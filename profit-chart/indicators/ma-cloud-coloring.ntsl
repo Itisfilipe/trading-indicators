@@ -1,0 +1,56 @@
+// =========================================================================
+// MOVING AVERAGES CLOUD - Coloring Rule (Regra de Coloracao)
+// =========================================================================
+// Colors candles based on 2 EMA alignment + price confirmation:
+//   - GREEN: Bullish alignment (fast > slow) and price confirms
+//   - RED:   Bearish alignment (fast < slow) and price confirms
+//   - GRAY:  Price contradicts the trend
+//            (e.g. downtrend but price above both EMAs)
+//
+// IMPORTANT: This is a COLORING RULE, not an indicator!
+// To apply: Right-click chart -> "Inserir Regra de Coloracao" -> Select this
+// =========================================================================
+
+input
+  // Periodo da media movel exponencial rapida
+  Periodo_EMA_Rapida(17);
+
+  // Periodo da media movel exponencial lenta
+  Periodo_EMA_Lenta(34);
+
+var
+  fEmaFast: Float;
+  fEmaSlow: Float;
+
+  fEmaMax: Float;
+  fEmaMin: Float;
+
+begin
+  // -----------------------------------------------------------------------
+  // Calculate EMAs
+  // -----------------------------------------------------------------------
+  fEmaFast := MediaExp(Periodo_EMA_Rapida, Close);
+  fEmaSlow := MediaExp(Periodo_EMA_Lenta, Close);
+
+  if fEmaFast > fEmaSlow then
+  begin
+    fEmaMax := fEmaFast;
+    fEmaMin := fEmaSlow;
+  end
+  else
+  begin
+    fEmaMax := fEmaSlow;
+    fEmaMin := fEmaFast;
+  end;
+
+  // -----------------------------------------------------------------------
+  // Apply Candle Coloring (gray when price contradicts the trend)
+  // -----------------------------------------------------------------------
+  if (fEmaFast > fEmaSlow) and (Close >= fEmaMin) then
+    PaintBar(RGB(0, 180, 80))
+  else if (fEmaFast < fEmaSlow) and (Close <= fEmaMax) then
+    PaintBar(RGB(220, 50, 50))
+  else
+    PaintBar(RGB(128, 128, 128));
+
+end;

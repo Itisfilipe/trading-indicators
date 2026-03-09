@@ -1,0 +1,304 @@
+// =========================================================================
+// CONFLUENCE COLORING - Coloring Rule (Regra de Coloracao)
+// =========================================================================
+// Colors candle bars based on multiple signal rules. Each rule produces a
+// bullish/bearish boolean. The color mapping combines them:
+//
+// Color scale (strongest to weakest):
+//   - REVERSAL:   Keltner channel reversal + tape (white)
+//   - ENTRY:      tape + MACDs + EMA pullback (blue)
+//   - TAPE:       tape active (green / red)
+//   - MACD BOTH:  both MACDs aligned (medium green / red)
+//   - MACD MAJOR: major MACD only, weakest (dim green / red)
+//
+// Current rules:
+//   1. Major MACD histogram (longer-term direction)
+//   2. Minor MACD histogram (short-term confirmation)
+//   3. Tape reading (volume + aggression aligned with candle direction)
+//   4. EMA pullback entry (direction change near an EMA, not past it)
+//   5. Keltner channel reversal (price exits band, reverses with tape)
+//
+// To add a new rule:
+//   1. Add inputs for the new indicator
+//   2. Add variables for the calculation
+//   3. Calculate the indicator and set a boolean signal (bXxxBullish)
+//   4. Update the color mapping section
+//
+// IMPORTANT: This is a COLORING RULE, not an indicator!
+// To apply: Right-click chart -> "Inserir Regra de Coloracao" -> Select this
+// =========================================================================
+
+input
+  // ----- Major MACD (longer-term) -----
+
+  // Major MACD fast EMA period. Default: 73
+  Major_MACD_Fast(73);
+
+  // Major MACD slow EMA period. Default: 305
+  Major_MACD_Slow(305);
+
+  // Major MACD signal line period. Default: 34
+  Major_MACD_Signal(34);
+
+  // ----- Minor MACD (short-term) -----
+
+  // Minor MACD fast EMA period. Default: 34
+  Minor_MACD_Fast(34);
+
+  // Minor MACD slow EMA period. Default: 72
+  Minor_MACD_Slow(72);
+
+  // Minor MACD signal line period. Default: 17
+  Minor_MACD_Signal(17);
+
+  // ----- Tape Reading -----
+
+  // Tape aggression balance MA period. Default: 305
+  Tape_MA_Balance(305);
+
+  // Tape volume MA period. Default: 305
+  Tape_MA_Volume(305);
+
+  // ----- EMA Trend Filter -----
+
+  // Fast EMA period for trend filter. Default: 21
+  EMA_Fast(21);
+
+  // Slow EMA period for trend filter. Default: 42
+  EMA_Slow(42);
+
+  // Max Renko boxes between Close and nearest EMA (stop loss protection). Default: 2.5
+  EMA_Max_Distance(2.8);
+
+  // ----- Keltner Channel Reversal -----
+
+  // Keltner EMA period. Default: 21
+  Keltner_Period(21);
+
+  // Keltner ATR deviation multiplier. Default: 3
+  Keltner_Dev(3);
+
+  // ----- Enable/Disable Rules -----
+
+  // Enable tape reading rule. Default: 1 (enabled)
+  Enable_Tape(0);
+
+  // Enable EMA pullback entry rule. Default: 1 (enabled)
+  Enable_EMA(1);
+
+  // Enable Keltner channel reversal rule. Default: 1 (enabled)
+  Enable_Keltner(1);
+
+var
+  // Major MACD components
+  fMajorMacdLine: Float;
+  fMajorSignalLine: Float;
+  fMajorHistogram: Float;
+
+  // Minor MACD components
+  fMinorMacdLine: Float;
+  fMinorSignalLine: Float;
+  fMinorHistogram: Float;
+
+  // Tape reading components
+  fBalance: Float;
+  fAbsBalance: Float;
+  fVol: Float;
+  fMaBalance: Float;
+  fMaVol: Float;
+
+  // EMA alignment components
+  fEmaFast: Float;
+  fEmaSlow: Float;
+  fBoxSize: Float;
+  fDistFast: Float;
+  fDistSlow: Float;
+  fCloseDistFast: Float;
+  fCloseDistSlow: Float;
+  bCloseNearEma: Boolean;
+
+  // Keltner channel components
+  fKeltnerMid: Float;
+  fTrueRange: Float;
+  fTrueRangeTemp: Float;
+  fKeltnerATR: Float;
+  fKeltnerUpper: Float;
+  fKeltnerLower: Float;
+  bKeltnerReversal: Boolean;
+
+  // Signal booleans (add new bXxxBullish for each rule)
+  bMajorBullish: Boolean;
+  bMinorBullish: Boolean;
+  bTapeHighlight: Boolean;
+  bTapeBullish: Boolean;
+  bEmaBullish: Boolean;
+  bEmaBearish: Boolean;
+
+begin
+  // -----------------------------------------------------------------------
+  // Rule 1: Major MACD Histogram
+  // -----------------------------------------------------------------------
+  fMajorMacdLine := MediaExp(Major_MACD_Fast, Close) - MediaExp(Major_MACD_Slow, Close);
+  fMajorSignalLine := MediaExp(Major_MACD_Signal, fMajorMacdLine);
+  fMajorHistogram := fMajorMacdLine - fMajorSignalLine;
+  bMajorBullish := fMajorHistogram >= 0;
+
+  // -----------------------------------------------------------------------
+  // Rule 2: Minor MACD Histogram
+  // -----------------------------------------------------------------------
+  fMinorMacdLine := MediaExp(Minor_MACD_Fast, Close) - MediaExp(Minor_MACD_Slow, Close);
+  fMinorSignalLine := MediaExp(Minor_MACD_Signal, fMinorMacdLine);
+  fMinorHistogram := fMinorMacdLine - fMinorSignalLine;
+  bMinorBullish := fMinorHistogram >= 0;
+
+  // -----------------------------------------------------------------------
+  // Rule 3: Tape Reading (volume + aggression aligned with candle)
+  // -----------------------------------------------------------------------
+  fBalance := AgressionVolBuy - AgressionVolSell;
+  bTapeBullish := fBalance >= 0;
+  if bTapeBullish then
+    fAbsBalance := fBalance
+  else
+    fAbsBalance := -fBalance;
+  fVol := QuantityVol(False, True);
+  fMaBalance := Media(Tape_MA_Balance, fAbsBalance);
+  fMaVol := Media(Tape_MA_Volume, fVol);
+
+  // Highlight when volume AND aggression are both above their MAs
+  // AND aggression direction aligns with candle direction
+  bTapeHighlight := (fVol >= fMaVol) and (fAbsBalance >= fMaBalance)
+    and (  (bTapeBullish and (Close >= Open))
+        or ((not bTapeBullish) and (Close < Open)));
+
+  // -----------------------------------------------------------------------
+  // Rule 4: EMA Pullback Entry
+  // -----------------------------------------------------------------------
+  // Detects: trend bricks -> opposite bricks (pullback) -> first trend brick
+  // near an EMA. The entry brick must not open and close past the EMAs.
+  fEmaFast := MediaExp(EMA_Fast, Close);
+  fEmaSlow := MediaExp(EMA_Slow, Close);
+
+  // Box size from previous closed Renko box
+  if Close[1] >= Open[1] then
+    fBoxSize := Close[1] - Open[1]
+  else
+    fBoxSize := Open[1] - Close[1];
+  if fBoxSize = 0 then
+    fBoxSize := 1;
+
+  // Distance from Open to each EMA (Open = where the pullback ended)
+  if Open >= fEmaFast then
+    fDistFast := Open - fEmaFast
+  else
+    fDistFast := fEmaFast - Open;
+  if Open >= fEmaSlow then
+    fDistSlow := Open - fEmaSlow
+  else
+    fDistSlow := fEmaSlow - Open;
+
+  // Distance from Close to each EMA (Close must be within N boxes of an EMA)
+  if Close >= fEmaFast then
+    fCloseDistFast := Close - fEmaFast
+  else
+    fCloseDistFast := fEmaFast - Close;
+  if Close >= fEmaSlow then
+    fCloseDistSlow := Close - fEmaSlow
+  else
+    fCloseDistSlow := fEmaSlow - Close;
+  bCloseNearEma := (fCloseDistFast <= EMA_Max_Distance * fBoxSize)
+    or (fCloseDistSlow <= EMA_Max_Distance * fBoxSize);
+
+  // Bullish pullback entry:
+  //   - Uptrend (fast EMA > slow EMA)
+  //   - Current brick is green, pullback within last 2 bricks
+  //   - Pullback reached near an EMA (Open within 2 boxes of either EMA)
+  //   - Close within EMA_Max_Distance boxes of an EMA
+  //   - Not crossed: entry brick Close still above slow EMA (straddling OK)
+  //   - Pullback valid: no brick [1] or [2] entirely below slow EMA
+  bEmaBullish := (fEmaFast > fEmaSlow)
+    and (Close >= Open)
+    and ((Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]))
+    and (Close >= fEmaSlow)
+    and ((Open[1] >= fEmaSlow[1]) or (Close[1] >= fEmaSlow[1]))
+    and ((Open[2] >= fEmaSlow[2]) or (Close[2] >= fEmaSlow[2]))
+    and ((Open[3] >= fEmaSlow[3]) or (Close[3] >= fEmaSlow[3]))
+    and ((fDistFast <= 2 * fBoxSize) or (fDistSlow <= 2 * fBoxSize))
+    and bCloseNearEma;
+
+  // Bearish pullback entry (mirror):
+  //   - Downtrend (fast EMA < slow EMA)
+  //   - Current brick is red, previous or 2nd previous was green (pullback)
+  //   - Pullback reached near an EMA (Open within 2 boxes of either EMA)
+  //   - Close within EMA_Max_Distance boxes of an EMA
+  //   - Not crossed: entry brick Close still below slow EMA (straddling OK)
+  //   - Pullback valid: no brick [1] or [2] entirely above slow EMA
+  bEmaBearish := (fEmaFast < fEmaSlow)
+    and (Close < Open)
+    and ((Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]))
+    and (Close <= fEmaSlow)
+    and ((Open[1] <= fEmaSlow[1]) or (Close[1] <= fEmaSlow[1]))
+    and ((Open[2] <= fEmaSlow[2]) or (Close[2] <= fEmaSlow[2]))
+    and ((Open[3] <= fEmaSlow[3]) or (Close[3] <= fEmaSlow[3]))
+    and ((fDistFast <= 2 * fBoxSize) or (fDistSlow <= 2 * fBoxSize))
+    and bCloseNearEma;
+
+  // -----------------------------------------------------------------------
+  // Rule 5: Keltner Channel Reversal
+  // -----------------------------------------------------------------------
+  // Keltner Channel: EMA middle line + ATR-based bands.
+  // When price exits the channel and the next brick reverses with tape
+  // confirmation, it signals a strong reversal.
+  fKeltnerMid := MediaExp(Keltner_Period, Close);
+
+  // True Range: max(High-Low, |High-PrevClose|, |Low-PrevClose|)
+  fTrueRange := High - Low;
+  fTrueRangeTemp := High - Close[1];
+  if fTrueRangeTemp < 0 then fTrueRangeTemp := -fTrueRangeTemp;
+  if fTrueRangeTemp > fTrueRange then fTrueRange := fTrueRangeTemp;
+  fTrueRangeTemp := Low - Close[1];
+  if fTrueRangeTemp < 0 then fTrueRangeTemp := -fTrueRangeTemp;
+  if fTrueRangeTemp > fTrueRange then fTrueRange := fTrueRangeTemp;
+
+  fKeltnerATR := MediaExp(Keltner_Period, fTrueRange);
+  fKeltnerUpper := fKeltnerMid + Keltner_Dev * fKeltnerATR;
+  fKeltnerLower := fKeltnerMid - Keltner_Dev * fKeltnerATR;
+
+  // Bullish reversal: previous brick entirely below lower band, current turns up
+  // Bearish reversal: previous brick entirely above upper band, current turns down
+  bKeltnerReversal :=
+    ((Open[1] < fKeltnerLower[1]) and (Close[1] < fKeltnerLower[1]) and (Close >= Open))
+    or ((Open[1] > fKeltnerUpper[1]) and (Close[1] > fKeltnerUpper[1]) and (Close < Open));
+
+  // -----------------------------------------------------------------------
+  // Color Mapping
+  // -----------------------------------------------------------------------
+
+  // REVERSAL: Keltner channel breakout reversal + tape confirmation
+  if (Enable_Keltner >= 1) and bTapeHighlight and bKeltnerReversal then
+    PaintBar(RGB(255, 255, 255))
+
+  // ENTRY: tape + both MACDs + EMA pullback -- full confluence, best signal
+  else if (Enable_EMA >= 1) and bTapeHighlight and bTapeBullish and bMajorBullish and bMinorBullish and bEmaBullish then
+    PaintBar(RGB(0, 120, 255))
+  else if (Enable_EMA >= 1) and bTapeHighlight and (not bTapeBullish) and (not bMajorBullish) and (not bMinorBullish) and bEmaBearish then
+    PaintBar(RGB(0, 120, 255))
+
+  // TAPE: tape active (volume + aggression above average, aligned with brick)
+  else if (Enable_Tape >= 1) and bTapeHighlight and bTapeBullish then
+    PaintBar(RGB(0, 255, 0))
+  else if (Enable_Tape >= 1) and bTapeHighlight and (not bTapeBullish) then
+    PaintBar(RGB(255, 0, 0))
+
+  // MACD BOTH: both MACDs aligned, no tape -- trend confirmed
+  else if bMajorBullish and bMinorBullish then
+    PaintBar(RGB(0, 160, 0))
+  else if (not bMajorBullish) and (not bMinorBullish) then
+    PaintBar(RGB(160, 0, 0))
+
+  // MACD MAJOR: only major MACD aligned -- weakest signal
+  else if bMajorBullish then
+    PaintBar(RGB(0, 80, 0))
+  else
+    PaintBar(RGB(80, 0, 0));
+
+end;

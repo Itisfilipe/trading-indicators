@@ -1,0 +1,14 @@
+// =========================================================================
+// DAY OPEN - Per-day opening price line
+// =========================================================================
+// Plots a horizontal line at each day's opening price.
+// OpenD(0) returns the current session's open for each bar,
+// producing a stepped line that resets every new day.
+// =========================================================================
+
+begin
+  Plot(OpenD(0));
+  SetPlotColor(1, RGB(255, 165, 0));
+  SetPlotWidth(1, 2);
+  SetPlotStyle(1, 2);
+end;

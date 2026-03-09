@@ -1,0 +1,77 @@
+// =========================================================================
+// MOVING AVERAGES CLOUD - EMA Cloud Indicator
+// =========================================================================
+// Displays 2 EMAs with dynamic coloring based on alignment:
+//   - GREEN: Bullish alignment (fast > slow) and price confirms
+//   - RED:   Bearish alignment (fast < slow) and price confirms
+//   - GRAY:  Price contradicts the trend
+//            (e.g. downtrend but price above both EMAs)
+//
+// =========================================================================
+// HOW TO ENABLE THE CLOUD FILL (must be done in UI):
+// =========================================================================
+// 1. Apply this indicator to your chart
+// 2. Right-click on one of the EMA lines in the chart
+// 3. Select "Propriedades" or "Editar"
+// 4. Go to "Preenchimento" tab
+// 5. Check "Preencher entre linhas" or similar option
+// 6. Select "Plot 1" and "Plot 2" as the boundaries
+// 7. Choose a fill color (or it may follow line color automatically)
+// =========================================================================
+
+input
+  // Periodo da media movel exponencial rapida
+  Periodo_EMA_Rapida(17);
+
+  // Periodo da media movel exponencial lenta
+  Periodo_EMA_Lenta(34);
+
+var
+  fEmaFast: Float;
+  fEmaSlow: Float;
+
+  fEmaMax: Float;
+  fEmaMin: Float;
+
+  nCurrentColor: Integer;
+
+begin
+  // -----------------------------------------------------------------------
+  // Calculate EMAs
+  // -----------------------------------------------------------------------
+  fEmaFast := MediaExp(Periodo_EMA_Rapida, Close);
+  fEmaSlow := MediaExp(Periodo_EMA_Lenta, Close);
+
+  if fEmaFast > fEmaSlow then
+  begin
+    fEmaMax := fEmaFast;
+    fEmaMin := fEmaSlow;
+  end
+  else
+  begin
+    fEmaMax := fEmaSlow;
+    fEmaMin := fEmaFast;
+  end;
+
+  // -----------------------------------------------------------------------
+  // Determine Color (gray when price contradicts the trend)
+  // -----------------------------------------------------------------------
+  if (fEmaFast > fEmaSlow) and (Close >= fEmaMin) then
+    nCurrentColor := RGB(0, 180, 80)
+  else if (fEmaFast < fEmaSlow) and (Close <= fEmaMax) then
+    nCurrentColor := RGB(220, 50, 50)
+  else
+    nCurrentColor := RGB(128, 128, 128);
+
+  // -----------------------------------------------------------------------
+  // Plot EMAs
+  // -----------------------------------------------------------------------
+  PlotN(1, fEmaFast);
+  SetPlotColor(1, nCurrentColor);
+  SetPlotWidth(1, 2);
+
+  PlotN(2, fEmaSlow);
+  SetPlotColor(2, nCurrentColor);
+  SetPlotWidth(2, 2);
+
+end;

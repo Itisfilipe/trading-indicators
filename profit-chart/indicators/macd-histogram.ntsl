@@ -1,0 +1,99 @@
+// =========================================================================
+// MACD HISTOGRAM WITH OUTLINE
+// =========================================================================
+// Shows only the MACD histogram with a line connecting the tops
+// for easy visualization of highs and lows.
+//
+// The line helps identify:
+//   - Histogram peaks (momentum highs)
+//   - Histogram valleys (momentum lows)
+//   - Divergences with price
+// =========================================================================
+
+input
+  // ----- MACD Periods -----
+
+  // Periodo da EMA rapida. Padrao: 34
+  Periodo_EMA_Rapida(34);
+
+  // Periodo da EMA lenta. Padrao: 72
+  Periodo_EMA_Lenta(72);
+
+  // Periodo da linha de sinal (EMA do MACD). Padrao: 17
+  Periodo_Sinal(17);
+
+  // ----- Display Options -----
+
+  // Exibir linha de contorno conectando os topos do histograma? Util para identificar divergencias.
+  Exibir_Linha_Contorno(true);
+
+var
+  bStarted: Boolean;
+
+  // MACD components
+  fMacdLine: Float;
+  fSignalLine: Float;
+  fHistogram: Float;
+
+  // Colors
+  nPositiveColor: Integer;
+  nNegativeColor: Integer;
+  nLineColor: Integer;
+
+begin
+  // -----------------------------------------------------------------------
+  // Initialization
+  // -----------------------------------------------------------------------
+  if not bStarted then
+  begin
+    bStarted := True;
+    nPositiveColor := RGB(0, 180, 80);      // Green for positive
+    nNegativeColor := RGB(220, 50, 50);     // Red for negative
+    nLineColor := RGB(255, 255, 255);       // White line
+  end;
+
+  // -----------------------------------------------------------------------
+  // Calculate MACD
+  // -----------------------------------------------------------------------
+  // MACD Line = Fast EMA - Slow EMA
+  fMacdLine := MediaExp(Periodo_EMA_Rapida, Close) - MediaExp(Periodo_EMA_Lenta, Close);
+
+  // Signal Line = EMA of MACD Line
+  fSignalLine := MediaExp(Periodo_Sinal, fMacdLine);
+
+  // Histogram = MACD Line - Signal Line
+  fHistogram := fMacdLine - fSignalLine;
+
+  // -----------------------------------------------------------------------
+  // Plot 1: Histogram (bars)
+  // -----------------------------------------------------------------------
+  PlotN(1, fHistogram);
+  SetPlotType(1, 1);        // 1 = Histogram
+  SetPlotWidth(1, 2);
+
+  // Color based on positive/negative
+  if fHistogram >= 0 then
+    SetPlotColor(1, nPositiveColor)
+  else
+    SetPlotColor(1, nNegativeColor);
+
+  // -----------------------------------------------------------------------
+  // Plot 2: Outline line at the top of histogram
+  // -----------------------------------------------------------------------
+  if Exibir_Linha_Contorno then
+  begin
+    PlotN(2, fHistogram);
+    SetPlotType(2, 0);      // 0 = Line
+    SetPlotWidth(2, 2);
+    SetPlotColor(2, nLineColor);
+  end;
+
+  // -----------------------------------------------------------------------
+  // Plot 3: Zero line reference
+  // -----------------------------------------------------------------------
+  PlotN(3, 0);
+  SetPlotType(3, 0);        // Line
+  SetPlotWidth(3, 1);
+  SetPlotColor(3, RGB(100, 100, 100));  // Gray
+
+end;
