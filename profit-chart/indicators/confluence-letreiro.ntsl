@@ -1,0 +1,230 @@
+// =========================================================================
+// CONFLUENCE LETREIRO - Indicator (companion to Confluence Coloring)
+// =========================================================================
+// Displays a colored histogram banner in a separate sub-window.
+// Green bar on bullish trigger, red bar on bearish trigger, gray otherwise.
+// Uses the same logic and inputs as the coloring rule.
+//
+// IMPORTANT: Keep inputs in sync with confluence-coloring.ntsl!
+// To apply: Right-click chart -> "Inserir Indicador" -> Select this
+// Display in a separate sub-window (not overlaid on the price chart).
+// =========================================================================
+
+input
+  // ----- Major MACD (longer-term) -----
+
+  // Major MACD fast EMA period. Default: 200
+  Major_MACD_Fast(200);
+
+  // Major MACD slow EMA period. Default: 800
+  Major_MACD_Slow(800);
+
+  // Major MACD signal line period. Default: 50
+  Major_MACD_Signal(50);
+
+  // ----- Minor MACD (short-term) -----
+
+  // Minor MACD fast EMA period. Default: 72
+  Minor_MACD_Fast(72);
+
+  // Minor MACD slow EMA period. Default: 200
+  Minor_MACD_Slow(200);
+
+  // Minor MACD signal line period. Default: 34
+  Minor_MACD_Signal(34);
+
+  // ----- Tape Reading -----
+
+  // Tape aggression balance MA period. Default: 305
+  Tape_MA_Balance(305);
+
+  // Tape volume MA period. Default: 305
+  Tape_MA_Volume(305);
+
+  // ----- EMA Trend Filter -----
+
+  // Fast EMA period for trend filter. Default: 21
+  EMA_Fast(21);
+
+  // Slow EMA period for trend filter. Default: 42
+  EMA_Slow(42);
+
+  // ----- Enable/Disable Rules -----
+
+  // Enable major MACD filter
+  Enable_Major_MACD(true);
+
+  // Enable minor MACD filter
+  Enable_Minor_MACD(true);
+
+  // Enable tape reading filter
+  Enable_Tape(true);
+
+  // Loose tape: trigger if volume OR aggression above average (ignores direction)
+  Tape_Loose(true);
+
+  // Enable EMA pullback entry (core trigger)
+  Enable_EMA(true);
+
+  // Require pullback (opposite brick in last 3) before entry
+  Enable_Pullback(true);
+
+  // Require pullback bricks stay on correct side of slow EMA
+  Enable_Not_Crossed(true);
+
+  // ----- Letreiro Settings -----
+
+  // Label font size. Default: 10
+  Label_Size(10);
+
+var
+  // Major MACD components
+  fMajorMacdLine: Float;
+  fMajorSignalLine: Float;
+  fMajorHistogram: Float;
+
+  // Minor MACD components
+  fMinorMacdLine: Float;
+  fMinorSignalLine: Float;
+  fMinorHistogram: Float;
+
+  // Tape reading components
+  fBalance: Float;
+  fAbsBalance: Float;
+  fVol: Float;
+  fMaBalance: Float;
+  fMaVol: Float;
+
+  // EMA alignment components
+  fEmaFast: Float;
+  fEmaSlow: Float;
+  fEmaUpper: Float;
+  fEmaLower: Float;
+  bBrickTouchesEma: Boolean;
+
+  // Signal booleans
+  bMajorBullish: Boolean;
+  bMinorBullish: Boolean;
+  bTapeHighlight: Boolean;
+  bTapeBullish: Boolean;
+  bEmaBullish: Boolean;
+  bEmaBearish: Boolean;
+
+  // MACD confluence (enable-aware)
+  bMacdBull: Boolean;
+  bMacdBear: Boolean;
+
+  // Final trigger results
+  bTriggerBull: Boolean;
+  bTriggerBear: Boolean;
+
+begin
+  // -----------------------------------------------------------------------
+  // Rule 1: Major MACD Histogram
+  // -----------------------------------------------------------------------
+  fMajorMacdLine := MediaExp(Major_MACD_Fast, Close) - MediaExp(Major_MACD_Slow, Close);
+  fMajorSignalLine := MediaExp(Major_MACD_Signal, fMajorMacdLine);
+  fMajorHistogram := fMajorMacdLine - fMajorSignalLine;
+  bMajorBullish := fMajorHistogram >= 0;
+
+  // -----------------------------------------------------------------------
+  // Rule 2: Minor MACD Histogram
+  // -----------------------------------------------------------------------
+  fMinorMacdLine := MediaExp(Minor_MACD_Fast, Close) - MediaExp(Minor_MACD_Slow, Close);
+  fMinorSignalLine := MediaExp(Minor_MACD_Signal, fMinorMacdLine);
+  fMinorHistogram := fMinorMacdLine - fMinorSignalLine;
+  bMinorBullish := fMinorHistogram >= 0;
+
+  // -----------------------------------------------------------------------
+  // Rule 3: Tape Reading (volume + aggression aligned with candle)
+  // -----------------------------------------------------------------------
+  fBalance := AgressionVolBuy - AgressionVolSell;
+  bTapeBullish := fBalance >= 0;
+  if bTapeBullish then
+    fAbsBalance := fBalance
+  else
+    fAbsBalance := -fBalance;
+  fVol := QuantityVol(False, True);
+  fMaBalance := Media(Tape_MA_Balance, fAbsBalance);
+  fMaVol := Media(Tape_MA_Volume, fVol);
+
+  if not Enable_Tape then begin
+    bTapeHighlight := True;
+    bTapeBullish := Close >= Open;
+  end else if Tape_Loose then begin
+    bTapeHighlight := (fVol >= fMaVol) or (fAbsBalance >= fMaBalance);
+    bTapeBullish := Close >= Open;
+  end else begin
+    bTapeHighlight := (fVol >= fMaVol) and (fAbsBalance >= fMaBalance)
+      and (  (bTapeBullish and (Close >= Open))
+          or ((not bTapeBullish) and (Close < Open)));
+  end;
+
+  // -----------------------------------------------------------------------
+  // Rule 4: EMA Pullback Entry
+  // -----------------------------------------------------------------------
+  fEmaFast := MediaExp(EMA_Fast, Close);
+  fEmaSlow := MediaExp(EMA_Slow, Close);
+
+  if fEmaFast >= fEmaSlow then begin
+    fEmaUpper := fEmaFast;
+    fEmaLower := fEmaSlow;
+  end else begin
+    fEmaUpper := fEmaSlow;
+    fEmaLower := fEmaFast;
+  end;
+
+  bBrickTouchesEma := (Low <= fEmaUpper) and (High >= fEmaLower);
+
+  bEmaBullish := (fEmaFast > fEmaSlow)
+    and (Close >= Open)
+    and bBrickTouchesEma
+    and ((not Enable_Pullback) or (Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]))
+    and ((not Enable_Not_Crossed) or (Close >= fEmaSlow))
+    and ((not Enable_Not_Crossed) or (Open[1] >= fEmaSlow[1]) or (Close[1] >= fEmaSlow[1]))
+    and ((not Enable_Not_Crossed) or (Open[2] >= fEmaSlow[2]) or (Close[2] >= fEmaSlow[2]))
+    and ((not Enable_Not_Crossed) or (Open[3] >= fEmaSlow[3]) or (Close[3] >= fEmaSlow[3]));
+
+  bEmaBearish := (fEmaFast < fEmaSlow)
+    and (Close < Open)
+    and bBrickTouchesEma
+    and ((not Enable_Pullback) or (Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]))
+    and ((not Enable_Not_Crossed) or (Close <= fEmaSlow))
+    and ((not Enable_Not_Crossed) or (Open[1] <= fEmaSlow[1]) or (Close[1] <= fEmaSlow[1]))
+    and ((not Enable_Not_Crossed) or (Open[2] <= fEmaSlow[2]) or (Close[2] <= fEmaSlow[2]))
+    and ((not Enable_Not_Crossed) or (Open[3] <= fEmaSlow[3]) or (Close[3] <= fEmaSlow[3]));
+
+  // -----------------------------------------------------------------------
+  // MACD Confluence (enable-aware)
+  // -----------------------------------------------------------------------
+  bMacdBull := ((not Enable_Major_MACD) or bMajorBullish)
+    and ((not Enable_Minor_MACD) or bMinorBullish);
+  bMacdBear := ((not Enable_Major_MACD) or (not bMajorBullish))
+    and ((not Enable_Minor_MACD) or (not bMinorBullish));
+
+  // -----------------------------------------------------------------------
+  // Final Trigger Computation
+  // -----------------------------------------------------------------------
+  bTriggerBull := Enable_EMA and bEmaBullish
+    and bTapeHighlight and bTapeBullish and bMacdBull;
+  bTriggerBear := Enable_EMA and bEmaBearish
+    and bTapeHighlight and (not bTapeBullish) and bMacdBear;
+
+  // -----------------------------------------------------------------------
+  // Letreiro (colored histogram banner + text label)
+  // -----------------------------------------------------------------------
+  Plot(1);
+  SetPlotType(1, 1);
+  SetPlotWidth(1, 5);
+
+  if bTriggerBull then begin
+    SetPlotColor(1, RGB(0, 160, 0));
+    PlotText("BUY", clWhite, 1, Label_Size);
+  end else if bTriggerBear then begin
+    SetPlotColor(1, RGB(200, 0, 0));
+    PlotText("SELL", clWhite, 1, Label_Size);
+  end else begin
+    SetPlotColor(1, RGB(40, 40, 40));
+  end;
+
+end;
