@@ -69,11 +69,14 @@ input
   // Enable minor MACD filter
   Enable_Minor_MACD(true);
 
-  // Enable tape reading filter
-  Enable_Tape(true);
+  // Require volume above average for tape
+  Tape_Require_Volume(true);
 
-  // Loose tape: trigger if volume OR aggression above average (ignores direction)
-  Tape_Loose(true);
+  // Require aggression above average for tape
+  Tape_Require_Aggression(true);
+
+  // Require aggression direction aligned with candle for tape
+  Tape_Require_Direction(false);
 
   // Enable EMA pullback entry (core trigger)
   Enable_EMA(true);
@@ -155,19 +158,16 @@ begin
   fMaBalance := Media(Tape_MA_Balance, fAbsBalance);
   fMaVol := Media(Tape_MA_Volume, fVol);
 
-  // Highlight when volume AND aggression are both above their MAs
-  // AND aggression direction aligns with candle direction
-  if not Enable_Tape then begin
-    bTapeHighlight := True;
+  // Tape highlight: each condition is independently toggleable
+  bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
+    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance))
+    and (not Tape_Require_Direction
+      or (bTapeBullish and (Close >= Open))
+      or ((not bTapeBullish) and (Close < Open)));
+
+  // When direction is not required, follow candle for color mapping
+  if not Tape_Require_Direction then
     bTapeBullish := Close >= Open;
-  end else if Tape_Loose then begin
-    bTapeHighlight := (fVol >= fMaVol) or (fAbsBalance >= fMaBalance);
-    bTapeBullish := Close >= Open;
-  end else begin
-    bTapeHighlight := (fVol >= fMaVol) and (fAbsBalance >= fMaBalance)
-      and (  (bTapeBullish and (Close >= Open))
-          or ((not bTapeBullish) and (Close < Open)));
-  end;
 
   // -----------------------------------------------------------------------
   // Rule 4: EMA Pullback Entry
