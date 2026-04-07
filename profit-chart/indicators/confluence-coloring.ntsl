@@ -73,7 +73,7 @@ input
   Enable_Tape(1);
 
   // Loose tape: trigger if volume OR aggression above average (ignores direction). Default: 0
-  Tape_Loose(0);
+  Tape_Loose(1);
 
   // Enable EMA pullback entry (core trigger). Default: 1
   Enable_EMA(1);
