@@ -221,25 +221,25 @@ begin
   // -----------------------------------------------------------------------
   // Always plot to keep the sub-window scale. Default color is white
   // (looks empty). On trigger: black bg + white text (or inverted).
-  Plot(1);
+  Plot(100);
   SetPlotType(1, 1);
   SetPlotWidth(1, Bar_Width);
 
   if bTriggerBull then begin
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
-      PlotText("BUY", clBlack, 1, Label_Size);
+      PlotText("BUY", clBlack, 3, Label_Size, 50);
     end else begin
       SetPlotColor(1, clBlack);
-      PlotText("BUY", clWhite, 1, Label_Size);
+      PlotText("BUY", clWhite, 3, Label_Size, 50);
     end;
   end else if bTriggerBear then begin
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
-      PlotText("SELL", clBlack, 1, Label_Size);
+      PlotText("SELL", clBlack, 3, Label_Size, 50);
     end else begin
       SetPlotColor(1, clBlack);
-      PlotText("SELL", clWhite, 1, Label_Size);
+      PlotText("SELL", clWhite, 3, Label_Size, 50);
     end;
   end else begin
     SetPlotColor(1, clWhite);
