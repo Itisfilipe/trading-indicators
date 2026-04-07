@@ -219,12 +219,13 @@ begin
   // -----------------------------------------------------------------------
   // Letreiro (real-time flash sign)
   // -----------------------------------------------------------------------
-  // Transparent by default. Flashes black bg + white text on trigger.
-  // Invert option: white bg + black text.
+  // Always plot to keep the sub-window scale. Default color is white
+  // (looks empty). On trigger: black bg + white text (or inverted).
+  Plot(1);
+  SetPlotType(1, 1);
+  SetPlotWidth(1, Bar_Width);
+
   if bTriggerBull then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, Bar_Width);
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("BUY", clBlack, 3, Label_Size, 0.5);
@@ -233,9 +234,6 @@ begin
       PlotText("BUY", clWhite, 3, Label_Size, 0.5);
     end;
   end else if bTriggerBear then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, Bar_Width);
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("SELL", clBlack, 3, Label_Size, 0.5);
@@ -244,7 +242,7 @@ begin
       PlotText("SELL", clWhite, 3, Label_Size, 0.5);
     end;
   end else begin
-    NoPlot(1);
+    SetPlotColor(1, clWhite);
   end;
 
 end;
