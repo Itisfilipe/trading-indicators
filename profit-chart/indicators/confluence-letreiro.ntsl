@@ -214,13 +214,13 @@ begin
     and bTapeHighlight and (not bTapeBullish) and bMacdBear;
 
   // -----------------------------------------------------------------------
-  // Letreiro (flashes colored banner only on trigger)
+  // Letreiro (solid sign, lights up on trigger)
   // -----------------------------------------------------------------------
+  Plot(1);
   SetPlotType(1, 1);
   SetPlotWidth(1, 5);
 
   if bTriggerBull then begin
-    Plot(1);
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("BUY", RGB(0, 120, 255), 1, Label_Size);
@@ -229,7 +229,6 @@ begin
       PlotText("BUY", clWhite, 1, Label_Size);
     end;
   end else if bTriggerBear then begin
-    Plot(1);
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("SELL", RGB(0, 120, 255), 1, Label_Size);
@@ -238,7 +237,7 @@ begin
       PlotText("SELL", clWhite, 1, Label_Size);
     end;
   end else begin
-    NoPlot(1);
+    SetPlotColor(1, clBlack);
   end;
 
 end;
