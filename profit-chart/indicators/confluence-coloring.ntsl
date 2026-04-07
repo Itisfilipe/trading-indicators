@@ -61,28 +61,28 @@ input
   // Slow EMA period for trend filter. Default: 42
   EMA_Slow(42);
 
-  // ----- Enable/Disable Rules (0 = disabled, 1 = enabled) -----
+  // ----- Enable/Disable Rules -----
 
-  // Enable major MACD filter. Default: 1
-  Enable_Major_MACD(1);
+  // Enable major MACD filter
+  Enable_Major_MACD(true);
 
-  // Enable minor MACD filter. Default: 1
-  Enable_Minor_MACD(1);
+  // Enable minor MACD filter
+  Enable_Minor_MACD(true);
 
-  // Enable tape reading filter. Default: 1
-  Enable_Tape(1);
+  // Enable tape reading filter
+  Enable_Tape(true);
 
-  // Loose tape: trigger if volume OR aggression above average (ignores direction). Default: 0
-  Tape_Loose(1);
+  // Loose tape: trigger if volume OR aggression above average (ignores direction)
+  Tape_Loose(true);
 
-  // Enable EMA pullback entry (core trigger). Default: 1
-  Enable_EMA(1);
+  // Enable EMA pullback entry (core trigger)
+  Enable_EMA(true);
 
-  // Require pullback (opposite brick in last 3) before entry. Default: 1
-  Enable_Pullback(1);
+  // Require pullback (opposite brick in last 3) before entry
+  Enable_Pullback(true);
 
-  // Require pullback bricks stay on correct side of slow EMA. Default: 1
-  Enable_Not_Crossed(1);
+  // Require pullback bricks stay on correct side of slow EMA
+  Enable_Not_Crossed(true);
 
 var
   // Major MACD components
@@ -157,10 +157,10 @@ begin
 
   // Highlight when volume AND aggression are both above their MAs
   // AND aggression direction aligns with candle direction
-  if Enable_Tape < 1 then begin
+  if not Enable_Tape then begin
     bTapeHighlight := True;
     bTapeBullish := Close >= Open;
-  end else if Tape_Loose >= 1 then begin
+  end else if Tape_Loose then begin
     bTapeHighlight := (fVol >= fMaVol) or (fAbsBalance >= fMaBalance);
     bTapeBullish := Close >= Open;
   end else begin
@@ -198,11 +198,11 @@ begin
   bEmaBullish := (fEmaFast > fEmaSlow)
     and (Close >= Open)
     and bBrickTouchesEma
-    and ((Enable_Pullback < 1) or (Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]))
-    and ((Enable_Not_Crossed < 1) or (Close >= fEmaSlow))
-    and ((Enable_Not_Crossed < 1) or (Open[1] >= fEmaSlow[1]) or (Close[1] >= fEmaSlow[1]))
-    and ((Enable_Not_Crossed < 1) or (Open[2] >= fEmaSlow[2]) or (Close[2] >= fEmaSlow[2]))
-    and ((Enable_Not_Crossed < 1) or (Open[3] >= fEmaSlow[3]) or (Close[3] >= fEmaSlow[3]));
+    and ((not Enable_Pullback) or (Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]))
+    and ((not Enable_Not_Crossed) or (Close >= fEmaSlow))
+    and ((not Enable_Not_Crossed) or (Open[1] >= fEmaSlow[1]) or (Close[1] >= fEmaSlow[1]))
+    and ((not Enable_Not_Crossed) or (Open[2] >= fEmaSlow[2]) or (Close[2] >= fEmaSlow[2]))
+    and ((not Enable_Not_Crossed) or (Open[3] >= fEmaSlow[3]) or (Close[3] >= fEmaSlow[3]));
 
   // Bearish pullback entry (mirror):
   //   - Downtrend (fast EMA < slow EMA)
@@ -213,27 +213,27 @@ begin
   bEmaBearish := (fEmaFast < fEmaSlow)
     and (Close < Open)
     and bBrickTouchesEma
-    and ((Enable_Pullback < 1) or (Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]))
-    and ((Enable_Not_Crossed < 1) or (Close <= fEmaSlow))
-    and ((Enable_Not_Crossed < 1) or (Open[1] <= fEmaSlow[1]) or (Close[1] <= fEmaSlow[1]))
-    and ((Enable_Not_Crossed < 1) or (Open[2] <= fEmaSlow[2]) or (Close[2] <= fEmaSlow[2]))
-    and ((Enable_Not_Crossed < 1) or (Open[3] <= fEmaSlow[3]) or (Close[3] <= fEmaSlow[3]));
+    and ((not Enable_Pullback) or (Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]))
+    and ((not Enable_Not_Crossed) or (Close <= fEmaSlow))
+    and ((not Enable_Not_Crossed) or (Open[1] <= fEmaSlow[1]) or (Close[1] <= fEmaSlow[1]))
+    and ((not Enable_Not_Crossed) or (Open[2] <= fEmaSlow[2]) or (Close[2] <= fEmaSlow[2]))
+    and ((not Enable_Not_Crossed) or (Open[3] <= fEmaSlow[3]) or (Close[3] <= fEmaSlow[3]));
 
   // -----------------------------------------------------------------------
   // MACD Confluence (enable-aware)
   // -----------------------------------------------------------------------
   // Every enabled MACD must agree; disabled ones are ignored
-  bMacdBull := ((Enable_Major_MACD < 1) or bMajorBullish)
-    and ((Enable_Minor_MACD < 1) or bMinorBullish);
-  bMacdBear := ((Enable_Major_MACD < 1) or (not bMajorBullish))
-    and ((Enable_Minor_MACD < 1) or (not bMinorBullish));
+  bMacdBull := ((not Enable_Major_MACD) or bMajorBullish)
+    and ((not Enable_Minor_MACD) or bMinorBullish);
+  bMacdBear := ((not Enable_Major_MACD) or (not bMajorBullish))
+    and ((not Enable_Minor_MACD) or (not bMinorBullish));
 
   // -----------------------------------------------------------------------
   // Final Trigger Computation
   // -----------------------------------------------------------------------
-  bTriggerBull := (Enable_EMA >= 1) and bEmaBullish
+  bTriggerBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeBullish and bMacdBull;
-  bTriggerBear := (Enable_EMA >= 1) and bEmaBearish
+  bTriggerBear := Enable_EMA and bEmaBearish
     and bTapeHighlight and (not bTapeBullish) and bMacdBear;
 
   // -----------------------------------------------------------------------
