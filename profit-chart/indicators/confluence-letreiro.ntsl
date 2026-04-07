@@ -221,7 +221,7 @@ begin
   // -----------------------------------------------------------------------
   // Always plot to keep the sub-window scale. Default color is white
   // (looks empty). On trigger: black bg + white text (or inverted).
-  Plot(0);
+  Plot(1);
   SetPlotType(1, 1);
   SetPlotWidth(1, Bar_Width);
 
