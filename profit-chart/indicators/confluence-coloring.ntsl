@@ -74,6 +74,9 @@ input
   // Enable tape reading filter. Default: 1
   Enable_Tape(1);
 
+  // Loose tape: trigger if volume OR aggression above average (ignores direction). Default: 0
+  Tape_Loose(0);
+
   // Enable EMA pullback entry (core trigger). Default: 1
   Enable_EMA(1);
 
@@ -154,14 +157,16 @@ begin
 
   // Highlight when volume AND aggression are both above their MAs
   // AND aggression direction aligns with candle direction
-  if Enable_Tape >= 1 then
-    bTapeHighlight := (fVol >= fMaVol) and (fAbsBalance >= fMaBalance)
-      and (  (bTapeBullish and (Close >= Open))
-          or ((not bTapeBullish) and (Close < Open)))
-  else begin
+  if Enable_Tape < 1 then begin
     bTapeHighlight := True;
     bTapeBullish := Close >= Open;
-  end;
+  end else if Tape_Loose >= 1 then begin
+    bTapeHighlight := (fVol >= fMaVol) or (fAbsBalance >= fMaBalance);
+    bTapeBullish := Close >= Open;
+  end else
+    bTapeHighlight := (fVol >= fMaVol) and (fAbsBalance >= fMaBalance)
+      and (  (bTapeBullish and (Close >= Open))
+          or ((not bTapeBullish) and (Close < Open)));
 
   // -----------------------------------------------------------------------
   // Rule 4: EMA Pullback Entry
