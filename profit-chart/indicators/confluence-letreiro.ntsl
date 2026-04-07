@@ -219,11 +219,14 @@ begin
   // -----------------------------------------------------------------------
   // Letreiro (real-time flash sign)
   // -----------------------------------------------------------------------
+  // No LastBarOnChart guard — Renko recalculates all bars on new bricks,
+  // so historical bars re-evaluate and go dark. Only the forming brick
+  // with an active trigger will flash.
   Plot(1);
   SetPlotType(1, 1);
   SetPlotWidth(1, Bar_Width);
 
-  if LastBarOnChart and bTriggerBull then begin
+  if bTriggerBull then begin
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("BUY", RGB(0, 120, 255), 1, Label_Size);
@@ -231,7 +234,7 @@ begin
       SetPlotColor(1, RGB(0, 120, 255));
       PlotText("BUY", clWhite, 1, Label_Size);
     end;
-  end else if LastBarOnChart and bTriggerBear then begin
+  end else if bTriggerBear then begin
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("SELL", RGB(0, 120, 255), 1, Label_Size);
