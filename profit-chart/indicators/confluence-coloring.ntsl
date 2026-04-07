@@ -239,7 +239,9 @@ begin
   // -----------------------------------------------------------------------
   // Color Mapping
   // -----------------------------------------------------------------------
-  if bTriggerBull or bTriggerBear then
-    PaintBar(RGB(0, 120, 255));
+  if bTriggerBull then
+    PaintBar(RGB(0, 120, 255))
+  else if bTriggerBear then
+    PaintBar(RGB(255, 0, 0));
 
 end;

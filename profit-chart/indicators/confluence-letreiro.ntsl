@@ -77,8 +77,6 @@ input
   // Label font size. Default: 38
   Label_Size(38);
 
-  // Invert colors: false = black background + white text, true = white background + black text
-  Invert_Colors(false);
 
 var
   // Major MACD components
@@ -222,24 +220,14 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    if Invert_Colors then begin
-      SetPlotColor(1, clWhite);
-      PlotText("BUY", clBlack, 1, Label_Size);
-    end else begin
-      SetPlotColor(1, clBlack);
-      PlotText("BUY", clWhite, 1, Label_Size);
-    end;
+    SetPlotColor(1, RGB(0, 120, 255));
+    PlotText("BUY", clWhite, 1, Label_Size);
   end else if bTriggerBear then begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    if Invert_Colors then begin
-      SetPlotColor(1, clWhite);
-      PlotText("SELL", clBlack, 1, Label_Size);
-    end else begin
-      SetPlotColor(1, clBlack);
-      PlotText("SELL", clWhite, 1, Label_Size);
-    end;
+    SetPlotColor(1, RGB(255, 0, 0));
+    PlotText("SELL", clWhite, 1, Label_Size);
   end else begin
     NoPlot(1);
   end;
