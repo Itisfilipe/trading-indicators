@@ -78,8 +78,6 @@ input
   // Label font size. Default: 8
   Label_Size(8);
 
-  // Label color: false = black, true = white
-  Label_White(false);
 
 var
   // Major MACD components
@@ -122,8 +120,6 @@ var
   bTriggerBull: Boolean;
   bTriggerBear: Boolean;
 
-  // Label color
-  nLabelColor: Integer;
 
 begin
   // -----------------------------------------------------------------------
@@ -220,14 +216,9 @@ begin
   // -----------------------------------------------------------------------
   // Labels
   // -----------------------------------------------------------------------
-  if Label_White then
-    nLabelColor := clWhite
-  else
-    nLabelColor := clBlack;
-
   if bTriggerBull then
-    PlotText("BUY", nLabelColor, 0, Label_Size)
+    PlotText("BUY", RGB(0, 120, 255), 0, Label_Size)
   else if bTriggerBear then
-    PlotText("SELL", nLabelColor, 2, Label_Size);
+    PlotText("SELL", RGB(255, 0, 0), 2, Label_Size);
 
 end;
