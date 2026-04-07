@@ -218,16 +218,16 @@ begin
   // -----------------------------------------------------------------------
   // "All" = every enabled MACD agrees (disabled ones are ignored, not counted)
   // "Any" = at least one enabled MACD agrees (or both disabled = no filter)
-  bMacdAllBull := (Enable_Major_MACD < 1 or bMajorBullish)
-    and (Enable_Minor_MACD < 1 or bMinorBullish);
-  bMacdAnyBull := (Enable_Major_MACD >= 1 and bMajorBullish)
-    or (Enable_Minor_MACD >= 1 and bMinorBullish)
+  bMacdAllBull := ((Enable_Major_MACD < 1) or bMajorBullish)
+    and ((Enable_Minor_MACD < 1) or bMinorBullish);
+  bMacdAnyBull := ((Enable_Major_MACD >= 1) and bMajorBullish)
+    or ((Enable_Minor_MACD >= 1) and bMinorBullish)
     or ((Enable_Major_MACD < 1) and (Enable_Minor_MACD < 1));
 
-  bMacdAllBear := (Enable_Major_MACD < 1 or (not bMajorBullish))
-    and (Enable_Minor_MACD < 1 or (not bMinorBullish));
-  bMacdAnyBear := (Enable_Major_MACD >= 1 and (not bMajorBullish))
-    or (Enable_Minor_MACD >= 1 and (not bMinorBullish))
+  bMacdAllBear := ((Enable_Major_MACD < 1) or (not bMajorBullish))
+    and ((Enable_Minor_MACD < 1) or (not bMinorBullish));
+  bMacdAnyBear := ((Enable_Major_MACD >= 1) and (not bMajorBullish))
+    or ((Enable_Minor_MACD >= 1) and (not bMinorBullish))
     or ((Enable_Major_MACD < 1) and (Enable_Minor_MACD < 1));
 
   // -----------------------------------------------------------------------
