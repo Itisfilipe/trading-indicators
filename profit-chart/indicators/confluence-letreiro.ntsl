@@ -219,12 +219,11 @@ begin
   // -----------------------------------------------------------------------
   // Letreiro (real-time flash sign)
   // -----------------------------------------------------------------------
-  // Sub-window is transparent. On trigger, the last bar flashes a big label.
-  // Set the sub-window background color in Profit Chart to black for best effect.
+  Plot(1);
+  SetPlotType(1, 1);
+  SetPlotWidth(1, Bar_Width);
+
   if LastBarOnChart and bTriggerBull then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, Bar_Width);
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("BUY", RGB(0, 120, 255), 1, Label_Size);
@@ -233,9 +232,6 @@ begin
       PlotText("BUY", clWhite, 1, Label_Size);
     end;
   end else if LastBarOnChart and bTriggerBear then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, Bar_Width);
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
       PlotText("SELL", RGB(0, 120, 255), 1, Label_Size);
@@ -244,7 +240,7 @@ begin
       PlotText("SELL", clWhite, 1, Label_Size);
     end;
   end else begin
-    NoPlot(1);
+    SetPlotColor(1, RGB(20, 20, 20));
   end;
 
 end;
