@@ -74,8 +74,8 @@ input
 
   // ----- Letreiro Settings -----
 
-  // Label font size. Default: 30
-  Label_Size(30);
+  // Label font size. Default: 50
+  Label_Size(50);
 
   // Bar thickness. Default: 50
   Bar_Width(50);
@@ -228,18 +228,18 @@ begin
   if bTriggerBull then begin
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
-      PlotText("BUY", clBlack, 3, Label_Size, 0.5);
+      PlotText("BUY", clBlack, 1, Label_Size);
     end else begin
       SetPlotColor(1, clBlack);
-      PlotText("BUY", clWhite, 3, Label_Size, 0.5);
+      PlotText("BUY", clWhite, 1, Label_Size);
     end;
   end else if bTriggerBear then begin
     if Invert_Colors then begin
       SetPlotColor(1, clWhite);
-      PlotText("SELL", clBlack, 3, Label_Size, 0.5);
+      PlotText("SELL", clBlack, 1, Label_Size);
     end else begin
       SetPlotColor(1, clBlack);
-      PlotText("SELL", clWhite, 3, Label_Size, 0.5);
+      PlotText("SELL", clWhite, 1, Label_Size);
     end;
   end else begin
     SetPlotColor(1, clWhite);
