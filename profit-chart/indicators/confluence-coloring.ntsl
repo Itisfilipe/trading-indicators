@@ -27,25 +27,25 @@
 input
   // ----- Major MACD (longer-term) -----
 
-  // Major MACD fast EMA period. Default: 73
-  Major_MACD_Fast(73);
+  // Major MACD fast EMA period. Default: 200
+  Major_MACD_Fast(200);
 
-  // Major MACD slow EMA period. Default: 305
-  Major_MACD_Slow(305);
+  // Major MACD slow EMA period. Default: 800
+  Major_MACD_Slow(800);
 
-  // Major MACD signal line period. Default: 34
-  Major_MACD_Signal(34);
+  // Major MACD signal line period. Default: 50
+  Major_MACD_Signal(50);
 
   // ----- Minor MACD (short-term) -----
 
-  // Minor MACD fast EMA period. Default: 34
-  Minor_MACD_Fast(34);
+  // Minor MACD fast EMA period. Default: 72
+  Minor_MACD_Fast(72);
 
-  // Minor MACD slow EMA period. Default: 72
-  Minor_MACD_Slow(72);
+  // Minor MACD slow EMA period. Default: 200
+  Minor_MACD_Slow(200);
 
-  // Minor MACD signal line period. Default: 17
-  Minor_MACD_Signal(17);
+  // Minor MACD signal line period. Default: 34
+  Minor_MACD_Signal(34);
 
   // ----- Tape Reading -----
 
