@@ -74,8 +74,8 @@ input
 
   // ----- Letreiro Settings -----
 
-  // Label font size. Default: 20
-  Label_Size(20);
+  // Label font size. Default: 38
+  Label_Size(38);
 
   // Invert colors: false = black background + white text, true = white background + black text
   Invert_Colors(false);
