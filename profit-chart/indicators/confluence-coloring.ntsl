@@ -4,9 +4,7 @@
 // Colors candle bars based on multiple signal rules. Each rule produces a
 // bullish/bearish boolean. The color mapping combines them:
 //
-// Colors:
-//   - STRONG ENTRY: tape + both MACDs + EMA pullback (bright blue)
-//   - WEAK ENTRY:   tape + one MACD + EMA pullback (dark blue)
+// Color: ENTRY — all enabled rules agree (blue)
 //
 // Current rules:
 //   1. Major MACD histogram (longer-term direction)
@@ -120,16 +118,12 @@ var
   bEmaBearish: Boolean;
 
   // MACD confluence (enable-aware)
-  bMacdAllBull: Boolean;
-  bMacdAnyBull: Boolean;
-  bMacdAllBear: Boolean;
-  bMacdAnyBear: Boolean;
+  bMacdBull: Boolean;
+  bMacdBear: Boolean;
 
   // Final trigger results
-  bStrongBull: Boolean;
-  bStrongBear: Boolean;
-  bWeakBull: Boolean;
-  bWeakBear: Boolean;
+  bTriggerBull: Boolean;
+  bTriggerBear: Boolean;
 
 begin
   // -----------------------------------------------------------------------
@@ -228,38 +222,24 @@ begin
   // -----------------------------------------------------------------------
   // MACD Confluence (enable-aware)
   // -----------------------------------------------------------------------
-  // "All" = every enabled MACD agrees (disabled ones are ignored, not counted)
-  // "Any" = at least one enabled MACD agrees (or both disabled = no filter)
-  bMacdAllBull := ((Enable_Major_MACD < 1) or bMajorBullish)
+  // Every enabled MACD must agree; disabled ones are ignored
+  bMacdBull := ((Enable_Major_MACD < 1) or bMajorBullish)
     and ((Enable_Minor_MACD < 1) or bMinorBullish);
-  bMacdAnyBull := ((Enable_Major_MACD >= 1) and bMajorBullish)
-    or ((Enable_Minor_MACD >= 1) and bMinorBullish)
-    or ((Enable_Major_MACD < 1) and (Enable_Minor_MACD < 1));
-
-  bMacdAllBear := ((Enable_Major_MACD < 1) or (not bMajorBullish))
+  bMacdBear := ((Enable_Major_MACD < 1) or (not bMajorBullish))
     and ((Enable_Minor_MACD < 1) or (not bMinorBullish));
-  bMacdAnyBear := ((Enable_Major_MACD >= 1) and (not bMajorBullish))
-    or ((Enable_Minor_MACD >= 1) and (not bMinorBullish))
-    or ((Enable_Major_MACD < 1) and (Enable_Minor_MACD < 1));
 
   // -----------------------------------------------------------------------
   // Final Trigger Computation
   // -----------------------------------------------------------------------
-  bStrongBull := (Enable_EMA >= 1) and bEmaBullish
-    and bTapeHighlight and bTapeBullish and bMacdAllBull;
-  bStrongBear := (Enable_EMA >= 1) and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish) and bMacdAllBear;
-  bWeakBull := (Enable_EMA >= 1) and bEmaBullish
-    and bTapeHighlight and bTapeBullish and bMacdAnyBull;
-  bWeakBear := (Enable_EMA >= 1) and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish) and bMacdAnyBear;
+  bTriggerBull := (Enable_EMA >= 1) and bEmaBullish
+    and bTapeHighlight and bTapeBullish and bMacdBull;
+  bTriggerBear := (Enable_EMA >= 1) and bEmaBearish
+    and bTapeHighlight and (not bTapeBullish) and bMacdBear;
 
   // -----------------------------------------------------------------------
   // Color Mapping
   // -----------------------------------------------------------------------
-  if bStrongBull or bStrongBear then
-    PaintBar(RGB(0, 120, 255))
-  else if bWeakBull or bWeakBear then
-    PaintBar(RGB(0, 80, 160));
+  if bTriggerBull or bTriggerBear then
+    PaintBar(RGB(0, 120, 255));
 
 end;
