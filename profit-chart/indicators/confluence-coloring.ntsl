@@ -258,9 +258,9 @@ begin
 
   // Trend: both MACDs aligned (strong)
   else if bMajorBullish and bMinorBullish then
-    PaintBar(2263842)
+    PaintBar(RGB(0, 180, 0))
   else if (not bMajorBullish) and (not bMinorBullish) then
-    PaintBar(3158220)
+    PaintBar(RGB(200, 0, 0))
 
   // Trend: only minor MACD aligned (soft)
   else if bMinorBullish then
