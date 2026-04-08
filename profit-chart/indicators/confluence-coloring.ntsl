@@ -250,11 +250,11 @@ begin
   if bStrongBull then
     PaintBar(RGB(0, 120, 255))
   else if bStrongBear then
-    PaintBar(RGB(255, 0, 0))
+    PaintBar(RGB(255, 0, 255))
   else if bScalpBull then
     PaintBar(RGB(0, 80, 160))
   else if bScalpBear then
-    PaintBar(RGB(160, 0, 0))
+    PaintBar(RGB(180, 0, 180))
 
   // Trend: both MACDs aligned (strong)
   else if bMajorBullish and bMinorBullish then
