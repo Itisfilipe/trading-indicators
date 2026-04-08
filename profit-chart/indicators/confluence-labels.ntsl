@@ -52,12 +52,6 @@ input
 
   // ----- Enable/Disable Rules -----
 
-  // Enable major MACD filter
-  Enable_Major_MACD(true);
-
-  // Enable minor MACD filter
-  Enable_Minor_MACD(true);
-
   // Require volume above average for tape
   Tape_Require_Volume(true);
 
@@ -73,12 +67,10 @@ input
   // Require pullback (opposite brick in last 3) before entry
   Enable_Pullback(true);
 
-
   // ----- Label Settings -----
 
   // Label font size. Default: 8
   Label_Size(8);
-
 
 var
   // Major MACD components
@@ -114,14 +106,11 @@ var
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
 
-  // MACD confluence (enable-aware)
-  bMacdBull: Boolean;
-  bMacdBear: Boolean;
-
   // Final trigger results
-  bTriggerBull: Boolean;
-  bTriggerBear: Boolean;
-
+  bStrongBull: Boolean;
+  bStrongBear: Boolean;
+  bScalpBull: Boolean;
+  bScalpBear: Boolean;
 
 begin
   // -----------------------------------------------------------------------
@@ -209,27 +198,31 @@ begin
     and (nCrossed <= 1);
 
   // -----------------------------------------------------------------------
-  // MACD Confluence (enable-aware)
-  // -----------------------------------------------------------------------
-  bMacdBull := ((not Enable_Major_MACD) or bMajorBullish)
-    and ((not Enable_Minor_MACD) or bMinorBullish);
-  bMacdBear := ((not Enable_Major_MACD) or (not bMajorBullish))
-    and ((not Enable_Minor_MACD) or (not bMinorBullish));
-
-  // -----------------------------------------------------------------------
   // Final Trigger Computation
   // -----------------------------------------------------------------------
-  bTriggerBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish and bMacdBull;
-  bTriggerBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish) and bMacdBear;
+  bStrongBull := Enable_EMA and bEmaBullish
+    and bTapeHighlight and bTapeBullish
+    and bMajorBullish and bMinorBullish;
+  bStrongBear := Enable_EMA and bEmaBearish
+    and bTapeHighlight and (not bTapeBullish)
+    and (not bMajorBullish) and (not bMinorBullish);
+  bScalpBull := Enable_EMA and bEmaBullish
+    and bTapeHighlight and bTapeBullish
+    and (not bMajorBullish) and bMinorBullish;
+  bScalpBear := Enable_EMA and bEmaBearish
+    and bTapeHighlight and (not bTapeBullish)
+    and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
   // Labels
   // -----------------------------------------------------------------------
-  if bTriggerBull then
+  if bStrongBull then
     PlotText("BUY", RGB(0, 120, 255), 0, Label_Size)
-  else if bTriggerBear then
-    PlotText("SELL", RGB(255, 0, 0), 2, Label_Size);
+  else if bStrongBear then
+    PlotText("SELL", RGB(255, 0, 0), 2, Label_Size)
+  else if bScalpBull then
+    PlotText("SCALP", RGB(0, 80, 160), 0, Label_Size)
+  else if bScalpBear then
+    PlotText("SCALP", RGB(160, 0, 0), 2, Label_Size);
 
 end;
