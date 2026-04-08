@@ -264,8 +264,8 @@ begin
 
   // Trend: only minor MACD aligned (soft)
   else if bMinorBullish then
-    PaintBar(13172630)
+    PaintBar(RGB(150, 250, 200))
   else
-    PaintBar(9869055);
+    PaintBar(RGB(255, 160, 150));
 
 end;
