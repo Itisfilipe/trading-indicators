@@ -84,8 +84,6 @@ input
   // Require pullback (opposite brick in last 3) before entry
   Enable_Pullback(true);
 
-  // Require pullback bricks stay on correct side of slow EMA
-  Enable_Not_Crossed(true);
 
 var
   // Major MACD components
@@ -111,6 +109,7 @@ var
   fEmaUpper: Float;
   fEmaLower: Float;
   bBrickTouchesEma: Boolean;
+  nCrossed: Integer;
 
   // Signal booleans
   bMajorBullish: Boolean;
@@ -194,30 +193,44 @@ begin
   //   - Current brick is green
   //   - Brick touches or crosses the EMA zone
   //   - [toggleable] Pullback within last 3 bricks
-  //   - [toggleable] Not crossed: Close above slow EMA, no brick entirely below it
+  //   - Close above slow EMA
+  //   - At most 1 lookback brick entirely below slow EMA
+  nCrossed := 0;
+  if (Open[1] < fEmaSlow[1]) and (Close[1] < fEmaSlow[1]) then
+    nCrossed := nCrossed + 1;
+  if (Open[2] < fEmaSlow[2]) and (Close[2] < fEmaSlow[2]) then
+    nCrossed := nCrossed + 1;
+  if (Open[3] < fEmaSlow[3]) and (Close[3] < fEmaSlow[3]) then
+    nCrossed := nCrossed + 1;
+
   bEmaBullish := (fEmaFast > fEmaSlow)
     and (Close >= Open)
     and bBrickTouchesEma
     and ((not Enable_Pullback) or (Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]))
-    and ((not Enable_Not_Crossed) or (Close >= fEmaSlow))
-    and ((not Enable_Not_Crossed) or (Open[1] >= fEmaSlow[1]) or (Close[1] >= fEmaSlow[1]))
-    and ((not Enable_Not_Crossed) or (Open[2] >= fEmaSlow[2]) or (Close[2] >= fEmaSlow[2]))
-    and ((not Enable_Not_Crossed) or (Open[3] >= fEmaSlow[3]) or (Close[3] >= fEmaSlow[3]));
+    and (Close >= fEmaSlow)
+    and (nCrossed <= 1);
 
   // Bearish pullback entry (mirror):
   //   - Downtrend (fast EMA < slow EMA)
   //   - Current brick is red
   //   - Brick touches or crosses the EMA zone
   //   - [toggleable] Pullback within last 3 bricks
-  //   - [toggleable] Not crossed: Close below slow EMA, no brick entirely above it
+  //   - Close below slow EMA
+  //   - At most 1 lookback brick entirely above slow EMA
+  nCrossed := 0;
+  if (Open[1] > fEmaSlow[1]) and (Close[1] > fEmaSlow[1]) then
+    nCrossed := nCrossed + 1;
+  if (Open[2] > fEmaSlow[2]) and (Close[2] > fEmaSlow[2]) then
+    nCrossed := nCrossed + 1;
+  if (Open[3] > fEmaSlow[3]) and (Close[3] > fEmaSlow[3]) then
+    nCrossed := nCrossed + 1;
+
   bEmaBearish := (fEmaFast < fEmaSlow)
     and (Close < Open)
     and bBrickTouchesEma
     and ((not Enable_Pullback) or (Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]))
-    and ((not Enable_Not_Crossed) or (Close <= fEmaSlow))
-    and ((not Enable_Not_Crossed) or (Open[1] <= fEmaSlow[1]) or (Close[1] <= fEmaSlow[1]))
-    and ((not Enable_Not_Crossed) or (Open[2] <= fEmaSlow[2]) or (Close[2] <= fEmaSlow[2]))
-    and ((not Enable_Not_Crossed) or (Open[3] <= fEmaSlow[3]) or (Close[3] <= fEmaSlow[3]));
+    and (Close <= fEmaSlow)
+    and (nCrossed <= 1);
 
   // -----------------------------------------------------------------------
   // MACD Confluence (enable-aware)
