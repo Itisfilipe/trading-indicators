@@ -57,7 +57,7 @@ input
   // Require aggression above average for tape
   Tape_Require_Aggression(true);
 
-  // Minimum wick-to-body ratio for rejection trades. Default: 1.2
+  // Minimum wick-to-body ratio for rejection trades. Default: 1.5
   Rej_Wick_Ratio(1.5);
 
   // Enable EMA pullback entry (core trigger)
