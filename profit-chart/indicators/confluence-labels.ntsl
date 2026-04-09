@@ -219,10 +219,10 @@ begin
   if bStrongBull then
     PlotText("BUY", RGB(0, 120, 255), 0, Label_Size)
   else if bStrongBear then
-    PlotText("SELL", RGB(255, 0, 255), 2, Label_Size)
+    PlotText("SELL", RGB(255, 0, 0), 2, Label_Size)
   else if bScalpBull then
     PlotText("SCALP", RGB(0, 80, 160), 0, Label_Size)
   else if bScalpBear then
-    PlotText("SCALP", RGB(180, 0, 180), 2, Label_Size);
+    PlotText("SCALP", RGB(160, 0, 0), 2, Label_Size);
 
 end;

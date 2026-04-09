@@ -225,7 +225,7 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(255, 0, 255));
+    SetPlotColor(1, RGB(255, 0, 0));
     PlotText("SELL", clWhite, 1, Label_Size);
   end else if bScalpBull then begin
     Plot(1);
@@ -237,7 +237,7 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(180, 0, 180));
+    SetPlotColor(1, RGB(160, 0, 0));
     PlotText("SCALP", clWhite, 1, Label_Size);
   end else begin
     NoPlot(1);
