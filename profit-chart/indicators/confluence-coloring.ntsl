@@ -119,8 +119,10 @@ var
 
   // Rejection components
   fBody: Float;
-  fWick: Float;
-  bRejection: Boolean;
+  fBottomWick: Float;
+  fTopWick: Float;
+  bRejBullWick: Boolean;
+  bRejBearWick: Boolean;
 
   // Final trigger results
   bStrongBull: Boolean;
@@ -171,17 +173,29 @@ begin
     or ((not bTapeBullish) and (Close < Open));
 
   // Rejection: aggression against trend + wick >= ratio * body
-  if Close >= Open then begin
-    fBody := Close - Open;
-    fWick := Open - Low;
-  end else begin
+  if Close >= Open then
+    fBody := Close - Open
+  else
     fBody := Open - Close;
-    fWick := High - Open;
-  end;
   if fBody = 0 then
     fBody := 1;
-  bRejection := (not bTapeWithTrend) and bTapeHighlight
-    and (fWick >= Rej_Wick_Ratio * fBody);
+
+  // Bottom wick: from lower body edge to Low (for bullish rejection)
+  if Open <= Close then
+    fBottomWick := Open - Low
+  else
+    fBottomWick := Close - Low;
+
+  // Top wick: from upper body edge to High (for bearish rejection)
+  if Open <= Close then
+    fTopWick := High - Close
+  else
+    fTopWick := High - Open;
+
+  bRejBullWick := (not bTapeWithTrend) and bTapeHighlight
+    and (fBottomWick >= Rej_Wick_Ratio * fBody);
+  bRejBearWick := (not bTapeWithTrend) and bTapeHighlight
+    and (fTopWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
   // Rule 4: EMA Pullback Entry
@@ -264,14 +278,14 @@ begin
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and (not bMinorBullish);
 
-  // Rejection: aggression against trend + wick >= ratio * body
-  bRejBull := Enable_EMA and bEmaBullish and bRejection
+  // Rejection: aggression against trend + wick confirms
+  bRejBull := Enable_EMA and bEmaBullish and bRejBullWick
     and bMajorBullish and bMinorBullish;
-  bRejBear := Enable_EMA and bEmaBearish and bRejection
+  bRejBear := Enable_EMA and bEmaBearish and bRejBearWick
     and (not bMajorBullish) and (not bMinorBullish);
-  bRejsBull := Enable_EMA and bEmaBullish and bRejection
+  bRejsBull := Enable_EMA and bEmaBullish and bRejBullWick
     and (not bMajorBullish) and bMinorBullish;
-  bRejsBear := Enable_EMA and bEmaBearish and bRejection
+  bRejsBear := Enable_EMA and bEmaBearish and bRejBearWick
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
