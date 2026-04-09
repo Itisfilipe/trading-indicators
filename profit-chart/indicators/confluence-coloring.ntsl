@@ -82,6 +82,9 @@ input
   // Require pullback (opposite brick in last 3) before entry
   Enable_Pullback(true);
 
+  // Trend color based on major MACD (true) or minor MACD (false)
+  Trend_Follow_Major(true);
+
 var
   // Major MACD components
   fMajorMacdLine: Float;
@@ -318,7 +321,11 @@ begin
   else if (not bMajorBullish) and (not bMinorBullish) then
     PaintBar(RGB(30, 30, 30))
 
-  // Trend: only minor MACD aligned (soft)
+  // Trend: one MACD disagrees (soft) — color family follows Major or Minor
+  else if Trend_Follow_Major and bMajorBullish then
+    PaintBar(RGB(140, 210, 140))
+  else if Trend_Follow_Major and (not bMajorBullish) then
+    PaintBar(RGB(130, 130, 130))
   else if bMinorBullish then
     PaintBar(RGB(140, 210, 140))
   else
