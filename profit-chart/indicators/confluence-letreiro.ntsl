@@ -57,8 +57,8 @@ input
   // Require aggression above average for tape
   Tape_Require_Aggression(true);
 
-  // Require aggression direction aligned with candle for tape
-  Tape_Require_Direction(false);
+  // Minimum wick-to-body ratio for rejection trades. Default: 1.2
+  Rej_Wick_Ratio(1.2);
 
   // Enable EMA pullback entry (core trigger)
   Enable_EMA(true);
@@ -102,14 +102,24 @@ var
   bMinorBullish: Boolean;
   bTapeHighlight: Boolean;
   bTapeBullish: Boolean;
+  bTapeWithTrend: Boolean;
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
+
+  // Rejection components
+  fBody: Float;
+  fWick: Float;
+  bRejection: Boolean;
 
   // Final trigger results
   bStrongBull: Boolean;
   bStrongBear: Boolean;
   bScalpBull: Boolean;
   bScalpBear: Boolean;
+  bRejBull: Boolean;
+  bRejBear: Boolean;
+  bRejsBull: Boolean;
+  bRejsBear: Boolean;
 
 begin
   // -----------------------------------------------------------------------
@@ -142,13 +152,22 @@ begin
   fMaVol := Media(Tape_MA_Volume, fVol);
 
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
-    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance))
-    and (not Tape_Require_Direction
-      or (bTapeBullish and (Close >= Open))
-      or ((not bTapeBullish) and (Close < Open)));
+    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance));
 
-  if not Tape_Require_Direction then
-    bTapeBullish := Close >= Open;
+  bTapeWithTrend := (bTapeBullish and (Close >= Open))
+    or ((not bTapeBullish) and (Close < Open));
+
+  if Close >= Open then begin
+    fBody := Close - Open;
+    fWick := Open - Low;
+  end else begin
+    fBody := Open - Close;
+    fWick := High - Open;
+  end;
+  if fBody = 0 then
+    fBody := 1;
+  bRejection := (not bTapeWithTrend) and bTapeHighlight
+    and (fWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
   // Rule 4: EMA Pullback Entry
@@ -200,16 +219,25 @@ begin
   // Final Trigger Computation
   // -----------------------------------------------------------------------
   bStrongBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish
+    and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and bMinorBullish;
   bStrongBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish)
+    and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and (not bMinorBullish);
   bScalpBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish
+    and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and bMinorBullish;
   bScalpBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish)
+    and bTapeHighlight and bTapeWithTrend
+    and bMajorBullish and (not bMinorBullish);
+
+  bRejBull := Enable_EMA and bEmaBullish and bRejection
+    and bMajorBullish and bMinorBullish;
+  bRejBear := Enable_EMA and bEmaBearish and bRejection
+    and (not bMajorBullish) and (not bMinorBullish);
+  bRejsBull := Enable_EMA and bEmaBullish and bRejection
+    and (not bMajorBullish) and bMinorBullish;
+  bRejsBear := Enable_EMA and bEmaBearish and bRejection
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
@@ -239,6 +267,30 @@ begin
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(160, 0, 0));
     PlotText("SCALP", clWhite, 1, Label_Size);
+  end else if bRejBull then begin
+    Plot(1);
+    SetPlotType(1, 1);
+    SetPlotWidth(1, 10);
+    SetPlotColor(1, RGB(255, 165, 0));
+    PlotText("REJ", clWhite, 1, Label_Size);
+  end else if bRejBear then begin
+    Plot(1);
+    SetPlotType(1, 1);
+    SetPlotWidth(1, 10);
+    SetPlotColor(1, RGB(255, 165, 0));
+    PlotText("REJ", clWhite, 1, Label_Size);
+  end else if bRejsBull then begin
+    Plot(1);
+    SetPlotType(1, 1);
+    SetPlotWidth(1, 10);
+    SetPlotColor(1, RGB(180, 120, 0));
+    PlotText("REJS", clWhite, 1, Label_Size);
+  end else if bRejsBear then begin
+    Plot(1);
+    SetPlotType(1, 1);
+    SetPlotWidth(1, 10);
+    SetPlotColor(1, RGB(180, 120, 0));
+    PlotText("REJS", clWhite, 1, Label_Size);
   end else begin
     NoPlot(1);
   end;

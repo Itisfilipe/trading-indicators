@@ -5,8 +5,10 @@
 // bullish/bearish boolean. The color mapping combines them:
 //
 // Colors:
-//   - STRONG: both MACDs + tape + EMA pullback (bright blue / red)
-//   - SCALP:  minor MACD + tape + EMA pullback, major disagrees (dim blue / red)
+//   - STRONG: both MACDs + tape with trend + EMA pullback (bright blue / red)
+//   - SCALP:  minor MACD + tape with trend + EMA pullback (dim blue / red)
+//   - REJ:    both MACDs + tape against trend + wick rejection (bright orange)
+//   - REJS:   minor MACD + tape against trend + wick rejection (dim orange)
 //
 // Current rules:
 //   1. Major MACD histogram (longer-term direction)
@@ -71,8 +73,8 @@ input
   // Require aggression above average for tape
   Tape_Require_Aggression(true);
 
-  // Require aggression direction aligned with candle for tape
-  Tape_Require_Direction(false);
+  // Minimum wick-to-body ratio for rejection trades. Default: 1.2
+  Rej_Wick_Ratio(1.2);
 
   // Enable EMA pullback entry (core trigger)
   Enable_EMA(true);
@@ -111,14 +113,24 @@ var
   bMinorBullish: Boolean;
   bTapeHighlight: Boolean;
   bTapeBullish: Boolean;
+  bTapeWithTrend: Boolean;
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
+
+  // Rejection components
+  fBody: Float;
+  fWick: Float;
+  bRejection: Boolean;
 
   // Final trigger results
   bStrongBull: Boolean;
   bStrongBear: Boolean;
   bScalpBull: Boolean;
   bScalpBear: Boolean;
+  bRejBull: Boolean;
+  bRejBear: Boolean;
+  bRejsBull: Boolean;
+  bRejsBear: Boolean;
 
 begin
   // -----------------------------------------------------------------------
@@ -150,16 +162,26 @@ begin
   fMaBalance := Media(Tape_MA_Balance, fAbsBalance);
   fMaVol := Media(Tape_MA_Volume, fVol);
 
-  // Tape highlight: each condition is independently toggleable
+  // Tape highlight: volume and aggression above average
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
-    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance))
-    and (not Tape_Require_Direction
-      or (bTapeBullish and (Close >= Open))
-      or ((not bTapeBullish) and (Close < Open)));
+    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance));
 
-  // When direction is not required, follow candle for color mapping
-  if not Tape_Require_Direction then
-    bTapeBullish := Close >= Open;
+  // Tape direction: does aggression align with candle?
+  bTapeWithTrend := (bTapeBullish and (Close >= Open))
+    or ((not bTapeBullish) and (Close < Open));
+
+  // Rejection: aggression against trend + wick >= ratio * body
+  if Close >= Open then begin
+    fBody := Close - Open;
+    fWick := Open - Low;
+  end else begin
+    fBody := Open - Close;
+    fWick := High - Open;
+  end;
+  if fBody = 0 then
+    fBody := 1;
+  bRejection := (not bTapeWithTrend) and bTapeHighlight
+    and (fWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
   // Rule 4: EMA Pullback Entry
@@ -228,25 +250,35 @@ begin
   // -----------------------------------------------------------------------
   // Final Trigger Computation
   // -----------------------------------------------------------------------
-  // Strong: both MACDs aligned. Scalp: only minor aligned.
+  // Normal: aggression with trend. Rejection: aggression against + wick confirms.
   bStrongBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish
+    and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and bMinorBullish;
   bStrongBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish)
+    and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and (not bMinorBullish);
   bScalpBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish
+    and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and bMinorBullish;
   bScalpBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish)
+    and bTapeHighlight and bTapeWithTrend
+    and bMajorBullish and (not bMinorBullish);
+
+  // Rejection: aggression against trend + wick >= ratio * body
+  bRejBull := Enable_EMA and bEmaBullish and bRejection
+    and bMajorBullish and bMinorBullish;
+  bRejBear := Enable_EMA and bEmaBearish and bRejection
+    and (not bMajorBullish) and (not bMinorBullish);
+  bRejsBull := Enable_EMA and bEmaBullish and bRejection
+    and (not bMajorBullish) and bMinorBullish;
+  bRejsBear := Enable_EMA and bEmaBearish and bRejection
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
   // Color Mapping
   // -----------------------------------------------------------------------
 
-  // Triggers (EMA pullback + tape + MACD)
+  // Normal triggers (aggression with trend)
   if bStrongBull then
     PaintBar(RGB(0, 120, 255))
   else if bStrongBear then
@@ -255,6 +287,16 @@ begin
     PaintBar(RGB(0, 80, 160))
   else if bScalpBear then
     PaintBar(RGB(160, 0, 0))
+
+  // Rejection triggers (aggression against trend + wick confirms)
+  else if bRejBull then
+    PaintBar(RGB(255, 165, 0))
+  else if bRejBear then
+    PaintBar(RGB(255, 165, 0))
+  else if bRejsBull then
+    PaintBar(RGB(180, 120, 0))
+  else if bRejsBear then
+    PaintBar(RGB(180, 120, 0))
 
   // Trend: both MACDs aligned (strong)
   else if bMajorBullish and bMinorBullish then

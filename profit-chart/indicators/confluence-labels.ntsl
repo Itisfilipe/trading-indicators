@@ -58,8 +58,8 @@ input
   // Require aggression above average for tape
   Tape_Require_Aggression(true);
 
-  // Require aggression direction aligned with candle for tape
-  Tape_Require_Direction(false);
+  // Minimum wick-to-body ratio for rejection trades. Default: 1.2
+  Rej_Wick_Ratio(1.2);
 
   // Enable EMA pullback entry (core trigger)
   Enable_EMA(true);
@@ -103,14 +103,24 @@ var
   bMinorBullish: Boolean;
   bTapeHighlight: Boolean;
   bTapeBullish: Boolean;
+  bTapeWithTrend: Boolean;
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
+
+  // Rejection components
+  fBody: Float;
+  fWick: Float;
+  bRejection: Boolean;
 
   // Final trigger results
   bStrongBull: Boolean;
   bStrongBear: Boolean;
   bScalpBull: Boolean;
   bScalpBear: Boolean;
+  bRejBull: Boolean;
+  bRejBear: Boolean;
+  bRejsBull: Boolean;
+  bRejsBear: Boolean;
 
 begin
   // -----------------------------------------------------------------------
@@ -143,13 +153,22 @@ begin
   fMaVol := Media(Tape_MA_Volume, fVol);
 
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
-    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance))
-    and (not Tape_Require_Direction
-      or (bTapeBullish and (Close >= Open))
-      or ((not bTapeBullish) and (Close < Open)));
+    and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance));
 
-  if not Tape_Require_Direction then
-    bTapeBullish := Close >= Open;
+  bTapeWithTrend := (bTapeBullish and (Close >= Open))
+    or ((not bTapeBullish) and (Close < Open));
+
+  if Close >= Open then begin
+    fBody := Close - Open;
+    fWick := Open - Low;
+  end else begin
+    fBody := Open - Close;
+    fWick := High - Open;
+  end;
+  if fBody = 0 then
+    fBody := 1;
+  bRejection := (not bTapeWithTrend) and bTapeHighlight
+    and (fWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
   // Rule 4: EMA Pullback Entry
@@ -201,16 +220,25 @@ begin
   // Final Trigger Computation
   // -----------------------------------------------------------------------
   bStrongBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish
+    and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and bMinorBullish;
   bStrongBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish)
+    and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and (not bMinorBullish);
   bScalpBull := Enable_EMA and bEmaBullish
-    and bTapeHighlight and bTapeBullish
+    and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and bMinorBullish;
   bScalpBear := Enable_EMA and bEmaBearish
-    and bTapeHighlight and (not bTapeBullish)
+    and bTapeHighlight and bTapeWithTrend
+    and bMajorBullish and (not bMinorBullish);
+
+  bRejBull := Enable_EMA and bEmaBullish and bRejection
+    and bMajorBullish and bMinorBullish;
+  bRejBear := Enable_EMA and bEmaBearish and bRejection
+    and (not bMajorBullish) and (not bMinorBullish);
+  bRejsBull := Enable_EMA and bEmaBullish and bRejection
+    and (not bMajorBullish) and bMinorBullish;
+  bRejsBear := Enable_EMA and bEmaBearish and bRejection
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
@@ -223,6 +251,14 @@ begin
   else if bScalpBull then
     PlotText("SCALP", RGB(0, 80, 160), 0, Label_Size)
   else if bScalpBear then
-    PlotText("SCALP", RGB(160, 0, 0), 2, Label_Size);
+    PlotText("SCALP", RGB(160, 0, 0), 2, Label_Size)
+  else if bRejBull then
+    PlotText("REJ", RGB(255, 165, 0), 0, Label_Size)
+  else if bRejBear then
+    PlotText("REJ", RGB(255, 165, 0), 2, Label_Size)
+  else if bRejsBull then
+    PlotText("REJS", RGB(180, 120, 0), 0, Label_Size)
+  else if bRejsBear then
+    PlotText("REJS", RGB(180, 120, 0), 2, Label_Size);
 
 end;
