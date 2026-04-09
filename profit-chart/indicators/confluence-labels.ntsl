@@ -72,8 +72,8 @@ input
   // Label font size. Default: 8
   Label_Size(8);
 
-  // Label offset from brick (in body-size multiples). Default: 1.5
-  Label_Offset(1.5);
+  // Label offset from brick (in body-size multiples). Default: 0.5
+  Label_Offset(0.5);
 
 var
   // Major MACD components
