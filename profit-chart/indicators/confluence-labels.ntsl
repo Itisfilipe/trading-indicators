@@ -72,8 +72,8 @@ input
   // Label font size. Default: 8
   Label_Size(8);
 
-  // Label offset from brick (in body-size multiples). Default: 0.5
-  Label_Offset(0.5);
+  // Label offset from brick (in points). Default: 10
+  Label_Offset(10);
 
 var
   // Major MACD components
@@ -262,7 +262,7 @@ begin
   // -----------------------------------------------------------------------
   // Labels (position 3 = custom price, offset from High/Low)
   // -----------------------------------------------------------------------
-  fLabelOffset := fBody * Label_Offset;
+  fLabelOffset := Label_Offset;
 
   if bStrongBull then
     PlotText("BUY", RGB(0, 120, 255), 3, Label_Size, Low - fLabelOffset)
