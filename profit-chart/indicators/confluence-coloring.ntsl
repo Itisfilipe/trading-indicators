@@ -258,14 +258,14 @@ begin
 
   // Trend: both MACDs aligned (strong)
   else if bMajorBullish and bMinorBullish then
-    PaintBar(RGB(0, 180, 0))
+    PaintBar(RGB(0, 150, 0))
   else if (not bMajorBullish) and (not bMinorBullish) then
-    PaintBar(RGB(0, 0, 0))
+    PaintBar(RGB(50, 50, 50))
 
   // Trend: only minor MACD aligned (soft)
   else if bMinorBullish then
-    PaintBar(RGB(150, 250, 200))
+    PaintBar(RGB(180, 230, 180))
   else
-    PaintBar(RGB(80, 80, 80));
+    PaintBar(RGB(160, 160, 160));
 
 end;
