@@ -20,24 +20,24 @@
 //
 // Volume bars are scaled by (maSaldo / maVol) so both histograms have
 // the same visual proportions. The MA lines are symmetric at +/- maSaldo.
+//
+// Inputs:
+//   maPeriodSaldo - SMA period for aggression balance (default 20)
+//   maPeriodVol   - SMA period for quantity (default 20)
 // ============================================================================
 
 input
-  // SMA period for aggression balance
-  maPeriodSaldo(305);
-
-  // SMA period for quantity
-  maPeriodVol(305);
-
+  maPeriodSaldo(300);   // SMA period for aggression balance
+  maPeriodVol(500);     // SMA period for quantity
 var
-  saldo: Float;
-  absSaldo: Float;
-  vol: Float;
-  maSaldo: Float;
-  maVol: Float;
-  scale: Float;
-
+  saldo : Float;       // Signed aggression balance (buy - sell), for color direction
+  absSaldo : Float;    // Absolute aggression balance, for plotting and MA
+  vol : Float;         // QuantityVol (contracts, no projected/auction)
+  maSaldo : Float;     // SMA of absolute aggression balance
+  maVol : Float;       // SMA of quantity
+  scale : Float;       // Normalization factor (maSaldo / maVol)
 begin
+  // Signed balance determines color (green/red), absolute value is plotted
   saldo := AgressionVolBuy - AgressionVolSell;
   if saldo >= 0 then
     absSaldo := saldo
@@ -45,43 +45,52 @@ begin
     absSaldo := -saldo;
   vol := QuantityVol(False, True);
 
+  // SMA of absolute balance (always positive, used as intensity threshold and line)
   maSaldo := Media(maPeriodSaldo, absSaldo);
+
+  // SMA of quantity
   maVol := Media(maPeriodVol, vol);
 
+  // Scale factor: normalize volume to aggression magnitude
   if maVol > 0 then
     scale := maSaldo / maVol
   else
     scale := 1;
 
-  // --- Plot 1: Aggression balance histogram (above zero) ---
+  // --- Plot 1: Aggression balance histogram (always above zero) ---
+  // Green = buying dominance, Red = selling dominance
+  // Bright = magnitude above MA (strong), Dim = below MA (weak)
   SetPlotType(1, 1);
-  if saldo >= 0 then begin
+  if saldo >= 0 then
+  begin
     if absSaldo >= maSaldo then
-      SetPlotColor(1, RGB(0, 255, 0))
+      SetPlotColor(1, RGB(0, 255, 0))     // Bright green: strong buying
     else
-      SetPlotColor(1, RGB(0, 160, 0));
-  end else begin
+      SetPlotColor(1, RGB(0, 160, 0));     // Dim green: weak buying
+  end
+  else
+  begin
     if absSaldo >= maSaldo then
-      SetPlotColor(1, RGB(255, 0, 0))
+      SetPlotColor(1, RGB(255, 0, 0))     // Bright red: strong selling
     else
-      SetPlotColor(1, RGB(180, 0, 0));
+      SetPlotColor(1, RGB(180, 0, 0));     // Dim red: weak selling
   end;
   Plot(absSaldo);
 
-  // --- Plot 2: Quantity histogram (below zero, scaled) ---
+  // --- Plot 2: Quantity histogram (always below zero) ---
+  // Bright = quantity above MA (high activity), Dim = below MA (low activity)
   SetPlotType(2, 1);
   if vol >= maVol then
-    SetPlotColor(2, RGB(0, 220, 255))
+    SetPlotColor(2, RGB(0, 220, 255))     // Bright blue: high activity
   else
-    SetPlotColor(2, RGB(0, 130, 200));
+    SetPlotColor(2, RGB(0, 130, 200));     // Dim blue: low activity
   Plot2(-vol * scale);
 
-  // --- Plot 3: Aggression MA line (positive) ---
+  // --- Plot 3: SMA of aggression magnitude (white line, positive territory) ---
   SetPlotColor(3, RGB(255, 255, 255));
   Plot3(maSaldo);
 
-  // --- Plot 4: Scaled volume MA line (negative, symmetric) ---
+  // --- Plot 4: Scaled volume MA (white line, negative territory = -maSaldo) ---
   SetPlotColor(4, RGB(255, 255, 255));
   Plot4(-maSaldo);
-
 end;
