@@ -319,15 +319,15 @@ begin
   else if bScalpBear then
     PaintBar(RGB(160, 0, 0))
 
-  // Rejection triggers (aggression against trend + wick confirms)
+  // Rejection triggers (same colors, labels differentiate)
   else if bRejBull then
-    PaintBar(RGB(255, 165, 0))
+    PaintBar(RGB(0, 120, 255))
   else if bRejBear then
-    PaintBar(RGB(255, 165, 0))
+    PaintBar(RGB(255, 0, 0))
   else if bRejsBull then
-    PaintBar(RGB(180, 120, 0))
+    PaintBar(RGB(0, 80, 160))
   else if bRejsBear then
-    PaintBar(RGB(180, 120, 0))
+    PaintBar(RGB(160, 0, 0))
 
   // Trend: both MACDs aligned (strong)
   else if bMajorBullish and bMinorBullish then

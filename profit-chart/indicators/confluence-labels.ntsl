@@ -276,20 +276,20 @@ begin
   fLabelOffset := Label_Offset;
 
   if bStrongBull then
-    PlotText("BUY", RGB(0, 120, 255), 3, Label_Size, Low - fLabelOffset)
+    PlotText("B", RGB(0, 120, 255), 3, Label_Size, Low - fLabelOffset)
   else if bStrongBear then
-    PlotText("SELL", RGB(255, 0, 0), 3, Label_Size, High + fLabelOffset)
+    PlotText("S", RGB(255, 0, 0), 3, Label_Size, High + fLabelOffset)
   else if bScalpBull then
-    PlotText("SCALP", RGB(0, 80, 160), 3, Label_Size, Low - fLabelOffset)
+    PlotText("BS", RGB(0, 80, 160), 3, Label_Size, Low - fLabelOffset)
   else if bScalpBear then
-    PlotText("SCALP", RGB(160, 0, 0), 3, Label_Size, High + fLabelOffset)
+    PlotText("SS", RGB(160, 0, 0), 3, Label_Size, High + fLabelOffset)
   else if bRejBull then
-    PlotText("REJ", RGB(255, 165, 0), 3, Label_Size, Low - fLabelOffset)
+    PlotText("BR", RGB(0, 120, 255), 3, Label_Size, Low - fLabelOffset)
   else if bRejBear then
-    PlotText("REJ", RGB(255, 165, 0), 3, Label_Size, High + fLabelOffset)
+    PlotText("SR", RGB(255, 0, 0), 3, Label_Size, High + fLabelOffset)
   else if bRejsBull then
-    PlotText("REJS", RGB(180, 120, 0), 3, Label_Size, Low - fLabelOffset)
+    PlotText("BSR", RGB(0, 80, 160), 3, Label_Size, Low - fLabelOffset)
   else if bRejsBear then
-    PlotText("REJS", RGB(180, 120, 0), 3, Label_Size, High + fLabelOffset);
+    PlotText("SSR", RGB(160, 0, 0), 3, Label_Size, High + fLabelOffset);
 
 end;

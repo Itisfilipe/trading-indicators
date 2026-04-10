@@ -266,54 +266,42 @@ begin
   // -----------------------------------------------------------------------
   // Letreiro: nothing by default, flashes on trigger
   // -----------------------------------------------------------------------
-  if bStrongBull then begin
+  if bStrongBull or bRejBull then begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(0, 120, 255));
-    PlotText("BUY", clWhite, 1, Label_Size);
-  end else if bStrongBear then begin
+    if bRejBull then
+      PlotText("BR", clWhite, 1, Label_Size)
+    else
+      PlotText("B", clWhite, 1, Label_Size);
+  end else if bStrongBear or bRejBear then begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(255, 0, 0));
-    PlotText("SELL", clWhite, 1, Label_Size);
-  end else if bScalpBull then begin
+    if bRejBear then
+      PlotText("SR", clWhite, 1, Label_Size)
+    else
+      PlotText("S", clWhite, 1, Label_Size);
+  end else if bScalpBull or bRejsBull then begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(0, 80, 160));
-    PlotText("SCALP", clWhite, 1, Label_Size);
-  end else if bScalpBear then begin
+    if bRejsBull then
+      PlotText("BSR", clWhite, 1, Label_Size)
+    else
+      PlotText("BS", clWhite, 1, Label_Size);
+  end else if bScalpBear or bRejsBear then begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(160, 0, 0));
-    PlotText("SCALP", clWhite, 1, Label_Size);
-  end else if bRejBull then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(255, 165, 0));
-    PlotText("REJ", clWhite, 1, Label_Size);
-  end else if bRejBear then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(255, 165, 0));
-    PlotText("REJ", clWhite, 1, Label_Size);
-  end else if bRejsBull then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(180, 120, 0));
-    PlotText("REJS", clWhite, 1, Label_Size);
-  end else if bRejsBear then begin
-    Plot(1);
-    SetPlotType(1, 1);
-    SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(180, 120, 0));
-    PlotText("REJS", clWhite, 1, Label_Size);
+    if bRejsBear then
+      PlotText("SSR", clWhite, 1, Label_Size)
+    else
+      PlotText("SS", clWhite, 1, Label_Size);
   end else begin
     NoPlot(1);
   end;
