@@ -1,25 +1,25 @@
 // ============================================================================
-// Tape Reading - Aggression Balance & Volume
+// Tape Reading - Saldo de Agressao & Volume
 // ============================================================================
 //
-// Shows aggression balance magnitude as a histogram above zero and
-// volume as a histogram below zero, with MA-driven color intensity.
+// Exibe a magnitude do saldo de agressao como histograma acima do zero
+// e volume como histograma abaixo do zero, com intensidade de cor pela media.
 //
-// Plot 1 (Histogram): |AgressionVolBuy - AgressionVolSell| (always above zero)
-//   - Bright green: buying dominance, magnitude above MA (strong buying)
-//   - Dim green:    buying dominance, magnitude below MA (weak buying)
-//   - Bright red:   selling dominance, magnitude above MA (strong selling)
-//   - Dim red:      selling dominance, magnitude below MA (weak selling)
+// Plot 1 (Histograma): |AgressionVolBuy - AgressionVolSell| (sempre acima do zero)
+//   - Verde claro: dominancia compradora, magnitude acima da media (compra forte)
+//   - Verde escuro: dominancia compradora, magnitude abaixo da media (compra fraca)
+//   - Vermelho claro: dominancia vendedora, magnitude acima da media (venda forte)
+//   - Vermelho escuro: dominancia vendedora, magnitude abaixo da media (venda fraca)
 //
-// Plot 2 (Histogram): -Quantity scaled to aggression magnitude (always below zero)
-//   - Bright blue: quantity >= its MA (high activity)
-//   - Dim blue:    quantity <  its MA (low activity)
+// Plot 2 (Histograma): -Quantidade escalada pela magnitude da agressao (abaixo do zero)
+//   - Azul claro: quantidade >= media (alta atividade)
+//   - Azul escuro: quantidade < media (baixa atividade)
 //
-// Plot 3 (Line): SMA of aggression magnitude (white, always positive)
-// Plot 4 (Line): -SMA of aggression magnitude (white, always negative, = scaled vol MA)
+// Plot 3 (Linha): Media do saldo de agressao (branco, sempre positivo)
+// Plot 4 (Linha): -Media do saldo de agressao (branco, sempre negativo, = media vol escalada)
 //
-// Volume bars are scaled by (maSaldo / maVol) so both histograms have
-// the same visual proportions. The MA lines are symmetric at +/- maSaldo.
+// Barras de volume escaladas por (maSaldo / maVol) para manter
+// proporcoes visuais iguais. Linhas de media simetricas em +/- maSaldo.
 //
 // Inputs:
 //   Tape_Days_Saldo - Dias para media do saldo de agressao (padrao 3)
