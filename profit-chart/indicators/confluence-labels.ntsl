@@ -36,11 +36,8 @@ input
 
   // ----- Tape Reading -----
 
-  // Tape aggression balance MA period. Default: 305
-  Tape_MA_Balance(500);
-
-  // Tape volume MA period. Default: 305
-  Tape_MA_Volume(500);
+  // Number of days for tape average baseline. Default: 3
+  Tape_Days(3);
 
   // ----- EMA Trend Filter -----
 
@@ -92,6 +89,9 @@ var
   fVol: Float;
   fMaBalance: Float;
   fMaVol: Float;
+  nBarsToday: Integer;
+  nBarsPerDay: Integer;
+  nTapePeriod: Integer;
 
   // EMA alignment components
   fEmaFast: Float;
@@ -150,6 +150,17 @@ begin
   // -----------------------------------------------------------------------
   // Rule 3: Tape Reading (volume + aggression aligned with candle)
   // -----------------------------------------------------------------------
+  if Date <> Date[1] then begin
+    nBarsPerDay := nBarsToday;
+    nBarsToday := 1;
+  end else
+    nBarsToday := nBarsToday + 1;
+
+  if nBarsPerDay > 0 then
+    nTapePeriod := nBarsPerDay * Tape_Days
+  else
+    nTapePeriod := 500;
+
   fBalance := AgressionVolBuy - AgressionVolSell;
   bTapeBullish := fBalance >= 0;
   if bTapeBullish then
@@ -157,8 +168,8 @@ begin
   else
     fAbsBalance := -fBalance;
   fVol := QuantityVol(False, True);
-  fMaBalance := Media(Tape_MA_Balance, fAbsBalance);
-  fMaVol := Media(Tape_MA_Volume, fVol);
+  fMaBalance := Media(nTapePeriod, fAbsBalance);
+  fMaVol := Media(nTapePeriod, fVol);
 
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
     and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance));
