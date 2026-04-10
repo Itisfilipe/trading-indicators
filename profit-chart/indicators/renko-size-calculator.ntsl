@@ -1,0 +1,157 @@
+// =========================================================================
+// RENKO SIZE CALCULATOR - Half ATR in Ticks (No Gap)
+// =========================================================================
+// Calculates the ideal Renko box size based on half the ATR.
+// Period is defined in DAYS and the indicator automatically calculates
+// how many candles that represents in the current timeframe.
+//
+// Plots:
+//   - Plot 1: ATR (optional)
+//   - Plot 2: Renko size (in ticks)
+// =========================================================================
+
+input
+  // ----- ATR Settings -----
+
+  // Number of days for ATR calculation. Auto-converts to candle count.
+  Periodo_Dias(5);
+
+  // Ignore opening gaps (overnight)? When active, True Range uses only
+  // High-Low on the first candle of the day, avoiding gap distortion.
+  Ignorar_Gaps(false);
+
+  // ----- Display Options -----
+
+  // Show ATR line on chart?
+  Exibir_ATR(true);
+
+  // Show calculated candle count? Useful to verify conversion.
+  Exibir_Num_Candles(false);
+
+var
+  bStarted: Boolean;
+
+  // Tick size
+  fTickSize: Float;
+
+  // True Range calculation
+  fTrueRange: Float;
+  fHighLow: Float;
+  fHighClose: Float;
+  fLowClose: Float;
+
+  // Session detection
+  bIsNewSession: Boolean;
+
+  // Candles per day calculation
+  nCandlesInCurrentDay: Integer;
+  nCandlesPerDay: Integer;
+  nDaysCount: Integer;
+  nActualPeriod: Integer;
+
+  // Values
+  fATR: Float;
+  nRenkoTicks: Integer;
+
+  // Colors
+  nATRColor: Integer;
+  nTicksColor: Integer;
+  nCandlesColor: Integer;
+
+begin
+  // -----------------------------------------------------------------------
+  // Initialization
+  // -----------------------------------------------------------------------
+  if not bStarted then begin
+    bStarted := True;
+    nATRColor := RGB(255, 150, 50);
+    nTicksColor := RGB(100, 255, 100);
+    nCandlesColor := RGB(150, 150, 255);
+    nCandlesPerDay := 0;
+    nCandlesInCurrentDay := 0;
+    nDaysCount := 0;
+  end;
+
+  // -----------------------------------------------------------------------
+  // Get tick size
+  // -----------------------------------------------------------------------
+  fTickSize := MinPriceIncrement;
+
+  // -----------------------------------------------------------------------
+  // Detect new session and calculate candles per day
+  // -----------------------------------------------------------------------
+  bIsNewSession := (Date <> Date[1]);
+
+  if bIsNewSession then begin
+    if nCandlesInCurrentDay > 0 then begin
+      nCandlesPerDay := nCandlesInCurrentDay;
+      nDaysCount := nDaysCount + 1;
+    end;
+    nCandlesInCurrentDay := 1;
+  end else
+    nCandlesInCurrentDay := nCandlesInCurrentDay + 1;
+
+  // -----------------------------------------------------------------------
+  // Calculate actual period (days * candles per day)
+  // -----------------------------------------------------------------------
+  if nCandlesPerDay > 0 then
+    nActualPeriod := Periodo_Dias * nCandlesPerDay
+  else
+    nActualPeriod := Periodo_Dias;
+
+  if nActualPeriod < 1 then
+    nActualPeriod := 1;
+
+  // -----------------------------------------------------------------------
+  // Calculate True Range
+  // -----------------------------------------------------------------------
+  fHighLow := High - Low;
+
+  if Ignorar_Gaps and bIsNewSession then
+    fTrueRange := fHighLow
+  else begin
+    fHighClose := ABS(High - Close[1]);
+    fLowClose := ABS(Low - Close[1]);
+    fTrueRange := fHighLow;
+    if fHighClose > fTrueRange then
+      fTrueRange := fHighClose;
+    if fLowClose > fTrueRange then
+      fTrueRange := fLowClose;
+  end;
+
+  // -----------------------------------------------------------------------
+  // Calculate ATR with dynamic period
+  // -----------------------------------------------------------------------
+  fATR := MediaExp(nActualPeriod, fTrueRange);
+
+  if fTickSize > 0 then
+    nRenkoTicks := Round((fATR / 2) / fTickSize)
+  else
+    nRenkoTicks := 0;
+
+  // -----------------------------------------------------------------------
+  // Plot 1: ATR (optional)
+  // -----------------------------------------------------------------------
+  if Exibir_ATR then begin
+    PlotN(1, fATR);
+    SetPlotColor(1, nATRColor);
+    SetPlotWidth(1, 2);
+  end;
+
+  // -----------------------------------------------------------------------
+  // Plot 2: Renko Ticks
+  // -----------------------------------------------------------------------
+  PlotN(2, nRenkoTicks);
+  SetPlotColor(2, nTicksColor);
+  SetPlotWidth(2, 2);
+
+  // -----------------------------------------------------------------------
+  // Plot 3: Candles count (optional - for debugging)
+  // -----------------------------------------------------------------------
+  if Exibir_Num_Candles then begin
+    PlotN(3, nActualPeriod);
+    SetPlotColor(3, nCandlesColor);
+    SetPlotWidth(3, 1);
+  end;
+
+end;
