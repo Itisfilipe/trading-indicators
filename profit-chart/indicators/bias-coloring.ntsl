@@ -1,0 +1,39 @@
+// =========================================================================
+// BIAS INDICATOR - Regra de Coloracao
+// =========================================================================
+// Paints bricks based on position vs EMA:
+//   - Green: Buy bias (brick opened and closed above EMA)
+//   - Dark:  Sell bias (brick opened and closed below EMA)
+//   - Brick crossing EMA keeps the previous bias
+//
+// IMPORTANT: This is a COLORING RULE, not an indicator!
+// To apply: Right-click chart -> "Inserir Regra de Coloracao" -> Select this
+// =========================================================================
+
+input
+  // EMA period for bias detection. Default: 55
+  EMA_Period(55);
+
+var
+  fEMA: Float;
+  nBias: Integer; // 1 = buy, -1 = sell, 0 = undefined
+
+begin
+  fEMA := MediaExp(EMA_Period, Close);
+
+  // Brick entirely above EMA -> buy bias
+  if (Open > fEMA) and (Close > fEMA) then
+    nBias := 1
+
+  // Brick entirely below EMA -> sell bias
+  else if (Open < fEMA) and (Close < fEMA) then
+    nBias := -1;
+
+  // Brick crossing EMA -> keeps previous bias (nBias unchanged)
+
+  if nBias = 1 then
+    PaintBar(RGB(0, 120, 0))
+  else if nBias = -1 then
+    PaintBar(RGB(30, 30, 30));
+
+end;
