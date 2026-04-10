@@ -36,8 +36,11 @@ input
 
   // ----- Tape Reading -----
 
-  // Numero de dias para media do tape. Default: 3
-  Tape_Days(3);
+  // Periodo da media de agressao do tape. Padrao: 500
+  Tape_MA_Saldo(500);
+
+  // Periodo da media de volume do tape. Padrao: 300
+  Tape_MA_Vol(300);
 
   // ----- Filtro de Tendencia por EMA -----
 
@@ -89,9 +92,6 @@ var
   fVol: Float;
   fMaBalance: Float;
   fMaVol: Float;
-  nBarsToday: Integer;
-  nBarsPerDay: Integer;
-  nTapePeriod: Integer;
 
   // Componentes de alinhamento EMA
   fEmaFast: Float;
@@ -150,22 +150,6 @@ begin
   // -----------------------------------------------------------------------
   // Regra 3: Tape Reading (volume + agressao alinhados com o candle)
   // -----------------------------------------------------------------------
-  // Conta barras por dia
-  if Date <> Date[1] then begin
-    nBarsPerDay := nBarsToday;
-    nBarsToday := 1;
-  end else
-    nBarsToday := nBarsToday + 1;
-
-  // Periodo do tape
-  if nBarsPerDay > 0 then
-    nTapePeriod := nBarsPerDay * Tape_Days
-  else
-    nTapePeriod := nBarsToday;
-  if nTapePeriod < 1 then
-    nTapePeriod := 1;
-
-  // Direcao do tape
   fBalance := AgressionVolBuy - AgressionVolSell;
   bTapeBullish := fBalance >= 0;
   if bTapeBullish then
@@ -173,8 +157,8 @@ begin
   else
     fAbsBalance := -fBalance;
   fVol := QuantityVol(False, True);
-  fMaBalance := Media(nTapePeriod, fAbsBalance);
-  fMaVol := Media(nTapePeriod, fVol);
+  fMaBalance := Media(Tape_MA_Saldo, fAbsBalance);
+  fMaVol := Media(Tape_MA_Vol, fVol);
 
   // Tape ativo
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))

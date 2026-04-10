@@ -21,16 +21,16 @@
 // Plot 4 (Linha): Referencia -1 (media do volume)
 //
 // Inputs:
-//   Tape_Days_Saldo - Dias para media do saldo de agressao (padrao 3)
-//   Tape_Days_Vol   - Dias para media do volume (padrao 3)
+//   Tape_MA_Saldo - Periodo da media do saldo de agressao (padrao 500)
+//   Tape_MA_Vol   - Periodo da media do volume (padrao 300)
 // ============================================================================
 
 input
-  // Numero de dias para media do saldo de agressao
-  Tape_Days_Saldo(3);
+  // Periodo da media do saldo de agressao. Padrao: 500
+  Tape_MA_Saldo(500);
 
-  // Numero de dias para media do volume
-  Tape_Days_Vol(3);
+  // Periodo da media do volume. Padrao: 300
+  Tape_MA_Vol(300);
 
 var
   saldo : Float;
@@ -41,31 +41,7 @@ var
   fNormSaldo : Float;
   fNormVol : Float;
 
-  // Calculo de barras por dia
-  nBarsToday: Integer;
-  nBarsPerDay: Integer;
-  nPeriodSaldo: Integer;
-  nPeriodVol: Integer;
 begin
-  // Conta barras por dia para periodo dinamico da media
-  if Date <> Date[1] then begin
-    nBarsPerDay := nBarsToday;
-    nBarsToday := 1;
-  end else
-    nBarsToday := nBarsToday + 1;
-
-  if nBarsPerDay > 0 then begin
-    nPeriodSaldo := nBarsPerDay * Tape_Days_Saldo;
-    nPeriodVol := nBarsPerDay * Tape_Days_Vol;
-  end else begin
-    nPeriodSaldo := nBarsToday;
-    nPeriodVol := nBarsToday;
-  end;
-  if nPeriodSaldo < 1 then
-    nPeriodSaldo := 1;
-  if nPeriodVol < 1 then
-    nPeriodVol := 1;
-
   saldo := AgressionVolBuy - AgressionVolSell;
   if saldo >= 0 then
     absSaldo := saldo
@@ -73,8 +49,8 @@ begin
     absSaldo := -saldo;
   vol := QuantityVol(False, True);
 
-  maSaldo := Media(nPeriodSaldo, absSaldo);
-  maVol := Media(nPeriodVol, vol);
+  maSaldo := Media(Tape_MA_Saldo, absSaldo);
+  maVol := Media(Tape_MA_Vol, vol);
 
   // Normaliza como multiplo da media (1.0 = na media, 2.0 = 2x a media)
   if maSaldo > 0 then
