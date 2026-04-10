@@ -5,21 +5,20 @@
 // Exibe a magnitude do saldo de agressao como histograma acima do zero
 // e volume como histograma abaixo do zero, com intensidade de cor pela media.
 //
-// Plot 1 (Histograma): |AgressionVolBuy - AgressionVolSell| (sempre acima do zero)
-//   - Verde claro: dominancia compradora, magnitude acima da media (compra forte)
-//   - Verde escuro: dominancia compradora, magnitude abaixo da media (compra fraca)
-//   - Vermelho claro: dominancia vendedora, magnitude acima da media (venda forte)
-//   - Vermelho escuro: dominancia vendedora, magnitude abaixo da media (venda fraca)
+// Ambos normalizados como multiplo da media (1.0 = na media, 2.0 = 2x).
 //
-// Plot 2 (Histograma): -Quantidade escalada pela magnitude da agressao (abaixo do zero)
-//   - Azul claro: quantidade >= media (alta atividade)
-//   - Azul escuro: quantidade < media (baixa atividade)
+// Plot 1 (Histograma): Agressao normalizada (acima do zero)
+//   - Verde claro: dominancia compradora, acima da media (compra forte)
+//   - Verde escuro: dominancia compradora, abaixo da media (compra fraca)
+//   - Vermelho claro: dominancia vendedora, acima da media (venda forte)
+//   - Vermelho escuro: dominancia vendedora, abaixo da media (venda fraca)
 //
-// Plot 3 (Linha): Media do saldo de agressao (branco, sempre positivo)
-// Plot 4 (Linha): -Media do saldo de agressao (branco, sempre negativo, = media vol escalada)
+// Plot 2 (Histograma): Volume normalizado (abaixo do zero)
+//   - Azul claro: acima da media (alta atividade)
+//   - Azul escuro: abaixo da media (baixa atividade)
 //
-// Barras de volume escaladas por (maSaldo / maVol) para manter
-// proporcoes visuais iguais. Linhas de media simetricas em +/- maSaldo.
+// Plot 3 (Linha): Referencia +1 (media da agressao)
+// Plot 4 (Linha): Referencia -1 (media do volume)
 //
 // Inputs:
 //   Tape_Days_Saldo - Dias para media do saldo de agressao (padrao 3)
@@ -39,7 +38,8 @@ var
   vol : Float;
   maSaldo : Float;
   maVol : Float;
-  scale : Float;
+  fNormSaldo : Float;
+  fNormVol : Float;
 
   // Calculo de barras por dia
   nBarsToday: Integer;
@@ -72,46 +72,48 @@ begin
   maSaldo := Media(nPeriodSaldo, absSaldo);
   maVol := Media(nPeriodVol, vol);
 
-  // Fator de escala: normaliza volume para magnitude da agressao
+  // Normaliza como multiplo da media (1.0 = na media, 2.0 = 2x a media)
+  if maSaldo > 0 then
+    fNormSaldo := absSaldo / maSaldo
+  else
+    fNormSaldo := 0;
+
   if maVol > 0 then
-    scale := maSaldo / maVol
+    fNormVol := vol / maVol
   else
-    scale := 1;
+    fNormVol := 0;
 
-  // --- Plot 1: Histograma do saldo de agressao (sempre acima de zero) ---
+  // --- Plot 1: Agressao normalizada (acima de zero) ---
   // Verde = dominancia compradora, Vermelho = dominancia vendedora
-  // Claro = magnitude acima da media (forte), Escuro = abaixo da media (fraco)
+  // Claro = acima da media (forte), Escuro = abaixo da media (fraco)
   SetPlotType(1, 1);
-  if saldo >= 0 then
-  begin
-    if absSaldo >= maSaldo then
-      SetPlotColor(1, RGB(0, 255, 0))     // Verde claro: compra forte
+  if saldo >= 0 then begin
+    if fNormSaldo >= 1 then
+      SetPlotColor(1, RGB(0, 255, 0))
     else
-      SetPlotColor(1, RGB(0, 160, 0));     // Verde escuro: compra fraca
-  end
-  else
-  begin
-    if absSaldo >= maSaldo then
-      SetPlotColor(1, RGB(255, 0, 0))     // Vermelho claro: venda forte
+      SetPlotColor(1, RGB(0, 160, 0));
+  end else begin
+    if fNormSaldo >= 1 then
+      SetPlotColor(1, RGB(255, 0, 0))
     else
-      SetPlotColor(1, RGB(180, 0, 0));     // Vermelho escuro: venda fraca
+      SetPlotColor(1, RGB(180, 0, 0));
   end;
-  Plot(absSaldo);
+  Plot(fNormSaldo);
 
-  // --- Plot 2: Histograma de quantidade (sempre abaixo de zero) ---
-  // Claro = quantidade acima da media (alta atividade), Escuro = abaixo da media (baixa atividade)
+  // --- Plot 2: Volume normalizado (abaixo de zero) ---
+  // Claro = acima da media (alta atividade), Escuro = abaixo da media
   SetPlotType(2, 1);
-  if vol >= maVol then
-    SetPlotColor(2, RGB(0, 220, 255))     // Azul claro: alta atividade
+  if fNormVol >= 1 then
+    SetPlotColor(2, RGB(0, 220, 255))
   else
-    SetPlotColor(2, RGB(0, 130, 200));     // Azul escuro: baixa atividade
-  Plot2(-vol * scale);
+    SetPlotColor(2, RGB(0, 130, 200));
+  Plot2(-fNormVol);
 
-  // --- Plot 3: Media do saldo de agressao (linha branca, territorio positivo) ---
+  // --- Plot 3: Linha de referencia +1 (media da agressao) ---
   SetPlotColor(3, RGB(255, 255, 255));
-  Plot3(maSaldo);
+  Plot3(1);
 
-  // --- Plot 4: Media de volume escalada (linha branca, territorio negativo = -maSaldo) ---
+  // --- Plot 4: Linha de referencia -1 (media do volume) ---
   SetPlotColor(4, RGB(255, 255, 255));
-  Plot4(-maSaldo);
+  Plot4(-1);
 end;
