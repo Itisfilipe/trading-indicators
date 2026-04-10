@@ -22,15 +22,15 @@
 // the same visual proportions. The MA lines are symmetric at +/- maSaldo.
 //
 // Inputs:
-//   maPeriodSaldo - SMA period for aggression balance (default 20)
-//   maPeriodVol   - SMA period for quantity (default 20)
+//   Tape_Days_Saldo - Dias para media do saldo de agressao (padrao 3)
+//   Tape_Days_Vol   - Dias para media do volume (padrao 3)
 // ============================================================================
 
 input
-  // Number of days for aggression balance average
+  // Numero de dias para media do saldo de agressao
   Tape_Days_Saldo(3);
 
-  // Number of days for volume average
+  // Numero de dias para media do volume
   Tape_Days_Vol(3);
 
 var
@@ -41,13 +41,13 @@ var
   maVol : Float;
   scale : Float;
 
-  // Bars per day calculation
+  // Calculo de barras por dia
   nBarsToday: Integer;
   nBarsPerDay: Integer;
   nPeriodSaldo: Integer;
   nPeriodVol: Integer;
 begin
-  // Count bars per day for dynamic MA period
+  // Conta barras por dia para periodo dinamico da media
   if Date <> Date[1] then begin
     nBarsPerDay := nBarsToday;
     nBarsToday := 1;
@@ -72,46 +72,46 @@ begin
   maSaldo := Media(nPeriodSaldo, absSaldo);
   maVol := Media(nPeriodVol, vol);
 
-  // Scale factor: normalize volume to aggression magnitude
+  // Fator de escala: normaliza volume para magnitude da agressao
   if maVol > 0 then
     scale := maSaldo / maVol
   else
     scale := 1;
 
-  // --- Plot 1: Aggression balance histogram (always above zero) ---
-  // Green = buying dominance, Red = selling dominance
-  // Bright = magnitude above MA (strong), Dim = below MA (weak)
+  // --- Plot 1: Histograma do saldo de agressao (sempre acima de zero) ---
+  // Verde = dominancia compradora, Vermelho = dominancia vendedora
+  // Claro = magnitude acima da media (forte), Escuro = abaixo da media (fraco)
   SetPlotType(1, 1);
   if saldo >= 0 then
   begin
     if absSaldo >= maSaldo then
-      SetPlotColor(1, RGB(0, 255, 0))     // Bright green: strong buying
+      SetPlotColor(1, RGB(0, 255, 0))     // Verde claro: compra forte
     else
-      SetPlotColor(1, RGB(0, 160, 0));     // Dim green: weak buying
+      SetPlotColor(1, RGB(0, 160, 0));     // Verde escuro: compra fraca
   end
   else
   begin
     if absSaldo >= maSaldo then
-      SetPlotColor(1, RGB(255, 0, 0))     // Bright red: strong selling
+      SetPlotColor(1, RGB(255, 0, 0))     // Vermelho claro: venda forte
     else
-      SetPlotColor(1, RGB(180, 0, 0));     // Dim red: weak selling
+      SetPlotColor(1, RGB(180, 0, 0));     // Vermelho escuro: venda fraca
   end;
   Plot(absSaldo);
 
-  // --- Plot 2: Quantity histogram (always below zero) ---
-  // Bright = quantity above MA (high activity), Dim = below MA (low activity)
+  // --- Plot 2: Histograma de quantidade (sempre abaixo de zero) ---
+  // Claro = quantidade acima da media (alta atividade), Escuro = abaixo da media (baixa atividade)
   SetPlotType(2, 1);
   if vol >= maVol then
-    SetPlotColor(2, RGB(0, 220, 255))     // Bright blue: high activity
+    SetPlotColor(2, RGB(0, 220, 255))     // Azul claro: alta atividade
   else
-    SetPlotColor(2, RGB(0, 130, 200));     // Dim blue: low activity
+    SetPlotColor(2, RGB(0, 130, 200));     // Azul escuro: baixa atividade
   Plot2(-vol * scale);
 
-  // --- Plot 3: SMA of aggression magnitude (white line, positive territory) ---
+  // --- Plot 3: Media do saldo de agressao (linha branca, territorio positivo) ---
   SetPlotColor(3, RGB(255, 255, 255));
   Plot3(maSaldo);
 
-  // --- Plot 4: Scaled volume MA (white line, negative territory = -maSaldo) ---
+  // --- Plot 4: Media de volume escalada (linha branca, territorio negativo = -maSaldo) ---
   SetPlotColor(4, RGB(255, 255, 255));
   Plot4(-maSaldo);
 end;

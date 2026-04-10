@@ -1,50 +1,45 @@
 // =========================================================================
-// MOVING AVERAGES CLOUD - Coloring Rule (Regra de Coloracao)
+// MOVING AVERAGES CLOUD - Regra de Coloracao
 // =========================================================================
-// Colors candles based on 2 EMA alignment + price confirmation:
-//   - GREEN: Bullish alignment (fast > slow) and price confirms
-//   - RED:   Bearish alignment (fast < slow) and price confirms
-//   - GRAY:  Price contradicts the trend
-//            (e.g. downtrend but price above both EMAs)
+// Pinta candles baseado no alinhamento de 2 EMAs + confirmacao de preco:
+//   - VERDE: Alinhamento de alta (rapida > lenta) e preco confirma
+//   - VERMELHO: Alinhamento de baixa (rapida < lenta) e preco confirma
+//   - CINZA: Preco contradiz a tendencia
 //
-// IMPORTANT: This is a COLORING RULE, not an indicator!
-// To apply: Right-click chart -> "Inserir Regra de Coloracao" -> Select this
+// IMPORTANTE: Criar como REGRA DE COLORACAO (nao como Indicador)
+// Editor de Estrategias -> Nova Estrategia -> Coloracao
 // =========================================================================
 
 input
-  // Periodo da media movel exponencial rapida
-  Periodo_EMA_Rapida(17);
+  // Periodo da media movel exponencial rapida. Padrao: 21
+  Periodo_EMA_Rapida(21);
 
-  // Periodo da media movel exponencial lenta
-  Periodo_EMA_Lenta(34);
+  // Periodo da media movel exponencial lenta. Padrao: 42
+  Periodo_EMA_Lenta(42);
 
 var
   fEmaFast: Float;
   fEmaSlow: Float;
-
   fEmaMax: Float;
   fEmaMin: Float;
 
 begin
   // -----------------------------------------------------------------------
-  // Calculate EMAs
+  // Calcula EMAs
   // -----------------------------------------------------------------------
   fEmaFast := MediaExp(Periodo_EMA_Rapida, Close);
   fEmaSlow := MediaExp(Periodo_EMA_Lenta, Close);
 
-  if fEmaFast > fEmaSlow then
-  begin
+  if fEmaFast > fEmaSlow then begin
     fEmaMax := fEmaFast;
     fEmaMin := fEmaSlow;
-  end
-  else
-  begin
+  end else begin
     fEmaMax := fEmaSlow;
     fEmaMin := fEmaFast;
   end;
 
   // -----------------------------------------------------------------------
-  // Apply Candle Coloring (gray when price contradicts the trend)
+  // Aplica coloracao (cinza quando preco contradiz a tendencia)
   // -----------------------------------------------------------------------
   if (fEmaFast > fEmaSlow) and (Close >= fEmaMin) then
     PaintBar(RGB(0, 180, 80))

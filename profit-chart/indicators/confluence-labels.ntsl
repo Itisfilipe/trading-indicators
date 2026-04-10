@@ -1,89 +1,89 @@
 // =========================================================================
-// CONFLUENCE LABELS - Indicator (companion to Confluence Coloring)
+// CONFLUENCE LABELS - Indicador (complemento do Confluence Coloring)
 // =========================================================================
-// Plots text labels on bricks where the confluence trigger fires.
-// Uses the same logic and inputs as the coloring rule.
+// Plota labels nos bricks onde o gatilho de confluencia dispara.
+// Usa a mesma logica e inputs da regra de coloracao.
 //
-// Bullish trigger: label below the brick
-// Bearish trigger: label above the brick
+// Gatilho de compra: label abaixo do brick
+// Gatilho de venda: label acima do brick
 //
-// IMPORTANT: Keep inputs in sync with confluence-coloring.ntsl!
-// To apply: Right-click chart -> "Inserir Indicador" -> Select this
+// IMPORTANTE: Manter inputs sincronizados com confluence-coloring.ntsl!
+// Para aplicar: Clique direito no grafico -> "Inserir Indicador" -> Selecionar
 // =========================================================================
 
 input
-  // ----- Major MACD (longer-term) -----
+  // ----- MACD Maior (longo prazo) -----
 
-  // Major MACD fast EMA period. Default: 200
+  // Periodo da EMA rapida do MACD maior. Default: 200
   Major_MACD_Fast(200);
 
-  // Major MACD slow EMA period. Default: 800
+  // Periodo da EMA lenta do MACD maior. Default: 800
   Major_MACD_Slow(800);
 
-  // Major MACD signal line period. Default: 50
+  // Periodo da linha de sinal do MACD maior. Default: 50
   Major_MACD_Signal(50);
 
-  // ----- Minor MACD (short-term) -----
+  // ----- MACD Menor (curto prazo) -----
 
-  // Minor MACD fast EMA period. Default: 72
+  // Periodo da EMA rapida do MACD menor. Default: 72
   Minor_MACD_Fast(72);
 
-  // Minor MACD slow EMA period. Default: 200
+  // Periodo da EMA lenta do MACD menor. Default: 200
   Minor_MACD_Slow(200);
 
-  // Minor MACD signal line period. Default: 34
+  // Periodo da linha de sinal do MACD menor. Default: 34
   Minor_MACD_Signal(34);
 
   // ----- Tape Reading -----
 
-  // Number of days for tape average baseline. Default: 3
+  // Numero de dias para media do tape. Default: 3
   Tape_Days(3);
 
-  // ----- EMA Trend Filter -----
+  // ----- Filtro de Tendencia por EMA -----
 
-  // Fast EMA period for trend filter. Default: 21
+  // Periodo da EMA rapida. Default: 21
   EMA_Fast(21);
 
-  // Slow EMA period for trend filter. Default: 42
+  // Periodo da EMA lenta. Default: 42
   EMA_Slow(42);
 
-  // ----- Enable/Disable Rules -----
+  // ----- Ativar/Desativar Regras -----
 
-  // Require volume above average for tape
+  // Exigir volume acima da media para tape
   Tape_Require_Volume(true);
 
-  // Require aggression above average for tape
+  // Exigir agressao acima da media para tape
   Tape_Require_Aggression(true);
 
-  // Minimum wick-to-body ratio for rejection trades. Default: 1.5
+  // Razao minima pavio/corpo para rejeicao. Default: 1.5
   Rej_Wick_Ratio(1.5);
 
-  // Enable EMA pullback entry (core trigger)
+  // Ativar entrada por pullback na EMA (gatilho principal)
   Enable_EMA(true);
 
-  // Require pullback (opposite brick in last 3) before entry
+  // Exigir pullback (brick oposto nos ultimos 3) antes da entrada
   Enable_Pullback(true);
 
-  // ----- Label Settings -----
+  // ----- Configuracoes dos Labels -----
 
-  // Label font size. Default: 8
+  // Tamanho da fonte dos labels. Default: 8
   Label_Size(8);
 
-  // Label offset from brick (in points). Default: 10
+  // Distancia do label ao brick (em pontos). Default: 10
   Label_Offset(10);
 
 var
-  // Major MACD components
+  // Componentes do MACD maior
   fMajorMacdLine: Float;
   fMajorSignalLine: Float;
   fMajorHistogram: Float;
 
-  // Minor MACD components
+  // Componentes do MACD menor
   fMinorMacdLine: Float;
   fMinorSignalLine: Float;
   fMinorHistogram: Float;
 
-  // Tape reading components
+  // Componentes do tape reading
   fBalance: Float;
   fAbsBalance: Float;
   fVol: Float;
@@ -93,7 +93,7 @@ var
   nBarsPerDay: Integer;
   nTapePeriod: Integer;
 
-  // EMA alignment components
+  // Componentes de alinhamento EMA
   fEmaFast: Float;
   fEmaSlow: Float;
   fEmaUpper: Float;
@@ -101,7 +101,7 @@ var
   bBrickTouchesEma: Boolean;
   nCrossed: Integer;
 
-  // Signal booleans
+  // Sinais booleanos
   bMajorBullish: Boolean;
   bMinorBullish: Boolean;
   bTapeHighlight: Boolean;
@@ -110,17 +110,17 @@ var
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
 
-  // Rejection components
+  // Componentes de rejeicao
   fBody: Float;
   fBottomWick: Float;
   fTopWick: Float;
   bRejBullWick: Boolean;
   bRejBearWick: Boolean;
 
-  // Label positioning
+  // Posicionamento dos labels
   fLabelOffset: Float;
 
-  // Final trigger results
+  // Resultados finais dos gatilhos
   bStrongBull: Boolean;
   bStrongBear: Boolean;
   bScalpBull: Boolean;
@@ -132,7 +132,7 @@ var
 
 begin
   // -----------------------------------------------------------------------
-  // Rule 1: Major MACD Histogram
+  // Regra 1: Histograma MACD Maior
   // -----------------------------------------------------------------------
   fMajorMacdLine := MediaExp(Major_MACD_Fast, Close) - MediaExp(Major_MACD_Slow, Close);
   fMajorSignalLine := MediaExp(Major_MACD_Signal, fMajorMacdLine);
@@ -140,7 +140,7 @@ begin
   bMajorBullish := fMajorHistogram >= 0;
 
   // -----------------------------------------------------------------------
-  // Rule 2: Minor MACD Histogram
+  // Regra 2: Histograma MACD Menor
   // -----------------------------------------------------------------------
   fMinorMacdLine := MediaExp(Minor_MACD_Fast, Close) - MediaExp(Minor_MACD_Slow, Close);
   fMinorSignalLine := MediaExp(Minor_MACD_Signal, fMinorMacdLine);
@@ -148,19 +148,22 @@ begin
   bMinorBullish := fMinorHistogram >= 0;
 
   // -----------------------------------------------------------------------
-  // Rule 3: Tape Reading (volume + aggression aligned with candle)
+  // Regra 3: Tape Reading (volume + agressao alinhados com o candle)
   // -----------------------------------------------------------------------
+  // Conta barras por dia
   if Date <> Date[1] then begin
     nBarsPerDay := nBarsToday;
     nBarsToday := 1;
   end else
     nBarsToday := nBarsToday + 1;
 
+  // Periodo do tape
   if nBarsPerDay > 0 then
     nTapePeriod := nBarsPerDay * Tape_Days
   else
     nTapePeriod := 500;
 
+  // Direcao do tape
   fBalance := AgressionVolBuy - AgressionVolSell;
   bTapeBullish := fBalance >= 0;
   if bTapeBullish then
@@ -171,12 +174,14 @@ begin
   fMaBalance := Media(nTapePeriod, fAbsBalance);
   fMaVol := Media(nTapePeriod, fVol);
 
+  // Tape ativo
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
     and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance));
 
   bTapeWithTrend := (bTapeBullish and (Close >= Open))
     or ((not bTapeBullish) and (Close < Open));
 
+  // Rejeicao
   if Close >= Open then
     fBody := Close - Open
   else
@@ -184,11 +189,13 @@ begin
   if fBody = 0 then
     fBody := 1;
 
+  // Pavio inferior
   if Open <= Close then
     fBottomWick := Open - Low
   else
     fBottomWick := Close - Low;
 
+  // Pavio superior
   if Open <= Close then
     fTopWick := High - Close
   else
@@ -200,11 +207,12 @@ begin
     and (fTopWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
-  // Rule 4: EMA Pullback Entry
+  // Regra 4: Entrada por Pullback na EMA
   // -----------------------------------------------------------------------
   fEmaFast := MediaExp(EMA_Fast, Close);
   fEmaSlow := MediaExp(EMA_Slow, Close);
 
+  // Limites da zona das EMAs
   if fEmaFast >= fEmaSlow then begin
     fEmaUpper := fEmaFast;
     fEmaLower := fEmaSlow;
@@ -213,8 +221,10 @@ begin
     fEmaLower := fEmaFast;
   end;
 
+  // Brick toca ou cruza
   bBrickTouchesEma := (Low <= fEmaUpper) and (High >= fEmaLower);
 
+  // Entrada de compra por pullback
   nCrossed := 0;
   if (Open[1] < fEmaSlow[1]) and (Close[1] < fEmaSlow[1]) then
     nCrossed := nCrossed + 1;
@@ -230,6 +240,7 @@ begin
     and (Close >= fEmaSlow)
     and (nCrossed <= 1);
 
+  // Entrada de venda por pullback
   nCrossed := 0;
   if (Open[1] > fEmaSlow[1]) and (Close[1] > fEmaSlow[1]) then
     nCrossed := nCrossed + 1;
@@ -246,14 +257,16 @@ begin
     and (nCrossed <= 1);
 
   // -----------------------------------------------------------------------
-  // Final Trigger Computation
+  // Calculo Final dos Gatilhos
   // -----------------------------------------------------------------------
+  // Strong: direcao a favor do MACD maior
   bStrongBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish;
   bStrongBear := Enable_EMA and bEmaBearish
     and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish);
+  // Scalp: direcao contra MACD maior
   bScalpBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and bMinorBullish;
@@ -271,7 +284,7 @@ begin
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
-  // Labels (position 3 = custom price, offset from High/Low)
+  // Labels (posicao 3 = preco customizado, offset do High/Low)
   // -----------------------------------------------------------------------
   fLabelOffset := Label_Offset;
 

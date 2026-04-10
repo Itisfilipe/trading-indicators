@@ -1,99 +1,92 @@
 // =========================================================================
-// CONFLUENCE COLORING - Coloring Rule (Regra de Coloracao)
+// CONFLUENCE COLORING - Regra de Coloracao
 // =========================================================================
-// Colors candle bars based on multiple signal rules. Each rule produces a
-// bullish/bearish boolean. The color mapping combines them:
+// Pinta candles/bricks com base em multiplas regras de confluencia.
 //
-// Signal types:
-//   - STRONG: with major trend + tape with trend + EMA pullback (blue / red)
-//   - SCALP:  against major trend + minor confirms + tape with trend (dim blue / red)
-//   - REJ:    with major trend + tape against + wick rejection (bright orange)
-//   - REJS:   against major + minor confirms + tape against + wick (dim orange)
+// Tipos de sinal:
+//   - STRONG: a favor do MACD maior + tape a favor + pullback na EMA (azul / vermelho)
+//   - SCALP:  contra MACD maior + MACD menor confirma + tape a favor (azul / vermelho suave)
+//   - REJ:    a favor do MACD maior + tape contra + pavio confirma rejeicao
+//   - REJS:   contra MACD maior + MACD menor confirma + tape contra + pavio
 //
-// Rules:
-//   1. Major MACD histogram (trend regime — strong vs scalp)
-//   2. Minor MACD histogram (gates counter-trend scalps)
-//   3. Tape reading (volume + aggression above N-day average)
-//   4. EMA pullback entry (trend brick at EMA zone after pullback)
+// Regras:
+//   1. MACD maior (regime de tendencia — strong vs scalp)
+//   2. MACD menor (habilita scalps contra-tendencia)
+//   3. Tape reading (volume + agressao acima da media de N dias)
+//   4. Pullback na EMA (brick na zona das EMAs apos pullback)
 //
-// To add a new rule:
-//   1. Add inputs for the new indicator
-//   2. Add variables for the calculation
-//   3. Calculate the indicator and set a boolean signal (bXxxBullish)
-//   4. Update the color mapping section
-//
-// IMPORTANT: This is a COLORING RULE, not an indicator!
-// To apply: Right-click chart -> "Inserir Regra de Coloracao" -> Select this
+// IMPORTANTE: Criar como REGRA DE COLORACAO (nao como Indicador)
+// Editor de Estrategias -> Nova Estrategia -> Coloracao
 // =========================================================================
 
 input
-  // ----- Major MACD (longer-term) -----
+  // ----- MACD Maior (tendencia de longo prazo) -----
 
-  // Major MACD fast EMA period. Default: 200
+  // Periodo da EMA rapida do MACD maior. Padrao: 200
   Major_MACD_Fast(200);
 
-  // Major MACD slow EMA period. Default: 800
+  // Periodo da EMA lenta do MACD maior. Padrao: 800
   Major_MACD_Slow(800);
 
-  // Major MACD signal line period. Default: 50
+  // Periodo da linha de sinal do MACD maior. Padrao: 50
   Major_MACD_Signal(50);
 
-  // ----- Minor MACD (short-term) -----
+  // ----- MACD Menor (curto prazo) -----
 
-  // Minor MACD fast EMA period. Default: 72
+  // Periodo da EMA rapida do MACD menor. Padrao: 72
   Minor_MACD_Fast(72);
 
-  // Minor MACD slow EMA period. Default: 200
+  // Periodo da EMA lenta do MACD menor. Padrao: 200
   Minor_MACD_Slow(200);
 
-  // Minor MACD signal line period. Default: 34
+  // Periodo da linha de sinal do MACD menor. Padrao: 34
   Minor_MACD_Signal(34);
 
   // ----- Tape Reading -----
 
-  // Number of days for tape average baseline. Default: 3
+  // Numero de dias para media do tape. Padrao: 3
   Tape_Days(3);
 
-  // ----- EMA Trend Filter -----
+  // ----- Filtro de Tendencia (EMAs) -----
 
-  // Fast EMA period for trend filter. Default: 21
+  // Periodo da EMA rapida. Padrao: 21
   EMA_Fast(21);
 
-  // Slow EMA period for trend filter. Default: 42
+  // Periodo da EMA lenta. Padrao: 42
   EMA_Slow(42);
 
-  // ----- Enable/Disable Rules -----
+  // ----- Ativar/Desativar Regras -----
 
-  // Require volume above average for tape
+  // Exigir volume acima da media para tape
   Tape_Require_Volume(true);
 
-  // Require aggression above average for tape
+  // Exigir agressao acima da media para tape
   Tape_Require_Aggression(true);
 
-  // Minimum wick-to-body ratio for rejection trades. Default: 1.5
+  // Razao minima pavio/corpo para rejeicao. Padrao: 1.5
   Rej_Wick_Ratio(1.5);
 
-  // Enable EMA pullback entry (core trigger)
+  // Ativar entrada por pullback na EMA (gatilho principal)
   Enable_EMA(true);
 
-  // Require pullback (opposite brick in last 3) before entry
+  // Exigir pullback (brick oposto nos ultimos 3) antes da entrada
   Enable_Pullback(true);
 
-  // Trend color based on major MACD (true) or minor MACD (false)
+  // Cor da tendencia baseada no MACD maior (true) ou menor (false)
   Trend_Follow_Major(true);
 
 var
-  // Major MACD components
+  // Componentes do MACD maior
   fMajorMacdLine: Float;
   fMajorSignalLine: Float;
   fMajorHistogram: Float;
 
-  // Minor MACD components
+  // Componentes do MACD menor
   fMinorMacdLine: Float;
   fMinorSignalLine: Float;
   fMinorHistogram: Float;
 
-  // Tape reading components
+  // Componentes do tape reading
   fBalance: Float;
   fAbsBalance: Float;
   fVol: Float;
@@ -103,7 +96,7 @@ var
   nBarsPerDay: Integer;
   nTapePeriod: Integer;
 
-  // EMA alignment components
+  // Componentes de alinhamento EMA
   fEmaFast: Float;
   fEmaSlow: Float;
   fEmaUpper: Float;
@@ -111,7 +104,7 @@ var
   bBrickTouchesEma: Boolean;
   nCrossed: Integer;
 
-  // Signal booleans
+  // Sinais booleanos
   bMajorBullish: Boolean;
   bMinorBullish: Boolean;
   bTapeHighlight: Boolean;
@@ -120,14 +113,14 @@ var
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
 
-  // Rejection components
+  // Componentes de rejeicao
   fBody: Float;
   fBottomWick: Float;
   fTopWick: Float;
   bRejBullWick: Boolean;
   bRejBearWick: Boolean;
 
-  // Final trigger results
+  // Resultados finais dos gatilhos
   bStrongBull: Boolean;
   bStrongBear: Boolean;
   bScalpBull: Boolean;
@@ -139,7 +132,7 @@ var
 
 begin
   // -----------------------------------------------------------------------
-  // Rule 1: Major MACD Histogram
+  // Regra 1: Histograma MACD Maior
   // -----------------------------------------------------------------------
   fMajorMacdLine := MediaExp(Major_MACD_Fast, Close) - MediaExp(Major_MACD_Slow, Close);
   fMajorSignalLine := MediaExp(Major_MACD_Signal, fMajorMacdLine);
@@ -147,7 +140,7 @@ begin
   bMajorBullish := fMajorHistogram >= 0;
 
   // -----------------------------------------------------------------------
-  // Rule 2: Minor MACD Histogram
+  // Regra 2: Histograma MACD Menor
   // -----------------------------------------------------------------------
   fMinorMacdLine := MediaExp(Minor_MACD_Fast, Close) - MediaExp(Minor_MACD_Slow, Close);
   fMinorSignalLine := MediaExp(Minor_MACD_Signal, fMinorMacdLine);
@@ -155,16 +148,16 @@ begin
   bMinorBullish := fMinorHistogram >= 0;
 
   // -----------------------------------------------------------------------
-  // Rule 3: Tape Reading (volume + aggression aligned with candle)
+  // Regra 3: Tape Reading (volume + agressao)
   // -----------------------------------------------------------------------
-  // Count bars per day to compute tape MA period dynamically
+  // Conta barras por dia para calcular periodo da media dinamicamente
   if Date <> Date[1] then begin
     nBarsPerDay := nBarsToday;
     nBarsToday := 1;
   end else
     nBarsToday := nBarsToday + 1;
 
-  // Tape period = bars_per_day * days (fallback 500 until first day completes)
+  // Periodo do tape = barras_por_dia * dias (fallback 500 ate completar 1 dia)
   if nBarsPerDay > 0 then
     nTapePeriod := nBarsPerDay * Tape_Days
   else
@@ -180,15 +173,15 @@ begin
   fMaBalance := Media(nTapePeriod, fAbsBalance);
   fMaVol := Media(nTapePeriod, fVol);
 
-  // Tape highlight: volume and aggression above average
+  // Tape ativo: volume e agressao acima da media
   bTapeHighlight := (not Tape_Require_Volume or (fVol >= fMaVol))
     and (not Tape_Require_Aggression or (fAbsBalance >= fMaBalance));
 
-  // Tape direction: does aggression align with candle?
+  // Direcao do tape: agressao alinhada com o candle?
   bTapeWithTrend := (bTapeBullish and (Close >= Open))
     or ((not bTapeBullish) and (Close < Open));
 
-  // Rejection: aggression against trend + wick >= ratio * body
+  // Rejeicao: agressao contra tendencia + pavio >= razao * corpo
   if Close >= Open then
     fBody := Close - Open
   else
@@ -196,13 +189,13 @@ begin
   if fBody = 0 then
     fBody := 1;
 
-  // Bottom wick: from lower body edge to Low (for bullish rejection)
+  // Pavio inferior: da borda inferior do corpo ate Low (rejeicao de compra)
   if Open <= Close then
     fBottomWick := Open - Low
   else
     fBottomWick := Close - Low;
 
-  // Top wick: from upper body edge to High (for bearish rejection)
+  // Pavio superior: da borda superior do corpo ate High (rejeicao de venda)
   if Open <= Close then
     fTopWick := High - Close
   else
@@ -214,14 +207,14 @@ begin
     and (fTopWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
-  // Rule 4: EMA Pullback Entry
+  // Regra 4: Entrada por Pullback na EMA
   // -----------------------------------------------------------------------
-  // Detects: trend bricks -> opposite bricks (pullback) -> first trend brick
-  // near an EMA. The entry brick must not open and close past the EMAs.
+  // Detecta: bricks na tendencia -> bricks opostos (pullback) -> primeiro
+  // brick na direcao da tendencia tocando a zona das EMAs.
   fEmaFast := MediaExp(EMA_Fast, Close);
   fEmaSlow := MediaExp(EMA_Slow, Close);
 
-  // EMA zone boundaries
+  // Limites da zona das EMAs
   if fEmaFast >= fEmaSlow then begin
     fEmaUpper := fEmaFast;
     fEmaLower := fEmaSlow;
@@ -230,16 +223,16 @@ begin
     fEmaLower := fEmaFast;
   end;
 
-  // Brick touches or crosses the EMA zone (overlap between [Low,High] and [EmaLower,EmaUpper])
+  // Brick toca ou cruza a zona das EMAs
   bBrickTouchesEma := (Low <= fEmaUpper) and (High >= fEmaLower);
 
-  // Bullish pullback entry:
-  //   - Uptrend (fast EMA > slow EMA)
-  //   - Current brick is green
-  //   - Brick touches or crosses the EMA zone
-  //   - [toggleable] Pullback within last 3 bricks
-  //   - Close above slow EMA
-  //   - At most 1 lookback brick entirely below slow EMA
+  // Entrada de compra por pullback:
+  //   - Tendencia de alta (EMA rapida > EMA lenta)
+  //   - Brick atual e verde
+  //   - Brick toca a zona das EMAs
+  //   - [opcao] Pullback nos ultimos 3 bricks
+  //   - Close acima da EMA lenta
+  //   - No maximo 1 brick inteiramente abaixo da EMA lenta
   nCrossed := 0;
   if (Open[1] < fEmaSlow[1]) and (Close[1] < fEmaSlow[1]) then
     nCrossed := nCrossed + 1;
@@ -255,13 +248,13 @@ begin
     and (Close >= fEmaSlow)
     and (nCrossed <= 1);
 
-  // Bearish pullback entry (mirror):
-  //   - Downtrend (fast EMA < slow EMA)
-  //   - Current brick is red
-  //   - Brick touches or crosses the EMA zone
-  //   - [toggleable] Pullback within last 3 bricks
-  //   - Close below slow EMA
-  //   - At most 1 lookback brick entirely above slow EMA
+  // Entrada de venda por pullback (espelho):
+  //   - Tendencia de baixa (EMA rapida < EMA lenta)
+  //   - Brick atual e vermelho
+  //   - Brick toca a zona das EMAs
+  //   - [opcao] Pullback nos ultimos 3 bricks
+  //   - Close abaixo da EMA lenta
+  //   - No maximo 1 brick inteiramente acima da EMA lenta
   nCrossed := 0;
   if (Open[1] > fEmaSlow[1]) and (Close[1] > fEmaSlow[1]) then
     nCrossed := nCrossed + 1;
@@ -278,10 +271,10 @@ begin
     and (nCrossed <= 1);
 
   // -----------------------------------------------------------------------
-  // Final Trigger Computation
+  // Calculo Final dos Gatilhos
   // -----------------------------------------------------------------------
-  // Strong: signal direction matches major MACD (minor irrelevant)
-  // Scalp: signal direction opposes major, minor has flipped to enable it
+  // Strong: direcao do sinal a favor do MACD maior (menor irrelevante)
+  // Scalp: direcao contra MACD maior, menor confirmou a virada
   bStrongBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish;
@@ -295,7 +288,7 @@ begin
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and (not bMinorBullish);
 
-  // Rejection: same strong/scalp logic + aggression against + wick confirms
+  // Rejeicao: mesma logica strong/scalp + agressao contra + pavio confirma
   bRejBull := Enable_EMA and bEmaBullish and bRejBullWick
     and bMajorBullish;
   bRejBear := Enable_EMA and bEmaBearish and bRejBearWick
@@ -306,10 +299,10 @@ begin
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
-  // Color Mapping
+  // Mapeamento de Cores
   // -----------------------------------------------------------------------
 
-  // Normal triggers (aggression with trend)
+  // Gatilhos normais (agressao a favor)
   if bStrongBull then
     PaintBar(RGB(0, 120, 255))
   else if bStrongBear then
@@ -319,7 +312,7 @@ begin
   else if bScalpBear then
     PaintBar(RGB(160, 0, 0))
 
-  // Rejection triggers (same colors, labels differentiate)
+  // Gatilhos de rejeicao (mesmas cores, labels diferenciam)
   else if bRejBull then
     PaintBar(RGB(0, 120, 255))
   else if bRejBear then
@@ -329,13 +322,13 @@ begin
   else if bRejsBear then
     PaintBar(RGB(160, 0, 0))
 
-  // Trend: both MACDs aligned (strong)
+  // Tendencia: ambos MACDs alinhados (forte)
   else if bMajorBullish and bMinorBullish then
     PaintBar(RGB(0, 120, 0))
   else if (not bMajorBullish) and (not bMinorBullish) then
     PaintBar(RGB(30, 30, 30))
 
-  // Trend: one MACD disagrees (soft) — color family follows Major or Minor
+  // Tendencia: um MACD discorda (suave)
   else if Trend_Follow_Major and bMajorBullish then
     PaintBar(RGB(140, 210, 140))
   else if Trend_Follow_Major and (not bMajorBullish) then

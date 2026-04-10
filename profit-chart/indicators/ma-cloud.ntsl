@@ -1,60 +1,54 @@
 // =========================================================================
-// MOVING AVERAGES CLOUD - EMA Cloud Indicator
+// MOVING AVERAGES CLOUD - Nuvem de Medias Moveis
 // =========================================================================
-// Displays 2 EMAs with dynamic coloring based on alignment:
-//   - GREEN: Bullish alignment (fast > slow) and price confirms
-//   - RED:   Bearish alignment (fast < slow) and price confirms
-//   - GRAY:  Price contradicts the trend
-//            (e.g. downtrend but price above both EMAs)
+// Exibe 2 EMAs com coloracao dinamica baseada no alinhamento:
+//   - VERDE: Alinhamento de alta (rapida > lenta) e preco confirma
+//   - VERMELHO: Alinhamento de baixa (rapida < lenta) e preco confirma
+//   - CINZA: Preco contradiz a tendencia
 //
 // =========================================================================
-// HOW TO ENABLE THE CLOUD FILL (must be done in UI):
+// COMO ATIVAR O PREENCHIMENTO DA NUVEM (feito na interface):
 // =========================================================================
-// 1. Apply this indicator to your chart
-// 2. Right-click on one of the EMA lines in the chart
-// 3. Select "Propriedades" or "Editar"
-// 4. Go to "Preenchimento" tab
-// 5. Check "Preencher entre linhas" or similar option
-// 6. Select "Plot 1" and "Plot 2" as the boundaries
-// 7. Choose a fill color (or it may follow line color automatically)
+// 1. Aplique este indicador no grafico
+// 2. Clique direito em uma das linhas EMA no grafico
+// 3. Selecione "Propriedades" ou "Editar"
+// 4. Va na aba "Preenchimento"
+// 5. Marque "Preencher entre linhas"
+// 6. Selecione "Plot 1" e "Plot 2" como limites
+// 7. Escolha uma cor de preenchimento
 // =========================================================================
 
 input
-  // Periodo da media movel exponencial rapida
-  Periodo_EMA_Rapida(17);
+  // Periodo da media movel exponencial rapida. Padrao: 21
+  Periodo_EMA_Rapida(21);
 
-  // Periodo da media movel exponencial lenta
-  Periodo_EMA_Lenta(34);
+  // Periodo da media movel exponencial lenta. Padrao: 42
+  Periodo_EMA_Lenta(42);
 
 var
   fEmaFast: Float;
   fEmaSlow: Float;
-
   fEmaMax: Float;
   fEmaMin: Float;
-
   nCurrentColor: Integer;
 
 begin
   // -----------------------------------------------------------------------
-  // Calculate EMAs
+  // Calcula EMAs
   // -----------------------------------------------------------------------
   fEmaFast := MediaExp(Periodo_EMA_Rapida, Close);
   fEmaSlow := MediaExp(Periodo_EMA_Lenta, Close);
 
-  if fEmaFast > fEmaSlow then
-  begin
+  if fEmaFast > fEmaSlow then begin
     fEmaMax := fEmaFast;
     fEmaMin := fEmaSlow;
-  end
-  else
-  begin
+  end else begin
     fEmaMax := fEmaSlow;
     fEmaMin := fEmaFast;
   end;
 
   // -----------------------------------------------------------------------
-  // Determine Color (gray when price contradicts the trend)
+  // Determina cor (cinza quando preco contradiz a tendencia)
   // -----------------------------------------------------------------------
   if (fEmaFast > fEmaSlow) and (Close >= fEmaMin) then
     nCurrentColor := RGB(0, 180, 80)
@@ -64,7 +58,7 @@ begin
     nCurrentColor := RGB(128, 128, 128);
 
   // -----------------------------------------------------------------------
-  // Plot EMAs
+  // Plota EMAs
   // -----------------------------------------------------------------------
   PlotN(1, fEmaFast);
   SetPlotColor(1, nCurrentColor);

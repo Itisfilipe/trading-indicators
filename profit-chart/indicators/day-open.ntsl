@@ -1,9 +1,9 @@
 // =========================================================================
-// DAY OPEN - Per-day opening price line
+// DAY OPEN - Linha de abertura do dia
 // =========================================================================
-// Plots a horizontal line at each day's opening price.
-// OpenD(0) returns the current session's open for each bar,
-// producing a stepped line that resets every new day.
+// Plota uma linha horizontal no preco de abertura de cada dia.
+// OpenD(0) retorna a abertura da sessao atual para cada barra,
+// produzindo uma linha escalonada que reseta a cada novo dia.
 // =========================================================================
 
 begin
