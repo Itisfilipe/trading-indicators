@@ -272,7 +272,7 @@ begin
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(0, 120, 255));
     if bRejBull then
-      PlotText("BUYREJ", clWhite, 1, Label_Size)
+      PlotText("BUYR", clWhite, 1, Label_Size)
     else
       PlotText("BUY", clWhite, 1, Label_Size);
   end else if bStrongBear or bRejBear then begin
@@ -281,7 +281,7 @@ begin
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(255, 0, 0));
     if bRejBear then
-      PlotText("SELREJ", clWhite, 1, Label_Size)
+      PlotText("SELLR", clWhite, 1, Label_Size)
     else
       PlotText("SELL", clWhite, 1, Label_Size);
   end else if bScalpBull or bRejsBull then begin
@@ -290,18 +290,18 @@ begin
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(0, 80, 160));
     if bRejsBull then
-      PlotText("BSREJ", clWhite, 1, Label_Size)
+      PlotText("BSCALPR", clWhite, 1, Label_Size)
     else
-      PlotText("BSCAL", clWhite, 1, Label_Size);
+      PlotText("BSCALP", clWhite, 1, Label_Size);
   end else if bScalpBear or bRejsBear then begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
     SetPlotColor(1, RGB(160, 0, 0));
     if bRejsBear then
-      PlotText("SSREJ", clWhite, 1, Label_Size)
+      PlotText("SSCALPR", clWhite, 1, Label_Size)
     else
-      PlotText("SSCAL", clWhite, 1, Label_Size);
+      PlotText("SSCALP", clWhite, 1, Label_Size);
   end else begin
     NoPlot(1);
   end;
