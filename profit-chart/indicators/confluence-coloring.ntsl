@@ -161,7 +161,9 @@ begin
   if nBarsPerDay > 0 then
     nTapePeriod := nBarsPerDay * Tape_Days
   else
-    nTapePeriod := 500;
+    nTapePeriod := nBarsToday;
+  if nTapePeriod < 1 then
+    nTapePeriod := 1;
 
   fBalance := AgressionVolBuy - AgressionVolSell;
   bTapeBullish := fBalance >= 0;

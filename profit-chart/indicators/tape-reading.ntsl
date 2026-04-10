@@ -58,9 +58,13 @@ begin
     nPeriodSaldo := nBarsPerDay * Tape_Days_Saldo;
     nPeriodVol := nBarsPerDay * Tape_Days_Vol;
   end else begin
-    nPeriodSaldo := 500;
-    nPeriodVol := 500;
+    nPeriodSaldo := nBarsToday;
+    nPeriodVol := nBarsToday;
   end;
+  if nPeriodSaldo < 1 then
+    nPeriodSaldo := 1;
+  if nPeriodVol < 1 then
+    nPeriodVol := 1;
 
   saldo := AgressionVolBuy - AgressionVolSell;
   if saldo >= 0 then
