@@ -4,17 +4,17 @@
 // Colors candle bars based on multiple signal rules. Each rule produces a
 // bullish/bearish boolean. The color mapping combines them:
 //
-// Colors:
-//   - STRONG: both MACDs + tape with trend + EMA pullback (bright blue / red)
-//   - SCALP:  minor MACD + tape with trend + EMA pullback (dim blue / red)
-//   - REJ:    both MACDs + tape against trend + wick rejection (bright orange)
-//   - REJS:   minor MACD + tape against trend + wick rejection (dim orange)
+// Signal types:
+//   - STRONG: with major trend + tape with trend + EMA pullback (blue / red)
+//   - SCALP:  against major trend + minor confirms + tape with trend (dim blue / red)
+//   - REJ:    with major trend + tape against + wick rejection (bright orange)
+//   - REJS:   against major + minor confirms + tape against + wick (dim orange)
 //
-// Current rules:
-//   1. Major MACD histogram (longer-term direction)
-//   2. Minor MACD histogram (short-term confirmation)
-//   3. Tape reading (volume + aggression aligned with candle direction)
-//   4. EMA pullback entry (direction change near an EMA, not past it)
+// Rules:
+//   1. Major MACD histogram (trend regime — strong vs scalp)
+//   2. Minor MACD histogram (gates counter-trend scalps)
+//   3. Tape reading (volume + aggression above N-day average)
+//   4. EMA pullback entry (trend brick at EMA zone after pullback)
 //
 // To add a new rule:
 //   1. Add inputs for the new indicator
