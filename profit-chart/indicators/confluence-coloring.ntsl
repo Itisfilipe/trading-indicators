@@ -280,13 +280,14 @@ begin
   // -----------------------------------------------------------------------
   // Final Trigger Computation
   // -----------------------------------------------------------------------
-  // Normal: aggression with trend. Rejection: aggression against + wick confirms.
+  // Strong: signal direction matches major MACD (minor irrelevant)
+  // Scalp: signal direction opposes major, minor has flipped to enable it
   bStrongBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
-    and bMajorBullish and bMinorBullish;
+    and bMajorBullish;
   bStrongBear := Enable_EMA and bEmaBearish
     and bTapeHighlight and bTapeWithTrend
-    and (not bMajorBullish) and (not bMinorBullish);
+    and (not bMajorBullish);
   bScalpBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and bMinorBullish;
@@ -294,11 +295,11 @@ begin
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and (not bMinorBullish);
 
-  // Rejection: aggression against trend + wick confirms
+  // Rejection: same strong/scalp logic + aggression against + wick confirms
   bRejBull := Enable_EMA and bEmaBullish and bRejBullWick
-    and bMajorBullish and bMinorBullish;
+    and bMajorBullish;
   bRejBear := Enable_EMA and bEmaBearish and bRejBearWick
-    and (not bMajorBullish) and (not bMinorBullish);
+    and (not bMajorBullish);
   bRejsBull := Enable_EMA and bEmaBullish and bRejBullWick
     and (not bMajorBullish) and bMinorBullish;
   bRejsBear := Enable_EMA and bEmaBearish and bRejBearWick
