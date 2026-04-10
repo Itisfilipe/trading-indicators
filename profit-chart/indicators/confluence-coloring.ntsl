@@ -3,17 +3,26 @@
 // =========================================================================
 // Pinta candles/bricks com base em multiplas regras de confluencia.
 //
-// Tipos de sinal:
-//   - STRONG: a favor do MACD maior + tape a favor + pullback na EMA (azul / vermelho)
-//   - SCALP:  contra MACD maior + MACD menor confirma + tape a favor (azul / vermelho suave)
-//   - REJ:    a favor do MACD maior + tape contra + pavio confirma rejeicao
-//   - REJS:   contra MACD maior + MACD menor confirma + tape contra + pavio
+// Como ler as cores (tema claro):
+//   GATILHOS (sinais de entrada):
+//   - Azul = compra forte (MACD maior a favor + tape + pullback na EMA)
+//   - Vermelho = venda forte (igual mas na direcao oposta)
+//   - Azul claro = scalp compra (contra tendencia maior, MACD menor confirma)
+//   - Vermelho escuro = scalp venda (idem)
+//   - Mesmas cores para rejeicoes (labels diferenciam: B, S, BS, SS, BR, SR...)
 //
-// Regras:
-//   1. MACD maior (regime de tendencia — strong vs scalp)
+//   TENDENCIA (sem gatilho, apenas direcao):
+//   - Verde = ambos MACDs concordam para alta
+//   - Verde claro = so um MACD para alta
+//   - Preto = ambos MACDs concordam para baixa
+//   - Cinza = so um MACD para baixa
+//
+// Regras que precisam concordar para um gatilho:
+//   1. MACD maior (define se e strong ou scalp)
 //   2. MACD menor (habilita scalps contra-tendencia)
-//   3. Tape reading (volume + agressao acima da media de N dias)
+//   3. Tape reading (volume + agressao acima da media)
 //   4. Pullback na EMA (brick na zona das EMAs apos pullback)
+//   5. Rejeicao (agressao contra + pavio confirma)
 //
 // IMPORTANTE: Criar como REGRA DE COLORACAO (nao como Indicador)
 // Editor de Estrategias -> Nova Estrategia -> Coloracao

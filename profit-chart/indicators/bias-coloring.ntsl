@@ -1,10 +1,13 @@
 // =========================================================================
 // BIAS INDICATOR - Regra de Coloracao
 // =========================================================================
-// Pinta bricks baseado na posicao vs EMA:
-//   - Verde: Bias de COMPRA (brick abriu e fechou acima da EMA)
-//   - Escuro: Bias de VENDA (brick abriu e fechou abaixo da EMA)
-//   - Brick cruzando a EMA mantem o bias anterior
+// Mostra o "bias" (tendencia geral) baseado na posicao do preco vs EMA.
+//
+// O que faz:
+//   - Verde quando o brick esta inteiro acima da EMA (bias de compra)
+//   - Escuro/Vermelho quando o brick esta inteiro abaixo (bias de venda)
+//   - Quando o brick cruza a EMA, mantem o bias anterior
+//     (a tendencia so muda quando o preco sai completamente da EMA)
 //
 // IMPORTANTE: Criar como REGRA DE COLORACAO (nao como Indicador)
 // Editor de Estrategias -> Nova Estrategia -> Coloracao
@@ -14,32 +17,49 @@ input
   // Periodo da EMA para deteccao de bias. Padrao: 55
   EMA_Period(55);
 
-  // Cor do bias de compra
-  Bull_Color(clGreen);
-
-  // Cor do bias de venda
-  Bear_Color(clRed);
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
 
 var
-  fEMA: Float;
-  nBias: Integer; // 1 = compra, -1 = venda, 0 = indefinido
+  fEMA: Float;          // valor da EMA
+  nBias: Integer;       // 1 = compra, -1 = venda, 0 = indefinido
+  nBullColor: Integer;
+  nBearColor: Integer;
 
 begin
+  // -----------------------------------------------------------------------
+  // Define cores com base no tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nBullColor := RGB(0, 180, 0);         // verde vivo
+    nBearColor := RGB(200, 0, 0);         // vermelho vivo
+  end else begin
+    nBullColor := RGB(0, 120, 0);         // verde
+    nBearColor := RGB(30, 30, 30);        // preto
+  end;
+
+  // -----------------------------------------------------------------------
+  // Calcula a EMA
+  // -----------------------------------------------------------------------
   fEMA := MediaExp(EMA_Period, Close);
 
-  // Brick inteiro acima da EMA -> bias de compra
+  // -----------------------------------------------------------------------
+  // Determina o bias:
+  //   - Brick inteiro ACIMA da EMA = bias de compra
+  //   - Brick inteiro ABAIXO da EMA = bias de venda
+  //   - Brick CRUZANDO a EMA = mantem o bias anterior
+  // -----------------------------------------------------------------------
   if (Open > fEMA) and (Close > fEMA) then
     nBias := 1
-
-  // Brick inteiro abaixo da EMA -> bias de venda
   else if (Open < fEMA) and (Close < fEMA) then
     nBias := -1;
 
-  // Brick cruzando a EMA -> mantem bias anterior (nBias nao muda)
-
+  // -----------------------------------------------------------------------
+  // Pinta o brick com base no bias atual
+  // -----------------------------------------------------------------------
   if nBias = 1 then
-    PaintBar(Bull_Color)
+    PaintBar(nBullColor)
   else if nBias = -1 then
-    PaintBar(Bear_Color);
+    PaintBar(nBearColor);
 
 end;

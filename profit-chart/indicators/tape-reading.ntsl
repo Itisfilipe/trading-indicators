@@ -2,27 +2,20 @@
 // Tape Reading - Saldo de Agressao & Volume
 // ============================================================================
 //
-// Exibe a magnitude do saldo de agressao como histograma acima do zero
-// e volume como histograma abaixo do zero, com intensidade de cor pela media.
+// Mostra a forca dos compradores vs vendedores e o volume de contratos.
 //
-// Ambos normalizados como multiplo da media (1.0 = na media, 2.0 = 2x).
+// Como ler:
+//   ACIMA do zero = agressao (quem esta empurrando o preco)
+//     - Verde = compradores dominando
+//     - Vermelho = vendedores dominando
+//     - Barra acima da linha branca = agressao ACIMA da media (forte)
 //
-// Plot 1 (Histograma): Agressao normalizada (acima do zero)
-//   - Verde claro: dominancia compradora, acima da media (compra forte)
-//   - Verde escuro: dominancia compradora, abaixo da media (compra fraca)
-//   - Vermelho claro: dominancia vendedora, acima da media (venda forte)
-//   - Vermelho escuro: dominancia vendedora, abaixo da media (venda fraca)
+//   ABAIXO do zero = volume de contratos
+//     - Azul claro = volume acima da media (mercado ativo)
+//     - Azul escuro = volume abaixo da media (mercado parado)
 //
-// Plot 2 (Histograma): Volume normalizado (abaixo do zero)
-//   - Azul claro: acima da media (alta atividade)
-//   - Azul escuro: abaixo da media (baixa atividade)
-//
-// Plot 3 (Linha): Referencia +1 (media da agressao)
-// Plot 4 (Linha): Referencia -1 (media do volume)
-//
-// Inputs:
-//   Tape_MA_Saldo - Periodo da media do saldo de agressao (padrao 500)
-//   Tape_MA_Vol   - Periodo da media do volume (padrao 300)
+//   Linhas brancas = referencia da media (valor 1.0)
+//   Valores normalizados: 1.0 = na media, 2.0 = 2x a media
 // ============================================================================
 
 input
@@ -32,16 +25,52 @@ input
   // Periodo da media do volume. Padrao: 300
   Tape_MA_Vol(300);
 
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
 var
-  saldo : Float;
-  absSaldo : Float;
-  vol : Float;
-  maSaldo : Float;
-  maVol : Float;
-  fNormSaldo : Float;
-  fNormVol : Float;
+  saldo: Float;         // saldo de agressao (compra - venda)
+  absSaldo: Float;      // valor absoluto do saldo
+  vol: Float;           // volume de contratos
+  maSaldo: Float;       // media do saldo
+  maVol: Float;         // media do volume
+  fNormSaldo: Float;    // saldo normalizado (multiplo da media)
+  fNormVol: Float;      // volume normalizado (multiplo da media)
+
+  // Cores do tema
+  nBuyStrong: Integer;
+  nBuyWeak: Integer;
+  nSellStrong: Integer;
+  nSellWeak: Integer;
+  nVolHigh: Integer;
+  nVolLow: Integer;
+  nLineColor: Integer;
 
 begin
+  // -----------------------------------------------------------------------
+  // Define cores com base no tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nBuyStrong := RGB(0, 255, 0);         // verde vivo
+    nBuyWeak := RGB(0, 120, 0);           // verde escuro
+    nSellStrong := RGB(255, 0, 0);        // vermelho vivo
+    nSellWeak := RGB(120, 0, 0);          // vermelho escuro
+    nVolHigh := RGB(0, 200, 255);         // azul claro
+    nVolLow := RGB(0, 100, 180);          // azul escuro
+    nLineColor := RGB(200, 200, 200);     // cinza claro
+  end else begin
+    nBuyStrong := RGB(0, 255, 0);         // verde vivo
+    nBuyWeak := RGB(0, 160, 0);           // verde medio
+    nSellStrong := RGB(255, 0, 0);        // vermelho vivo
+    nSellWeak := RGB(180, 0, 0);          // vermelho escuro
+    nVolHigh := RGB(0, 220, 255);         // azul claro
+    nVolLow := RGB(0, 130, 200);          // azul medio
+    nLineColor := RGB(255, 255, 255);     // branco
+  end;
+
+  // -----------------------------------------------------------------------
+  // Calcula saldo de agressao e volume
+  // -----------------------------------------------------------------------
   saldo := AgressionVolBuy - AgressionVolSell;
   if saldo >= 0 then
     absSaldo := saldo
@@ -52,7 +81,10 @@ begin
   maSaldo := Media(Tape_MA_Saldo, absSaldo);
   maVol := Media(Tape_MA_Vol, vol);
 
-  // Normaliza como multiplo da media (1.0 = na media, 2.0 = 2x a media)
+  // -----------------------------------------------------------------------
+  // Normaliza como multiplo da media
+  // Valor 1.0 = na media, 2.0 = 2x acima da media
+  // -----------------------------------------------------------------------
   if maSaldo > 0 then
     fNormSaldo := absSaldo / maSaldo
   else
@@ -63,37 +95,43 @@ begin
   else
     fNormVol := 0;
 
-  // --- Plot 1: Agressao normalizada (acima de zero) ---
-  // Verde = dominancia compradora, Vermelho = dominancia vendedora
-  // Claro = acima da media (forte), Escuro = abaixo da media (fraco)
+  // -----------------------------------------------------------------------
+  // Histograma de agressao (acima do zero)
+  // Verde = compradores, Vermelho = vendedores
+  // Cor viva = acima da media, Cor escura = abaixo da media
+  // -----------------------------------------------------------------------
   SetPlotType(1, 1);
   if saldo >= 0 then begin
     if fNormSaldo >= 1 then
-      SetPlotColor(1, RGB(0, 255, 0))
+      SetPlotColor(1, nBuyStrong)
     else
-      SetPlotColor(1, RGB(0, 160, 0));
+      SetPlotColor(1, nBuyWeak);
   end else begin
     if fNormSaldo >= 1 then
-      SetPlotColor(1, RGB(255, 0, 0))
+      SetPlotColor(1, nSellStrong)
     else
-      SetPlotColor(1, RGB(180, 0, 0));
+      SetPlotColor(1, nSellWeak);
   end;
   Plot(fNormSaldo);
 
-  // --- Plot 2: Volume normalizado (abaixo de zero) ---
-  // Claro = acima da media (alta atividade), Escuro = abaixo da media
+  // -----------------------------------------------------------------------
+  // Histograma de volume (abaixo do zero)
+  // Azul claro = volume alto, Azul escuro = volume baixo
+  // -----------------------------------------------------------------------
   SetPlotType(2, 1);
   if fNormVol >= 1 then
-    SetPlotColor(2, RGB(0, 220, 255))
+    SetPlotColor(2, nVolHigh)
   else
-    SetPlotColor(2, RGB(0, 130, 200));
+    SetPlotColor(2, nVolLow);
   Plot2(-fNormVol);
 
-  // --- Plot 3: Linha de referencia +1 (media da agressao) ---
-  SetPlotColor(3, RGB(255, 255, 255));
+  // -----------------------------------------------------------------------
+  // Linhas de referencia nas medias (+1 e -1)
+  // -----------------------------------------------------------------------
+  SetPlotColor(3, nLineColor);
   Plot3(1);
 
-  // --- Plot 4: Linha de referencia -1 (media do volume) ---
-  SetPlotColor(4, RGB(255, 255, 255));
+  SetPlotColor(4, nLineColor);
   Plot4(-1);
+
 end;

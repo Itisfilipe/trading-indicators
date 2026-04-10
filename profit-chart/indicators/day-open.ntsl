@@ -2,13 +2,30 @@
 // DAY OPEN - Linha de abertura do dia
 // =========================================================================
 // Plota uma linha horizontal no preco de abertura de cada dia.
-// OpenD(0) retorna a abertura da sessao atual para cada barra,
-// produzindo uma linha escalonada que reseta a cada novo dia.
+// A linha reseta automaticamente quando um novo dia comeca.
+//
+// Como usar:
+//   - A linha mostra onde o mercado abriu hoje
+//   - Preco acima da abertura = dia positivo ate agora
+//   - Preco abaixo da abertura = dia negativo ate agora
+//   - Serve como suporte/resistencia natural do dia
 // =========================================================================
 
+input
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
+var
+  nColor: Integer;
+
 begin
+  if Tema_Escuro then
+    nColor := RGB(255, 200, 50)           // amarelo claro
+  else
+    nColor := RGB(255, 165, 0);           // laranja
+
   Plot(OpenD(0));
-  SetPlotColor(1, RGB(255, 165, 0));
+  SetPlotColor(1, nColor);
   SetPlotWidth(1, 2);
   SetPlotStyle(1, 2);
 end;

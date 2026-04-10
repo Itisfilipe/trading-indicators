@@ -1,78 +1,89 @@
 // =========================================================================
 // MACD HISTOGRAM COM CONTORNO
 // =========================================================================
-// Exibe apenas o histograma do MACD com uma linha conectando os topos
-// para facilitar a visualizacao de maximas e minimas.
+// Exibe o histograma do MACD com uma linha conectando os topos.
 //
-// A linha ajuda a identificar:
-//   - Picos do histograma (maximas de momentum)
-//   - Vales do histograma (minimas de momentum)
-//   - Divergencias com o preco
+// O que faz:
+//   - Barras verdes quando o momentum esta positivo (compradores dominando)
+//   - Barras vermelhas quando o momentum esta negativo (vendedores dominando)
+//   - Linha branca conecta os topos para facilitar ver divergencias
+//   - Linha cinza no zero como referencia
+//
+// Como usar:
+//   - Histograma crescendo = momentum acelerando
+//   - Histograma diminuindo = momentum desacelerando
+//   - Cruzou o zero para cima = mudanca de tendencia para alta
+//   - Cruzou o zero para baixo = mudanca de tendencia para baixa
 // =========================================================================
 
 input
-  // ----- Periodos do MACD -----
-
-  // Periodo da EMA rapida. Padrao: 72
+  // Periodo da EMA rapida (reage mais rapido ao preco). Padrao: 72
   Periodo_EMA_Rapida(72);
 
-  // Periodo da EMA lenta. Padrao: 200
+  // Periodo da EMA lenta (suaviza o movimento). Padrao: 200
   Periodo_EMA_Lenta(200);
 
-  // Periodo da linha de sinal (EMA do MACD). Padrao: 34
+  // Periodo da linha de sinal (suaviza o MACD). Padrao: 34
   Periodo_Sinal(34);
 
-  // ----- Opcoes de Exibicao -----
-
-  // Exibir linha de contorno conectando os topos do histograma?
+  // Mostrar linha branca conectando os topos do histograma?
   Exibir_Linha_Contorno(true);
 
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
 var
-  bStarted: Boolean;
+  // Calculo do MACD
+  fMacdLine: Float;       // linha MACD = EMA rapida - EMA lenta
+  fSignalLine: Float;     // linha de sinal = EMA do MACD
+  fHistogram: Float;      // histograma = MACD - sinal
 
-  // Componentes do MACD
-  fMacdLine: Float;
-  fSignalLine: Float;
-  fHistogram: Float;
-
-  // Cores
+  // Cores (definidas pelo tema)
   nPositiveColor: Integer;
   nNegativeColor: Integer;
   nLineColor: Integer;
+  nZeroColor: Integer;
 
 begin
   // -----------------------------------------------------------------------
-  // Inicializacao
+  // Define cores com base no tema escolhido
   // -----------------------------------------------------------------------
-  if not bStarted then begin
-    bStarted := True;
-    nPositiveColor := RGB(0, 180, 80);
-    nNegativeColor := RGB(220, 50, 50);
-    nLineColor := RGB(255, 255, 255);
+  if Tema_Escuro then begin
+    nPositiveColor := RGB(0, 200, 0);     // verde vivo
+    nNegativeColor := RGB(200, 0, 0);     // vermelho vivo
+    nLineColor := RGB(200, 200, 200);     // cinza claro
+    nZeroColor := RGB(80, 80, 80);        // cinza escuro
+  end else begin
+    nPositiveColor := RGB(0, 180, 80);    // verde
+    nNegativeColor := RGB(220, 50, 50);   // vermelho
+    nLineColor := RGB(255, 255, 255);     // branco
+    nZeroColor := RGB(100, 100, 100);     // cinza
   end;
 
   // -----------------------------------------------------------------------
-  // Calcula MACD
+  // Calcula o MACD
+  // MACD = diferenca entre EMA rapida e EMA lenta
+  // Histograma = diferenca entre MACD e sua linha de sinal
   // -----------------------------------------------------------------------
   fMacdLine := MediaExp(Periodo_EMA_Rapida, Close) - MediaExp(Periodo_EMA_Lenta, Close);
   fSignalLine := MediaExp(Periodo_Sinal, fMacdLine);
   fHistogram := fMacdLine - fSignalLine;
 
   // -----------------------------------------------------------------------
-  // Plot 1: Histograma (barras)
+  // Desenha o histograma (barras coloridas)
+  // Verde = momentum positivo, Vermelho = momentum negativo
   // -----------------------------------------------------------------------
   PlotN(1, fHistogram);
   SetPlotType(1, 1);
   SetPlotWidth(1, 2);
-
-  // Cor baseada em positivo/negativo
   if fHistogram >= 0 then
     SetPlotColor(1, nPositiveColor)
   else
     SetPlotColor(1, nNegativeColor);
 
   // -----------------------------------------------------------------------
-  // Plot 2: Linha de contorno no topo do histograma
+  // Desenha a linha de contorno (conecta os topos do histograma)
+  // Ajuda a visualizar picos, vales e divergencias
   // -----------------------------------------------------------------------
   if Exibir_Linha_Contorno then begin
     PlotN(2, fHistogram);
@@ -82,11 +93,11 @@ begin
   end;
 
   // -----------------------------------------------------------------------
-  // Plot 3: Linha de referencia no zero
+  // Desenha a linha de referencia no zero
   // -----------------------------------------------------------------------
   PlotN(3, 0);
   SetPlotType(3, 0);
   SetPlotWidth(3, 1);
-  SetPlotColor(3, RGB(100, 100, 100));
+  SetPlotColor(3, nZeroColor);
 
 end;

@@ -1,21 +1,26 @@
 // =========================================================================
 // MOVING AVERAGES CLOUD - Regra de Coloracao
 // =========================================================================
-// Pinta candles baseado no alinhamento de 2 EMAs + confirmacao de preco:
-//   - VERDE: Alinhamento de alta (rapida > lenta) e preco confirma
-//   - VERMELHO: Alinhamento de baixa (rapida < lenta) e preco confirma
-//   - CINZA: Preco contradiz a tendencia
+// Pinta os candles com base no alinhamento de 2 EMAs.
+//
+// O que faz:
+//   - Verde se tendencia de alta e preco confirma
+//   - Vermelho se tendencia de baixa e preco confirma
+//   - Cinza se o preco contradiz a tendencia
 //
 // IMPORTANTE: Criar como REGRA DE COLORACAO (nao como Indicador)
 // Editor de Estrategias -> Nova Estrategia -> Coloracao
 // =========================================================================
 
 input
-  // Periodo da media movel exponencial rapida. Padrao: 21
+  // Periodo da EMA rapida. Padrao: 21
   Periodo_EMA_Rapida(21);
 
-  // Periodo da media movel exponencial lenta. Padrao: 42
+  // Periodo da EMA lenta. Padrao: 42
   Periodo_EMA_Lenta(42);
+
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
 
 var
   fEmaFast: Float;
@@ -23,9 +28,27 @@ var
   fEmaMax: Float;
   fEmaMin: Float;
 
+  // Cores do tema
+  nBullColor: Integer;
+  nBearColor: Integer;
+  nNeutralColor: Integer;
+
 begin
   // -----------------------------------------------------------------------
-  // Calcula EMAs
+  // Define cores com base no tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nBullColor := RGB(0, 200, 0);         // verde vivo
+    nBearColor := RGB(200, 0, 0);         // vermelho vivo
+    nNeutralColor := RGB(80, 80, 80);     // cinza escuro
+  end else begin
+    nBullColor := RGB(0, 180, 80);        // verde
+    nBearColor := RGB(220, 50, 50);       // vermelho
+    nNeutralColor := RGB(128, 128, 128);  // cinza
+  end;
+
+  // -----------------------------------------------------------------------
+  // Calcula as EMAs
   // -----------------------------------------------------------------------
   fEmaFast := MediaExp(Periodo_EMA_Rapida, Close);
   fEmaSlow := MediaExp(Periodo_EMA_Lenta, Close);
@@ -39,13 +62,13 @@ begin
   end;
 
   // -----------------------------------------------------------------------
-  // Aplica coloracao (cinza quando preco contradiz a tendencia)
+  // Pinta o candle com base na tendencia
   // -----------------------------------------------------------------------
   if (fEmaFast > fEmaSlow) and (Close >= fEmaMin) then
-    PaintBar(RGB(0, 180, 80))
+    PaintBar(nBullColor)
   else if (fEmaFast < fEmaSlow) and (Close <= fEmaMax) then
-    PaintBar(RGB(220, 50, 50))
+    PaintBar(nBearColor)
   else
-    PaintBar(RGB(128, 128, 128));
+    PaintBar(nNeutralColor);
 
 end;

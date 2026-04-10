@@ -1,40 +1,58 @@
 // =========================================================================
 // MOVING AVERAGES CLOUD - Nuvem de Medias Moveis
 // =========================================================================
-// Exibe 2 EMAs com coloracao dinamica baseada no alinhamento:
-//   - VERDE: Alinhamento de alta (rapida > lenta) e preco confirma
-//   - VERMELHO: Alinhamento de baixa (rapida < lenta) e preco confirma
-//   - CINZA: Preco contradiz a tendencia
+// Exibe 2 EMAs que formam uma "nuvem" entre elas.
 //
-// =========================================================================
-// COMO ATIVAR O PREENCHIMENTO DA NUVEM (feito na interface):
-// =========================================================================
-// 1. Aplique este indicador no grafico
-// 2. Clique direito em uma das linhas EMA no grafico
-// 3. Selecione "Propriedades" ou "Editar"
-// 4. Va na aba "Preenchimento"
-// 5. Marque "Preencher entre linhas"
-// 6. Selecione "Plot 1" e "Plot 2" como limites
-// 7. Escolha uma cor de preenchimento
+// O que faz:
+//   - Verde quando a EMA rapida esta acima da lenta (tendencia de alta)
+//   - Vermelho quando a EMA rapida esta abaixo da lenta (tendencia de baixa)
+//   - Cinza quando o preco contradiz a tendencia (sinal de cautela)
+//
+// Para ativar o preenchimento da nuvem:
+//   1. Clique direito em uma das linhas no grafico
+//   2. Selecione "Propriedades"
+//   3. Aba "Preenchimento" -> Marque "Preencher entre linhas"
+//   4. Selecione Plot 1 e Plot 2 como limites
 // =========================================================================
 
 input
-  // Periodo da media movel exponencial rapida. Padrao: 21
+  // Periodo da EMA rapida (reage mais rapido ao preco). Padrao: 21
   Periodo_EMA_Rapida(21);
 
-  // Periodo da media movel exponencial lenta. Padrao: 42
+  // Periodo da EMA lenta (suaviza o movimento). Padrao: 42
   Periodo_EMA_Lenta(42);
 
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
 var
-  fEmaFast: Float;
-  fEmaSlow: Float;
-  fEmaMax: Float;
-  fEmaMin: Float;
+  fEmaFast: Float;      // EMA rapida
+  fEmaSlow: Float;      // EMA lenta
+  fEmaMax: Float;       // a maior das duas EMAs
+  fEmaMin: Float;       // a menor das duas EMAs
   nCurrentColor: Integer;
+
+  // Cores do tema
+  nBullColor: Integer;
+  nBearColor: Integer;
+  nNeutralColor: Integer;
 
 begin
   // -----------------------------------------------------------------------
-  // Calcula EMAs
+  // Define cores com base no tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nBullColor := RGB(0, 200, 0);         // verde vivo
+    nBearColor := RGB(200, 0, 0);         // vermelho vivo
+    nNeutralColor := RGB(80, 80, 80);     // cinza escuro
+  end else begin
+    nBullColor := RGB(0, 180, 80);        // verde
+    nBearColor := RGB(220, 50, 50);       // vermelho
+    nNeutralColor := RGB(128, 128, 128);  // cinza
+  end;
+
+  // -----------------------------------------------------------------------
+  // Calcula as duas EMAs
   // -----------------------------------------------------------------------
   fEmaFast := MediaExp(Periodo_EMA_Rapida, Close);
   fEmaSlow := MediaExp(Periodo_EMA_Lenta, Close);
@@ -48,17 +66,20 @@ begin
   end;
 
   // -----------------------------------------------------------------------
-  // Determina cor (cinza quando preco contradiz a tendencia)
+  // Escolhe a cor:
+  //   - Verde se tendencia de alta E preco confirma (acima da menor EMA)
+  //   - Vermelho se tendencia de baixa E preco confirma (abaixo da maior EMA)
+  //   - Cinza se o preco contradiz a tendencia (cuidado!)
   // -----------------------------------------------------------------------
   if (fEmaFast > fEmaSlow) and (Close >= fEmaMin) then
-    nCurrentColor := RGB(0, 180, 80)
+    nCurrentColor := nBullColor
   else if (fEmaFast < fEmaSlow) and (Close <= fEmaMax) then
-    nCurrentColor := RGB(220, 50, 50)
+    nCurrentColor := nBearColor
   else
-    nCurrentColor := RGB(128, 128, 128);
+    nCurrentColor := nNeutralColor;
 
   // -----------------------------------------------------------------------
-  // Plota EMAs
+  // Desenha as duas EMAs com a mesma cor
   // -----------------------------------------------------------------------
   PlotN(1, fEmaFast);
   SetPlotColor(1, nCurrentColor);

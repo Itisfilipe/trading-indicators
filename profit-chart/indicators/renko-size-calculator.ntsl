@@ -2,35 +2,40 @@
 // RENKO SIZE CALCULATOR - Metade do ATR em Ticks
 // =========================================================================
 // Calcula o tamanho ideal de box Renko baseado na metade do ATR.
+//
+// O que faz:
+//   - Calcula o ATR (volatilidade media) dos ultimos N dias
+//   - Divide pela metade e converte em ticks
+//   - O resultado e o tamanho sugerido para o box Renko
+//
+// Como usar:
+//   - Aplique em um grafico de tempo (ex: 30s, 1min, 5min)
+//   - A linha verde mostra o tamanho sugerido em ticks
+//   - Use esse valor para configurar seu grafico Renko
+//
 // O periodo e definido em DIAS e o indicador calcula automaticamente
 // quantos candles isso representa no timeframe atual.
-//
-// Plots:
-//   - Plot 1: ATR (opcional)
-//   - Plot 2: Tamanho Renko (em ticks)
 // =========================================================================
 
 input
-  // ----- Configuracoes do ATR -----
-
   // Numero de dias para calcular o ATR. Padrao: 5
   Periodo_Dias(5);
 
   // Ignorar gaps de abertura (overnight)? Padrao: false
+  // Quando ativo, usa apenas High-Low no primeiro candle do dia
   Ignorar_Gaps(false);
 
-  // ----- Opcoes de Exibicao -----
-
-  // Exibir linha do ATR no grafico?
+  // Mostrar linha do ATR no grafico?
   Exibir_ATR(true);
 
-  // Exibir numero de candles calculado? Util para verificar a conversao.
+  // Mostrar numero de candles calculado? (util para debug)
   Exibir_Num_Candles(false);
+
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
 
 var
   bStarted: Boolean;
-
-  // Tamanho do tick
   fTickSize: Float;
 
   // Calculo do True Range
@@ -42,13 +47,13 @@ var
   // Deteccao de sessao
   bIsNewSession: Boolean;
 
-  // Calculo de candles por dia
+  // Contagem de candles por dia
   nCandlesInCurrentDay: Integer;
   nCandlesPerDay: Integer;
   nDaysCount: Integer;
   nActualPeriod: Integer;
 
-  // Valores
+  // Resultados
   fATR: Float;
   nRenkoTicks: Integer;
 
@@ -59,25 +64,32 @@ var
 
 begin
   // -----------------------------------------------------------------------
-  // Inicializacao
+  // Define cores com base no tema
   // -----------------------------------------------------------------------
   if not bStarted then begin
     bStarted := True;
-    nATRColor := RGB(255, 150, 50);
-    nTicksColor := RGB(100, 255, 100);
-    nCandlesColor := RGB(150, 150, 255);
     nCandlesPerDay := 0;
     nCandlesInCurrentDay := 0;
     nDaysCount := 0;
   end;
 
+  if Tema_Escuro then begin
+    nATRColor := RGB(255, 180, 80);       // laranja claro
+    nTicksColor := RGB(0, 255, 100);      // verde vivo
+    nCandlesColor := RGB(100, 150, 255);  // azul claro
+  end else begin
+    nATRColor := RGB(255, 150, 50);       // laranja
+    nTicksColor := RGB(100, 255, 100);    // verde
+    nCandlesColor := RGB(150, 150, 255);  // azul
+  end;
+
   // -----------------------------------------------------------------------
-  // Tamanho do tick
+  // Tamanho do tick do ativo
   // -----------------------------------------------------------------------
   fTickSize := MinPriceIncrement;
 
   // -----------------------------------------------------------------------
-  // Detecta nova sessao e calcula candles por dia
+  // Detecta novo dia e conta candles por dia
   // -----------------------------------------------------------------------
   bIsNewSession := (Date <> Date[1]);
 
@@ -91,7 +103,7 @@ begin
     nCandlesInCurrentDay := nCandlesInCurrentDay + 1;
 
   // -----------------------------------------------------------------------
-  // Calcula periodo real (dias * candles por dia)
+  // Periodo real = dias x candles por dia
   // -----------------------------------------------------------------------
   if nCandlesPerDay > 0 then
     nActualPeriod := Periodo_Dias * nCandlesPerDay
@@ -102,7 +114,9 @@ begin
     nActualPeriod := 1;
 
   // -----------------------------------------------------------------------
-  // Calcula True Range
+  // Calcula True Range (volatilidade de cada candle)
+  // Se Ignorar_Gaps esta ativo, usa apenas High-Low no primeiro candle
+  // do dia para nao distorcer com o gap de abertura
   // -----------------------------------------------------------------------
   fHighLow := High - Low;
 
@@ -119,7 +133,8 @@ begin
   end;
 
   // -----------------------------------------------------------------------
-  // Calcula ATR com periodo dinamico
+  // ATR = media exponencial do True Range
+  // Tamanho Renko = metade do ATR convertido em ticks
   // -----------------------------------------------------------------------
   fATR := MediaExp(nActualPeriod, fTrueRange);
 
@@ -129,7 +144,7 @@ begin
     nRenkoTicks := 0;
 
   // -----------------------------------------------------------------------
-  // Plot 1: ATR (opcional)
+  // Desenha os plots
   // -----------------------------------------------------------------------
   if Exibir_ATR then begin
     PlotN(1, fATR);
@@ -137,16 +152,10 @@ begin
     SetPlotWidth(1, 2);
   end;
 
-  // -----------------------------------------------------------------------
-  // Plot 2: Ticks do Renko
-  // -----------------------------------------------------------------------
   PlotN(2, nRenkoTicks);
   SetPlotColor(2, nTicksColor);
   SetPlotWidth(2, 2);
 
-  // -----------------------------------------------------------------------
-  // Plot 3: Contagem de candles (opcional - para debug)
-  // -----------------------------------------------------------------------
   if Exibir_Num_Candles then begin
     PlotN(3, nActualPeriod);
     SetPlotColor(3, nCandlesColor);
