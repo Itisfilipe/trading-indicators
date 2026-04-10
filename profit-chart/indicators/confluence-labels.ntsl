@@ -37,10 +37,10 @@ input
   // ----- Tape Reading -----
 
   // Tape aggression balance MA period. Default: 305
-  Tape_MA_Balance(72);
+  Tape_MA_Balance(500);
 
   // Tape volume MA period. Default: 305
-  Tape_MA_Volume(72);
+  Tape_MA_Volume(500);
 
   // ----- EMA Trend Filter -----
 
