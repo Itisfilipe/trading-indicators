@@ -75,6 +75,9 @@ input
   // Distancia do label ao brick (em pontos). Default: 10
   Label_Offset(10);
 
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
 var
   // Componentes do MACD maior
   fMajorMacdLine: Float;
@@ -120,6 +123,12 @@ var
   // Posicionamento dos labels
   fLabelOffset: Float;
 
+  // Cores do tema
+  nTriggerBull: Integer;
+  nTriggerBear: Integer;
+  nScalpBullColor: Integer;
+  nScalpBearColor: Integer;
+
   // Resultados finais dos gatilhos
   bStrongBull: Boolean;
   bStrongBear: Boolean;
@@ -131,6 +140,21 @@ var
   bRejsBear: Boolean;
 
 begin
+  // -----------------------------------------------------------------------
+  // Cores do Tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nTriggerBull := RGB(0, 120, 255);     // azul
+    nTriggerBear := RGB(255, 0, 255);     // fucsia
+    nScalpBullColor := RGB(0, 80, 180);   // azul escuro
+    nScalpBearColor := RGB(180, 0, 180);  // fucsia escuro
+  end else begin
+    nTriggerBull := RGB(0, 120, 255);     // azul
+    nTriggerBear := RGB(255, 0, 0);       // vermelho
+    nScalpBullColor := RGB(100, 180, 255); // azul claro
+    nScalpBearColor := RGB(160, 0, 0);    // vermelho escuro
+  end;
+
   // -----------------------------------------------------------------------
   // Regra 1: Histograma MACD Maior
   // -----------------------------------------------------------------------
@@ -275,20 +299,20 @@ begin
   fLabelOffset := Label_Offset;
 
   if bStrongBull then
-    PlotText("B", RGB(0, 120, 255), 3, Label_Size, Low - fLabelOffset)
+    PlotText("B", nTriggerBull, 3, Label_Size, Low - fLabelOffset)
   else if bStrongBear then
-    PlotText("S", RGB(255, 0, 0), 3, Label_Size, High + fLabelOffset)
+    PlotText("S", nTriggerBear, 3, Label_Size, High + fLabelOffset)
   else if bScalpBull then
-    PlotText("BS", RGB(0, 80, 160), 3, Label_Size, Low - fLabelOffset)
+    PlotText("BS", nScalpBullColor, 3, Label_Size, Low - fLabelOffset)
   else if bScalpBear then
-    PlotText("SS", RGB(160, 0, 0), 3, Label_Size, High + fLabelOffset)
+    PlotText("SS", nScalpBearColor, 3, Label_Size, High + fLabelOffset)
   else if bRejBull then
-    PlotText("BR", RGB(0, 120, 255), 3, Label_Size, Low - fLabelOffset)
+    PlotText("BR", nTriggerBull, 3, Label_Size, Low - fLabelOffset)
   else if bRejBear then
-    PlotText("SR", RGB(255, 0, 0), 3, Label_Size, High + fLabelOffset)
+    PlotText("SR", nTriggerBear, 3, Label_Size, High + fLabelOffset)
   else if bRejsBull then
-    PlotText("BSR", RGB(0, 80, 160), 3, Label_Size, Low - fLabelOffset)
+    PlotText("BSR", nScalpBullColor, 3, Label_Size, Low - fLabelOffset)
   else if bRejsBear then
-    PlotText("SSR", RGB(160, 0, 0), 3, Label_Size, High + fLabelOffset);
+    PlotText("SSR", nScalpBearColor, 3, Label_Size, High + fLabelOffset);
 
 end;

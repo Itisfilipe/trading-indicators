@@ -78,6 +78,9 @@ input
   // Cor da tendencia baseada no MACD maior (true) ou menor (false)
   Trend_Follow_Major(true);
 
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
 var
   // Componentes do MACD maior
   fMajorMacdLine: Float;
@@ -120,6 +123,16 @@ var
   bRejBullWick: Boolean;
   bRejBearWick: Boolean;
 
+  // Cores do tema
+  nTriggerBull: Integer;
+  nTriggerBear: Integer;
+  nScalpBullColor: Integer;
+  nScalpBearColor: Integer;
+  nTrendStrong: Integer;
+  nTrendStrongBear: Integer;
+  nTrendSoft: Integer;
+  nTrendSoftBear: Integer;
+
   // Resultados finais dos gatilhos
   bStrongBull: Boolean;
   bStrongBear: Boolean;
@@ -131,6 +144,29 @@ var
   bRejsBear: Boolean;
 
 begin
+  // -----------------------------------------------------------------------
+  // Cores do Tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nTriggerBull := RGB(0, 120, 255);     // azul
+    nTriggerBear := RGB(255, 0, 255);     // fucsia
+    nScalpBullColor := RGB(0, 80, 180);   // azul escuro
+    nScalpBearColor := RGB(180, 0, 180);  // fucsia escuro
+    nTrendStrong := RGB(0, 180, 0);       // verde vivo
+    nTrendStrongBear := RGB(200, 0, 0);   // vermelho vivo
+    nTrendSoft := RGB(0, 100, 0);         // verde escuro
+    nTrendSoftBear := RGB(100, 0, 0);     // vermelho escuro
+  end else begin
+    nTriggerBull := RGB(0, 120, 255);     // azul
+    nTriggerBear := RGB(255, 0, 0);       // vermelho
+    nScalpBullColor := RGB(100, 180, 255); // azul claro
+    nScalpBearColor := RGB(160, 0, 0);    // vermelho escuro
+    nTrendStrong := RGB(0, 120, 0);       // verde
+    nTrendStrongBear := RGB(30, 30, 30);  // preto
+    nTrendSoft := RGB(140, 210, 140);     // verde claro
+    nTrendSoftBear := RGB(130, 130, 130); // cinza
+  end;
+
   // -----------------------------------------------------------------------
   // Regra 1: Histograma MACD Maior
   // -----------------------------------------------------------------------
@@ -291,38 +327,38 @@ begin
 
   // Gatilhos normais (agressao a favor)
   if bStrongBull then
-    PaintBar(RGB(0, 120, 255))
+    PaintBar(nTriggerBull)
   else if bStrongBear then
-    PaintBar(RGB(255, 0, 0))
+    PaintBar(nTriggerBear)
   else if bScalpBull then
-    PaintBar(RGB(0, 80, 160))
+    PaintBar(nScalpBullColor)
   else if bScalpBear then
-    PaintBar(RGB(160, 0, 0))
+    PaintBar(nScalpBearColor)
 
   // Gatilhos de rejeicao (mesmas cores, labels diferenciam)
   else if bRejBull then
-    PaintBar(RGB(0, 120, 255))
+    PaintBar(nTriggerBull)
   else if bRejBear then
-    PaintBar(RGB(255, 0, 0))
+    PaintBar(nTriggerBear)
   else if bRejsBull then
-    PaintBar(RGB(0, 80, 160))
+    PaintBar(nScalpBullColor)
   else if bRejsBear then
-    PaintBar(RGB(160, 0, 0))
+    PaintBar(nScalpBearColor)
 
   // Tendencia: ambos MACDs alinhados (forte)
   else if bMajorBullish and bMinorBullish then
-    PaintBar(RGB(0, 120, 0))
+    PaintBar(nTrendStrong)
   else if (not bMajorBullish) and (not bMinorBullish) then
-    PaintBar(RGB(30, 30, 30))
+    PaintBar(nTrendStrongBear)
 
   // Tendencia: um MACD discorda (suave)
   else if Trend_Follow_Major and bMajorBullish then
-    PaintBar(RGB(140, 210, 140))
+    PaintBar(nTrendSoft)
   else if Trend_Follow_Major and (not bMajorBullish) then
-    PaintBar(RGB(130, 130, 130))
+    PaintBar(nTrendSoftBear)
   else if bMinorBullish then
-    PaintBar(RGB(140, 210, 140))
+    PaintBar(nTrendSoft)
   else
-    PaintBar(RGB(130, 130, 130));
+    PaintBar(nTrendSoftBear);
 
 end;

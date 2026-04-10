@@ -66,6 +66,9 @@ input
   // Exigir pullback (brick oposto nos ultimos 3) antes da entrada
   Enable_Pullback(true);
 
+  // Tema escuro (true) ou claro (false)
+  Tema_Escuro(false);
+
   // ----- Configuracoes do Letreiro -----
 
   // Tamanho da fonte. Padrao: 38
@@ -113,6 +116,12 @@ var
   bRejBullWick: Boolean;
   bRejBearWick: Boolean;
 
+  // Cores do tema
+  nTriggerBull: Integer;
+  nTriggerBear: Integer;
+  nScalpBullColor: Integer;
+  nScalpBearColor: Integer;
+
   // Resultados finais dos gatilhos
   bStrongBull: Boolean;
   bStrongBear: Boolean;
@@ -124,6 +133,21 @@ var
   bRejsBear: Boolean;
 
 begin
+  // -----------------------------------------------------------------------
+  // Cores do Tema
+  // -----------------------------------------------------------------------
+  if Tema_Escuro then begin
+    nTriggerBull := RGB(0, 120, 255);     // azul
+    nTriggerBear := RGB(255, 0, 255);     // fucsia
+    nScalpBullColor := RGB(0, 80, 180);   // azul escuro
+    nScalpBearColor := RGB(180, 0, 180);  // fucsia escuro
+  end else begin
+    nTriggerBull := RGB(0, 120, 255);     // azul
+    nTriggerBear := RGB(255, 0, 0);       // vermelho
+    nScalpBullColor := RGB(100, 180, 255); // azul claro
+    nScalpBearColor := RGB(160, 0, 0);    // vermelho escuro
+  end;
+
   // -----------------------------------------------------------------------
   // Regra 1: Histograma MACD Maior
   // -----------------------------------------------------------------------
@@ -259,7 +283,7 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(0, 120, 255));
+    SetPlotColor(1, nTriggerBull);
     if bRejBull then
       PlotText("BUYR", clWhite, 1, Label_Size)
     else
@@ -268,7 +292,7 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(255, 0, 0));
+    SetPlotColor(1, nTriggerBear);
     if bRejBear then
       PlotText("SELLR", clWhite, 1, Label_Size)
     else
@@ -277,7 +301,7 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(0, 80, 160));
+    SetPlotColor(1, nScalpBullColor);
     if bRejsBull then
       PlotText("BSCALPR", clWhite, 1, Label_Size)
     else
@@ -286,7 +310,7 @@ begin
     Plot(1);
     SetPlotType(1, 1);
     SetPlotWidth(1, 10);
-    SetPlotColor(1, RGB(160, 0, 0));
+    SetPlotColor(1, nScalpBearColor);
     if bRejsBear then
       PlotText("SSCALPR", clWhite, 1, Label_Size)
     else
