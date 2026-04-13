@@ -43,12 +43,42 @@ Every NTSL file follows three sections: `input` (parameters), `var` (declaration
 - `HorizontalLineCustom` and `PlotN` cannot coexist in the same indicator
 - `fBoxSize` can be zero on the first bar — always guard with `if fBoxSize = 0 then fBoxSize := 1`
 
-## Architecture: Confluence Coloring
+## Architecture: Confluence System
 
-The main indicator (`confluence-coloring.ntsl`) is a multi-rule coloring system that computes independent boolean signals and combines them in a priority cascade:
+Three synchronized files share identical signal logic — only output differs:
 
-1. **Rules** (computed independently): Major MACD, Minor MACD, Tape Reading, EMA Pullback, Keltner Reversal
-2. **Cascade** (highest priority wins): REVERSAL (white) → ENTRY (blue) → TAPE (green/red) → MACD BOTH (medium green/red) → MACD MAJOR (dim green/red)
-3. **Toggles**: `Enable_Tape`, `Enable_EMA`, `Enable_Keltner` control which color tiers appear (signals always compute)
+- `confluence-coloring.ntsl` — Coloring rule: paints bars via `PaintBar()`
+- `confluence-labels.ntsl` — Indicator: plots text labels (B, S, BS, SS, BR, SR, BSR, SSR) near bricks
+- `confluence-letreiro.ntsl` — Indicator: colored banner in separate sub-window
 
-To add a new rule: add inputs, add variables, compute a boolean signal, insert into the cascade at the appropriate priority level.
+**IMPORTANT:** Signal logic must stay identical across all three files. Only output sections differ.
+
+### Rules (computed independently)
+
+1. **Major MACD** — long-term trend (histogram >= 0 = bullish)
+2. **Minor MACD** — short-term trend (enables scalp signals)
+3. **Tape Reading** — volume + aggression above MA, aligned with brick direction
+4. **EMA Pullback** — brick in trend direction touching EMA zone after pullback (lookback: 6 bars, max 2 bars crossed beyond slow EMA)
+5. **Rejection** — aggression against trend + wick >= ratio * body
+
+### Signal Types
+
+| Signal | Condition | Color (light theme) |
+|--------|-----------|-------------------|
+| Strong Buy/Sell | EMA pullback + tape + Major MACD agrees | Blue / Red |
+| Scalp Buy/Sell | EMA pullback + tape + Major MACD opposes + Minor confirms | Light blue / Dark red |
+| Rejection variants | Same as above + rejection wick + counter-aggression | Same colors (labels differentiate) |
+
+### Color Cascade (highest priority wins)
+
+Strong triggers → Scalp triggers → Rejection strong → Rejection scalp → Both MACDs agree (trend) → One MACD disagrees (soft trend)
+
+### Toggles
+
+- `Enable_EMA` — master toggle for all EMA-based entry signals
+- `Ignore_Pullback` — when true, EMA signal only needs trend direction + brick direction + EMA zone touch (skips pullback check, close vs slow EMA, nCrossed limit)
+- `Enable_Scalp` — when false, disables all scalp and scalp-rejection signals
+- `Trend_Follow_Major` — trend color follows Major MACD (true) or Minor MACD (false)
+- `Tema_Escuro` — dark/light theme colors
+
+To add a new rule: add inputs, add variables, compute a boolean signal, insert into the cascade at the appropriate priority level. Update all three files.

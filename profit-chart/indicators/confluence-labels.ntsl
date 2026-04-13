@@ -64,8 +64,11 @@ input
   // Ativar entrada por pullback na EMA (gatilho principal)
   Enable_EMA(true);
 
-  // Exigir pullback (brick oposto nos ultimos 3) antes da entrada
-  Enable_Pullback(true);
+  // Ignorar regra de pullback (so exige direcao + zona EMA)
+  Ignore_Pullback(false);
+
+  // Ativar sinais de scalp (contra tendencia maior, MACD menor confirma)
+  Enable_Scalp(false);
 
   // ----- Configuracoes dos Labels -----
 
@@ -242,13 +245,25 @@ begin
     nCrossed := nCrossed + 1;
   if (Open[3] < fEmaSlow[3]) and (Close[3] < fEmaSlow[3]) then
     nCrossed := nCrossed + 1;
+  if (Open[4] < fEmaSlow[4]) and (Close[4] < fEmaSlow[4]) then
+    nCrossed := nCrossed + 1;
+  if (Open[5] < fEmaSlow[5]) and (Close[5] < fEmaSlow[5]) then
+    nCrossed := nCrossed + 1;
+  if (Open[6] < fEmaSlow[6]) and (Close[6] < fEmaSlow[6]) then
+    nCrossed := nCrossed + 1;
 
-  bEmaBullish := (fEmaFast > fEmaSlow)
-    and (Close >= Open)
-    and bBrickTouchesEma
-    and ((not Enable_Pullback) or (Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]))
-    and (Close >= fEmaSlow)
-    and (nCrossed <= 1);
+  if Ignore_Pullback then
+    bEmaBullish := (fEmaFast > fEmaSlow)
+      and (Close >= Open)
+      and bBrickTouchesEma
+  else begin
+    bEmaBullish := (fEmaFast > fEmaSlow)
+      and (Close >= Open)
+      and bBrickTouchesEma
+      and ((Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]) or (Close[4] < Open[4]) or (Close[5] < Open[5]) or (Close[6] < Open[6]))
+      and (Close >= fEmaSlow)
+      and (nCrossed <= 2);
+  end;
 
   // Entrada de venda por pullback
   nCrossed := 0;
@@ -258,13 +273,25 @@ begin
     nCrossed := nCrossed + 1;
   if (Open[3] > fEmaSlow[3]) and (Close[3] > fEmaSlow[3]) then
     nCrossed := nCrossed + 1;
+  if (Open[4] > fEmaSlow[4]) and (Close[4] > fEmaSlow[4]) then
+    nCrossed := nCrossed + 1;
+  if (Open[5] > fEmaSlow[5]) and (Close[5] > fEmaSlow[5]) then
+    nCrossed := nCrossed + 1;
+  if (Open[6] > fEmaSlow[6]) and (Close[6] > fEmaSlow[6]) then
+    nCrossed := nCrossed + 1;
 
-  bEmaBearish := (fEmaFast < fEmaSlow)
-    and (Close < Open)
-    and bBrickTouchesEma
-    and ((not Enable_Pullback) or (Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]))
-    and (Close <= fEmaSlow)
-    and (nCrossed <= 1);
+  if Ignore_Pullback then
+    bEmaBearish := (fEmaFast < fEmaSlow)
+      and (Close < Open)
+      and bBrickTouchesEma
+  else begin
+    bEmaBearish := (fEmaFast < fEmaSlow)
+      and (Close < Open)
+      and bBrickTouchesEma
+      and ((Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]) or (Close[4] >= Open[4]) or (Close[5] >= Open[5]) or (Close[6] >= Open[6]))
+      and (Close <= fEmaSlow)
+      and (nCrossed <= 2);
+  end;
 
   // -----------------------------------------------------------------------
   // Calculo Final dos Gatilhos
@@ -277,10 +304,10 @@ begin
     and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish);
   // Scalp: direcao contra MACD maior
-  bScalpBull := Enable_EMA and bEmaBullish
+  bScalpBull := Enable_Scalp and Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
     and (not bMajorBullish) and bMinorBullish;
-  bScalpBear := Enable_EMA and bEmaBearish
+  bScalpBear := Enable_Scalp and Enable_EMA and bEmaBearish
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and (not bMinorBullish);
 
@@ -288,9 +315,9 @@ begin
     and bMajorBullish;
   bRejBear := Enable_EMA and bEmaBearish and bRejBearWick
     and (not bMajorBullish);
-  bRejsBull := Enable_EMA and bEmaBullish and bRejBullWick
+  bRejsBull := Enable_Scalp and Enable_EMA and bEmaBullish and bRejBullWick
     and (not bMajorBullish) and bMinorBullish;
-  bRejsBear := Enable_EMA and bEmaBearish and bRejBearWick
+  bRejsBear := Enable_Scalp and Enable_EMA and bEmaBearish and bRejBearWick
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------
