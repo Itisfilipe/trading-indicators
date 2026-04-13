@@ -84,7 +84,7 @@ Complemento do Confluence Coloring. Plota labels de texto acima ou abaixo dos br
 
 **Parametros adicionais:**
 - `Label_Size(8)` — tamanho da fonte
-- `Label_Offset_Ticks(2)` — distancia do label ao High/Low em ticks
+- `Label_Offset_Ticks(8)` — distancia do label ao High/Low em ticks
 
 > Manter os parametros sincronizados com o Confluence Coloring!
 

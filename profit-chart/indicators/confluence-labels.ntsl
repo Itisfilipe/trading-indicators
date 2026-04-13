@@ -76,7 +76,7 @@ input
   Label_Size(8);
 
   // Distancia do label ao High/Low em ticks. Default: 2
-  Label_Offset_Ticks(2);
+  Label_Offset_Ticks(8);
 
   // Tema escuro (true) ou claro (false)
   Tema_Escuro(false);
