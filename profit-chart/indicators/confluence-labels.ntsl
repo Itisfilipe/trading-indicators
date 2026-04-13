@@ -75,6 +75,9 @@ input
   // Tamanho da fonte dos labels. Default: 8
   Label_Size(8);
 
+  // Distancia do label ao High/Low em ticks. Default: 2
+  Label_Offset_Ticks(2);
+
   // Tema escuro (true) ou claro (false)
   Tema_Escuro(false);
 
@@ -320,7 +323,7 @@ begin
   // -----------------------------------------------------------------------
   // Labels (posicao 3 = preco customizado, offset do High/Low)
   // -----------------------------------------------------------------------
-  fLabelOffset := MinimumTick * 2;
+  fLabelOffset := MinimumTick * Label_Offset_Ticks;
 
   if bStrongBull then
     PlotText("B", nTriggerBull, 3, Label_Size, Low - fLabelOffset)
