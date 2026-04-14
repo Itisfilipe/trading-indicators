@@ -323,7 +323,7 @@ begin
   // -----------------------------------------------------------------------
   // Labels (posicao 3 = preco customizado, offset do High/Low)
   // -----------------------------------------------------------------------
-  fLabelOffset := MinimumTick * Label_Offset_Ticks;
+  fLabelOffset := MinPriceIncrement * Label_Offset_Ticks;
 
   if bStrongBull then
     PlotText("B", nTriggerBull, 3, Label_Size, Low - fLabelOffset)
