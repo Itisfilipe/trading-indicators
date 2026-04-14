@@ -55,7 +55,7 @@ O indicador principal do sistema. Pinta cada candle/brick com base na confluenci
 2. **MACD menor** (72/200/34) — habilita scalps quando vira contra a tendencia maior
 3. **Tape reading** — volume e/ou agressao acima da media de N periodos
 4. **Pullback na EMA** — brick tocando a zona entre as EMAs 21/42 apos pullback (lookback: 6 bricks, max 2 inteiramente alem da EMA lenta)
-5. **Rejeicao** — agressao contra a direcao do candle + pavio >= 1.5x o corpo
+5. **Rejeicao** — agressao contra a direcao do sinal + pavio >= 1.5x o corpo (cor do candle irrelevante)
 
 **Parametros principais:**
 - `Major_MACD_Fast/Slow/Signal` — periodos do MACD maior
@@ -64,6 +64,7 @@ O indicador principal do sistema. Pinta cada candle/brick com base na confluenci
 - `Tape_MA_Vol(300)` — periodo da media de volume
 - `EMA_Fast(21)` / `EMA_Slow(42)` — EMAs do filtro de tendencia
 - `Rej_Wick_Ratio(1.5)` — razao minima pavio/corpo para rejeicao
+- `EMA_Zone_Tolerance(2)` — tolerancia em ticks para considerar candle na zona EMA
 - `Ignore_Pullback(false)` — ignorar regra de pullback (so exige direcao + zona EMA)
 - `Enable_Scalp(true)` — ativar/desativar sinais de scalp
 - `Trend_Follow_Major(true)` — cor da tendencia segue o MACD maior

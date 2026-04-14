@@ -63,6 +63,9 @@ input
   // Ativar entrada por pullback na EMA (gatilho principal)
   Enable_EMA(true);
 
+  // Tolerancia para considerar candle "tocando" a zona EMA (em ticks). Padrao: 2
+  EMA_Zone_Tolerance(2);
+
   // Ignorar regra de pullback (so exige direcao + zona EMA)
   Ignore_Pullback(false);
 
@@ -100,6 +103,7 @@ var
   fEmaSlow: Float;
   fEmaUpper: Float;
   fEmaLower: Float;
+  fEmaTolerance: Float;
   bBrickTouchesEma: Boolean;
   nCrossed: Integer;
 
@@ -109,6 +113,8 @@ var
   bTapeHighlight: Boolean;
   bTapeBullish: Boolean;
   bTapeWithTrend: Boolean;
+  bEmaZoneBull: Boolean;
+  bEmaZoneBear: Boolean;
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
 
@@ -206,9 +212,9 @@ begin
   else
     fTopWick := High - Open;
 
-  bRejBullWick := (not bTapeWithTrend) and bTapeHighlight
+  bRejBullWick := (not bTapeBullish) and bTapeHighlight
     and (fBottomWick >= Rej_Wick_Ratio * fBody);
-  bRejBearWick := (not bTapeWithTrend) and bTapeHighlight
+  bRejBearWick := bTapeBullish and bTapeHighlight
     and (fTopWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
@@ -225,7 +231,8 @@ begin
     fEmaLower := fEmaFast;
   end;
 
-  bBrickTouchesEma := (Low <= fEmaUpper) and (High >= fEmaLower);
+  fEmaTolerance := MinPriceIncrement * EMA_Zone_Tolerance;
+  bBrickTouchesEma := (Low <= fEmaUpper + fEmaTolerance) and (High >= fEmaLower - fEmaTolerance);
 
   nCrossed := 0;
   if (Open[1] < fEmaSlow[1]) and (Close[1] < fEmaSlow[1]) then
@@ -242,17 +249,17 @@ begin
     nCrossed := nCrossed + 1;
 
   if Ignore_Pullback then
-    bEmaBullish := (fEmaFast > fEmaSlow)
-      and (Close >= Open)
+    bEmaZoneBull := (fEmaFast > fEmaSlow)
       and bBrickTouchesEma
   else begin
-    bEmaBullish := (fEmaFast > fEmaSlow)
-      and (Close >= Open)
+    bEmaZoneBull := (fEmaFast > fEmaSlow)
       and bBrickTouchesEma
       and ((Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]) or (Close[4] < Open[4]) or (Close[5] < Open[5]) or (Close[6] < Open[6]))
       and (Close >= fEmaSlow)
       and (nCrossed <= 2);
   end;
+
+  bEmaBullish := bEmaZoneBull and (Close >= Open);
 
   nCrossed := 0;
   if (Open[1] > fEmaSlow[1]) and (Close[1] > fEmaSlow[1]) then
@@ -269,17 +276,17 @@ begin
     nCrossed := nCrossed + 1;
 
   if Ignore_Pullback then
-    bEmaBearish := (fEmaFast < fEmaSlow)
-      and (Close < Open)
+    bEmaZoneBear := (fEmaFast < fEmaSlow)
       and bBrickTouchesEma
   else begin
-    bEmaBearish := (fEmaFast < fEmaSlow)
-      and (Close < Open)
+    bEmaZoneBear := (fEmaFast < fEmaSlow)
       and bBrickTouchesEma
       and ((Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]) or (Close[4] >= Open[4]) or (Close[5] >= Open[5]) or (Close[6] >= Open[6]))
       and (Close <= fEmaSlow)
       and (nCrossed <= 2);
   end;
+
+  bEmaBearish := bEmaZoneBear and (Close < Open);
 
   // -----------------------------------------------------------------------
   // Calculo Final dos Gatilhos
@@ -297,13 +304,13 @@ begin
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and (not bMinorBullish);
 
-  bRejBull := Enable_EMA and bEmaBullish and bRejBullWick
+  bRejBull := Enable_EMA and bEmaZoneBull and bRejBullWick
     and bMajorBullish;
-  bRejBear := Enable_EMA and bEmaBearish and bRejBearWick
+  bRejBear := Enable_EMA and bEmaZoneBear and bRejBearWick
     and (not bMajorBullish);
-  bRejsBull := Enable_Scalp and Enable_EMA and bEmaBullish and bRejBullWick
+  bRejsBull := Enable_Scalp and Enable_EMA and bEmaZoneBull and bRejBullWick
     and (not bMajorBullish) and bMinorBullish;
-  bRejsBear := Enable_Scalp and Enable_EMA and bEmaBearish and bRejBearWick
+  bRejsBear := Enable_Scalp and Enable_EMA and bEmaZoneBear and bRejBearWick
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------

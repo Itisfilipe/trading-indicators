@@ -81,6 +81,9 @@ input
   // Ativar entrada por pullback na EMA (gatilho principal)
   Enable_EMA(true);
 
+  // Tolerancia para considerar candle "tocando" a zona EMA (em ticks). Padrao: 2
+  EMA_Zone_Tolerance(2);
+
   // Ignorar regra de pullback (so exige direcao + zona EMA)
   Ignore_Pullback(false);
 
@@ -116,6 +119,7 @@ var
   fEmaSlow: Float;
   fEmaUpper: Float;
   fEmaLower: Float;
+  fEmaTolerance: Float;
   bBrickTouchesEma: Boolean;
   nCrossed: Integer;
 
@@ -125,6 +129,8 @@ var
   bTapeHighlight: Boolean;
   bTapeBullish: Boolean;
   bTapeWithTrend: Boolean;
+  bEmaZoneBull: Boolean;
+  bEmaZoneBear: Boolean;
   bEmaBullish: Boolean;
   bEmaBearish: Boolean;
 
@@ -236,9 +242,9 @@ begin
   else
     fTopWick := High - Open;
 
-  bRejBullWick := (not bTapeWithTrend) and bTapeHighlight
+  bRejBullWick := (not bTapeBullish) and bTapeHighlight
     and (fBottomWick >= Rej_Wick_Ratio * fBody);
-  bRejBearWick := (not bTapeWithTrend) and bTapeHighlight
+  bRejBearWick := bTapeBullish and bTapeHighlight
     and (fTopWick >= Rej_Wick_Ratio * fBody);
 
   // -----------------------------------------------------------------------
@@ -258,8 +264,9 @@ begin
     fEmaLower := fEmaFast;
   end;
 
-  // Brick toca ou cruza a zona das EMAs
-  bBrickTouchesEma := (Low <= fEmaUpper) and (High >= fEmaLower);
+  // Brick toca ou esta proximo da zona das EMAs (tolerancia em ticks)
+  fEmaTolerance := MinPriceIncrement * EMA_Zone_Tolerance;
+  bBrickTouchesEma := (Low <= fEmaUpper + fEmaTolerance) and (High >= fEmaLower - fEmaTolerance);
 
   // Entrada de compra por pullback:
   //   - Tendencia de alta (EMA rapida > EMA lenta)
@@ -282,26 +289,27 @@ begin
   if (Open[6] < fEmaSlow[6]) and (Close[6] < fEmaSlow[6]) then
     nCrossed := nCrossed + 1;
 
+  // Zona bull: tendencia de alta + candle proximo da zona EMA (sem exigir direcao)
   if Ignore_Pullback then
-    bEmaBullish := (fEmaFast > fEmaSlow)
-      and (Close >= Open)
+    bEmaZoneBull := (fEmaFast > fEmaSlow)
       and bBrickTouchesEma
   else begin
-    bEmaBullish := (fEmaFast > fEmaSlow)
-      and (Close >= Open)
+    bEmaZoneBull := (fEmaFast > fEmaSlow)
       and bBrickTouchesEma
       and ((Close[1] < Open[1]) or (Close[2] < Open[2]) or (Close[3] < Open[3]) or (Close[4] < Open[4]) or (Close[5] < Open[5]) or (Close[6] < Open[6]))
       and (Close >= fEmaSlow)
       and (nCrossed <= 2);
   end;
 
+  // Entrada de compra: zona bull + candle verde
+  bEmaBullish := bEmaZoneBull and (Close >= Open);
+
   // Entrada de venda por pullback (espelho):
   //   - Tendencia de baixa (EMA rapida < EMA lenta)
-  //   - Brick atual e vermelho
-  //   - Brick toca a zona das EMAs
-  //   - Pullback nos ultimos 6 bricks
+  //   - Candle proximo da zona das EMAs
+  //   - Pullback nos ultimos 6 candles
   //   - Close abaixo da EMA lenta
-  //   - No maximo 2 bricks inteiramente acima da EMA lenta
+  //   - No maximo 2 candles inteiramente acima da EMA lenta
   nCrossed := 0;
   if (Open[1] > fEmaSlow[1]) and (Close[1] > fEmaSlow[1]) then
     nCrossed := nCrossed + 1;
@@ -316,24 +324,26 @@ begin
   if (Open[6] > fEmaSlow[6]) and (Close[6] > fEmaSlow[6]) then
     nCrossed := nCrossed + 1;
 
+  // Zona bear: tendencia de baixa + candle proximo da zona EMA (sem exigir direcao)
   if Ignore_Pullback then
-    bEmaBearish := (fEmaFast < fEmaSlow)
-      and (Close < Open)
+    bEmaZoneBear := (fEmaFast < fEmaSlow)
       and bBrickTouchesEma
   else begin
-    bEmaBearish := (fEmaFast < fEmaSlow)
-      and (Close < Open)
+    bEmaZoneBear := (fEmaFast < fEmaSlow)
       and bBrickTouchesEma
       and ((Close[1] >= Open[1]) or (Close[2] >= Open[2]) or (Close[3] >= Open[3]) or (Close[4] >= Open[4]) or (Close[5] >= Open[5]) or (Close[6] >= Open[6]))
       and (Close <= fEmaSlow)
       and (nCrossed <= 2);
   end;
 
+  // Entrada de venda: zona bear + candle vermelho
+  bEmaBearish := bEmaZoneBear and (Close < Open);
+
   // -----------------------------------------------------------------------
   // Calculo Final dos Gatilhos
   // -----------------------------------------------------------------------
-  // Strong: direcao do sinal a favor do MACD maior (menor irrelevante)
-  // Scalp: direcao contra MACD maior, menor confirmou a virada
+  // Strong: candle na direcao + MACD maior a favor
+  // Scalp: candle na direcao + MACD maior contra + menor confirma
   bStrongBull := Enable_EMA and bEmaBullish
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish;
@@ -347,14 +357,14 @@ begin
     and bTapeHighlight and bTapeWithTrend
     and bMajorBullish and (not bMinorBullish);
 
-  // Rejeicao: mesma logica strong/scalp + agressao contra + pavio confirma
-  bRejBull := Enable_EMA and bEmaBullish and bRejBullWick
+  // Rejeicao: zona EMA + pavio grande + tape contra (candle color irrelevante)
+  bRejBull := Enable_EMA and bEmaZoneBull and bRejBullWick
     and bMajorBullish;
-  bRejBear := Enable_EMA and bEmaBearish and bRejBearWick
+  bRejBear := Enable_EMA and bEmaZoneBear and bRejBearWick
     and (not bMajorBullish);
-  bRejsBull := Enable_Scalp and Enable_EMA and bEmaBullish and bRejBullWick
+  bRejsBull := Enable_Scalp and Enable_EMA and bEmaZoneBull and bRejBullWick
     and (not bMajorBullish) and bMinorBullish;
-  bRejsBear := Enable_Scalp and Enable_EMA and bEmaBearish and bRejBearWick
+  bRejsBear := Enable_Scalp and Enable_EMA and bEmaZoneBear and bRejBearWick
     and bMajorBullish and (not bMinorBullish);
 
   // -----------------------------------------------------------------------

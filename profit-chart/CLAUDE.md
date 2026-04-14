@@ -57,17 +57,17 @@ Three synchronized files share identical signal logic — only output differs:
 
 1. **Major MACD** — long-term trend (histogram >= 0 = bullish)
 2. **Minor MACD** — short-term trend (enables scalp signals)
-3. **Tape Reading** — volume + aggression above MA, aligned with brick direction
-4. **EMA Pullback** — brick in trend direction touching EMA zone after pullback (lookback: 6 bars, max 2 bars crossed beyond slow EMA)
-5. **Rejection** — aggression against trend + wick >= ratio * body
+3. **Tape Reading** — volume + aggression above MA, aligned with candle direction
+4. **EMA Zone** — candle near EMA zone after pullback (lookback: 6 bars, max 2 crossed beyond slow EMA, tolerance in ticks). Split into `bEmaZoneBull`/`bEmaZoneBear` (direction-agnostic) and `bEmaBullish`/`bEmaBearish` (requires candle color)
+5. **Rejection** — tape against signal direction (not candle direction) + wick >= ratio * body. Uses `bEmaZoneBull`/`bEmaZoneBear` so candle color is irrelevant — wick decides
 
 ### Signal Types
 
 | Signal | Condition | Color (light theme) |
 |--------|-----------|-------------------|
-| Strong Buy/Sell | EMA pullback + tape + Major MACD agrees | Blue / Red |
-| Scalp Buy/Sell | EMA pullback + tape + Major MACD opposes + Minor confirms | Light blue / Dark red |
-| Rejection variants | Same as above + rejection wick + counter-aggression | Same colors (labels differentiate) |
+| Strong Buy/Sell | EMA zone + green/red candle + tape aligned + Major MACD agrees | Blue / Red |
+| Scalp Buy/Sell | EMA zone + green/red candle + tape aligned + Major MACD opposes + Minor confirms | Light blue / Dark red |
+| Rejection variants | EMA zone (any candle color) + big wick + tape against signal direction | Same colors (labels differentiate) |
 
 ### Color Cascade (highest priority wins)
 
@@ -76,7 +76,8 @@ Strong triggers → Scalp triggers → Rejection strong → Rejection scalp → 
 ### Toggles
 
 - `Enable_EMA` — master toggle for all EMA-based entry signals
-- `Ignore_Pullback` — when true, EMA signal only needs trend direction + brick direction + EMA zone touch (skips pullback check, close vs slow EMA, nCrossed limit)
+- `EMA_Zone_Tolerance` — ticks of tolerance for candle "touching" EMA zone (default 2, helps with candle charts)
+- `Ignore_Pullback` — when true, EMA signal only needs trend direction + EMA zone touch (skips pullback check, close vs slow EMA, nCrossed limit)
 - `Enable_Scalp` — when false, disables all scalp and scalp-rejection signals
 - `Trend_Follow_Major` — trend color follows Major MACD (true) or Minor MACD (false)
 - `Tema_Escuro` — dark/light theme colors
