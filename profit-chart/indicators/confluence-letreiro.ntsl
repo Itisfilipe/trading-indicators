@@ -67,7 +67,7 @@ input
   Ignore_Pullback(false);
 
   // Ativar sinais de scalp (contra tendencia maior, MACD menor confirma)
-  Enable_Scalp(false);
+  Enable_Scalp(true);
 
   // Tema escuro (true) ou claro (false)
   Tema_Escuro(false);

@@ -68,7 +68,7 @@ input
   Ignore_Pullback(false);
 
   // Ativar sinais de scalp (contra tendencia maior, MACD menor confirma)
-  Enable_Scalp(false);
+  Enable_Scalp(true);
 
   // ----- Configuracoes dos Labels -----
 

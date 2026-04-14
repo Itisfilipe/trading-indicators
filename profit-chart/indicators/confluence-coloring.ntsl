@@ -85,7 +85,7 @@ input
   Ignore_Pullback(false);
 
   // Ativar sinais de scalp (contra tendencia maior, MACD menor confirma)
-  Enable_Scalp(false);
+  Enable_Scalp(true);
 
   // Cor da tendencia baseada no MACD maior (true) ou menor (false)
   Trend_Follow_Major(true);
