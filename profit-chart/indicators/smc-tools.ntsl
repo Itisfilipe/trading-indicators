@@ -3,8 +3,8 @@
 // =========================================================================
 // Ferramentas para Smart Money Concepts:
 //
-//   1. Killzones / Sessoes desenhadas como caixas preenchidas:
-//        - Sessao Asia / London / NY AM / NY Lunch / NY PM
+//   1. Killzones / Sessoes desenhadas como caixas (borda superior + inferior):
+//        - Asia / London / NY AM / NY Lunch / NY PM
 //      Cada sessao com cor propria e horarios configuraveis.
 //      Mantem ate Max_Past_Sessions caixas passadas por tipo (ring buffer)
 //      redesenhadas em LastBarOnChart para evitar duplicacao em ticks.
@@ -14,13 +14,11 @@
 //   2. Linhas HORIZONTAIS de abertura (preco Open na hora alvo):
 //        - Midnight Open / Weekly Open / 8:30 Open / 9:30 Open
 //
-//   3. Linhas VERTICAIS em 3 horarios livres (sem label).
-//
-//   4. Modo de horario:
-//      - Times_In_NY = false: todos os horarios sao hora do Brasil direta.
-//      - Times_In_NY = true:  horarios sao NY clock; o indicador soma
-//        NY_To_BR_Offset minutos pra converter pra BR.
-//        Default = 60 (DST). Mude para 120 quando NY estiver em EST (nov-mar).
+//   3. Modo de horario:
+//      - Times_In_NY = true (default): inputs em NY clock; o indicador soma
+//        NY_To_BR_Offset minutos pra converter pra BR (a plataforma usa BR).
+//        Default = 60 (DST abr-out). Mude para 120 no EST (nov-mar).
+//      - Times_In_NY = false: inputs em hora do Brasil direto.
 //
 // Observacoes:
 //   - Pensado para graficos baseados em tempo (1m, 5m, 15m).
@@ -33,60 +31,52 @@ input
   Tema_Escuro(false);
 
   // ----- Modo de horario -----
-  Times_In_NY(false);            // false = horarios em BR; true = NY com offset
-  NY_To_BR_Offset(60);           // minutos (60 = NY DST, 120 = NY EST)
+  Times_In_NY(true);             // true = horarios em NY (com offset); false = BR direto
+  NY_To_BR_Offset(60);           // minutos (60 = NY DST abr-out, 120 = NY EST nov-mar)
 
-  // ----- Sessoes / Killzones -----
+  // ----- Sessoes / Killzones (defaults em NY time) -----
   Enable_Asia(true);
-  Asia_Start(2100);              // 21:00 (BR DST default; NY 20:00)
-  Asia_End(100);                 // 01:00 - cruza meia-noite
+  Asia_Start(2000);              // 20:00 NY
+  Asia_End(0);                   // 00:00 NY - cruza meia-noite
 
   Enable_London(true);
-  London_Start(300);             // 03:00
-  London_End(600);               // 06:00
+  London_Start(200);             // 02:00 NY
+  London_End(500);               // 05:00 NY
 
   Enable_NY_AM(true);
-  NY_AM_Start(930);              // 09:30
-  NY_AM_End(1200);               // 12:00
+  NY_AM_Start(800);              // 08:00 NY
+  NY_AM_End(1100);               // 11:00 NY
 
   Enable_NY_Lunch(true);
-  NY_Lunch_Start(1300);          // 13:00
-  NY_Lunch_End(1430);            // 14:30
+  NY_Lunch_Start(1200);          // 12:00 NY
+  NY_Lunch_End(1300);            // 13:00 NY
 
   Enable_NY_PM(true);
-  NY_PM_Start(1430);             // 14:30
-  NY_PM_End(1700);               // 17:00
+  NY_PM_Start(1330);             // 13:30 NY
+  NY_PM_End(1600);               // 16:00 NY
 
   Show_Session_Levels(true);     // estende high/low (R/S) da sessao mais recente
   Session_Border_Width(1);
 
-  // ----- Linhas HORIZONTAIS de abertura -----
+  // ----- Linhas HORIZONTAIS de abertura (defaults em NY time) -----
   Midnight_Enable(true);
-  Midnight_Time(100);            // 01:00 BR (NY midnight DST)
+  Midnight_Time(0);              // 00:00 NY
   Midnight_Label("MO");
 
   Weekly_Enable(true);
   Weekly_Label("WO");
 
   Open830_Enable(true);
-  Open830_Time(930);             // 09:30 BR (NY 08:30 DST)
+  Open830_Time(830);             // 08:30 NY
   Open830_Label("8:30");
 
   Open930_Enable(true);
-  Open930_Time(1030);            // 10:30 BR (NY 09:30 DST)
+  Open930_Time(930);             // 09:30 NY
   Open930_Label("9:30");
-
-  // ----- Linhas VERTICAIS (sem label) -----
-  Vert1_Enable(true);
-  Vert1_Time(100);
-  Vert2_Enable(true);
-  Vert2_Time(930);
-  Vert3_Enable(true);
-  Vert3_Time(1030);
 
   Line_Style(2);                 // 0=solido, 1=traco longo, 2=traco curto
   Line_Width(1);
-  Line_End_Time(1900);           // Fim das linhas intraday (BR)
+  Line_End_Time(1800);           // Fim das linhas intraday (18:00 NY)
   Max_Past_Sessions(5);          // Slots historicos por tipo (max 5 implementado)
 
 var
@@ -97,7 +87,6 @@ var
   nNyLunchStartEff, nNyLunchEndEff : Integer;
   nNyPmStartEff,    nNyPmEndEff    : Integer;
   nMidnightEff, nOpen830Eff, nOpen930Eff   : Integer;
-  nVert1Eff, nVert2Eff, nVert3Eff          : Integer;
   nLineEndEff                              : Integer;
 
   // Sessao em andamento (running)
@@ -139,10 +128,8 @@ var
   // Cores
   nAsiaColor, nLondonColor, nNyAmColor, nNyLunchColor, nNyPmColor : Integer;
   nHorizColor                                                     : Integer;
-  nVert1Color, nVert2Color, nVert3Color                           : Integer;
 
   // Auxiliares
-  fMid, fHalfRange : Float;
   nT : Integer;
   nWeekStartDate : Integer;
   fWeeklyOpenPrice : Float;
@@ -157,9 +144,6 @@ begin
       nNyLunchColor  := RGB(150, 200, 255);
       nNyPmColor     := RGB(200, 130, 255);
       nHorizColor    := RGB(230, 230, 230);
-      nVert1Color    := RGB(180, 180, 180);
-      nVert2Color    := RGB(200, 140, 220);
-      nVert3Color    := RGB(140, 220, 180);
     end
   else
     begin
@@ -169,9 +153,6 @@ begin
       nNyLunchColor  := RGB(110, 170, 230);
       nNyPmColor     := RGB(160,  80, 200);
       nHorizColor    := RGB(0, 0, 0);
-      nVert1Color    := RGB(100, 100, 100);
-      nVert2Color    := RGB(140,  60, 180);
-      nVert3Color    := RGB( 40, 140,  80);
     end;
 
   // =================== TIMES EFETIVOS ===================
@@ -190,9 +171,6 @@ begin
       nMidnightEff     := CalcTime(Midnight_Time, NY_To_BR_Offset);
       nOpen830Eff      := CalcTime(Open830_Time,  NY_To_BR_Offset);
       nOpen930Eff      := CalcTime(Open930_Time,  NY_To_BR_Offset);
-      nVert1Eff        := CalcTime(Vert1_Time,    NY_To_BR_Offset);
-      nVert2Eff        := CalcTime(Vert2_Time,    NY_To_BR_Offset);
-      nVert3Eff        := CalcTime(Vert3_Time,    NY_To_BR_Offset);
       nLineEndEff      := CalcTime(Line_End_Time, NY_To_BR_Offset);
     end
   else
@@ -210,9 +188,6 @@ begin
       nMidnightEff     := Midnight_Time;
       nOpen830Eff      := Open830_Time;
       nOpen930Eff      := Open930_Time;
-      nVert1Eff        := Vert1_Time;
-      nVert2Eff        := Vert2_Time;
-      nVert3Eff        := Vert3_Time;
       nLineEndEff      := Line_End_Time;
     end;
 
@@ -262,15 +237,13 @@ begin
             nAsia1E := nAsiaStartDate;
         end;
 
-      // Running box (cada barra dentro da sessao)
+      // Running box: bordas superior + inferior (sem preenchimento -> sem linha central)
       if bInAsia then
         begin
-          fMid := (fAsiaHigh + fAsiaLow) / 2;
-          fHalfRange := (fAsiaHigh - fAsiaLow) / 2;
-          HorizontalLineCustom(fMid, nAsiaColor, Session_Border_Width, 0,
-            "", 8, tpTopLeft, nAsiaStartDate, Date, fHalfRange, nAsiaStartEff, nT);
           HorizontalLineCustom(fAsiaHigh, nAsiaColor, Session_Border_Width, 0,
             "Asia", 8, tpTopLeft, nAsiaStartDate, Date, 0, nAsiaStartEff, nT);
+          HorizontalLineCustom(fAsiaLow, nAsiaColor, Session_Border_Width, 0,
+            "", 8, tpTopLeft, nAsiaStartDate, Date, 0, nAsiaStartEff, nT);
         end;
 
       // Slots passados redesenhados so na ultima barra (evita acumulo)
@@ -278,33 +251,28 @@ begin
         begin
           if (nAsia1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              fMid := (fAsia1H + fAsia1L) / 2; fHalfRange := (fAsia1H - fAsia1L) / 2;
-              HorizontalLineCustom(fMid, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia1S, nAsia1E, fHalfRange, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia1H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia1S, nAsia1E, 0, nAsiaStartEff, nAsiaEndEff);
+              HorizontalLineCustom(fAsia1L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia1S, nAsia1E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              fMid := (fAsia2H + fAsia2L) / 2; fHalfRange := (fAsia2H - fAsia2L) / 2;
-              HorizontalLineCustom(fMid, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia2S, nAsia2E, fHalfRange, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia2H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia2S, nAsia2E, 0, nAsiaStartEff, nAsiaEndEff);
+              HorizontalLineCustom(fAsia2L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia2S, nAsia2E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              fMid := (fAsia3H + fAsia3L) / 2; fHalfRange := (fAsia3H - fAsia3L) / 2;
-              HorizontalLineCustom(fMid, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia3S, nAsia3E, fHalfRange, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia3H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia3S, nAsia3E, 0, nAsiaStartEff, nAsiaEndEff);
+              HorizontalLineCustom(fAsia3L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia3S, nAsia3E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              fMid := (fAsia4H + fAsia4L) / 2; fHalfRange := (fAsia4H - fAsia4L) / 2;
-              HorizontalLineCustom(fMid, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia4S, nAsia4E, fHalfRange, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia4H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia4S, nAsia4E, 0, nAsiaStartEff, nAsiaEndEff);
+              HorizontalLineCustom(fAsia4L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia4S, nAsia4E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              fMid := (fAsia5H + fAsia5L) / 2; fHalfRange := (fAsia5H - fAsia5L) / 2;
-              HorizontalLineCustom(fMid, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia5S, nAsia5E, fHalfRange, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia5H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia5S, nAsia5E, 0, nAsiaStartEff, nAsiaEndEff);
+              HorizontalLineCustom(fAsia5L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia5S, nAsia5E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
 
           // S/R extensao da sessao mais recente (slot 1)
@@ -361,45 +329,38 @@ begin
 
       if bInLondon then
         begin
-          fMid := (fLondonHigh + fLondonLow) / 2;
-          fHalfRange := (fLondonHigh - fLondonLow) / 2;
-          HorizontalLineCustom(fMid, nLondonColor, Session_Border_Width, 0,
-            "", 8, tpTopLeft, nLondonStartDate, Date, fHalfRange, nLondonStartEff, nT);
           HorizontalLineCustom(fLondonHigh, nLondonColor, Session_Border_Width, 0,
             "Lon", 8, tpTopLeft, nLondonStartDate, Date, 0, nLondonStartEff, nT);
+          HorizontalLineCustom(fLondonLow, nLondonColor, Session_Border_Width, 0,
+            "", 8, tpTopLeft, nLondonStartDate, Date, 0, nLondonStartEff, nT);
         end;
 
       if LastBarOnChart then
         begin
           if (nLon1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              fMid := (fLon1H + fLon1L) / 2; fHalfRange := (fLon1H - fLon1L) / 2;
-              HorizontalLineCustom(fMid, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon1S, nLon1E, fHalfRange, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon1H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon1S, nLon1E, 0, nLondonStartEff, nLondonEndEff);
+              HorizontalLineCustom(fLon1L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon1S, nLon1E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              fMid := (fLon2H + fLon2L) / 2; fHalfRange := (fLon2H - fLon2L) / 2;
-              HorizontalLineCustom(fMid, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon2S, nLon2E, fHalfRange, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon2H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon2S, nLon2E, 0, nLondonStartEff, nLondonEndEff);
+              HorizontalLineCustom(fLon2L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon2S, nLon2E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              fMid := (fLon3H + fLon3L) / 2; fHalfRange := (fLon3H - fLon3L) / 2;
-              HorizontalLineCustom(fMid, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon3S, nLon3E, fHalfRange, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon3H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon3S, nLon3E, 0, nLondonStartEff, nLondonEndEff);
+              HorizontalLineCustom(fLon3L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon3S, nLon3E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              fMid := (fLon4H + fLon4L) / 2; fHalfRange := (fLon4H - fLon4L) / 2;
-              HorizontalLineCustom(fMid, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon4S, nLon4E, fHalfRange, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon4H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon4S, nLon4E, 0, nLondonStartEff, nLondonEndEff);
+              HorizontalLineCustom(fLon4L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon4S, nLon4E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              fMid := (fLon5H + fLon5L) / 2; fHalfRange := (fLon5H - fLon5L) / 2;
-              HorizontalLineCustom(fMid, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon5S, nLon5E, fHalfRange, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon5H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon5S, nLon5E, 0, nLondonStartEff, nLondonEndEff);
+              HorizontalLineCustom(fLon5L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon5S, nLon5E, 0, nLondonStartEff, nLondonEndEff);
             end;
 
           if Show_Session_Levels and (nLon1E > 0) then
@@ -455,45 +416,38 @@ begin
 
       if bInNyAm then
         begin
-          fMid := (fNyAmHigh + fNyAmLow) / 2;
-          fHalfRange := (fNyAmHigh - fNyAmLow) / 2;
-          HorizontalLineCustom(fMid, nNyAmColor, Session_Border_Width, 0,
-            "", 8, tpTopLeft, nNyAmStartDate, Date, fHalfRange, nNyAmStartEff, nT);
           HorizontalLineCustom(fNyAmHigh, nNyAmColor, Session_Border_Width, 0,
             "AM", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
+          HorizontalLineCustom(fNyAmLow, nNyAmColor, Session_Border_Width, 0,
+            "", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
         end;
 
       if LastBarOnChart then
         begin
           if (nAm1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              fMid := (fAm1H + fAm1L) / 2; fHalfRange := (fAm1H - fAm1L) / 2;
-              HorizontalLineCustom(fMid, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm1S, nAm1E, fHalfRange, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm1H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm1S, nAm1E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm1L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm1S, nAm1E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              fMid := (fAm2H + fAm2L) / 2; fHalfRange := (fAm2H - fAm2L) / 2;
-              HorizontalLineCustom(fMid, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm2S, nAm2E, fHalfRange, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm2H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm2S, nAm2E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm2L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm2S, nAm2E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              fMid := (fAm3H + fAm3L) / 2; fHalfRange := (fAm3H - fAm3L) / 2;
-              HorizontalLineCustom(fMid, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm3S, nAm3E, fHalfRange, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm3H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm3S, nAm3E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm3L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm3S, nAm3E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              fMid := (fAm4H + fAm4L) / 2; fHalfRange := (fAm4H - fAm4L) / 2;
-              HorizontalLineCustom(fMid, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm4S, nAm4E, fHalfRange, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm4H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm4S, nAm4E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm4L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm4S, nAm4E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              fMid := (fAm5H + fAm5L) / 2; fHalfRange := (fAm5H - fAm5L) / 2;
-              HorizontalLineCustom(fMid, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm5S, nAm5E, fHalfRange, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm5H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm5S, nAm5E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm5L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm5S, nAm5E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
 
           if Show_Session_Levels and (nAm1E > 0) then
@@ -549,45 +503,38 @@ begin
 
       if bInNyLunch then
         begin
-          fMid := (fNyLunchHigh + fNyLunchLow) / 2;
-          fHalfRange := (fNyLunchHigh - fNyLunchLow) / 2;
-          HorizontalLineCustom(fMid, nNyLunchColor, Session_Border_Width, 0,
-            "", 8, tpTopLeft, nNyLunchStartDate, Date, fHalfRange, nNyLunchStartEff, nT);
           HorizontalLineCustom(fNyLunchHigh, nNyLunchColor, Session_Border_Width, 0,
             "Lunch", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
+          HorizontalLineCustom(fNyLunchLow, nNyLunchColor, Session_Border_Width, 0,
+            "", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
         end;
 
       if LastBarOnChart then
         begin
           if (nLu1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              fMid := (fLu1H + fLu1L) / 2; fHalfRange := (fLu1H - fLu1L) / 2;
-              HorizontalLineCustom(fMid, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu1S, nLu1E, fHalfRange, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu1H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu1S, nLu1E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu1L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu1S, nLu1E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              fMid := (fLu2H + fLu2L) / 2; fHalfRange := (fLu2H - fLu2L) / 2;
-              HorizontalLineCustom(fMid, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu2S, nLu2E, fHalfRange, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu2H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu2S, nLu2E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu2L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu2S, nLu2E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              fMid := (fLu3H + fLu3L) / 2; fHalfRange := (fLu3H - fLu3L) / 2;
-              HorizontalLineCustom(fMid, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu3S, nLu3E, fHalfRange, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu3H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu3S, nLu3E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu3L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu3S, nLu3E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              fMid := (fLu4H + fLu4L) / 2; fHalfRange := (fLu4H - fLu4L) / 2;
-              HorizontalLineCustom(fMid, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu4S, nLu4E, fHalfRange, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu4H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu4S, nLu4E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu4L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu4S, nLu4E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              fMid := (fLu5H + fLu5L) / 2; fHalfRange := (fLu5H - fLu5L) / 2;
-              HorizontalLineCustom(fMid, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu5S, nLu5E, fHalfRange, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu5H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu5S, nLu5E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu5L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu5S, nLu5E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
 
           if Show_Session_Levels and (nLu1E > 0) then
@@ -643,45 +590,38 @@ begin
 
       if bInNyPm then
         begin
-          fMid := (fNyPmHigh + fNyPmLow) / 2;
-          fHalfRange := (fNyPmHigh - fNyPmLow) / 2;
-          HorizontalLineCustom(fMid, nNyPmColor, Session_Border_Width, 0,
-            "", 8, tpTopLeft, nNyPmStartDate, Date, fHalfRange, nNyPmStartEff, nT);
           HorizontalLineCustom(fNyPmHigh, nNyPmColor, Session_Border_Width, 0,
             "PM", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
+          HorizontalLineCustom(fNyPmLow, nNyPmColor, Session_Border_Width, 0,
+            "", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
         end;
 
       if LastBarOnChart then
         begin
           if (nPm1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              fMid := (fPm1H + fPm1L) / 2; fHalfRange := (fPm1H - fPm1L) / 2;
-              HorizontalLineCustom(fMid, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm1S, nPm1E, fHalfRange, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm1H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm1S, nPm1E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm1L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm1S, nPm1E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              fMid := (fPm2H + fPm2L) / 2; fHalfRange := (fPm2H - fPm2L) / 2;
-              HorizontalLineCustom(fMid, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm2S, nPm2E, fHalfRange, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm2H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm2S, nPm2E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm2L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm2S, nPm2E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              fMid := (fPm3H + fPm3L) / 2; fHalfRange := (fPm3H - fPm3L) / 2;
-              HorizontalLineCustom(fMid, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm3S, nPm3E, fHalfRange, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm3H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm3S, nPm3E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm3L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm3S, nPm3E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              fMid := (fPm4H + fPm4L) / 2; fHalfRange := (fPm4H - fPm4L) / 2;
-              HorizontalLineCustom(fMid, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm4S, nPm4E, fHalfRange, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm4H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm4S, nPm4E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm4L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm4S, nPm4E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              fMid := (fPm5H + fPm5L) / 2; fHalfRange := (fPm5H - fPm5L) / 2;
-              HorizontalLineCustom(fMid, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm5S, nPm5E, fHalfRange, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm5H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm5S, nPm5E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm5L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm5S, nPm5E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
 
           if Show_Session_Levels and (nPm1E > 0) then
@@ -738,22 +678,4 @@ begin
           nWeekStartDate, LastWorkingDayOfWeek(nWeekStartDate), 0, 0, nLineEndEff);
     end;
 
-  // =================== LINHAS VERTICAIS ===================
-  if Vert1_Enable and (nT >= nVert1Eff) and
-     ((Time[1] < nVert1Eff) or (Date <> Date[1])) and
-     (Date >= CalcDate(LastCalcDate, -Max_Past_Sessions)) then
-    VerticalLineCustom(nVert1Color, Line_Width, Line_Style,
-      "", 8, tpTopRight, 0, 0, false);
-
-  if Vert2_Enable and (nT >= nVert2Eff) and
-     ((Time[1] < nVert2Eff) or (Date <> Date[1])) and
-     (Date >= CalcDate(LastCalcDate, -Max_Past_Sessions)) then
-    VerticalLineCustom(nVert2Color, Line_Width, Line_Style,
-      "", 8, tpTopRight, 0, 0, false);
-
-  if Vert3_Enable and (nT >= nVert3Eff) and
-     ((Time[1] < nVert3Eff) or (Date <> Date[1])) and
-     (Date >= CalcDate(LastCalcDate, -Max_Past_Sessions)) then
-    VerticalLineCustom(nVert3Color, Line_Width, Line_Style,
-      "", 8, tpTopRight, 0, 0, false);
 end;
