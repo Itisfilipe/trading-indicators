@@ -55,7 +55,7 @@ input
   NY_PM_Inicio(1330);             // 13:30 NY
   NY_PM_Fim(1600);               // 16:00 NY
 
-  Mostrar_Niveis_Sessao(true);     // estende high/low da sessao mais recente
+  Mostrar_Niveis_Sessao(false);    // estende high/low da sessao mais recente
   Espessura_Borda_Sessao(2);
 
   // ----- Linhas HORIZONTAIS de abertura (defaults em NY time) -----
