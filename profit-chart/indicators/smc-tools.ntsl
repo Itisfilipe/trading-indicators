@@ -250,8 +250,8 @@ begin
             nAsia1E := nAsiaStartDate;
         end;
 
-      // Running box: fill (width=0 tenta ocultar a linha central) + bordas
-      if bInAsia then
+      // Running box: desenha so na ultima barra do grafico (evita acumulo historico)
+      if bInAsia and LastBarOnChart then
         begin
           HorizontalLineCustom((fAsiaHigh+fAsiaLow)/2, nAsiaFill, 1, 0,
             "", 8, tpTopLeft, nAsiaStartDate, Date, (fAsiaHigh-fAsiaLow)/2, nAsiaStartEff, nT);
@@ -347,7 +347,7 @@ begin
             nLon1E := nLondonStartDate;
         end;
 
-      if bInLondon then
+      if bInLondon and LastBarOnChart then
         begin
           HorizontalLineCustom((fLondonHigh+fLondonLow)/2, nLondonFill, 1, 0,
             "", 8, tpTopLeft, nLondonStartDate, Date, (fLondonHigh-fLondonLow)/2, nLondonStartEff, nT);
@@ -441,7 +441,7 @@ begin
             nAm1E := nNyAmStartDate;
         end;
 
-      if bInNyAm then
+      if bInNyAm and LastBarOnChart then
         begin
           HorizontalLineCustom((fNyAmHigh+fNyAmLow)/2, nNyAmFill, 1, 0,
             "", 8, tpTopLeft, nNyAmStartDate, Date, (fNyAmHigh-fNyAmLow)/2, nNyAmStartEff, nT);
@@ -535,7 +535,7 @@ begin
             nLu1E := nNyLunchStartDate;
         end;
 
-      if bInNyLunch then
+      if bInNyLunch and LastBarOnChart then
         begin
           HorizontalLineCustom((fNyLunchHigh+fNyLunchLow)/2, nNyLunchFill, 1, 0,
             "", 8, tpTopLeft, nNyLunchStartDate, Date, (fNyLunchHigh-fNyLunchLow)/2, nNyLunchStartEff, nT);
@@ -629,7 +629,7 @@ begin
             nPm1E := nNyPmStartDate;
         end;
 
-      if bInNyPm then
+      if bInNyPm and LastBarOnChart then
         begin
           HorizontalLineCustom((fNyPmHigh+fNyPmLow)/2, nNyPmFill, 1, 0,
             "", 8, tpTopLeft, nNyPmStartDate, Date, (fNyPmHigh-fNyPmLow)/2, nNyPmStartEff, nT);
