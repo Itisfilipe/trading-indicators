@@ -237,9 +237,11 @@ begin
             nAsia1E := nAsiaStartDate;
         end;
 
-      // Running box: bordas superior + inferior (sem preenchimento -> sem linha central)
+      // Running box: fill (width=0 tenta ocultar a linha central) + bordas
       if bInAsia then
         begin
+          HorizontalLineCustom((fAsiaHigh+fAsiaLow)/2, nAsiaColor, 0, 0,
+            "", 8, tpTopLeft, nAsiaStartDate, Date, (fAsiaHigh-fAsiaLow)/2, nAsiaStartEff, nT);
           HorizontalLineCustom(fAsiaHigh, nAsiaColor, Session_Border_Width, 0,
             "Asia", 8, tpTopLeft, nAsiaStartDate, Date, 0, nAsiaStartEff, nT);
           HorizontalLineCustom(fAsiaLow, nAsiaColor, Session_Border_Width, 0,
@@ -251,37 +253,42 @@ begin
         begin
           if (nAsia1E > 0) and (Max_Past_Sessions >= 1) then
             begin
+              HorizontalLineCustom((fAsia1H+fAsia1L)/2, nAsiaColor, 0, 0, "", 8, tpTopLeft, nAsia1S, nAsia1E, (fAsia1H-fAsia1L)/2, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia1H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia1S, nAsia1E, 0, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia1L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia1S, nAsia1E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia2E > 0) and (Max_Past_Sessions >= 2) then
             begin
+              HorizontalLineCustom((fAsia2H+fAsia2L)/2, nAsiaColor, 0, 0, "", 8, tpTopLeft, nAsia2S, nAsia2E, (fAsia2H-fAsia2L)/2, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia2H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia2S, nAsia2E, 0, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia2L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia2S, nAsia2E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia3E > 0) and (Max_Past_Sessions >= 3) then
             begin
+              HorizontalLineCustom((fAsia3H+fAsia3L)/2, nAsiaColor, 0, 0, "", 8, tpTopLeft, nAsia3S, nAsia3E, (fAsia3H-fAsia3L)/2, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia3H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia3S, nAsia3E, 0, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia3L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia3S, nAsia3E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia4E > 0) and (Max_Past_Sessions >= 4) then
             begin
+              HorizontalLineCustom((fAsia4H+fAsia4L)/2, nAsiaColor, 0, 0, "", 8, tpTopLeft, nAsia4S, nAsia4E, (fAsia4H-fAsia4L)/2, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia4H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia4S, nAsia4E, 0, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia4L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia4S, nAsia4E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
           if (nAsia5E > 0) and (Max_Past_Sessions >= 5) then
             begin
+              HorizontalLineCustom((fAsia5H+fAsia5L)/2, nAsiaColor, 0, 0, "", 8, tpTopLeft, nAsia5S, nAsia5E, (fAsia5H-fAsia5L)/2, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia5H, nAsiaColor, Session_Border_Width, 0, "Asia", 8, tpTopLeft, nAsia5S, nAsia5E, 0, nAsiaStartEff, nAsiaEndEff);
               HorizontalLineCustom(fAsia5L, nAsiaColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAsia5S, nAsia5E, 0, nAsiaStartEff, nAsiaEndEff);
             end;
 
-          // S/R extensao da sessao mais recente (slot 1)
+          // S/R extensao da sessao mais recente (slot 1) - sem limite de hora
           if Show_Session_Levels and (nAsia1E > 0) then
             begin
-              HorizontalLineCustom(fAsia1H, nAsiaColor, 1, 2, "Asia R", 8, tpTopRight,
-                nAsia1E, 0, 0, nAsiaEndEff, nLineEndEff);
-              HorizontalLineCustom(fAsia1L, nAsiaColor, 1, 2, "Asia S", 8, tpBottomRight,
-                nAsia1E, 0, 0, nAsiaEndEff, nLineEndEff);
+              HorizontalLineCustom(fAsia1H, nAsiaColor, 1, 2, "Asia High", 8, tpTopRight,
+                nAsia1E, 0, 0, 0, 2359);
+              HorizontalLineCustom(fAsia1L, nAsiaColor, 1, 2, "Asia Low", 8, tpBottomRight,
+                nAsia1E, 0, 0, 0, 2359);
             end;
         end;
     end;
@@ -329,6 +336,8 @@ begin
 
       if bInLondon then
         begin
+          HorizontalLineCustom((fLondonHigh+fLondonLow)/2, nLondonColor, 0, 0,
+            "", 8, tpTopLeft, nLondonStartDate, Date, (fLondonHigh-fLondonLow)/2, nLondonStartEff, nT);
           HorizontalLineCustom(fLondonHigh, nLondonColor, Session_Border_Width, 0,
             "Lon", 8, tpTopLeft, nLondonStartDate, Date, 0, nLondonStartEff, nT);
           HorizontalLineCustom(fLondonLow, nLondonColor, Session_Border_Width, 0,
@@ -339,36 +348,41 @@ begin
         begin
           if (nLon1E > 0) and (Max_Past_Sessions >= 1) then
             begin
+              HorizontalLineCustom((fLon1H+fLon1L)/2, nLondonColor, 0, 0, "", 8, tpTopLeft, nLon1S, nLon1E, (fLon1H-fLon1L)/2, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon1H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon1S, nLon1E, 0, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon1L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon1S, nLon1E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon2E > 0) and (Max_Past_Sessions >= 2) then
             begin
+              HorizontalLineCustom((fLon2H+fLon2L)/2, nLondonColor, 0, 0, "", 8, tpTopLeft, nLon2S, nLon2E, (fLon2H-fLon2L)/2, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon2H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon2S, nLon2E, 0, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon2L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon2S, nLon2E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon3E > 0) and (Max_Past_Sessions >= 3) then
             begin
+              HorizontalLineCustom((fLon3H+fLon3L)/2, nLondonColor, 0, 0, "", 8, tpTopLeft, nLon3S, nLon3E, (fLon3H-fLon3L)/2, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon3H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon3S, nLon3E, 0, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon3L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon3S, nLon3E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon4E > 0) and (Max_Past_Sessions >= 4) then
             begin
+              HorizontalLineCustom((fLon4H+fLon4L)/2, nLondonColor, 0, 0, "", 8, tpTopLeft, nLon4S, nLon4E, (fLon4H-fLon4L)/2, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon4H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon4S, nLon4E, 0, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon4L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon4S, nLon4E, 0, nLondonStartEff, nLondonEndEff);
             end;
           if (nLon5E > 0) and (Max_Past_Sessions >= 5) then
             begin
+              HorizontalLineCustom((fLon5H+fLon5L)/2, nLondonColor, 0, 0, "", 8, tpTopLeft, nLon5S, nLon5E, (fLon5H-fLon5L)/2, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon5H, nLondonColor, Session_Border_Width, 0, "Lon", 8, tpTopLeft, nLon5S, nLon5E, 0, nLondonStartEff, nLondonEndEff);
               HorizontalLineCustom(fLon5L, nLondonColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLon5S, nLon5E, 0, nLondonStartEff, nLondonEndEff);
             end;
 
           if Show_Session_Levels and (nLon1E > 0) then
             begin
-              HorizontalLineCustom(fLon1H, nLondonColor, 1, 2, "Lon R", 8, tpTopRight,
-                nLon1E, 0, 0, nLondonEndEff, nLineEndEff);
-              HorizontalLineCustom(fLon1L, nLondonColor, 1, 2, "Lon S", 8, tpBottomRight,
-                nLon1E, 0, 0, nLondonEndEff, nLineEndEff);
+              HorizontalLineCustom(fLon1H, nLondonColor, 1, 2, "Lon High", 8, tpTopRight,
+                nLon1E, 0, 0, 0, 2359);
+              HorizontalLineCustom(fLon1L, nLondonColor, 1, 2, "Lon Low", 8, tpBottomRight,
+                nLon1E, 0, 0, 0, 2359);
             end;
         end;
     end;
@@ -416,8 +430,10 @@ begin
 
       if bInNyAm then
         begin
+          HorizontalLineCustom((fNyAmHigh+fNyAmLow)/2, nNyAmColor, 0, 0,
+            "", 8, tpTopLeft, nNyAmStartDate, Date, (fNyAmHigh-fNyAmLow)/2, nNyAmStartEff, nT);
           HorizontalLineCustom(fNyAmHigh, nNyAmColor, Session_Border_Width, 0,
-            "AM", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
+            "NY AM", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
           HorizontalLineCustom(fNyAmLow, nNyAmColor, Session_Border_Width, 0,
             "", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
         end;
@@ -426,36 +442,41 @@ begin
         begin
           if (nAm1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              HorizontalLineCustom(fAm1H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm1S, nAm1E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom((fAm1H+fAm1L)/2, nNyAmColor, 0, 0, "", 8, tpTopLeft, nAm1S, nAm1E, (fAm1H-fAm1L)/2, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm1H, nNyAmColor, Session_Border_Width, 0, "NY AM", 8, tpTopLeft, nAm1S, nAm1E, 0, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm1L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm1S, nAm1E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              HorizontalLineCustom(fAm2H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm2S, nAm2E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom((fAm2H+fAm2L)/2, nNyAmColor, 0, 0, "", 8, tpTopLeft, nAm2S, nAm2E, (fAm2H-fAm2L)/2, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm2H, nNyAmColor, Session_Border_Width, 0, "NY AM", 8, tpTopLeft, nAm2S, nAm2E, 0, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm2L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm2S, nAm2E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              HorizontalLineCustom(fAm3H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm3S, nAm3E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom((fAm3H+fAm3L)/2, nNyAmColor, 0, 0, "", 8, tpTopLeft, nAm3S, nAm3E, (fAm3H-fAm3L)/2, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm3H, nNyAmColor, Session_Border_Width, 0, "NY AM", 8, tpTopLeft, nAm3S, nAm3E, 0, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm3L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm3S, nAm3E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              HorizontalLineCustom(fAm4H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm4S, nAm4E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom((fAm4H+fAm4L)/2, nNyAmColor, 0, 0, "", 8, tpTopLeft, nAm4S, nAm4E, (fAm4H-fAm4L)/2, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm4H, nNyAmColor, Session_Border_Width, 0, "NY AM", 8, tpTopLeft, nAm4S, nAm4E, 0, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm4L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm4S, nAm4E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
           if (nAm5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              HorizontalLineCustom(fAm5H, nNyAmColor, Session_Border_Width, 0, "AM", 8, tpTopLeft, nAm5S, nAm5E, 0, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom((fAm5H+fAm5L)/2, nNyAmColor, 0, 0, "", 8, tpTopLeft, nAm5S, nAm5E, (fAm5H-fAm5L)/2, nNyAmStartEff, nNyAmEndEff);
+              HorizontalLineCustom(fAm5H, nNyAmColor, Session_Border_Width, 0, "NY AM", 8, tpTopLeft, nAm5S, nAm5E, 0, nNyAmStartEff, nNyAmEndEff);
               HorizontalLineCustom(fAm5L, nNyAmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nAm5S, nAm5E, 0, nNyAmStartEff, nNyAmEndEff);
             end;
 
           if Show_Session_Levels and (nAm1E > 0) then
             begin
-              HorizontalLineCustom(fAm1H, nNyAmColor, 1, 2, "AM R", 8, tpTopRight,
-                nAm1E, 0, 0, nNyAmEndEff, nLineEndEff);
-              HorizontalLineCustom(fAm1L, nNyAmColor, 1, 2, "AM S", 8, tpBottomRight,
-                nAm1E, 0, 0, nNyAmEndEff, nLineEndEff);
+              HorizontalLineCustom(fAm1H, nNyAmColor, 1, 2, "NY AM High", 8, tpTopRight,
+                nAm1E, 0, 0, 0, 2359);
+              HorizontalLineCustom(fAm1L, nNyAmColor, 1, 2, "NY AM Low", 8, tpBottomRight,
+                nAm1E, 0, 0, 0, 2359);
             end;
         end;
     end;
@@ -503,8 +524,10 @@ begin
 
       if bInNyLunch then
         begin
+          HorizontalLineCustom((fNyLunchHigh+fNyLunchLow)/2, nNyLunchColor, 0, 0,
+            "", 8, tpTopLeft, nNyLunchStartDate, Date, (fNyLunchHigh-fNyLunchLow)/2, nNyLunchStartEff, nT);
           HorizontalLineCustom(fNyLunchHigh, nNyLunchColor, Session_Border_Width, 0,
-            "Lunch", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
+            "NY Lunch", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
           HorizontalLineCustom(fNyLunchLow, nNyLunchColor, Session_Border_Width, 0,
             "", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
         end;
@@ -513,36 +536,41 @@ begin
         begin
           if (nLu1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              HorizontalLineCustom(fLu1H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu1S, nLu1E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom((fLu1H+fLu1L)/2, nNyLunchColor, 0, 0, "", 8, tpTopLeft, nLu1S, nLu1E, (fLu1H-fLu1L)/2, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu1H, nNyLunchColor, Session_Border_Width, 0, "NY Lunch", 8, tpTopLeft, nLu1S, nLu1E, 0, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu1L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu1S, nLu1E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              HorizontalLineCustom(fLu2H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu2S, nLu2E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom((fLu2H+fLu2L)/2, nNyLunchColor, 0, 0, "", 8, tpTopLeft, nLu2S, nLu2E, (fLu2H-fLu2L)/2, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu2H, nNyLunchColor, Session_Border_Width, 0, "NY Lunch", 8, tpTopLeft, nLu2S, nLu2E, 0, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu2L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu2S, nLu2E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              HorizontalLineCustom(fLu3H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu3S, nLu3E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom((fLu3H+fLu3L)/2, nNyLunchColor, 0, 0, "", 8, tpTopLeft, nLu3S, nLu3E, (fLu3H-fLu3L)/2, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu3H, nNyLunchColor, Session_Border_Width, 0, "NY Lunch", 8, tpTopLeft, nLu3S, nLu3E, 0, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu3L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu3S, nLu3E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              HorizontalLineCustom(fLu4H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu4S, nLu4E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom((fLu4H+fLu4L)/2, nNyLunchColor, 0, 0, "", 8, tpTopLeft, nLu4S, nLu4E, (fLu4H-fLu4L)/2, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu4H, nNyLunchColor, Session_Border_Width, 0, "NY Lunch", 8, tpTopLeft, nLu4S, nLu4E, 0, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu4L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu4S, nLu4E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
           if (nLu5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              HorizontalLineCustom(fLu5H, nNyLunchColor, Session_Border_Width, 0, "Lunch", 8, tpTopLeft, nLu5S, nLu5E, 0, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom((fLu5H+fLu5L)/2, nNyLunchColor, 0, 0, "", 8, tpTopLeft, nLu5S, nLu5E, (fLu5H-fLu5L)/2, nNyLunchStartEff, nNyLunchEndEff);
+              HorizontalLineCustom(fLu5H, nNyLunchColor, Session_Border_Width, 0, "NY Lunch", 8, tpTopLeft, nLu5S, nLu5E, 0, nNyLunchStartEff, nNyLunchEndEff);
               HorizontalLineCustom(fLu5L, nNyLunchColor, Session_Border_Width, 0, "", 8, tpTopLeft, nLu5S, nLu5E, 0, nNyLunchStartEff, nNyLunchEndEff);
             end;
 
           if Show_Session_Levels and (nLu1E > 0) then
             begin
-              HorizontalLineCustom(fLu1H, nNyLunchColor, 1, 2, "Lunch R", 8, tpTopRight,
-                nLu1E, 0, 0, nNyLunchEndEff, nLineEndEff);
-              HorizontalLineCustom(fLu1L, nNyLunchColor, 1, 2, "Lunch S", 8, tpBottomRight,
-                nLu1E, 0, 0, nNyLunchEndEff, nLineEndEff);
+              HorizontalLineCustom(fLu1H, nNyLunchColor, 1, 2, "NY Lunch High", 8, tpTopRight,
+                nLu1E, 0, 0, 0, 2359);
+              HorizontalLineCustom(fLu1L, nNyLunchColor, 1, 2, "NY Lunch Low", 8, tpBottomRight,
+                nLu1E, 0, 0, 0, 2359);
             end;
         end;
     end;
@@ -590,8 +618,10 @@ begin
 
       if bInNyPm then
         begin
+          HorizontalLineCustom((fNyPmHigh+fNyPmLow)/2, nNyPmColor, 0, 0,
+            "", 8, tpTopLeft, nNyPmStartDate, Date, (fNyPmHigh-fNyPmLow)/2, nNyPmStartEff, nT);
           HorizontalLineCustom(fNyPmHigh, nNyPmColor, Session_Border_Width, 0,
-            "PM", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
+            "NY PM", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
           HorizontalLineCustom(fNyPmLow, nNyPmColor, Session_Border_Width, 0,
             "", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
         end;
@@ -600,36 +630,41 @@ begin
         begin
           if (nPm1E > 0) and (Max_Past_Sessions >= 1) then
             begin
-              HorizontalLineCustom(fPm1H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm1S, nPm1E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom((fPm1H+fPm1L)/2, nNyPmColor, 0, 0, "", 8, tpTopLeft, nPm1S, nPm1E, (fPm1H-fPm1L)/2, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm1H, nNyPmColor, Session_Border_Width, 0, "NY PM", 8, tpTopLeft, nPm1S, nPm1E, 0, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm1L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm1S, nPm1E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm2E > 0) and (Max_Past_Sessions >= 2) then
             begin
-              HorizontalLineCustom(fPm2H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm2S, nPm2E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom((fPm2H+fPm2L)/2, nNyPmColor, 0, 0, "", 8, tpTopLeft, nPm2S, nPm2E, (fPm2H-fPm2L)/2, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm2H, nNyPmColor, Session_Border_Width, 0, "NY PM", 8, tpTopLeft, nPm2S, nPm2E, 0, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm2L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm2S, nPm2E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm3E > 0) and (Max_Past_Sessions >= 3) then
             begin
-              HorizontalLineCustom(fPm3H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm3S, nPm3E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom((fPm3H+fPm3L)/2, nNyPmColor, 0, 0, "", 8, tpTopLeft, nPm3S, nPm3E, (fPm3H-fPm3L)/2, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm3H, nNyPmColor, Session_Border_Width, 0, "NY PM", 8, tpTopLeft, nPm3S, nPm3E, 0, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm3L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm3S, nPm3E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm4E > 0) and (Max_Past_Sessions >= 4) then
             begin
-              HorizontalLineCustom(fPm4H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm4S, nPm4E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom((fPm4H+fPm4L)/2, nNyPmColor, 0, 0, "", 8, tpTopLeft, nPm4S, nPm4E, (fPm4H-fPm4L)/2, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm4H, nNyPmColor, Session_Border_Width, 0, "NY PM", 8, tpTopLeft, nPm4S, nPm4E, 0, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm4L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm4S, nPm4E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
           if (nPm5E > 0) and (Max_Past_Sessions >= 5) then
             begin
-              HorizontalLineCustom(fPm5H, nNyPmColor, Session_Border_Width, 0, "PM", 8, tpTopLeft, nPm5S, nPm5E, 0, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom((fPm5H+fPm5L)/2, nNyPmColor, 0, 0, "", 8, tpTopLeft, nPm5S, nPm5E, (fPm5H-fPm5L)/2, nNyPmStartEff, nNyPmEndEff);
+              HorizontalLineCustom(fPm5H, nNyPmColor, Session_Border_Width, 0, "NY PM", 8, tpTopLeft, nPm5S, nPm5E, 0, nNyPmStartEff, nNyPmEndEff);
               HorizontalLineCustom(fPm5L, nNyPmColor, Session_Border_Width, 0, "", 8, tpTopLeft, nPm5S, nPm5E, 0, nNyPmStartEff, nNyPmEndEff);
             end;
 
           if Show_Session_Levels and (nPm1E > 0) then
             begin
-              HorizontalLineCustom(fPm1H, nNyPmColor, 1, 2, "PM R", 8, tpTopRight,
-                nPm1E, 0, 0, nNyPmEndEff, nLineEndEff);
-              HorizontalLineCustom(fPm1L, nNyPmColor, 1, 2, "PM S", 8, tpBottomRight,
-                nPm1E, 0, 0, nNyPmEndEff, nLineEndEff);
+              HorizontalLineCustom(fPm1H, nNyPmColor, 1, 2, "NY PM High", 8, tpTopRight,
+                nPm1E, 0, 0, 0, 2359);
+              HorizontalLineCustom(fPm1L, nNyPmColor, 1, 2, "NY PM Low", 8, tpBottomRight,
+                nPm1E, 0, 0, 0, 2359);
             end;
         end;
     end;
