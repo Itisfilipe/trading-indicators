@@ -70,10 +70,7 @@ var
   nWeekStartDate : Integer;
 
 begin
-  if Tema_Escuro then
-    nHorizColor := RGB(230, 230, 230)
-  else
-    nHorizColor := RGB(0, 0, 0);
+  nHorizColor := RGB(0, 0, 0);
 
   if Horario_Em_NY then
     begin
