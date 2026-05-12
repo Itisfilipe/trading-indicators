@@ -230,19 +230,8 @@ begin
             HorizontalLineCustom(f133a5P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_1330, 8, tpTopRight, n133a5D, n133a5D, 0, nOpen1330Eff, nLineEndEff);
         end;
 
-      // Weekly
-      if Ativar_Weekly then
-        begin
-          if (nWk1D > 0) and (Max_Sessoes_Passadas >= 1) then
-            HorizontalLineCustom(fWk1P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk1D, nWk1End, 0, 0, nLineEndEff);
-          if (nWk2D > 0) and (Max_Sessoes_Passadas >= 2) then
-            HorizontalLineCustom(fWk2P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk2D, nWk2End, 0, 0, nLineEndEff);
-          if (nWk3D > 0) and (Max_Sessoes_Passadas >= 3) then
-            HorizontalLineCustom(fWk3P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk3D, nWk3End, 0, 0, nLineEndEff);
-          if (nWk4D > 0) and (Max_Sessoes_Passadas >= 4) then
-            HorizontalLineCustom(fWk4P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk4D, nWk4End, 0, 0, nLineEndEff);
-          if (nWk5D > 0) and (Max_Sessoes_Passadas >= 5) then
-            HorizontalLineCustom(fWk5P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk5D, nWk5End, 0, 0, nLineEndEff);
-        end;
+      // Weekly: somente semana atual (slot 1)
+      if Ativar_Weekly and (nWk1D > 0) then
+        HorizontalLineCustom(fWk1P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk1D, nWk1End, 0, 0, nLineEndEff);
     end;
 end;
