@@ -757,7 +757,7 @@ begin
   // ----- 8:30 Open: deteccao + shift -----
   if Ativar_830 and
      (((Date = Date[1]) and (Time[1] < nOpen830Eff) and (nT >= nOpen830Eff)) or
-      ((Date <> Date[1]) and (nT = nOpen830Eff))) and
+      ((Date <> Date[1]) and (nT >= nOpen830Eff))) and
      (Date <> n83a1D) then
     begin
       n83a5D := n83a4D; n83a4D := n83a3D; n83a3D := n83a2D; n83a2D := n83a1D;
@@ -769,7 +769,7 @@ begin
   // ----- 9:30 Open: deteccao + shift -----
   if Ativar_930 and
      (((Date = Date[1]) and (Time[1] < nOpen930Eff) and (nT >= nOpen930Eff)) or
-      ((Date <> Date[1]) and (nT = nOpen930Eff))) and
+      ((Date <> Date[1]) and (nT >= nOpen930Eff))) and
      (Date <> n93a1D) then
     begin
       n93a5D := n93a4D; n93a4D := n93a3D; n93a3D := n93a2D; n93a2D := n93a1D;
