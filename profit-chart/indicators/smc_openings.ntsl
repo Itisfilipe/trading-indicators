@@ -70,7 +70,10 @@ var
   nWeekStartDate : Integer;
 
 begin
-  nHorizColor := RGB(0, 0, 0);
+  if Tema_Escuro then
+    nHorizColor := RGB(230, 230, 230)        // quase branco
+  else
+    nHorizColor := RGB(0, 0, 0);             // preto
 
   if Horario_Em_NY then
     begin
