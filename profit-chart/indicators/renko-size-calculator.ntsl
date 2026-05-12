@@ -15,6 +15,13 @@
 //
 // O periodo e definido em DIAS e o indicador calcula automaticamente
 // quantos candles isso representa no timeframe atual.
+//
+// RTH (Regular Trading Hours):
+//   - Apenas_RTH=true filtra candles fora da janela RTH_Inicio..RTH_Fim
+//   - Util pra ativos com sessao prolongada (mini Dow noturno, futuros US)
+//     onde o overnight tem volatilidade diferente do pregao regular
+//   - Usa EMA manual ao inves de MediaExp para conseguir pular candles
+//     fora da janela sem distorcer o calculo
 // =========================================================================
 
 input
@@ -24,6 +31,19 @@ input
   // Ignorar gaps de abertura (overnight)? Padrao: false
   // Quando ativo, usa apenas High-Low no primeiro candle do dia
   Ignorar_Gaps(false);
+
+  // Calcular ATR apenas com candles do RTH (Regular Trading Hours)?
+  // Padrao: false (usa o pregao todo)
+  // Defaults configurados para RTH do Nasdaq (cash session 09:30-16:00 NY)
+  Apenas_RTH(false);
+
+  // RTH em horario NY? true (default) = soma offset para BR
+  Horario_Em_NY(true);
+  Offset_NY_Para_BR(60);         // minutos (60 = NY DST abr-out, 120 = EST nov-mar)
+
+  // Janela do RTH (formato HHMM). Default: 09:30 - 16:00 NY (Nasdaq cash)
+  RTH_Inicio(930);
+  RTH_Fim(1600);
 
   // Mostrar linha do ATR no grafico?
   Exibir_ATR(true);
@@ -46,6 +66,9 @@ var
 
   // Deteccao de sessao
   bIsNewSession: Boolean;
+  bInRTH: Boolean;
+  bConsiderar: Boolean;          // Considerar candle no calculo? (true se in-RTH ou Apenas_RTH=false)
+  nRTHStartEff, nRTHEndEff: Integer;
 
   // Contagem de candles por dia
   nCandlesInCurrentDay: Integer;
@@ -55,6 +78,8 @@ var
 
   // Resultados
   fATR: Float;
+  fK: Float;                     // Constante de suavizacao do EMA manual
+  bEmaSeeded: Boolean;
   nRenkoTicks: Integer;
 
   // Cores
@@ -89,17 +114,33 @@ begin
   fTickSize := MinPriceIncrement;
 
   // -----------------------------------------------------------------------
-  // Detecta novo dia e conta candles por dia
+  // Detecta novo dia e RTH (convertendo NY -> BR se necessario)
   // -----------------------------------------------------------------------
-  bIsNewSession := (Date <> Date[1]);
+  if Horario_Em_NY then begin
+    nRTHStartEff := CalcTime(RTH_Inicio, Offset_NY_Para_BR);
+    nRTHEndEff   := CalcTime(RTH_Fim,    Offset_NY_Para_BR);
+  end else begin
+    nRTHStartEff := RTH_Inicio;
+    nRTHEndEff   := RTH_Fim;
+  end;
 
+  bIsNewSession := (Date <> Date[1]);
+  bInRTH := (Time >= nRTHStartEff) and (Time < nRTHEndEff);
+  bConsiderar := (not Apenas_RTH) or bInRTH;
+
+  // -----------------------------------------------------------------------
+  // Conta candles por dia (apenas os que sao considerados)
+  // -----------------------------------------------------------------------
   if bIsNewSession then begin
     if nCandlesInCurrentDay > 0 then begin
       nCandlesPerDay := nCandlesInCurrentDay;
       nDaysCount := nDaysCount + 1;
     end;
-    nCandlesInCurrentDay := 1;
-  end else
+    if bConsiderar then
+      nCandlesInCurrentDay := 1
+    else
+      nCandlesInCurrentDay := 0;
+  end else if bConsiderar then
     nCandlesInCurrentDay := nCandlesInCurrentDay + 1;
 
   // -----------------------------------------------------------------------
@@ -114,29 +155,37 @@ begin
     nActualPeriod := 1;
 
   // -----------------------------------------------------------------------
-  // Calcula True Range (volatilidade de cada candle)
-  // Se Ignorar_Gaps esta ativo, usa apenas High-Low no primeiro candle
-  // do dia para nao distorcer com o gap de abertura
+  // Carry-forward do ATR (series zera entre barras quando indexado)
   // -----------------------------------------------------------------------
-  fHighLow := High - Low;
+  fATR := fATR[1];
 
-  if Ignorar_Gaps and bIsNewSession then
-    fTrueRange := fHighLow
-  else begin
-    fHighClose := ABS(High - Close[1]);
-    fLowClose := ABS(Low - Close[1]);
-    fTrueRange := fHighLow;
-    if fHighClose > fTrueRange then
-      fTrueRange := fHighClose;
-    if fLowClose > fTrueRange then
-      fTrueRange := fLowClose;
+  // -----------------------------------------------------------------------
+  // Calcula True Range e atualiza EMA manual SOMENTE em candles considerados
+  // (todos quando Apenas_RTH=false, RTH apenas quando true).
+  // EMA manual usado para permitir pular candles fora do RTH sem distorcer.
+  // -----------------------------------------------------------------------
+  if bConsiderar then begin
+    fHighLow := High - Low;
+
+    if Ignorar_Gaps and bIsNewSession then
+      fTrueRange := fHighLow
+    else begin
+      fHighClose := ABS(High - Close[1]);
+      fLowClose := ABS(Low - Close[1]);
+      fTrueRange := fHighLow;
+      if fHighClose > fTrueRange then
+        fTrueRange := fHighClose;
+      if fLowClose > fTrueRange then
+        fTrueRange := fLowClose;
+    end;
+
+    fK := 2 / (nActualPeriod + 1);
+    if not bEmaSeeded then begin
+      fATR := fTrueRange;
+      bEmaSeeded := True;
+    end else
+      fATR := fATR + fK * (fTrueRange - fATR);
   end;
-
-  // -----------------------------------------------------------------------
-  // ATR = media exponencial do True Range
-  // Tamanho Renko = metade do ATR convertido em ticks
-  // -----------------------------------------------------------------------
-  fATR := MediaExp(nActualPeriod, fTrueRange);
 
   if fTickSize > 0 then
     nRenkoTicks := Round((fATR / 2) / fTickSize)
