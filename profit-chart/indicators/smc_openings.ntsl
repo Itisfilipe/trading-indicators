@@ -30,10 +30,8 @@ input
 
   Ativar_Weekly(true);
   Weekly_Label("WO");
-  // Weekly Open: hora de abertura da semana (NY). ICT: 18:00 NY (CME reopen
-  // dom 18:00 NY). Em B3 sem dado de domingo, captura na primeira barra
-  // de segunda mesmo assim.
-  Weekly_Hora_Abertura(1800);    // 18:00 NY (Sunday open)
+  // Trade-week ICT comeca domingo 18:00 NY (CME reopen).
+  Weekly_Hora_Abertura(1800);    // 18:00 NY
 
   Ativar_830(true);
   Hora_830(830);                 // 08:30 NY
