@@ -112,9 +112,12 @@ begin
   nWk1D := nWk1D[1]; fWk1P := fWk1P[1]; nWk1End := nWk1End[1];
   nWeekStartDate := nWeekStartDate[1];
 
-  // ----- Midnight Open: deteccao + shift -----
-  if Ativar_Midnight and (nT >= nMidnightEff) and
-     ((Date <> Date[1]) or (Time[1] < nMidnightEff)) and
+  // ----- Midnight Open: somente cross intraday no mesmo dia BR -----
+  // BR date rola a meia-noite BR, entao na barra de 01:00 BR (=NY midnight DST)
+  // a previa em 00:45 BR ja tem mesmo Date. Date<>Date[1] indica gap (fim de
+  // semana, abertura semanal) e nao deve disparar Midnight aqui.
+  if Ativar_Midnight and (Date = Date[1]) and
+     (Time[1] < nMidnightEff) and (nT >= nMidnightEff) and
      (Date <> nMd1D) then
     begin
       nMd5D := nMd4D; nMd4D := nMd3D; nMd3D := nMd2D; nMd2D := nMd1D;
