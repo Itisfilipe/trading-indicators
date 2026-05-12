@@ -235,9 +235,9 @@ begin
           if Mostrar_Niveis_Sessao and (nAsia1E > 0) and (fAsia1H > fAsia1L) then
             begin
               HorizontalLineCustom(fAsia1H, nAsiaColor, 1, 2, "Asia High", 8, tpTopRight,
-                nAsia1S, 0, 0, nAsiaStartEff, 2359);
+                nAsia1E, 0, 0, nAsiaEndEff, 2359);
               HorizontalLineCustom(fAsia1L, nAsiaColor, 1, 2, "Asia Low", 8, tpBottomRight,
-                nAsia1S, 0, 0, nAsiaStartEff, 2359);
+                nAsia1E, 0, 0, nAsiaEndEff, 2359);
             end;
         end;
     end;
@@ -329,9 +329,9 @@ begin
           if Mostrar_Niveis_Sessao and (nLon1E > 0) and (fLon1H > fLon1L) then
             begin
               HorizontalLineCustom(fLon1H, nLondonColor, 1, 2, "London High", 8, tpTopRight,
-                nLon1S, 0, 0, nLondonStartEff, 2359);
+                nLon1E, 0, 0, nLondonEndEff, 2359);
               HorizontalLineCustom(fLon1L, nLondonColor, 1, 2, "London Low", 8, tpBottomRight,
-                nLon1S, 0, 0, nLondonStartEff, 2359);
+                nLon1E, 0, 0, nLondonEndEff, 2359);
             end;
         end;
     end;
@@ -423,9 +423,9 @@ begin
           if Mostrar_Niveis_Sessao and (nAm1E > 0) and (fAm1H > fAm1L) then
             begin
               HorizontalLineCustom(fAm1H, nNyAmColor, 1, 2, "NY AM High", 8, tpTopRight,
-                nAm1S, 0, 0, nNyAmStartEff, 2359);
+                nAm1E, 0, 0, nNyAmEndEff, 2359);
               HorizontalLineCustom(fAm1L, nNyAmColor, 1, 2, "NY AM Low", 8, tpBottomRight,
-                nAm1S, 0, 0, nNyAmStartEff, 2359);
+                nAm1E, 0, 0, nNyAmEndEff, 2359);
             end;
         end;
     end;
@@ -517,9 +517,9 @@ begin
           if Mostrar_Niveis_Sessao and (nLu1E > 0) and (fLu1H > fLu1L) then
             begin
               HorizontalLineCustom(fLu1H, nNyLunchColor, 1, 2, "NY Lunch High", 8, tpTopRight,
-                nLu1S, 0, 0, nNyLunchStartEff, 2359);
+                nLu1E, 0, 0, nNyLunchEndEff, 2359);
               HorizontalLineCustom(fLu1L, nNyLunchColor, 1, 2, "NY Lunch Low", 8, tpBottomRight,
-                nLu1S, 0, 0, nNyLunchStartEff, 2359);
+                nLu1E, 0, 0, nNyLunchEndEff, 2359);
             end;
         end;
     end;
@@ -611,9 +611,9 @@ begin
           if Mostrar_Niveis_Sessao and (nPm1E > 0) and (fPm1H > fPm1L) then
             begin
               HorizontalLineCustom(fPm1H, nNyPmColor, 1, 2, "NY PM High", 8, tpTopRight,
-                nPm1S, 0, 0, nNyPmStartEff, 2359);
+                nPm1E, 0, 0, nNyPmEndEff, 2359);
               HorizontalLineCustom(fPm1L, nNyPmColor, 1, 2, "NY PM Low", 8, tpBottomRight,
-                nPm1S, 0, 0, nNyPmStartEff, 2359);
+                nPm1E, 0, 0, nNyPmEndEff, 2359);
             end;
         end;
     end;
