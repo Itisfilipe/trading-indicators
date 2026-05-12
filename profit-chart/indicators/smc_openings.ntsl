@@ -1,0 +1,248 @@
+// =========================================================================
+// SMC OPENINGS - Linhas horizontais de abertura
+// =========================================================================
+// Linhas horizontais marcando precos de abertura chave SMC:
+//   - Midnight Open (NY midnight)
+//   - Weekly Open  (abertura da semana)
+//   - 8:30 Open    (NY 08:30 - news/data release)
+//   - 9:30 Open    (NY 09:30 - cash open)
+//   - 13:30 Open   (NY 13:30 - PM open / news release)
+//
+// Cada tipo tem ring buffer de 5 slots; detecao captura (shift + store),
+// redesenho acontece so em LastBarOnChart.
+//
+// Modo de horario:
+//   - Horario_Em_NY = true (default): inputs em NY clock; o indicador soma
+//     Offset_NY_Para_BR minutos pra converter pra BR.
+//     Default = 60 (DST abr-out). Mude para 120 no EST (nov-mar).
+//   - Horario_Em_NY = false: inputs em hora do Brasil direto.
+// =========================================================================
+
+input
+  Tema_Escuro(false);
+
+  Horario_Em_NY(true);
+  Offset_NY_Para_BR(60);
+
+  Ativar_Midnight(true);
+  Midnight_Hora(0);              // 00:00 NY
+  Midnight_Label("00:00");
+
+  Ativar_Weekly(true);
+  Weekly_Label("WO");
+
+  Ativar_830(true);
+  Hora_830(830);                 // 08:30 NY
+  Label_830("8:30");
+
+  Ativar_930(true);
+  Hora_930(930);                 // 09:30 NY
+  Label_930("9:30");
+
+  Ativar_1330(true);
+  Hora_1330(1330);               // 13:30 NY
+  Label_1330("13:30");
+
+  Estilo_Linha(2);               // 0=solido, 1=traco longo, 2=traco curto
+  Espessura_Linha(1);
+  Hora_Fim_Linha(1800);          // Fim das linhas intraday (18:00 NY)
+  Max_Sessoes_Passadas(5);
+
+var
+  nMidnightEff, nOpen830Eff, nOpen930Eff, nOpen1330Eff : Integer;
+  nLineEndEff                                          : Integer;
+
+  nMd1D, nMd2D, nMd3D, nMd4D, nMd5D : Integer;
+  fMd1P, fMd2P, fMd3P, fMd4P, fMd5P : Float;
+  n83a1D, n83a2D, n83a3D, n83a4D, n83a5D : Integer;
+  f83a1P, f83a2P, f83a3P, f83a4P, f83a5P : Float;
+  n93a1D, n93a2D, n93a3D, n93a4D, n93a5D : Integer;
+  f93a1P, f93a2P, f93a3P, f93a4P, f93a5P : Float;
+  n133a1D, n133a2D, n133a3D, n133a4D, n133a5D : Integer;
+  f133a1P, f133a2P, f133a3P, f133a4P, f133a5P : Float;
+  nWk1D, nWk2D, nWk3D, nWk4D, nWk5D : Integer;
+  fWk1P, fWk2P, fWk3P, fWk4P, fWk5P : Float;
+  nWk1End, nWk2End, nWk3End, nWk4End, nWk5End : Integer;
+
+  nHorizColor : Integer;
+
+  nT : Integer;
+  nWeekStartDate : Integer;
+
+begin
+  if Tema_Escuro then
+    nHorizColor := RGB(230, 230, 230)
+  else
+    nHorizColor := RGB(0, 0, 0);
+
+  if Horario_Em_NY then
+    begin
+      nMidnightEff := CalcTime(Midnight_Hora, Offset_NY_Para_BR);
+      nOpen830Eff  := CalcTime(Hora_830,  Offset_NY_Para_BR);
+      nOpen930Eff  := CalcTime(Hora_930,  Offset_NY_Para_BR);
+      nOpen1330Eff := CalcTime(Hora_1330, Offset_NY_Para_BR);
+      nLineEndEff  := CalcTime(Hora_Fim_Linha, Offset_NY_Para_BR);
+    end
+  else
+    begin
+      nMidnightEff := Midnight_Hora;
+      nOpen830Eff  := Hora_830;
+      nOpen930Eff  := Hora_930;
+      nOpen1330Eff := Hora_1330;
+      nLineEndEff  := Hora_Fim_Linha;
+    end;
+
+  nT := Time;
+
+  // Carry-forward dos slots de opens
+  nMd1D := nMd1D[1]; nMd2D := nMd2D[1]; nMd3D := nMd3D[1]; nMd4D := nMd4D[1]; nMd5D := nMd5D[1];
+  fMd1P := fMd1P[1]; fMd2P := fMd2P[1]; fMd3P := fMd3P[1]; fMd4P := fMd4P[1]; fMd5P := fMd5P[1];
+  n83a1D := n83a1D[1]; n83a2D := n83a2D[1]; n83a3D := n83a3D[1]; n83a4D := n83a4D[1]; n83a5D := n83a5D[1];
+  f83a1P := f83a1P[1]; f83a2P := f83a2P[1]; f83a3P := f83a3P[1]; f83a4P := f83a4P[1]; f83a5P := f83a5P[1];
+  n93a1D := n93a1D[1]; n93a2D := n93a2D[1]; n93a3D := n93a3D[1]; n93a4D := n93a4D[1]; n93a5D := n93a5D[1];
+  f93a1P := f93a1P[1]; f93a2P := f93a2P[1]; f93a3P := f93a3P[1]; f93a4P := f93a4P[1]; f93a5P := f93a5P[1];
+  n133a1D := n133a1D[1]; n133a2D := n133a2D[1]; n133a3D := n133a3D[1]; n133a4D := n133a4D[1]; n133a5D := n133a5D[1];
+  f133a1P := f133a1P[1]; f133a2P := f133a2P[1]; f133a3P := f133a3P[1]; f133a4P := f133a4P[1]; f133a5P := f133a5P[1];
+  nWk1D := nWk1D[1]; nWk2D := nWk2D[1]; nWk3D := nWk3D[1]; nWk4D := nWk4D[1]; nWk5D := nWk5D[1];
+  fWk1P := fWk1P[1]; fWk2P := fWk2P[1]; fWk3P := fWk3P[1]; fWk4P := fWk4P[1]; fWk5P := fWk5P[1];
+  nWk1End := nWk1End[1]; nWk2End := nWk2End[1]; nWk3End := nWk3End[1]; nWk4End := nWk4End[1]; nWk5End := nWk5End[1];
+  nWeekStartDate := nWeekStartDate[1];
+
+  // ----- Midnight Open: deteccao + shift -----
+  if Ativar_Midnight and (nT >= nMidnightEff) and
+     ((Date <> Date[1]) or (Time[1] < nMidnightEff)) and
+     (Date <> nMd1D) then
+    begin
+      nMd5D := nMd4D; nMd4D := nMd3D; nMd3D := nMd2D; nMd2D := nMd1D;
+      fMd5P := fMd4P; fMd4P := fMd3P; fMd3P := fMd2P; fMd2P := fMd1P;
+      nMd1D := Date;
+      fMd1P := Open;
+    end;
+
+  // ----- 8:30 Open: deteccao + shift -----
+  if Ativar_830 and
+     (((Date = Date[1]) and (Time[1] < nOpen830Eff) and (nT >= nOpen830Eff)) or
+      ((Date <> Date[1]) and (nT >= nOpen830Eff))) and
+     (Date <> n83a1D) then
+    begin
+      n83a5D := n83a4D; n83a4D := n83a3D; n83a3D := n83a2D; n83a2D := n83a1D;
+      f83a5P := f83a4P; f83a4P := f83a3P; f83a3P := f83a2P; f83a2P := f83a1P;
+      n83a1D := Date;
+      f83a1P := Open;
+    end;
+
+  // ----- 9:30 Open: deteccao + shift -----
+  if Ativar_930 and
+     (((Date = Date[1]) and (Time[1] < nOpen930Eff) and (nT >= nOpen930Eff)) or
+      ((Date <> Date[1]) and (nT >= nOpen930Eff))) and
+     (Date <> n93a1D) then
+    begin
+      n93a5D := n93a4D; n93a4D := n93a3D; n93a3D := n93a2D; n93a2D := n93a1D;
+      f93a5P := f93a4P; f93a4P := f93a3P; f93a3P := f93a2P; f93a2P := f93a1P;
+      n93a1D := Date;
+      f93a1P := Open;
+    end;
+
+  // ----- 13:30 Open: deteccao + shift -----
+  if Ativar_1330 and
+     (((Date = Date[1]) and (Time[1] < nOpen1330Eff) and (nT >= nOpen1330Eff)) or
+      ((Date <> Date[1]) and (nT >= nOpen1330Eff))) and
+     (Date <> n133a1D) then
+    begin
+      n133a5D := n133a4D; n133a4D := n133a3D; n133a3D := n133a2D; n133a2D := n133a1D;
+      f133a5P := f133a4P; f133a4P := f133a3P; f133a3P := f133a2P; f133a2P := f133a1P;
+      n133a1D := Date;
+      f133a1P := Open;
+    end;
+
+  // ----- Weekly Open: deteccao + shift -----
+  if Ativar_Weekly and (FirstWorkingDayOfWeek(Date) <> nWeekStartDate) then
+    begin
+      nWeekStartDate := FirstWorkingDayOfWeek(Date);
+      nWk5D := nWk4D; nWk4D := nWk3D; nWk3D := nWk2D; nWk2D := nWk1D;
+      fWk5P := fWk4P; fWk4P := fWk3P; fWk3P := fWk2P; fWk2P := fWk1P;
+      nWk5End := nWk4End; nWk4End := nWk3End; nWk3End := nWk2End; nWk2End := nWk1End;
+      nWk1D := nWeekStartDate;
+      fWk1P := Open;
+      nWk1End := LastWorkingDayOfWeek(nWeekStartDate);
+    end;
+
+  // ----- Desenho de todos os slots (so em LastBarOnChart) -----
+  if LastBarOnChart then
+    begin
+      // Midnight
+      if Ativar_Midnight then
+        begin
+          if (nMd1D > 0) and (Max_Sessoes_Passadas >= 1) then
+            HorizontalLineCustom(fMd1P, nHorizColor, Espessura_Linha, Estilo_Linha, Midnight_Label, 8, tpTopRight, nMd1D, nMd1D, 0, nMidnightEff, nLineEndEff);
+          if (nMd2D > 0) and (Max_Sessoes_Passadas >= 2) then
+            HorizontalLineCustom(fMd2P, nHorizColor, Espessura_Linha, Estilo_Linha, Midnight_Label, 8, tpTopRight, nMd2D, nMd2D, 0, nMidnightEff, nLineEndEff);
+          if (nMd3D > 0) and (Max_Sessoes_Passadas >= 3) then
+            HorizontalLineCustom(fMd3P, nHorizColor, Espessura_Linha, Estilo_Linha, Midnight_Label, 8, tpTopRight, nMd3D, nMd3D, 0, nMidnightEff, nLineEndEff);
+          if (nMd4D > 0) and (Max_Sessoes_Passadas >= 4) then
+            HorizontalLineCustom(fMd4P, nHorizColor, Espessura_Linha, Estilo_Linha, Midnight_Label, 8, tpTopRight, nMd4D, nMd4D, 0, nMidnightEff, nLineEndEff);
+          if (nMd5D > 0) and (Max_Sessoes_Passadas >= 5) then
+            HorizontalLineCustom(fMd5P, nHorizColor, Espessura_Linha, Estilo_Linha, Midnight_Label, 8, tpTopRight, nMd5D, nMd5D, 0, nMidnightEff, nLineEndEff);
+        end;
+
+      // 8:30
+      if Ativar_830 then
+        begin
+          if (n83a1D > 0) and (Max_Sessoes_Passadas >= 1) then
+            HorizontalLineCustom(f83a1P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_830, 8, tpTopRight, n83a1D, n83a1D, 0, nOpen830Eff, nLineEndEff);
+          if (n83a2D > 0) and (Max_Sessoes_Passadas >= 2) then
+            HorizontalLineCustom(f83a2P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_830, 8, tpTopRight, n83a2D, n83a2D, 0, nOpen830Eff, nLineEndEff);
+          if (n83a3D > 0) and (Max_Sessoes_Passadas >= 3) then
+            HorizontalLineCustom(f83a3P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_830, 8, tpTopRight, n83a3D, n83a3D, 0, nOpen830Eff, nLineEndEff);
+          if (n83a4D > 0) and (Max_Sessoes_Passadas >= 4) then
+            HorizontalLineCustom(f83a4P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_830, 8, tpTopRight, n83a4D, n83a4D, 0, nOpen830Eff, nLineEndEff);
+          if (n83a5D > 0) and (Max_Sessoes_Passadas >= 5) then
+            HorizontalLineCustom(f83a5P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_830, 8, tpTopRight, n83a5D, n83a5D, 0, nOpen830Eff, nLineEndEff);
+        end;
+
+      // 9:30
+      if Ativar_930 then
+        begin
+          if (n93a1D > 0) and (Max_Sessoes_Passadas >= 1) then
+            HorizontalLineCustom(f93a1P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_930, 8, tpTopRight, n93a1D, n93a1D, 0, nOpen930Eff, nLineEndEff);
+          if (n93a2D > 0) and (Max_Sessoes_Passadas >= 2) then
+            HorizontalLineCustom(f93a2P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_930, 8, tpTopRight, n93a2D, n93a2D, 0, nOpen930Eff, nLineEndEff);
+          if (n93a3D > 0) and (Max_Sessoes_Passadas >= 3) then
+            HorizontalLineCustom(f93a3P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_930, 8, tpTopRight, n93a3D, n93a3D, 0, nOpen930Eff, nLineEndEff);
+          if (n93a4D > 0) and (Max_Sessoes_Passadas >= 4) then
+            HorizontalLineCustom(f93a4P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_930, 8, tpTopRight, n93a4D, n93a4D, 0, nOpen930Eff, nLineEndEff);
+          if (n93a5D > 0) and (Max_Sessoes_Passadas >= 5) then
+            HorizontalLineCustom(f93a5P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_930, 8, tpTopRight, n93a5D, n93a5D, 0, nOpen930Eff, nLineEndEff);
+        end;
+
+      // 13:30
+      if Ativar_1330 then
+        begin
+          if (n133a1D > 0) and (Max_Sessoes_Passadas >= 1) then
+            HorizontalLineCustom(f133a1P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_1330, 8, tpTopRight, n133a1D, n133a1D, 0, nOpen1330Eff, nLineEndEff);
+          if (n133a2D > 0) and (Max_Sessoes_Passadas >= 2) then
+            HorizontalLineCustom(f133a2P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_1330, 8, tpTopRight, n133a2D, n133a2D, 0, nOpen1330Eff, nLineEndEff);
+          if (n133a3D > 0) and (Max_Sessoes_Passadas >= 3) then
+            HorizontalLineCustom(f133a3P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_1330, 8, tpTopRight, n133a3D, n133a3D, 0, nOpen1330Eff, nLineEndEff);
+          if (n133a4D > 0) and (Max_Sessoes_Passadas >= 4) then
+            HorizontalLineCustom(f133a4P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_1330, 8, tpTopRight, n133a4D, n133a4D, 0, nOpen1330Eff, nLineEndEff);
+          if (n133a5D > 0) and (Max_Sessoes_Passadas >= 5) then
+            HorizontalLineCustom(f133a5P, nHorizColor, Espessura_Linha, Estilo_Linha, Label_1330, 8, tpTopRight, n133a5D, n133a5D, 0, nOpen1330Eff, nLineEndEff);
+        end;
+
+      // Weekly
+      if Ativar_Weekly then
+        begin
+          if (nWk1D > 0) and (Max_Sessoes_Passadas >= 1) then
+            HorizontalLineCustom(fWk1P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk1D, nWk1End, 0, 0, nLineEndEff);
+          if (nWk2D > 0) and (Max_Sessoes_Passadas >= 2) then
+            HorizontalLineCustom(fWk2P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk2D, nWk2End, 0, 0, nLineEndEff);
+          if (nWk3D > 0) and (Max_Sessoes_Passadas >= 3) then
+            HorizontalLineCustom(fWk3P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk3D, nWk3End, 0, 0, nLineEndEff);
+          if (nWk4D > 0) and (Max_Sessoes_Passadas >= 4) then
+            HorizontalLineCustom(fWk4P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk4D, nWk4End, 0, 0, nLineEndEff);
+          if (nWk5D > 0) and (Max_Sessoes_Passadas >= 5) then
+            HorizontalLineCustom(fWk5P, nHorizColor, Espessura_Linha, Estilo_Linha, Weekly_Label, 8, tpTopRight, nWk5D, nWk5End, 0, 0, nLineEndEff);
+        end;
+    end;
+end;
