@@ -30,6 +30,10 @@ input
 
   Ativar_Weekly(true);
   Weekly_Label("WO");
+  // Weekly Open: hora de abertura da semana (NY). ICT: 18:00 NY (CME reopen
+  // dom 18:00 NY). Em B3 sem dado de domingo, captura na primeira barra
+  // de segunda mesmo assim.
+  Weekly_Hora_Abertura(1800);    // 18:00 NY (Sunday open)
 
   Ativar_830(true);
   Hora_830(830);                 // 08:30 NY
@@ -50,6 +54,7 @@ input
 
 var
   nMidnightEff, nOpen830Eff, nOpen930Eff, nOpen1330Eff : Integer;
+  nWeeklyOpenEff                                       : Integer;
   nLineEndEff                                          : Integer;
 
   nMd1D, nMd2D, nMd3D, nMd4D, nMd5D : Integer;
@@ -67,6 +72,8 @@ var
 
   nT : Integer;
   nWeekStartDate : Integer;
+  nTradeWeekMonday : Integer;
+  nDW : Integer;
 
 begin
   if Tema_Escuro then
@@ -79,16 +86,18 @@ begin
       nMidnightEff := CalcTime(Midnight_Hora, Offset_NY_Para_BR);
       nOpen830Eff  := CalcTime(Hora_830,  Offset_NY_Para_BR);
       nOpen930Eff  := CalcTime(Hora_930,  Offset_NY_Para_BR);
-      nOpen1330Eff := CalcTime(Hora_1330, Offset_NY_Para_BR);
-      nLineEndEff  := CalcTime(Hora_Fim_Linha, Offset_NY_Para_BR);
+      nOpen1330Eff   := CalcTime(Hora_1330, Offset_NY_Para_BR);
+      nWeeklyOpenEff := CalcTime(Weekly_Hora_Abertura, Offset_NY_Para_BR);
+      nLineEndEff    := CalcTime(Hora_Fim_Linha, Offset_NY_Para_BR);
     end
   else
     begin
-      nMidnightEff := Midnight_Hora;
-      nOpen830Eff  := Hora_830;
-      nOpen930Eff  := Hora_930;
-      nOpen1330Eff := Hora_1330;
-      nLineEndEff  := Hora_Fim_Linha;
+      nMidnightEff   := Midnight_Hora;
+      nOpen830Eff    := Hora_830;
+      nOpen930Eff    := Hora_930;
+      nOpen1330Eff   := Hora_1330;
+      nWeeklyOpenEff := Weekly_Hora_Abertura;
+      nLineEndEff    := Hora_Fim_Linha;
     end;
 
   nT := Time;
@@ -151,13 +160,29 @@ begin
       f133a1P := Open;
     end;
 
-  // ----- Weekly Open: captura semana atual (sem buffer historico) -----
-  if Ativar_Weekly and (FirstWorkingDayOfWeek(Date) <> nWeekStartDate) then
+  // ----- Weekly Open ICT: trade-week comeca domingo 18:00 NY -----
+  // Calcula a segunda-feira da trade-week corrente:
+  //   - Domingo apos abertura: proxima segunda
+  //   - Domingo antes da abertura: segunda da semana passada
+  //   - Sabado: segunda da semana passada (semana fechada na sexta)
+  //   - Seg-Sex: segunda atual (Date - (DayOfWeek-1))
+  // Em mercados B3 sem domingo, captura na primeira segunda mesmo.
+  nDW := DayOfWeek(Date);
+  if (nDW = 0) and (nT >= nWeeklyOpenEff) then
+    nTradeWeekMonday := CalcDate(Date, 1)
+  else if nDW = 0 then
+    nTradeWeekMonday := CalcDate(Date, -6)
+  else if nDW = 6 then
+    nTradeWeekMonday := CalcDate(Date, -5)
+  else
+    nTradeWeekMonday := CalcDate(Date, -(nDW - 1));
+
+  if Ativar_Weekly and (nTradeWeekMonday <> nWeekStartDate) then
     begin
-      nWeekStartDate := FirstWorkingDayOfWeek(Date);
-      nWk1D   := nWeekStartDate;
+      nWeekStartDate := nTradeWeekMonday;
+      nWk1D   := Date;
       fWk1P   := Open;
-      nWk1End := LastWorkingDayOfWeek(nWeekStartDate);
+      nWk1End := LastWorkingDayOfWeek(nTradeWeekMonday);
     end;
 
   // ----- Desenho de todos os slots (so em LastBarOnChart) -----
