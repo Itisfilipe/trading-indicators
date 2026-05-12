@@ -89,6 +89,7 @@ var
   nAsiaFill,  nLondonFill,  nNyAmFill,  nNyLunchFill,  nNyPmFill  : Integer;
 
   nT : Integer;
+  nEndRun : Integer;             // data fim da sessao corrente (para running draw)
 
 begin
   if Tema_Escuro then
@@ -191,12 +192,14 @@ begin
 
       if bInAsia and LastBarOnChart and (fAsiaHigh > fAsiaLow) then
         begin
+          nEndRun := nAsiaStartDate;
+          if nAsiaStartEff > nAsiaEndEff then nEndRun := CalcDate(nAsiaStartDate, 1);
           HorizontalLineCustom((fAsiaHigh+fAsiaLow)/2, nAsiaFill, 1, 0,
-            "", 8, tpTopLeft, nAsiaStartDate, Date, (fAsiaHigh-fAsiaLow)/2, nAsiaStartEff, nT);
+            "", 8, tpTopLeft, nAsiaStartDate, nEndRun, (fAsiaHigh-fAsiaLow)/2, nAsiaStartEff, nAsiaEndEff);
           HorizontalLineCustom(fAsiaHigh, nAsiaColor, Espessura_Borda_Sessao, 0,
-            "Asia", 8, tpTopLeft, nAsiaStartDate, Date, 0, nAsiaStartEff, nT);
+            "Asia", 8, tpTopLeft, nAsiaStartDate, nEndRun, 0, nAsiaStartEff, nAsiaEndEff);
           HorizontalLineCustom(fAsiaLow, nAsiaColor, Espessura_Borda_Sessao, 0,
-            "", 8, tpTopLeft, nAsiaStartDate, Date, 0, nAsiaStartEff, nT);
+            "", 8, tpTopLeft, nAsiaStartDate, nEndRun, 0, nAsiaStartEff, nAsiaEndEff);
         end;
 
       if LastBarOnChart then
@@ -285,12 +288,14 @@ begin
 
       if bInLondon and LastBarOnChart and (fLondonHigh > fLondonLow) then
         begin
+          nEndRun := nLondonStartDate;
+          if nLondonStartEff > nLondonEndEff then nEndRun := CalcDate(nLondonStartDate, 1);
           HorizontalLineCustom((fLondonHigh+fLondonLow)/2, nLondonFill, 1, 0,
-            "", 8, tpTopLeft, nLondonStartDate, Date, (fLondonHigh-fLondonLow)/2, nLondonStartEff, nT);
+            "", 8, tpTopLeft, nLondonStartDate, nEndRun, (fLondonHigh-fLondonLow)/2, nLondonStartEff, nLondonEndEff);
           HorizontalLineCustom(fLondonHigh, nLondonColor, Espessura_Borda_Sessao, 0,
-            "London", 8, tpTopLeft, nLondonStartDate, Date, 0, nLondonStartEff, nT);
+            "London", 8, tpTopLeft, nLondonStartDate, nEndRun, 0, nLondonStartEff, nLondonEndEff);
           HorizontalLineCustom(fLondonLow, nLondonColor, Espessura_Borda_Sessao, 0,
-            "", 8, tpTopLeft, nLondonStartDate, Date, 0, nLondonStartEff, nT);
+            "", 8, tpTopLeft, nLondonStartDate, nEndRun, 0, nLondonStartEff, nLondonEndEff);
         end;
 
       if LastBarOnChart then
@@ -379,12 +384,14 @@ begin
 
       if bInNyAm and LastBarOnChart and (fNyAmHigh > fNyAmLow) then
         begin
+          nEndRun := nNyAmStartDate;
+          if nNyAmStartEff > nNyAmEndEff then nEndRun := CalcDate(nNyAmStartDate, 1);
           HorizontalLineCustom((fNyAmHigh+fNyAmLow)/2, nNyAmFill, 1, 0,
-            "", 8, tpTopLeft, nNyAmStartDate, Date, (fNyAmHigh-fNyAmLow)/2, nNyAmStartEff, nT);
+            "", 8, tpTopLeft, nNyAmStartDate, nEndRun, (fNyAmHigh-fNyAmLow)/2, nNyAmStartEff, nNyAmEndEff);
           HorizontalLineCustom(fNyAmHigh, nNyAmColor, Espessura_Borda_Sessao, 0,
-            "NY AM", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
+            "NY AM", 8, tpTopLeft, nNyAmStartDate, nEndRun, 0, nNyAmStartEff, nNyAmEndEff);
           HorizontalLineCustom(fNyAmLow, nNyAmColor, Espessura_Borda_Sessao, 0,
-            "", 8, tpTopLeft, nNyAmStartDate, Date, 0, nNyAmStartEff, nT);
+            "", 8, tpTopLeft, nNyAmStartDate, nEndRun, 0, nNyAmStartEff, nNyAmEndEff);
         end;
 
       if LastBarOnChart then
@@ -473,12 +480,14 @@ begin
 
       if bInNyLunch and LastBarOnChart and (fNyLunchHigh > fNyLunchLow) then
         begin
+          nEndRun := nNyLunchStartDate;
+          if nNyLunchStartEff > nNyLunchEndEff then nEndRun := CalcDate(nNyLunchStartDate, 1);
           HorizontalLineCustom((fNyLunchHigh+fNyLunchLow)/2, nNyLunchFill, 1, 0,
-            "", 8, tpTopLeft, nNyLunchStartDate, Date, (fNyLunchHigh-fNyLunchLow)/2, nNyLunchStartEff, nT);
+            "", 8, tpTopLeft, nNyLunchStartDate, nEndRun, (fNyLunchHigh-fNyLunchLow)/2, nNyLunchStartEff, nNyLunchEndEff);
           HorizontalLineCustom(fNyLunchHigh, nNyLunchColor, Espessura_Borda_Sessao, 0,
-            "NY Lunch", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
+            "NY Lunch", 8, tpTopLeft, nNyLunchStartDate, nEndRun, 0, nNyLunchStartEff, nNyLunchEndEff);
           HorizontalLineCustom(fNyLunchLow, nNyLunchColor, Espessura_Borda_Sessao, 0,
-            "", 8, tpTopLeft, nNyLunchStartDate, Date, 0, nNyLunchStartEff, nT);
+            "", 8, tpTopLeft, nNyLunchStartDate, nEndRun, 0, nNyLunchStartEff, nNyLunchEndEff);
         end;
 
       if LastBarOnChart then
@@ -567,12 +576,14 @@ begin
 
       if bInNyPm and LastBarOnChart and (fNyPmHigh > fNyPmLow) then
         begin
+          nEndRun := nNyPmStartDate;
+          if nNyPmStartEff > nNyPmEndEff then nEndRun := CalcDate(nNyPmStartDate, 1);
           HorizontalLineCustom((fNyPmHigh+fNyPmLow)/2, nNyPmFill, 1, 0,
-            "", 8, tpTopLeft, nNyPmStartDate, Date, (fNyPmHigh-fNyPmLow)/2, nNyPmStartEff, nT);
+            "", 8, tpTopLeft, nNyPmStartDate, nEndRun, (fNyPmHigh-fNyPmLow)/2, nNyPmStartEff, nNyPmEndEff);
           HorizontalLineCustom(fNyPmHigh, nNyPmColor, Espessura_Borda_Sessao, 0,
-            "NY PM", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
+            "NY PM", 8, tpTopLeft, nNyPmStartDate, nEndRun, 0, nNyPmStartEff, nNyPmEndEff);
           HorizontalLineCustom(fNyPmLow, nNyPmColor, Espessura_Borda_Sessao, 0,
-            "", 8, tpTopLeft, nNyPmStartDate, Date, 0, nNyPmStartEff, nT);
+            "", 8, tpTopLeft, nNyPmStartDate, nEndRun, 0, nNyPmStartEff, nNyPmEndEff);
         end;
 
       if LastBarOnChart then
