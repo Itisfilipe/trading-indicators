@@ -1,22 +1,32 @@
 // =========================================================================
-// DAY OPEN - Linha de abertura do dia
+// DAY OPEN - Linhas horizontais de abertura diaria
 // =========================================================================
-// Plota uma linha horizontal no preco de abertura de cada dia.
-// A linha reseta automaticamente quando um novo dia comeca.
+// Plota uma linha horizontal no preco de abertura de cada dia, bounded
+// por data (mesma tecnica do smc-tools).
+//
+// Mantem ate Max_Dias_Passados dias passados via ring buffer (5 slots).
+// Cada slot guarda data + preco de abertura. Detecao acontece na primeira
+// barra do dia (Date <> Date[1]) e o desenho ocorre em LastBarOnChart
+// para evitar acumulo entre ticks.
 //
 // Como usar:
-//   - A linha mostra onde o mercado abriu hoje
-//   - Preco acima da abertura = dia positivo ate agora
-//   - Preco abaixo da abertura = dia negativo ate agora
+//   - Linha mostra onde o mercado abriu hoje (e nos N dias anteriores)
+//   - Preco acima da abertura do dia = dia positivo ate agora
+//   - Preco abaixo da abertura do dia = dia negativo ate agora
 //   - Serve como suporte/resistencia natural do dia
 // =========================================================================
 
 input
-  // Tema escuro (true) ou claro (false)
   Tema_Escuro(false);
+  Max_Dias_Passados(5);          // Slots historicos (max 5 implementado)
+  Estilo_Linha(2);               // 0=solido, 1=traco longo, 2=traco curto
+  Espessura_Linha(2);
 
 var
-  nColor: Integer;
+  nColor : Integer;
+  // Ring buffer (slot 1 = mais recente, slot 5 = mais antiga)
+  nDia1D, nDia2D, nDia3D, nDia4D, nDia5D : Integer;
+  fDia1P, fDia2P, fDia3P, fDia4P, fDia5P : Float;
 
 begin
   if Tema_Escuro then
@@ -24,8 +34,36 @@ begin
   else
     nColor := RGB(255, 165, 0);           // laranja
 
-  Plot(OpenD(0));
-  SetPlotColor(1, nColor);
-  SetPlotWidth(1, 2);
-  SetPlotStyle(1, 2);
+  // Carry-forward (NTSL zera series nao atribuidas a cada barra)
+  nDia1D := nDia1D[1]; nDia2D := nDia2D[1]; nDia3D := nDia3D[1]; nDia4D := nDia4D[1]; nDia5D := nDia5D[1];
+  fDia1P := fDia1P[1]; fDia2P := fDia2P[1]; fDia3P := fDia3P[1]; fDia4P := fDia4P[1]; fDia5P := fDia5P[1];
+
+  // Deteccao + shift na primeira barra do dia
+  if (Date <> Date[1]) and (Date <> nDia1D) then
+    begin
+      nDia5D := nDia4D; nDia4D := nDia3D; nDia3D := nDia2D; nDia2D := nDia1D;
+      fDia5P := fDia4P; fDia4P := fDia3P; fDia3P := fDia2P; fDia2P := fDia1P;
+      nDia1D := Date;
+      fDia1P := OpenD(0);
+    end;
+
+  // Desenho na ultima barra do grafico
+  if LastBarOnChart then
+    begin
+      if (nDia1D > 0) and (Max_Dias_Passados >= 1) then
+        HorizontalLineCustom(fDia1P, nColor, Espessura_Linha, Estilo_Linha,
+          "Open", 8, tpTopRight, nDia1D, nDia1D, 0, 0, 2359);
+      if (nDia2D > 0) and (Max_Dias_Passados >= 2) then
+        HorizontalLineCustom(fDia2P, nColor, Espessura_Linha, Estilo_Linha,
+          "Open", 8, tpTopRight, nDia2D, nDia2D, 0, 0, 2359);
+      if (nDia3D > 0) and (Max_Dias_Passados >= 3) then
+        HorizontalLineCustom(fDia3P, nColor, Espessura_Linha, Estilo_Linha,
+          "Open", 8, tpTopRight, nDia3D, nDia3D, 0, 0, 2359);
+      if (nDia4D > 0) and (Max_Dias_Passados >= 4) then
+        HorizontalLineCustom(fDia4P, nColor, Espessura_Linha, Estilo_Linha,
+          "Open", 8, tpTopRight, nDia4D, nDia4D, 0, 0, 2359);
+      if (nDia5D > 0) and (Max_Dias_Passados >= 5) then
+        HorizontalLineCustom(fDia5P, nColor, Espessura_Linha, Estilo_Linha,
+          "Open", 8, tpTopRight, nDia5D, nDia5D, 0, 0, 2359);
+    end;
 end;
