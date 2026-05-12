@@ -116,10 +116,11 @@ begin
       fMd1P := Open;
     end;
 
-  // ----- 8:30 Open: deteccao + shift -----
-  if Ativar_830 and
-     (((Date = Date[1]) and (Time[1] < nOpen830Eff) and (nT >= nOpen830Eff)) or
-      ((Date <> Date[1]) and (nT >= nOpen830Eff))) and
+  // ----- 8:30 Open: somente cross intraday no mesmo dia -----
+  // (evita capturar a 1a barra do grafico de um dia novo como "alvo" se
+  //  ela ja esta muito depois do horario)
+  if Ativar_830 and (Date = Date[1]) and
+     (Time[1] < nOpen830Eff) and (nT >= nOpen830Eff) and
      (Date <> n83a1D) then
     begin
       n83a5D := n83a4D; n83a4D := n83a3D; n83a3D := n83a2D; n83a2D := n83a1D;
@@ -128,10 +129,9 @@ begin
       f83a1P := Open;
     end;
 
-  // ----- 9:30 Open: deteccao + shift -----
-  if Ativar_930 and
-     (((Date = Date[1]) and (Time[1] < nOpen930Eff) and (nT >= nOpen930Eff)) or
-      ((Date <> Date[1]) and (nT >= nOpen930Eff))) and
+  // ----- 9:30 Open: somente cross intraday no mesmo dia -----
+  if Ativar_930 and (Date = Date[1]) and
+     (Time[1] < nOpen930Eff) and (nT >= nOpen930Eff) and
      (Date <> n93a1D) then
     begin
       n93a5D := n93a4D; n93a4D := n93a3D; n93a3D := n93a2D; n93a2D := n93a1D;
@@ -140,10 +140,9 @@ begin
       f93a1P := Open;
     end;
 
-  // ----- 13:30 Open: deteccao + shift -----
-  if Ativar_1330 and
-     (((Date = Date[1]) and (Time[1] < nOpen1330Eff) and (nT >= nOpen1330Eff)) or
-      ((Date <> Date[1]) and (nT >= nOpen1330Eff))) and
+  // ----- 13:30 Open: somente cross intraday no mesmo dia -----
+  if Ativar_1330 and (Date = Date[1]) and
+     (Time[1] < nOpen1330Eff) and (nT >= nOpen1330Eff) and
      (Date <> n133a1D) then
     begin
       n133a5D := n133a4D; n133a4D := n133a3D; n133a3D := n133a2D; n133a2D := n133a1D;
