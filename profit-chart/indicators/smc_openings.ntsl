@@ -60,9 +60,8 @@ var
   f93a1P, f93a2P, f93a3P, f93a4P, f93a5P : Float;
   n133a1D, n133a2D, n133a3D, n133a4D, n133a5D : Integer;
   f133a1P, f133a2P, f133a3P, f133a4P, f133a5P : Float;
-  nWk1D, nWk2D, nWk3D, nWk4D, nWk5D : Integer;
-  fWk1P, fWk2P, fWk3P, fWk4P, fWk5P : Float;
-  nWk1End, nWk2End, nWk3End, nWk4End, nWk5End : Integer;
+  nWk1D, nWk1End : Integer;
+  fWk1P : Float;
 
   nHorizColor : Integer;
 
@@ -103,9 +102,7 @@ begin
   f93a1P := f93a1P[1]; f93a2P := f93a2P[1]; f93a3P := f93a3P[1]; f93a4P := f93a4P[1]; f93a5P := f93a5P[1];
   n133a1D := n133a1D[1]; n133a2D := n133a2D[1]; n133a3D := n133a3D[1]; n133a4D := n133a4D[1]; n133a5D := n133a5D[1];
   f133a1P := f133a1P[1]; f133a2P := f133a2P[1]; f133a3P := f133a3P[1]; f133a4P := f133a4P[1]; f133a5P := f133a5P[1];
-  nWk1D := nWk1D[1]; nWk2D := nWk2D[1]; nWk3D := nWk3D[1]; nWk4D := nWk4D[1]; nWk5D := nWk5D[1];
-  fWk1P := fWk1P[1]; fWk2P := fWk2P[1]; fWk3P := fWk3P[1]; fWk4P := fWk4P[1]; fWk5P := fWk5P[1];
-  nWk1End := nWk1End[1]; nWk2End := nWk2End[1]; nWk3End := nWk3End[1]; nWk4End := nWk4End[1]; nWk5End := nWk5End[1];
+  nWk1D := nWk1D[1]; fWk1P := fWk1P[1]; nWk1End := nWk1End[1];
   nWeekStartDate := nWeekStartDate[1];
 
   // ----- Midnight Open: deteccao + shift -----
@@ -155,15 +152,12 @@ begin
       f133a1P := Open;
     end;
 
-  // ----- Weekly Open: deteccao + shift -----
+  // ----- Weekly Open: captura semana atual (sem buffer historico) -----
   if Ativar_Weekly and (FirstWorkingDayOfWeek(Date) <> nWeekStartDate) then
     begin
       nWeekStartDate := FirstWorkingDayOfWeek(Date);
-      nWk5D := nWk4D; nWk4D := nWk3D; nWk3D := nWk2D; nWk2D := nWk1D;
-      fWk5P := fWk4P; fWk4P := fWk3P; fWk3P := fWk2P; fWk2P := fWk1P;
-      nWk5End := nWk4End; nWk4End := nWk3End; nWk3End := nWk2End; nWk2End := nWk1End;
-      nWk1D := nWeekStartDate;
-      fWk1P := Open;
+      nWk1D   := nWeekStartDate;
+      fWk1P   := Open;
       nWk1End := LastWorkingDayOfWeek(nWeekStartDate);
     end;
 
