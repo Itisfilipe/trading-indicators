@@ -44,7 +44,7 @@ input
   Londres_Fim(500);               // 05:00 NY
 
   Ativar_NY_AM(true);
-  NY_AM_Inicio(800);              // 08:00 NY
+  NY_AM_Inicio(930);              // 09:30 NY (cash open)
   NY_AM_Fim(1100);               // 11:00 NY
 
   Ativar_NY_Lunch(true);
