@@ -44,7 +44,7 @@ input
   Label_1330("13:30");
 
   Estilo_Linha(2);               // 0=solido, 1=traco longo, 2=traco curto
-  Espessura_Linha(1);
+  Espessura_Linha(2);
   Hora_Fim_Linha(1800);          // Fim das linhas intraday (18:00 NY)
   Max_Sessoes_Passadas(5);
 
