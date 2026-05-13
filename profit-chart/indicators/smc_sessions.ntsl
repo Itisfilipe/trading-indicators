@@ -90,6 +90,8 @@ var
 
   nT : Integer;
   nEndRun : Integer;             // data fim da sessao corrente (para running draw)
+  nLastDrawBar : Integer;        // CurrentBar() da ultima execucao para gate de bNewBar
+  bNewBar : Boolean;             // true so na 1a passagem por uma nova barra
 
 begin
   if Tema_Escuro then
@@ -148,6 +150,16 @@ begin
 
   nT := Time;
 
+  // -----------------------------------------------------------------------
+  // bNewBar: gate para running-draw rodar apenas 1x por barra (nao por tick).
+  // HorizontalLineCustom eh aditivo (Profit nao limpa), entao redesenhar
+  // a cada tick com fAsiaHigh/Low atualizado gera ghost edges quando os
+  // niveis se expandem intra-bar.
+  // -----------------------------------------------------------------------
+  nLastDrawBar := nLastDrawBar[1];
+  bNewBar := (CurrentBar() <> nLastDrawBar);
+  nLastDrawBar := CurrentBar();
+
   // =================== ASIA ===================
   fAsiaHigh := fAsiaHigh[1]; fAsiaLow := fAsiaLow[1];
   nAsiaStartDate := nAsiaStartDate[1];
@@ -190,10 +202,20 @@ begin
             nAsia1E := nAsiaStartDate;
         end;
 
-      // Running-draw desativado: cada tick intra-bar redesenharia com
-      // fAsiaHigh/Low atualizado, e Profit nao limpa as chamadas anteriores
-      // -> ghost edges quando a sessao fecha com valores finais maiores.
-      // Sessao aparece apenas apos o fim (via slot 1 abaixo).
+      // Running-draw: 1x por barra (bNewBar) p/ reduzir ghosts de tick.
+      // Ghost residual quando High/Low expandem entre barras eh limitacao
+      // do HorizontalLineCustom (aditivo, sem API de delete).
+      if bInAsia and LastBarOnChart and bNewBar and (fAsiaHigh > fAsiaLow) then
+        begin
+          nEndRun := nAsiaStartDate;
+          if nAsiaStartEff > nAsiaEndEff then nEndRun := CalcDate(nAsiaStartDate, 1);
+          HorizontalLineCustom((fAsiaHigh+fAsiaLow)/2, nAsiaFill, 1, 0,
+            "", 8, tpTopLeft, nAsiaStartDate, nEndRun, (fAsiaHigh-fAsiaLow)/2, nAsiaStartEff, nAsiaEndEff);
+          HorizontalLineCustom(fAsiaHigh, nAsiaColor, Espessura_Borda_Sessao, 0,
+            "Asia", 8, tpTopLeft, nAsiaStartDate, nEndRun, 0, nAsiaStartEff, nAsiaEndEff);
+          HorizontalLineCustom(fAsiaLow, nAsiaColor, Espessura_Borda_Sessao, 0,
+            "", 8, tpTopLeft, nAsiaStartDate, nEndRun, 0, nAsiaStartEff, nAsiaEndEff);
+        end;
 
       if LastBarOnChart then
         begin
@@ -279,7 +301,17 @@ begin
             nLon1E := nLondonStartDate;
         end;
 
-      // Running-draw desativado (ver Asia)
+      if bInLondon and LastBarOnChart and bNewBar and (fLondonHigh > fLondonLow) then
+        begin
+          nEndRun := nLondonStartDate;
+          if nLondonStartEff > nLondonEndEff then nEndRun := CalcDate(nLondonStartDate, 1);
+          HorizontalLineCustom((fLondonHigh+fLondonLow)/2, nLondonFill, 1, 0,
+            "", 8, tpTopLeft, nLondonStartDate, nEndRun, (fLondonHigh-fLondonLow)/2, nLondonStartEff, nLondonEndEff);
+          HorizontalLineCustom(fLondonHigh, nLondonColor, Espessura_Borda_Sessao, 0,
+            "London", 8, tpTopLeft, nLondonStartDate, nEndRun, 0, nLondonStartEff, nLondonEndEff);
+          HorizontalLineCustom(fLondonLow, nLondonColor, Espessura_Borda_Sessao, 0,
+            "", 8, tpTopLeft, nLondonStartDate, nEndRun, 0, nLondonStartEff, nLondonEndEff);
+        end;
 
       if LastBarOnChart then
         begin
@@ -365,7 +397,17 @@ begin
             nAm1E := nNyAmStartDate;
         end;
 
-      // Running-draw desativado (ver Asia)
+      if bInNyAm and LastBarOnChart and bNewBar and (fNyAmHigh > fNyAmLow) then
+        begin
+          nEndRun := nNyAmStartDate;
+          if nNyAmStartEff > nNyAmEndEff then nEndRun := CalcDate(nNyAmStartDate, 1);
+          HorizontalLineCustom((fNyAmHigh+fNyAmLow)/2, nNyAmFill, 1, 0,
+            "", 8, tpTopLeft, nNyAmStartDate, nEndRun, (fNyAmHigh-fNyAmLow)/2, nNyAmStartEff, nNyAmEndEff);
+          HorizontalLineCustom(fNyAmHigh, nNyAmColor, Espessura_Borda_Sessao, 0,
+            "NY AM", 8, tpTopLeft, nNyAmStartDate, nEndRun, 0, nNyAmStartEff, nNyAmEndEff);
+          HorizontalLineCustom(fNyAmLow, nNyAmColor, Espessura_Borda_Sessao, 0,
+            "", 8, tpTopLeft, nNyAmStartDate, nEndRun, 0, nNyAmStartEff, nNyAmEndEff);
+        end;
 
       if LastBarOnChart then
         begin
@@ -451,7 +493,17 @@ begin
             nLu1E := nNyLunchStartDate;
         end;
 
-      // Running-draw desativado (ver Asia)
+      if bInNyLunch and LastBarOnChart and bNewBar and (fNyLunchHigh > fNyLunchLow) then
+        begin
+          nEndRun := nNyLunchStartDate;
+          if nNyLunchStartEff > nNyLunchEndEff then nEndRun := CalcDate(nNyLunchStartDate, 1);
+          HorizontalLineCustom((fNyLunchHigh+fNyLunchLow)/2, nNyLunchFill, 1, 0,
+            "", 8, tpTopLeft, nNyLunchStartDate, nEndRun, (fNyLunchHigh-fNyLunchLow)/2, nNyLunchStartEff, nNyLunchEndEff);
+          HorizontalLineCustom(fNyLunchHigh, nNyLunchColor, Espessura_Borda_Sessao, 0,
+            "NY Lunch", 8, tpTopLeft, nNyLunchStartDate, nEndRun, 0, nNyLunchStartEff, nNyLunchEndEff);
+          HorizontalLineCustom(fNyLunchLow, nNyLunchColor, Espessura_Borda_Sessao, 0,
+            "", 8, tpTopLeft, nNyLunchStartDate, nEndRun, 0, nNyLunchStartEff, nNyLunchEndEff);
+        end;
 
       if LastBarOnChart then
         begin
@@ -537,7 +589,17 @@ begin
             nPm1E := nNyPmStartDate;
         end;
 
-      // Running-draw desativado (ver Asia)
+      if bInNyPm and LastBarOnChart and bNewBar and (fNyPmHigh > fNyPmLow) then
+        begin
+          nEndRun := nNyPmStartDate;
+          if nNyPmStartEff > nNyPmEndEff then nEndRun := CalcDate(nNyPmStartDate, 1);
+          HorizontalLineCustom((fNyPmHigh+fNyPmLow)/2, nNyPmFill, 1, 0,
+            "", 8, tpTopLeft, nNyPmStartDate, nEndRun, (fNyPmHigh-fNyPmLow)/2, nNyPmStartEff, nNyPmEndEff);
+          HorizontalLineCustom(fNyPmHigh, nNyPmColor, Espessura_Borda_Sessao, 0,
+            "NY PM", 8, tpTopLeft, nNyPmStartDate, nEndRun, 0, nNyPmStartEff, nNyPmEndEff);
+          HorizontalLineCustom(fNyPmLow, nNyPmColor, Espessura_Borda_Sessao, 0,
+            "", 8, tpTopLeft, nNyPmStartDate, nEndRun, 0, nNyPmStartEff, nNyPmEndEff);
+        end;
 
       if LastBarOnChart then
         begin
