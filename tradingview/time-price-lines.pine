@@ -46,12 +46,16 @@ default_width = input.int(1, 'Default Line Width', 1, 5, tooltip = 'Default widt
 
 default_style = input.string('Dashed', 'Default Line Style', options = ['Solid', 'Dashed', 'Dotted'], group = default_group)
 
+// Shared across every line's Time/Period field, which is free text so the panel
+// stays compact instead of repeating a 50+ entry dropdown ten times.
+TIME_TOOLTIP = 'Intraday time as HH:MM (24-hour), or a higher-timeframe period code: D, W, M, 3M, 6M, 12M. Intraday times use the Time Zone setting above.'
+
 //==============================================================================
 // OPENING LINE INPUTS (10 Lines)
 //==============================================================================
 // Line 1 - Midnight
 l1_enabled = input.bool(true, '', inline = 'l1a', group = 'Line 1')
-l1_time = input.string('00:00', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l1a', group = 'Line 1')
+l1_time = input.string('00:00', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l1a', group = 'Line 1')
 l1_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l1a', group = 'Line 1')
 l1_label = input.string('00:00', 'Label', inline = 'l1b', group = 'Line 1')
 l1_color = input.color(color.gray, 'Color', inline = 'l1b', group = 'Line 1')
@@ -60,7 +64,7 @@ l1_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 2 - 9:30
 l2_enabled = input.bool(true, '', inline = 'l2a', group = 'Line 2')
-l2_time = input.string('09:30', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l2a', group = 'Line 2')
+l2_time = input.string('09:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l2a', group = 'Line 2')
 l2_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l2a', group = 'Line 2')
 l2_label = input.string('09:30', 'Label', inline = 'l2b', group = 'Line 2')
 l2_color = input.color(color.blue, 'Color', inline = 'l2b', group = 'Line 2')
@@ -69,7 +73,7 @@ l2_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 3 - 8:30
 l3_enabled = input.bool(true, '', inline = 'l3a', group = 'Line 3')
-l3_time = input.string('08:30', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l3a', group = 'Line 3')
+l3_time = input.string('08:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l3a', group = 'Line 3')
 l3_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l3a', group = 'Line 3')
 l3_label = input.string('08:30', 'Label', inline = 'l3b', group = 'Line 3')
 l3_color = input.color(color.purple, 'Color', inline = 'l3b', group = 'Line 3')
@@ -78,7 +82,7 @@ l3_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 4 - Daily
 l4_enabled = input.bool(false, '', inline = 'l4a', group = 'Line 4')
-l4_time = input.string('D', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l4a', group = 'Line 4')
+l4_time = input.string('D', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l4a', group = 'Line 4')
 l4_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4a', group = 'Line 4')
 l4_label = input.string('D.O.', 'Label', inline = 'l4b', group = 'Line 4')
 l4_color = input.color(color.orange, 'Color', inline = 'l4b', group = 'Line 4')
@@ -87,7 +91,7 @@ l4_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 5 - Weekly
 l5_enabled = input.bool(true, '', inline = 'l5a', group = 'Line 5')
-l5_time = input.string('W', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l5a', group = 'Line 5')
+l5_time = input.string('W', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l5a', group = 'Line 5')
 l5_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l5a', group = 'Line 5')
 l5_label = input.string('W.O.', 'Label', inline = 'l5b', group = 'Line 5')
 l5_color = input.color(color.green, 'Color', inline = 'l5b', group = 'Line 5')
@@ -96,7 +100,7 @@ l5_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 6 - Monthly
 l6_enabled = input.bool(true, '', inline = 'l6a', group = 'Line 6')
-l6_time = input.string('M', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l6a', group = 'Line 6')
+l6_time = input.string('M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l6a', group = 'Line 6')
 l6_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l6a', group = 'Line 6')
 l6_label = input.string('M.O.', 'Label', inline = 'l6b', group = 'Line 6')
 l6_color = input.color(color.red, 'Color', inline = 'l6b', group = 'Line 6')
@@ -105,7 +109,7 @@ l6_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 7
 l7_enabled = input.bool(false, '', inline = 'l7a', group = 'Line 7')
-l7_time = input.string('15:30', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l7a', group = 'Line 7')
+l7_time = input.string('15:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l7a', group = 'Line 7')
 l7_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l7a', group = 'Line 7')
 l7_label = input.string('15:30', 'Label', inline = 'l7b', group = 'Line 7')
 l7_color = input.color(color.teal, 'Color', inline = 'l7b', group = 'Line 7')
@@ -114,7 +118,7 @@ l7_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 8
 l8_enabled = input.bool(false, '', inline = 'l8a', group = 'Line 8')
-l8_time = input.string('16:00', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l8a', group = 'Line 8')
+l8_time = input.string('16:00', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l8a', group = 'Line 8')
 l8_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l8a', group = 'Line 8')
 l8_label = input.string('16:00', 'Label', inline = 'l8b', group = 'Line 8')
 l8_color = input.color(color.yellow, 'Color', inline = 'l8b', group = 'Line 8')
@@ -123,7 +127,7 @@ l8_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 9
 l9_enabled = input.bool(false, '', inline = 'l9a', group = 'Line 9')
-l9_time = input.string('3M', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l9a', group = 'Line 9')
+l9_time = input.string('3M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l9a', group = 'Line 9')
 l9_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l9a', group = 'Line 9')
 l9_label = input.string('Q.O.', 'Label', inline = 'l9b', group = 'Line 9')
 l9_color = input.color(color.aqua, 'Color', inline = 'l9b', group = 'Line 9')
@@ -132,7 +136,7 @@ l9_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3',
 
 // Line 10
 l10_enabled = input.bool(false, '', inline = 'l10a', group = 'Line 10')
-l10_time = input.string('12M', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l10a', group = 'Line 10')
+l10_time = input.string('12M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l10a', group = 'Line 10')
 l10_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l10a', group = 'Line 10')
 l10_label = input.string('Y.O.', 'Label', inline = 'l10b', group = 'Line 10')
 l10_color = input.color(color.fuchsia, 'Color', inline = 'l10b', group = 'Line 10')
@@ -169,14 +173,16 @@ get_tz_date() =>
     d = dayofmonth(time, g_timezone)
     timestamp(g_timezone, y, m, d, 0, 0)
 
-// Check if current bar matches the specified time
+// Check if current bar matches the specified time. The field is free text, so
+// bail out on anything that is not a parseable HH:MM instead of indexing blindly.
 is_time_match(time_str) =>
     parts = str.split(time_str, ':')
-    h = str.tonumber(array.get(parts, 0))
-    m = str.tonumber(array.get(parts, 1))
-    current_h = hour(time, g_timezone)
-    current_m = minute(time, g_timezone)
-    current_h == h and current_m == m
+    if array.size(parts) < 2
+        false
+    else
+        h = str.tonumber(array.get(parts, 0))
+        m = str.tonumber(array.get(parts, 1))
+        not na(h) and not na(m) and hour(time, g_timezone) == h and minute(time, g_timezone) == m
 
 // Check if it's a new HTF period
 is_new_htf_period(tf) =>
@@ -423,6 +429,9 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
     labels_array = get_hist_labels(idx)
     dates_array = get_hist_dates(idx)
 
+    // Free-text field: accept lowercase period codes (d, w, 3m) too.
+    time_n = str.upper(time_str)
+
     if not enabled
         // Delete all lines for this index
         size = array.size(lines_array)
@@ -441,11 +450,11 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
         array.set(htf_labels, idx, na)
         true
     else // Determine if this is HTF or time-based
-        is_htf_line = is_htf(time_str)
+        is_htf_line = is_htf(time_n)
 
         if is_htf_line
             // HTF line - handle separately
-            htf_idx = switch time_str
+            htf_idx = switch time_n
                 'D' => 0
                 'W' => 1
                 'M' => 2
@@ -456,7 +465,7 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
 
             new_price = get_htf_price(htf_idx, price_type)
 
-            if is_new_htf_period(time_str) or barstate.isfirst
+            if is_new_htf_period(time_n) or barstate.isfirst
                 // Delete old HTF line
                 line.delete(array.get(htf_lines, idx))
                 label.delete(array.get(htf_labels, idx))
@@ -514,7 +523,7 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
                         break
 
             // Create new line if time matches and we don't have today's line yet
-            if is_time_match(time_str) and not has_today_line
+            if is_time_match(time_n) and not has_today_line
                 new_price = get_price_by_type(price_type)
                 bars_extend = get_bars_to_extend()
                 bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1))
