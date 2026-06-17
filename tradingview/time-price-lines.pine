@@ -1,0 +1,553 @@
+//@version=6
+// -----------------------------------------------------------------------------
+// Useful Price Lines - Multi-Timeframe Support
+// Author: Filipe Teixeira Amaral
+// Version: 4.0
+// 
+// Description:
+// This indicator displays horizontal lines at key price levels including:
+// - Customizable time-based price lines (any hour/minute combination)
+// - Daily, Weekly, Monthly, Quarterly, Semi-Annual, and Yearly price lines
+// - Support for Open, High, Low, and Close prices for each line
+// - Automatic line extension with end-of-day cutoff
+// - Optional labels with customizable size and offset
+// - Time zone support for global markets
+// - Historical lines visibility control
+//
+// Features:
+// - Up to 10 customizable price lines
+// - Select OHLC price type for each line
+// - Control how many previous days to show lines
+// - Customizable line colors, width, and style per line
+// - Works on all timeframes
+// - Minimal performance impact
+// -----------------------------------------------------------------------------
+
+indicator('Useful Price Lines - Multi-Timeframe', 'Useful Price Lines', true, max_lines_count = 500, max_boxes_count = 500, max_bars_back = 500)
+
+//==============================================================================
+// INPUTS
+//==============================================================================
+// General Settings
+g_timezone = input.string('America/New_York', 'Time Zone', options = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'GMT-12', 'GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT', 'GMT+1', 'GMT+2', 'GMT+3', 'GMT+4', 'GMT+5', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'], tooltip = 'Select the timezone for time-based price lines', group = 'General Settings')
+
+g_days_to_show = input.int(0, 'Days of History to Show', 0, 30, tooltip = 'Number of previous days to show time-based lines. 0 = current day only.', group = 'General Settings')
+
+// Label Settings
+lbl_show = input.bool(true, 'Show Labels', tooltip = 'Display text labels at the end of each line', group = 'Label Settings')
+
+lbl_offset = input.int(3, 'Label Offset (bars)', 0, 50, tooltip = 'How many bars to the right of current bar to place labels', group = 'Label Settings')
+
+lbl_size = input.string('small', 'Default Label Size', options = ['tiny', 'small', 'normal', 'large'], group = 'Label Settings')
+
+// Default Line Settings
+default_group = 'Default Line Settings'
+default_width = input.int(1, 'Default Line Width', 1, 5, tooltip = 'Default width for all lines (can be overridden per line)', group = default_group)
+
+default_style = input.string('Dashed', 'Default Line Style', options = ['Solid', 'Dashed', 'Dotted'], group = default_group)
+
+//==============================================================================
+// OPENING LINE INPUTS (10 Lines)
+//==============================================================================
+// Line 1 - Midnight
+l1_enabled = input.bool(true, '', inline = 'l1a', group = 'Line 1')
+l1_time = input.string('00:00', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l1a', group = 'Line 1')
+l1_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l1a', group = 'Line 1')
+l1_label = input.string('00:00', 'Label', inline = 'l1b', group = 'Line 1')
+l1_color = input.color(color.gray, 'Color', inline = 'l1b', group = 'Line 1')
+l1_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l1c', group = 'Line 1')
+l1_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l1c', group = 'Line 1')
+
+// Line 2 - 9:30
+l2_enabled = input.bool(true, '', inline = 'l2a', group = 'Line 2')
+l2_time = input.string('09:30', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l2a', group = 'Line 2')
+l2_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l2a', group = 'Line 2')
+l2_label = input.string('09:30', 'Label', inline = 'l2b', group = 'Line 2')
+l2_color = input.color(color.blue, 'Color', inline = 'l2b', group = 'Line 2')
+l2_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l2c', group = 'Line 2')
+l2_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l2c', group = 'Line 2')
+
+// Line 3 - 8:30
+l3_enabled = input.bool(true, '', inline = 'l3a', group = 'Line 3')
+l3_time = input.string('08:30', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l3a', group = 'Line 3')
+l3_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l3a', group = 'Line 3')
+l3_label = input.string('08:30', 'Label', inline = 'l3b', group = 'Line 3')
+l3_color = input.color(color.purple, 'Color', inline = 'l3b', group = 'Line 3')
+l3_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l3c', group = 'Line 3')
+l3_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l3c', group = 'Line 3')
+
+// Line 4 - Daily
+l4_enabled = input.bool(false, '', inline = 'l4a', group = 'Line 4')
+l4_time = input.string('D', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l4a', group = 'Line 4')
+l4_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4a', group = 'Line 4')
+l4_label = input.string('D.O.', 'Label', inline = 'l4b', group = 'Line 4')
+l4_color = input.color(color.orange, 'Color', inline = 'l4b', group = 'Line 4')
+l4_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l4c', group = 'Line 4')
+l4_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l4c', group = 'Line 4')
+
+// Line 5 - Weekly
+l5_enabled = input.bool(true, '', inline = 'l5a', group = 'Line 5')
+l5_time = input.string('W', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l5a', group = 'Line 5')
+l5_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l5a', group = 'Line 5')
+l5_label = input.string('W.O.', 'Label', inline = 'l5b', group = 'Line 5')
+l5_color = input.color(color.green, 'Color', inline = 'l5b', group = 'Line 5')
+l5_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l5c', group = 'Line 5')
+l5_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l5c', group = 'Line 5')
+
+// Line 6 - Monthly
+l6_enabled = input.bool(true, '', inline = 'l6a', group = 'Line 6')
+l6_time = input.string('M', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l6a', group = 'Line 6')
+l6_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l6a', group = 'Line 6')
+l6_label = input.string('M.O.', 'Label', inline = 'l6b', group = 'Line 6')
+l6_color = input.color(color.red, 'Color', inline = 'l6b', group = 'Line 6')
+l6_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l6c', group = 'Line 6')
+l6_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l6c', group = 'Line 6')
+
+// Line 7
+l7_enabled = input.bool(false, '', inline = 'l7a', group = 'Line 7')
+l7_time = input.string('15:30', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l7a', group = 'Line 7')
+l7_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l7a', group = 'Line 7')
+l7_label = input.string('15:30', 'Label', inline = 'l7b', group = 'Line 7')
+l7_color = input.color(color.teal, 'Color', inline = 'l7b', group = 'Line 7')
+l7_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l7c', group = 'Line 7')
+l7_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l7c', group = 'Line 7')
+
+// Line 8
+l8_enabled = input.bool(false, '', inline = 'l8a', group = 'Line 8')
+l8_time = input.string('16:00', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l8a', group = 'Line 8')
+l8_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l8a', group = 'Line 8')
+l8_label = input.string('16:00', 'Label', inline = 'l8b', group = 'Line 8')
+l8_color = input.color(color.yellow, 'Color', inline = 'l8b', group = 'Line 8')
+l8_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l8c', group = 'Line 8')
+l8_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l8c', group = 'Line 8')
+
+// Line 9
+l9_enabled = input.bool(false, '', inline = 'l9a', group = 'Line 9')
+l9_time = input.string('3M', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l9a', group = 'Line 9')
+l9_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l9a', group = 'Line 9')
+l9_label = input.string('Q.O.', 'Label', inline = 'l9b', group = 'Line 9')
+l9_color = input.color(color.aqua, 'Color', inline = 'l9b', group = 'Line 9')
+l9_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l9c', group = 'Line 9')
+l9_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l9c', group = 'Line 9')
+
+// Line 10
+l10_enabled = input.bool(false, '', inline = 'l10a', group = 'Line 10')
+l10_time = input.string('12M', 'Time/Period', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], inline = 'l10a', group = 'Line 10')
+l10_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l10a', group = 'Line 10')
+l10_label = input.string('Y.O.', 'Label', inline = 'l10b', group = 'Line 10')
+l10_color = input.color(color.fuchsia, 'Color', inline = 'l10b', group = 'Line 10')
+l10_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l10c', group = 'Line 10')
+l10_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l10c', group = 'Line 10')
+
+//==============================================================================
+// FUNCTIONS
+//==============================================================================
+// Check if string is HTF
+is_htf(s) =>
+    s == 'D' or s == 'W' or s == 'M' or s == '3M' or s == '6M' or s == '12M'
+
+// Convert style string to line style
+get_line_style(style_str) =>
+    actual_style = style_str == 'Default' ? default_style : style_str
+    switch actual_style
+        'Dotted' => line.style_dotted
+        'Dashed' => line.style_dashed
+        => line.style_solid
+
+// Get line width
+get_line_width(width_str) =>
+    width_str == 'Default' ? default_width : int(str.tonumber(width_str))
+
+// Get hour in timezone
+get_tz_hour() =>
+    hour(time, g_timezone)
+
+// Get date in timezone (midnight)
+get_tz_date() =>
+    y = year(time, g_timezone)
+    m = month(time, g_timezone)
+    d = dayofmonth(time, g_timezone)
+    timestamp(g_timezone, y, m, d, 0, 0)
+
+// Check if current bar matches the specified time
+is_time_match(time_str) =>
+    parts = str.split(time_str, ':')
+    h = str.tonumber(array.get(parts, 0))
+    m = str.tonumber(array.get(parts, 1))
+    current_h = hour(time, g_timezone)
+    current_m = minute(time, g_timezone)
+    current_h == h and current_m == m
+
+// Check if it's a new HTF period
+is_new_htf_period(tf) =>
+    result = false
+
+    if tf == 'D'
+        result := ta.change(time('D')) != 0
+        result
+    else if tf == 'W'
+        result := ta.change(time('W')) != 0
+        result
+    else if tf == 'M'
+        result := ta.change(time('M')) != 0
+        result
+    else if tf == '3M'
+        result := ta.change(time('3M')) != 0
+        result
+    else if tf == '6M'
+        result := ta.change(time('6M')) != 0
+        result
+    else if tf == '12M'
+        result := ta.change(time('12M')) != 0
+        result
+
+    result
+
+// Calculate bars to extend (until end of day)
+get_bars_to_extend() =>
+    // Get minutes until midnight
+    current_h = get_tz_hour()
+    current_m = minute(time, g_timezone)
+    minutes_until_midnight = (24 - current_h - 1) * 60 + 60 - current_m
+
+    // Convert to bars based on timeframe
+    bars_per_minute = 1.0 / timeframe.multiplier
+    bars_extend = math.round(minutes_until_midnight * bars_per_minute)
+
+    // Limit to reasonable number; cast to int because line/label x-coords must be int
+    int(math.min(bars_extend, 500))
+
+// Get label size
+get_label_size() =>
+    switch lbl_size
+        'tiny' => size.tiny
+        'small' => size.small
+        'large' => size.large
+        => size.normal
+
+// Get price based on price type selection
+get_price_by_type(price_type) =>
+    switch price_type
+        'High' => high
+        'Low' => low
+        'Close' => close
+        => open
+
+//==============================================================================
+// LINE MANAGEMENT
+//==============================================================================
+// Use simple arrays to track historical lines
+// Each line slot can have multiple historical lines (max 31 days worth)
+var array<line> hist_lines_0 = array.new<line>()
+var array<label> hist_labels_0 = array.new<label>()
+var array<int> hist_dates_0 = array.new<int>()
+
+var array<line> hist_lines_1 = array.new<line>()
+var array<label> hist_labels_1 = array.new<label>()
+var array<int> hist_dates_1 = array.new<int>()
+
+var array<line> hist_lines_2 = array.new<line>()
+var array<label> hist_labels_2 = array.new<label>()
+var array<int> hist_dates_2 = array.new<int>()
+
+var array<line> hist_lines_3 = array.new<line>()
+var array<label> hist_labels_3 = array.new<label>()
+var array<int> hist_dates_3 = array.new<int>()
+
+var array<line> hist_lines_4 = array.new<line>()
+var array<label> hist_labels_4 = array.new<label>()
+var array<int> hist_dates_4 = array.new<int>()
+
+var array<line> hist_lines_5 = array.new<line>()
+var array<label> hist_labels_5 = array.new<label>()
+var array<int> hist_dates_5 = array.new<int>()
+
+var array<line> hist_lines_6 = array.new<line>()
+var array<label> hist_labels_6 = array.new<label>()
+var array<int> hist_dates_6 = array.new<int>()
+
+var array<line> hist_lines_7 = array.new<line>()
+var array<label> hist_labels_7 = array.new<label>()
+var array<int> hist_dates_7 = array.new<int>()
+
+var array<line> hist_lines_8 = array.new<line>()
+var array<label> hist_labels_8 = array.new<label>()
+var array<int> hist_dates_8 = array.new<int>()
+
+var array<line> hist_lines_9 = array.new<line>()
+var array<label> hist_labels_9 = array.new<label>()
+var array<int> hist_dates_9 = array.new<int>()
+
+// Store current HTF lines
+var array<line> htf_lines = array.new<line>(10)
+var array<label> htf_labels = array.new<label>(10)
+
+// HTF OHLC arrays (6 timeframes x 4 price types)
+var array<float> htf_opens = array.new<float>(6)
+var array<float> htf_highs = array.new<float>(6)
+var array<float> htf_lows = array.new<float>(6)
+var array<float> htf_closes = array.new<float>(6)
+
+// Initialize HTF arrays
+if barstate.isfirst
+    for i = 0 to 9 by 1
+        array.set(htf_lines, i, na)
+        array.set(htf_labels, i, na)
+
+//==============================================================================
+// GET HTF OHLC
+//==============================================================================
+// Daily OHLC
+daily_open = request.security(syminfo.tickerid, 'D', open, barmerge.gaps_off, barmerge.lookahead_on)
+daily_high = request.security(syminfo.tickerid, 'D', high, barmerge.gaps_off, barmerge.lookahead_on)
+daily_low = request.security(syminfo.tickerid, 'D', low, barmerge.gaps_off, barmerge.lookahead_on)
+daily_close = request.security(syminfo.tickerid, 'D', close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Weekly OHLC
+weekly_open = request.security(syminfo.tickerid, 'W', open, barmerge.gaps_off, barmerge.lookahead_on)
+weekly_high = request.security(syminfo.tickerid, 'W', high, barmerge.gaps_off, barmerge.lookahead_on)
+weekly_low = request.security(syminfo.tickerid, 'W', low, barmerge.gaps_off, barmerge.lookahead_on)
+weekly_close = request.security(syminfo.tickerid, 'W', close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Monthly OHLC
+monthly_open = request.security(syminfo.tickerid, 'M', open, barmerge.gaps_off, barmerge.lookahead_on)
+monthly_high = request.security(syminfo.tickerid, 'M', high, barmerge.gaps_off, barmerge.lookahead_on)
+monthly_low = request.security(syminfo.tickerid, 'M', low, barmerge.gaps_off, barmerge.lookahead_on)
+monthly_close = request.security(syminfo.tickerid, 'M', close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Quarterly OHLC
+quarterly_open = request.security(syminfo.tickerid, '3M', open, barmerge.gaps_off, barmerge.lookahead_on)
+quarterly_high = request.security(syminfo.tickerid, '3M', high, barmerge.gaps_off, barmerge.lookahead_on)
+quarterly_low = request.security(syminfo.tickerid, '3M', low, barmerge.gaps_off, barmerge.lookahead_on)
+quarterly_close = request.security(syminfo.tickerid, '3M', close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Semi-annual OHLC
+semiannual_open = request.security(syminfo.tickerid, '6M', open, barmerge.gaps_off, barmerge.lookahead_on)
+semiannual_high = request.security(syminfo.tickerid, '6M', high, barmerge.gaps_off, barmerge.lookahead_on)
+semiannual_low = request.security(syminfo.tickerid, '6M', low, barmerge.gaps_off, barmerge.lookahead_on)
+semiannual_close = request.security(syminfo.tickerid, '6M', close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Yearly OHLC
+yearly_open = request.security(syminfo.tickerid, '12M', open, barmerge.gaps_off, barmerge.lookahead_on)
+yearly_high = request.security(syminfo.tickerid, '12M', high, barmerge.gaps_off, barmerge.lookahead_on)
+yearly_low = request.security(syminfo.tickerid, '12M', low, barmerge.gaps_off, barmerge.lookahead_on)
+yearly_close = request.security(syminfo.tickerid, '12M', close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Store HTF OHLC
+array.set(htf_opens, 0, daily_open)
+array.set(htf_opens, 1, weekly_open)
+array.set(htf_opens, 2, monthly_open)
+array.set(htf_opens, 3, quarterly_open)
+array.set(htf_opens, 4, semiannual_open)
+array.set(htf_opens, 5, yearly_open)
+
+array.set(htf_highs, 0, daily_high)
+array.set(htf_highs, 1, weekly_high)
+array.set(htf_highs, 2, monthly_high)
+array.set(htf_highs, 3, quarterly_high)
+array.set(htf_highs, 4, semiannual_high)
+array.set(htf_highs, 5, yearly_high)
+
+array.set(htf_lows, 0, daily_low)
+array.set(htf_lows, 1, weekly_low)
+array.set(htf_lows, 2, monthly_low)
+array.set(htf_lows, 3, quarterly_low)
+array.set(htf_lows, 4, semiannual_low)
+array.set(htf_lows, 5, yearly_low)
+
+array.set(htf_closes, 0, daily_close)
+array.set(htf_closes, 1, weekly_close)
+array.set(htf_closes, 2, monthly_close)
+array.set(htf_closes, 3, quarterly_close)
+array.set(htf_closes, 4, semiannual_close)
+array.set(htf_closes, 5, yearly_close)
+
+//==============================================================================
+// HELPER FUNCTIONS
+//==============================================================================
+get_hist_lines(idx) =>
+    switch idx
+        0 => hist_lines_0
+        1 => hist_lines_1
+        2 => hist_lines_2
+        3 => hist_lines_3
+        4 => hist_lines_4
+        5 => hist_lines_5
+        6 => hist_lines_6
+        7 => hist_lines_7
+        8 => hist_lines_8
+        9 => hist_lines_9
+        => hist_lines_0
+
+get_hist_labels(idx) =>
+    switch idx
+        0 => hist_labels_0
+        1 => hist_labels_1
+        2 => hist_labels_2
+        3 => hist_labels_3
+        4 => hist_labels_4
+        5 => hist_labels_5
+        6 => hist_labels_6
+        7 => hist_labels_7
+        8 => hist_labels_8
+        9 => hist_labels_9
+        => hist_labels_0
+
+get_hist_dates(idx) =>
+    switch idx
+        0 => hist_dates_0
+        1 => hist_dates_1
+        2 => hist_dates_2
+        3 => hist_dates_3
+        4 => hist_dates_4
+        5 => hist_dates_5
+        6 => hist_dates_6
+        7 => hist_dates_7
+        8 => hist_dates_8
+        9 => hist_dates_9
+        => hist_dates_0
+
+// Get HTF price by type
+get_htf_price(htf_idx, price_type) =>
+    switch price_type
+        'High' => array.get(htf_highs, htf_idx)
+        'Low' => array.get(htf_lows, htf_idx)
+        'Close' => array.get(htf_closes, htf_idx)
+        => array.get(htf_opens, htf_idx)
+
+//==============================================================================
+// PROCESS LINES
+//==============================================================================
+process_line(idx, enabled, time_str, price_type, label_text, line_color, style_str, width_str) =>
+    lines_array = get_hist_lines(idx)
+    labels_array = get_hist_labels(idx)
+    dates_array = get_hist_dates(idx)
+
+    if not enabled
+        // Delete all lines for this index
+        size = array.size(lines_array)
+        if size > 0
+            for i = size - 1 to 0 by 1
+                line.delete(array.get(lines_array, i))
+                label.delete(array.get(labels_array, i))
+                array.remove(lines_array, i)
+                array.remove(labels_array, i)
+                array.remove(dates_array, i)
+
+        // Delete HTF lines
+        line.delete(array.get(htf_lines, idx))
+        label.delete(array.get(htf_labels, idx))
+        array.set(htf_lines, idx, na)
+        array.set(htf_labels, idx, na)
+        true
+    else // Determine if this is HTF or time-based
+        is_htf_line = is_htf(time_str)
+
+        if is_htf_line
+            // HTF line - handle separately
+            htf_idx = switch time_str
+                'D' => 0
+                'W' => 1
+                'M' => 2
+                '3M' => 3
+                '6M' => 4
+                '12M' => 5
+                => 0
+
+            new_price = get_htf_price(htf_idx, price_type)
+
+            if is_new_htf_period(time_str) or barstate.isfirst
+                // Delete old HTF line
+                line.delete(array.get(htf_lines, idx))
+                label.delete(array.get(htf_labels, idx))
+
+                // Create new HTF line
+                bars_extend = get_bars_to_extend()
+                bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1))
+
+                new_line = line.new(bar_index, new_price, bar_index + bars_extend, new_price, color = line_color, style = get_line_style(style_str), width = get_line_width(width_str))
+
+                new_label = lbl_show ? label.new(bar_index + lbl_offset, new_price, label_text, color = color.new(color.white, 100), textcolor = line_color, style = label.style_label_left, size = get_label_size()) : na
+
+                array.set(htf_lines, idx, new_line)
+                array.set(htf_labels, idx, new_label)
+
+            // Extend current HTF line
+            else if barstate.isconfirmed
+                current_line = array.get(htf_lines, idx)
+                if not na(current_line)
+                    bars_extend = get_bars_to_extend()
+                    bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1))
+                    line.set_x2(current_line, bar_index + bars_extend)
+
+                    current_label = array.get(htf_labels, idx)
+                    if lbl_show and not na(current_label)
+                        label.set_x(current_label, bar_index + lbl_offset)
+
+        else // Time-based line
+            current_date = get_tz_date()
+
+            // Clean up old lines first
+            size = array.size(lines_array)
+            if size > 0
+                for i = size - 1 to 0 by 1
+                    line_date = array.get(dates_array, i)
+                    days_diff = math.round((current_date - line_date) / 86400000)
+
+                    if days_diff > g_days_to_show
+                        line.delete(array.get(lines_array, i))
+                        label.delete(array.get(labels_array, i))
+                        array.remove(lines_array, i)
+                        array.remove(labels_array, i)
+                        array.remove(dates_array, i)
+
+            // Check if we already have a line for today
+            has_today_line = false
+            today_line_index = -1
+
+            size := array.size(dates_array)
+            if size > 0
+                for i = 0 to size - 1 by 1
+                    if array.get(dates_array, i) == current_date
+                        has_today_line := true
+                        today_line_index := i
+                        break
+
+            // Create new line if time matches and we don't have today's line yet
+            if is_time_match(time_str) and not has_today_line
+                new_price = get_price_by_type(price_type)
+                bars_extend = get_bars_to_extend()
+                bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1))
+
+                new_line = line.new(bar_index, new_price, bar_index + bars_extend, new_price, color = line_color, style = get_line_style(style_str), width = get_line_width(width_str))
+
+                new_label = lbl_show ? label.new(bar_index + lbl_offset, new_price, label_text, color = color.new(color.white, 100), textcolor = line_color, style = label.style_label_left, size = get_label_size()) : na
+
+                array.push(lines_array, new_line)
+                array.push(labels_array, new_label)
+                array.push(dates_array, current_date)
+
+            // Extend today's line if it exists
+            else if has_today_line and today_line_index >= 0 and barstate.isconfirmed
+                // Only extend if we're still on the same day
+                bars_extend = get_bars_to_extend()
+                bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1)) + 1
+                line.set_x2(array.get(lines_array, today_line_index), bar_index + bars_extend)
+
+                if lbl_show
+                    lbl = array.get(labels_array, today_line_index)
+                    if not na(lbl)
+                        label.set_x(lbl, bar_index + lbl_offset)
+        true
+
+// Process all lines
+process_line(0, l1_enabled, l1_time, l1_price, l1_label, l1_color, l1_style, l1_width)
+process_line(1, l2_enabled, l2_time, l2_price, l2_label, l2_color, l2_style, l2_width)
+process_line(2, l3_enabled, l3_time, l3_price, l3_label, l3_color, l3_style, l3_width)
+process_line(3, l4_enabled, l4_time, l4_price, l4_label, l4_color, l4_style, l4_width)
+process_line(4, l5_enabled, l5_time, l5_price, l5_label, l5_color, l5_style, l5_width)
+process_line(5, l6_enabled, l6_time, l6_price, l6_label, l6_color, l6_style, l6_width)
+process_line(6, l7_enabled, l7_time, l7_price, l7_label, l7_color, l7_style, l7_width)
+process_line(7, l8_enabled, l8_time, l8_price, l8_label, l8_color, l8_style, l8_width)
+process_line(8, l9_enabled, l9_time, l9_price, l9_label, l9_color, l9_style, l9_width)
+process_line(9, l10_enabled, l10_time, l10_price, l10_label, l10_color, l10_style, l10_width)
