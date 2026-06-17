@@ -40,11 +40,11 @@ lbl_offset = input.int(3, 'Label Offset (bars)', 0, 50, tooltip = 'How many bars
 
 lbl_size = input.string('small', 'Default Label Size', options = ['tiny', 'small', 'normal', 'large'], group = 'Label Settings')
 
-// Default Line Settings
-default_group = 'Default Line Settings'
-default_width = input.int(1, 'Default Line Width', 1, 5, tooltip = 'Default width for all lines (can be overridden per line)', group = default_group)
+// Line Style (applies to every line; kept global to keep the panel compact)
+default_group = 'Line Style'
+default_width = input.int(1, 'Line Width', 1, 5, tooltip = 'Width applied to all lines', group = default_group)
 
-default_style = input.string('Dashed', 'Default Line Style', options = ['Solid', 'Dashed', 'Dotted'], group = default_group)
+default_style = input.string('Dashed', 'Line Style', options = ['Solid', 'Dashed', 'Dotted'], group = default_group)
 
 // Shared across every line's Time/Period field, which is free text so the panel
 // stays compact instead of repeating a 50+ entry dropdown ten times.
@@ -59,8 +59,6 @@ l1_time = input.string('00:00', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 
 l1_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l1a', group = 'Line 1')
 l1_label = input.string('00:00', 'Label', inline = 'l1b', group = 'Line 1')
 l1_color = input.color(color.gray, 'Color', inline = 'l1b', group = 'Line 1')
-l1_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l1c', group = 'Line 1')
-l1_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l1c', group = 'Line 1')
 
 // Line 2 - 9:30
 l2_enabled = input.bool(true, '', inline = 'l2a', group = 'Line 2')
@@ -68,8 +66,6 @@ l2_time = input.string('09:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 
 l2_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l2a', group = 'Line 2')
 l2_label = input.string('09:30', 'Label', inline = 'l2b', group = 'Line 2')
 l2_color = input.color(color.blue, 'Color', inline = 'l2b', group = 'Line 2')
-l2_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l2c', group = 'Line 2')
-l2_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l2c', group = 'Line 2')
 
 // Line 3 - 8:30
 l3_enabled = input.bool(true, '', inline = 'l3a', group = 'Line 3')
@@ -77,8 +73,6 @@ l3_time = input.string('08:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 
 l3_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l3a', group = 'Line 3')
 l3_label = input.string('08:30', 'Label', inline = 'l3b', group = 'Line 3')
 l3_color = input.color(color.purple, 'Color', inline = 'l3b', group = 'Line 3')
-l3_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l3c', group = 'Line 3')
-l3_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l3c', group = 'Line 3')
 
 // Line 4 - Daily
 l4_enabled = input.bool(false, '', inline = 'l4a', group = 'Line 4')
@@ -86,8 +80,6 @@ l4_time = input.string('D', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l4a
 l4_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4a', group = 'Line 4')
 l4_label = input.string('D.O.', 'Label', inline = 'l4b', group = 'Line 4')
 l4_color = input.color(color.orange, 'Color', inline = 'l4b', group = 'Line 4')
-l4_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l4c', group = 'Line 4')
-l4_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l4c', group = 'Line 4')
 
 // Line 5 - Weekly
 l5_enabled = input.bool(true, '', inline = 'l5a', group = 'Line 5')
@@ -95,8 +87,6 @@ l5_time = input.string('W', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l5a
 l5_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l5a', group = 'Line 5')
 l5_label = input.string('W.O.', 'Label', inline = 'l5b', group = 'Line 5')
 l5_color = input.color(color.green, 'Color', inline = 'l5b', group = 'Line 5')
-l5_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l5c', group = 'Line 5')
-l5_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l5c', group = 'Line 5')
 
 // Line 6 - Monthly
 l6_enabled = input.bool(true, '', inline = 'l6a', group = 'Line 6')
@@ -104,8 +94,6 @@ l6_time = input.string('M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l6a
 l6_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l6a', group = 'Line 6')
 l6_label = input.string('M.O.', 'Label', inline = 'l6b', group = 'Line 6')
 l6_color = input.color(color.red, 'Color', inline = 'l6b', group = 'Line 6')
-l6_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l6c', group = 'Line 6')
-l6_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l6c', group = 'Line 6')
 
 // Line 7
 l7_enabled = input.bool(false, '', inline = 'l7a', group = 'Line 7')
@@ -113,8 +101,6 @@ l7_time = input.string('15:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 
 l7_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l7a', group = 'Line 7')
 l7_label = input.string('15:30', 'Label', inline = 'l7b', group = 'Line 7')
 l7_color = input.color(color.teal, 'Color', inline = 'l7b', group = 'Line 7')
-l7_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l7c', group = 'Line 7')
-l7_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l7c', group = 'Line 7')
 
 // Line 8
 l8_enabled = input.bool(false, '', inline = 'l8a', group = 'Line 8')
@@ -122,8 +108,6 @@ l8_time = input.string('16:00', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 
 l8_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l8a', group = 'Line 8')
 l8_label = input.string('16:00', 'Label', inline = 'l8b', group = 'Line 8')
 l8_color = input.color(color.yellow, 'Color', inline = 'l8b', group = 'Line 8')
-l8_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l8c', group = 'Line 8')
-l8_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l8c', group = 'Line 8')
 
 // Line 9
 l9_enabled = input.bool(false, '', inline = 'l9a', group = 'Line 9')
@@ -131,8 +115,6 @@ l9_time = input.string('3M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l9
 l9_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l9a', group = 'Line 9')
 l9_label = input.string('Q.O.', 'Label', inline = 'l9b', group = 'Line 9')
 l9_color = input.color(color.aqua, 'Color', inline = 'l9b', group = 'Line 9')
-l9_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l9c', group = 'Line 9')
-l9_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l9c', group = 'Line 9')
 
 // Line 10
 l10_enabled = input.bool(false, '', inline = 'l10a', group = 'Line 10')
@@ -140,8 +122,6 @@ l10_time = input.string('12M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = '
 l10_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l10a', group = 'Line 10')
 l10_label = input.string('Y.O.', 'Label', inline = 'l10b', group = 'Line 10')
 l10_color = input.color(color.fuchsia, 'Color', inline = 'l10b', group = 'Line 10')
-l10_style = input.string('Default', 'Style', options = ['Default', 'Solid', 'Dashed', 'Dotted'], inline = 'l10c', group = 'Line 10')
-l10_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3', '4', '5'], inline = 'l10c', group = 'Line 10')
 
 //==============================================================================
 // FUNCTIONS
@@ -150,17 +130,11 @@ l10_width = input.string('Default', 'Width', options = ['Default', '1', '2', '3'
 is_htf(s) =>
     s == 'D' or s == 'W' or s == 'M' or s == '3M' or s == '6M' or s == '12M'
 
-// Convert style string to line style
-get_line_style(style_str) =>
-    actual_style = style_str == 'Default' ? default_style : style_str
-    switch actual_style
-        'Dotted' => line.style_dotted
-        'Dashed' => line.style_dashed
-        => line.style_solid
-
-// Get line width
-get_line_width(width_str) =>
-    width_str == 'Default' ? default_width : int(str.tonumber(width_str))
+// Global line style, resolved once from the Line Style input
+line_style = switch default_style
+    'Dotted' => line.style_dotted
+    'Dashed' => line.style_dashed
+    => line.style_solid
 
 // Get hour in timezone
 get_tz_hour() =>
@@ -424,7 +398,7 @@ get_htf_price(htf_idx, price_type) =>
 //==============================================================================
 // PROCESS LINES
 //==============================================================================
-process_line(idx, enabled, time_str, price_type, label_text, line_color, style_str, width_str) =>
+process_line(idx, enabled, time_str, price_type, label_text, line_color) =>
     lines_array = get_hist_lines(idx)
     labels_array = get_hist_labels(idx)
     dates_array = get_hist_dates(idx)
@@ -474,7 +448,7 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
                 bars_extend = get_bars_to_extend()
                 bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1))
 
-                new_line = line.new(bar_index, new_price, bar_index + bars_extend, new_price, color = line_color, style = get_line_style(style_str), width = get_line_width(width_str))
+                new_line = line.new(bar_index, new_price, bar_index + bars_extend, new_price, color = line_color, style = line_style, width = default_width)
 
                 new_label = lbl_show ? label.new(bar_index + lbl_offset, new_price, label_text, color = color.new(color.white, 100), textcolor = line_color, style = label.style_label_left, size = get_label_size()) : na
 
@@ -528,7 +502,7 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
                 bars_extend = get_bars_to_extend()
                 bars_extend := math.min(bars_extend, math.max(0, lbl_offset - 1))
 
-                new_line = line.new(bar_index, new_price, bar_index + bars_extend, new_price, color = line_color, style = get_line_style(style_str), width = get_line_width(width_str))
+                new_line = line.new(bar_index, new_price, bar_index + bars_extend, new_price, color = line_color, style = line_style, width = default_width)
 
                 new_label = lbl_show ? label.new(bar_index + lbl_offset, new_price, label_text, color = color.new(color.white, 100), textcolor = line_color, style = label.style_label_left, size = get_label_size()) : na
 
@@ -550,13 +524,13 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color, style_s
         true
 
 // Process all lines
-process_line(0, l1_enabled, l1_time, l1_price, l1_label, l1_color, l1_style, l1_width)
-process_line(1, l2_enabled, l2_time, l2_price, l2_label, l2_color, l2_style, l2_width)
-process_line(2, l3_enabled, l3_time, l3_price, l3_label, l3_color, l3_style, l3_width)
-process_line(3, l4_enabled, l4_time, l4_price, l4_label, l4_color, l4_style, l4_width)
-process_line(4, l5_enabled, l5_time, l5_price, l5_label, l5_color, l5_style, l5_width)
-process_line(5, l6_enabled, l6_time, l6_price, l6_label, l6_color, l6_style, l6_width)
-process_line(6, l7_enabled, l7_time, l7_price, l7_label, l7_color, l7_style, l7_width)
-process_line(7, l8_enabled, l8_time, l8_price, l8_label, l8_color, l8_style, l8_width)
-process_line(8, l9_enabled, l9_time, l9_price, l9_label, l9_color, l9_style, l9_width)
-process_line(9, l10_enabled, l10_time, l10_price, l10_label, l10_color, l10_style, l10_width)
+process_line(0, l1_enabled, l1_time, l1_price, l1_label, l1_color)
+process_line(1, l2_enabled, l2_time, l2_price, l2_label, l2_color)
+process_line(2, l3_enabled, l3_time, l3_price, l3_label, l3_color)
+process_line(3, l4_enabled, l4_time, l4_price, l4_label, l4_color)
+process_line(4, l5_enabled, l5_time, l5_price, l5_label, l5_color)
+process_line(5, l6_enabled, l6_time, l6_price, l6_label, l6_color)
+process_line(6, l7_enabled, l7_time, l7_price, l7_label, l7_color)
+process_line(7, l8_enabled, l8_time, l8_price, l8_label, l8_color)
+process_line(8, l9_enabled, l9_time, l9_price, l9_label, l9_color)
+process_line(9, l10_enabled, l10_time, l10_price, l10_label, l10_color)
