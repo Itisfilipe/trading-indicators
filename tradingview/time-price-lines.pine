@@ -76,7 +76,7 @@ l3_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], 
 l3_color = input.color(color.black, '', inline = 'l3', group = g_lines)
 
 l4_enabled = input.bool(false, '', inline = 'l4', group = g_lines)
-l4_time = input.string('15:30', '', tooltip = TIME_TOOLTIP, inline = 'l4', group = g_lines)
+l4_time = input.string('13:30', '', tooltip = TIME_TOOLTIP, inline = 'l4', group = g_lines)
 l4_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4', group = g_lines)
 l4_color = input.color(color.black, '', inline = 'l4', group = g_lines)
 
