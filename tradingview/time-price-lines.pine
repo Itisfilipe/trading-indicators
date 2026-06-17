@@ -1,29 +1,32 @@
 //@version=6
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Filipe Teixeira Amaral
 // -----------------------------------------------------------------------------
 // Useful Price Lines - Multi-Timeframe Support
 // Author: Filipe Teixeira Amaral
-// Version: 4.0
-// 
+// Version: 5.0
+//
 // Description:
-// This indicator displays horizontal lines at key price levels including:
-// - Customizable time-based price lines (any hour/minute combination)
-// - Daily, Weekly, Monthly, Quarterly, Semi-Annual, and Yearly price lines
-// - Support for Open, High, Low, and Close prices for each line
-// - Automatic line extension with end-of-day cutoff
-// - Optional labels with customizable size and offset
-// - Time zone support for global markets
-// - Historical lines visibility control
+// Plots horizontal lines at up to 10 key price levels. Each line is either:
+// - An intraday time (any HH:MM in the selected time zone), or
+// - A higher-timeframe period: Daily, Weekly, Monthly, Quarterly,
+//   Semi-Annual, or Yearly.
+// Lines extend through the session with an end-of-day cutoff and an optional
+// label that is generated automatically from the period and price type.
+//
+// Per line you choose: on/off, time/period, price type (O/H/L/C) and color.
+// Line width and style are global so the settings panel stays compact.
 //
 // Features:
-// - Up to 10 customizable price lines
-// - Select OHLC price type for each line
-// - Control how many previous days to show lines
-// - Customizable line colors, width, and style per line
-// - Works on all timeframes
-// - Minimal performance impact
+// - 10 line slots, one compact row each
+// - Intraday or higher-timeframe levels, free-text time/period field
+// - Open/High/Low/Close price selection per line
+// - Auto labels (D.O, W.O, ... / the time for intraday)
+// - Time zone support and historical-days control
+// - Works on all timeframes, minimal performance impact
 // -----------------------------------------------------------------------------
 
-indicator('Useful Price Lines - Multi-Timeframe', 'Useful Price Lines', true, max_lines_count = 500, max_boxes_count = 500, max_bars_back = 500)
+indicator('Useful Price Lines - Multi-Timeframe', 'Useful Price Lines', true, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
 
 //==============================================================================
 // INPUTS
@@ -38,7 +41,7 @@ lbl_show = input.bool(true, 'Show Labels', tooltip = 'Display text labels at the
 
 lbl_offset = input.int(3, 'Label Offset (bars)', 0, 50, tooltip = 'How many bars to the right of current bar to place labels', group = 'Label Settings')
 
-lbl_size = input.string('small', 'Default Label Size', options = ['tiny', 'small', 'normal', 'large'], group = 'Label Settings')
+lbl_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = 'Label Settings')
 
 // Line Style (applies to every line; kept global to keep the panel compact)
 default_group = 'Line Style'
@@ -51,77 +54,61 @@ default_style = input.string('Dashed', 'Line Style', options = ['Solid', 'Dashed
 TIME_TOOLTIP = 'Intraday time as HH:MM (24-hour), or a higher-timeframe period code: D, W, M, 3M, 6M, 12M. Intraday times use the Time Zone setting above.'
 
 //==============================================================================
-// OPENING LINE INPUTS (10 Lines)
+// LINES — 10 slots, one compact row each: [on] · time/period · price · color
 //==============================================================================
-// Line 1 - Midnight
-l1_enabled = input.bool(true, '', inline = 'l1a', group = 'Line 1')
-l1_time = input.string('00:00', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l1a', group = 'Line 1')
-l1_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l1a', group = 'Line 1')
-l1_label = input.string('00:00', 'Label', inline = 'l1b', group = 'Line 1')
-l1_color = input.color(color.gray, 'Color', inline = 'l1b', group = 'Line 1')
+// The label for each line is derived automatically from its period and price
+// (see get_auto_label), so there is no separate label field to manage.
+g_lines = 'Lines'
 
-// Line 2 - 9:30
-l2_enabled = input.bool(true, '', inline = 'l2a', group = 'Line 2')
-l2_time = input.string('09:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l2a', group = 'Line 2')
-l2_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l2a', group = 'Line 2')
-l2_label = input.string('09:30', 'Label', inline = 'l2b', group = 'Line 2')
-l2_color = input.color(color.blue, 'Color', inline = 'l2b', group = 'Line 2')
+l1_enabled = input.bool(true, '', inline = 'l1', group = g_lines)
+l1_time = input.string('00:00', '', tooltip = TIME_TOOLTIP, inline = 'l1', group = g_lines)
+l1_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l1', group = g_lines)
+l1_color = input.color(color.gray, '', inline = 'l1', group = g_lines)
 
-// Line 3 - 8:30
-l3_enabled = input.bool(true, '', inline = 'l3a', group = 'Line 3')
-l3_time = input.string('08:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l3a', group = 'Line 3')
-l3_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l3a', group = 'Line 3')
-l3_label = input.string('08:30', 'Label', inline = 'l3b', group = 'Line 3')
-l3_color = input.color(color.purple, 'Color', inline = 'l3b', group = 'Line 3')
+l2_enabled = input.bool(true, '', inline = 'l2', group = g_lines)
+l2_time = input.string('09:30', '', tooltip = TIME_TOOLTIP, inline = 'l2', group = g_lines)
+l2_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l2', group = g_lines)
+l2_color = input.color(color.blue, '', inline = 'l2', group = g_lines)
 
-// Line 4 - Daily
-l4_enabled = input.bool(false, '', inline = 'l4a', group = 'Line 4')
-l4_time = input.string('D', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l4a', group = 'Line 4')
-l4_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4a', group = 'Line 4')
-l4_label = input.string('D.O.', 'Label', inline = 'l4b', group = 'Line 4')
-l4_color = input.color(color.orange, 'Color', inline = 'l4b', group = 'Line 4')
+l3_enabled = input.bool(true, '', inline = 'l3', group = g_lines)
+l3_time = input.string('08:30', '', tooltip = TIME_TOOLTIP, inline = 'l3', group = g_lines)
+l3_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l3', group = g_lines)
+l3_color = input.color(color.purple, '', inline = 'l3', group = g_lines)
 
-// Line 5 - Weekly
-l5_enabled = input.bool(true, '', inline = 'l5a', group = 'Line 5')
-l5_time = input.string('W', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l5a', group = 'Line 5')
-l5_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l5a', group = 'Line 5')
-l5_label = input.string('W.O.', 'Label', inline = 'l5b', group = 'Line 5')
-l5_color = input.color(color.green, 'Color', inline = 'l5b', group = 'Line 5')
+l4_enabled = input.bool(false, '', inline = 'l4', group = g_lines)
+l4_time = input.string('D', '', tooltip = TIME_TOOLTIP, inline = 'l4', group = g_lines)
+l4_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4', group = g_lines)
+l4_color = input.color(color.orange, '', inline = 'l4', group = g_lines)
 
-// Line 6 - Monthly
-l6_enabled = input.bool(true, '', inline = 'l6a', group = 'Line 6')
-l6_time = input.string('M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l6a', group = 'Line 6')
-l6_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l6a', group = 'Line 6')
-l6_label = input.string('M.O.', 'Label', inline = 'l6b', group = 'Line 6')
-l6_color = input.color(color.red, 'Color', inline = 'l6b', group = 'Line 6')
+l5_enabled = input.bool(true, '', inline = 'l5', group = g_lines)
+l5_time = input.string('W', '', tooltip = TIME_TOOLTIP, inline = 'l5', group = g_lines)
+l5_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l5', group = g_lines)
+l5_color = input.color(color.green, '', inline = 'l5', group = g_lines)
 
-// Line 7
-l7_enabled = input.bool(false, '', inline = 'l7a', group = 'Line 7')
-l7_time = input.string('15:30', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l7a', group = 'Line 7')
-l7_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l7a', group = 'Line 7')
-l7_label = input.string('15:30', 'Label', inline = 'l7b', group = 'Line 7')
-l7_color = input.color(color.teal, 'Color', inline = 'l7b', group = 'Line 7')
+l6_enabled = input.bool(true, '', inline = 'l6', group = g_lines)
+l6_time = input.string('M', '', tooltip = TIME_TOOLTIP, inline = 'l6', group = g_lines)
+l6_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l6', group = g_lines)
+l6_color = input.color(color.red, '', inline = 'l6', group = g_lines)
 
-// Line 8
-l8_enabled = input.bool(false, '', inline = 'l8a', group = 'Line 8')
-l8_time = input.string('16:00', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l8a', group = 'Line 8')
-l8_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l8a', group = 'Line 8')
-l8_label = input.string('16:00', 'Label', inline = 'l8b', group = 'Line 8')
-l8_color = input.color(color.yellow, 'Color', inline = 'l8b', group = 'Line 8')
+l7_enabled = input.bool(false, '', inline = 'l7', group = g_lines)
+l7_time = input.string('15:30', '', tooltip = TIME_TOOLTIP, inline = 'l7', group = g_lines)
+l7_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l7', group = g_lines)
+l7_color = input.color(color.teal, '', inline = 'l7', group = g_lines)
 
-// Line 9
-l9_enabled = input.bool(false, '', inline = 'l9a', group = 'Line 9')
-l9_time = input.string('3M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l9a', group = 'Line 9')
-l9_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l9a', group = 'Line 9')
-l9_label = input.string('Q.O.', 'Label', inline = 'l9b', group = 'Line 9')
-l9_color = input.color(color.aqua, 'Color', inline = 'l9b', group = 'Line 9')
+l8_enabled = input.bool(false, '', inline = 'l8', group = g_lines)
+l8_time = input.string('16:00', '', tooltip = TIME_TOOLTIP, inline = 'l8', group = g_lines)
+l8_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l8', group = g_lines)
+l8_color = input.color(color.yellow, '', inline = 'l8', group = g_lines)
 
-// Line 10
-l10_enabled = input.bool(false, '', inline = 'l10a', group = 'Line 10')
-l10_time = input.string('12M', 'Time/Period', tooltip = TIME_TOOLTIP, inline = 'l10a', group = 'Line 10')
-l10_price = input.string('Open', 'Price', options = ['Open', 'High', 'Low', 'Close'], inline = 'l10a', group = 'Line 10')
-l10_label = input.string('Y.O.', 'Label', inline = 'l10b', group = 'Line 10')
-l10_color = input.color(color.fuchsia, 'Color', inline = 'l10b', group = 'Line 10')
+l9_enabled = input.bool(false, '', inline = 'l9', group = g_lines)
+l9_time = input.string('3M', '', tooltip = TIME_TOOLTIP, inline = 'l9', group = g_lines)
+l9_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l9', group = g_lines)
+l9_color = input.color(color.aqua, '', inline = 'l9', group = g_lines)
+
+l10_enabled = input.bool(false, '', inline = 'l10', group = g_lines)
+l10_time = input.string('12M', '', tooltip = TIME_TOOLTIP, inline = 'l10', group = g_lines)
+l10_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l10', group = g_lines)
+l10_color = input.color(color.fuchsia, '', inline = 'l10', group = g_lines)
 
 //==============================================================================
 // FUNCTIONS
@@ -129,6 +116,20 @@ l10_color = input.color(color.fuchsia, 'Color', inline = 'l10b', group = 'Line 1
 // Check if string is HTF
 is_htf(s) =>
     s == 'D' or s == 'W' or s == 'M' or s == '3M' or s == '6M' or s == '12M'
+
+// Build a line's label from its period and price type. HTF periods get the
+// classic open shorthand (D.O, W.O, ...); intraday lines just show their time,
+// with a price suffix only when it is not the (default) Open.
+get_auto_label(time_n, price_type) =>
+    p = price_type == 'High' ? 'H' : price_type == 'Low' ? 'L' : price_type == 'Close' ? 'C' : 'O'
+    switch time_n
+        'D' => 'D.' + p
+        'W' => 'W.' + p
+        'M' => 'M.' + p
+        '3M' => 'Q.' + p
+        '6M' => 'S.' + p
+        '12M' => 'Y.' + p
+        => price_type == 'Open' ? time_n : time_n + ' ' + p
 
 // Global line style, resolved once from the Line Style input
 line_style = switch default_style
@@ -158,30 +159,25 @@ is_time_match(time_str) =>
         m = str.tonumber(array.get(parts, 1))
         not na(h) and not na(m) and hour(time, g_timezone) == h and minute(time, g_timezone) == m
 
+// New-period flags. time()/ta.change() must run on every bar, so they live at
+// global scope instead of inside conditional branches (avoids compiler warnings).
+new_period_d = ta.change(time('D')) != 0
+new_period_w = ta.change(time('W')) != 0
+new_period_m = ta.change(time('M')) != 0
+new_period_q = ta.change(time('3M')) != 0
+new_period_s = ta.change(time('6M')) != 0
+new_period_y = ta.change(time('12M')) != 0
+
 // Check if it's a new HTF period
 is_new_htf_period(tf) =>
-    result = false
-
-    if tf == 'D'
-        result := ta.change(time('D')) != 0
-        result
-    else if tf == 'W'
-        result := ta.change(time('W')) != 0
-        result
-    else if tf == 'M'
-        result := ta.change(time('M')) != 0
-        result
-    else if tf == '3M'
-        result := ta.change(time('3M')) != 0
-        result
-    else if tf == '6M'
-        result := ta.change(time('6M')) != 0
-        result
-    else if tf == '12M'
-        result := ta.change(time('12M')) != 0
-        result
-
-    result
+    switch tf
+        'D' => new_period_d
+        'W' => new_period_w
+        'M' => new_period_m
+        '3M' => new_period_q
+        '6M' => new_period_s
+        '12M' => new_period_y
+        => false
 
 // Calculate bars to extend (until end of day)
 get_bars_to_extend() =>
@@ -398,13 +394,14 @@ get_htf_price(htf_idx, price_type) =>
 //==============================================================================
 // PROCESS LINES
 //==============================================================================
-process_line(idx, enabled, time_str, price_type, label_text, line_color) =>
+process_line(idx, enabled, time_str, price_type, line_color) =>
     lines_array = get_hist_lines(idx)
     labels_array = get_hist_labels(idx)
     dates_array = get_hist_dates(idx)
 
     // Free-text field: accept lowercase period codes (d, w, 3m) too.
     time_n = str.upper(time_str)
+    label_text = get_auto_label(time_n, price_type)
 
     if not enabled
         // Delete all lines for this index
@@ -524,13 +521,13 @@ process_line(idx, enabled, time_str, price_type, label_text, line_color) =>
         true
 
 // Process all lines
-process_line(0, l1_enabled, l1_time, l1_price, l1_label, l1_color)
-process_line(1, l2_enabled, l2_time, l2_price, l2_label, l2_color)
-process_line(2, l3_enabled, l3_time, l3_price, l3_label, l3_color)
-process_line(3, l4_enabled, l4_time, l4_price, l4_label, l4_color)
-process_line(4, l5_enabled, l5_time, l5_price, l5_label, l5_color)
-process_line(5, l6_enabled, l6_time, l6_price, l6_label, l6_color)
-process_line(6, l7_enabled, l7_time, l7_price, l7_label, l7_color)
-process_line(7, l8_enabled, l8_time, l8_price, l8_label, l8_color)
-process_line(8, l9_enabled, l9_time, l9_price, l9_label, l9_color)
-process_line(9, l10_enabled, l10_time, l10_price, l10_label, l10_color)
+process_line(0, l1_enabled, l1_time, l1_price, l1_color)
+process_line(1, l2_enabled, l2_time, l2_price, l2_color)
+process_line(2, l3_enabled, l3_time, l3_price, l3_color)
+process_line(3, l4_enabled, l4_time, l4_price, l4_color)
+process_line(4, l5_enabled, l5_time, l5_price, l5_color)
+process_line(5, l6_enabled, l6_time, l6_price, l6_color)
+process_line(6, l7_enabled, l7_time, l7_price, l7_color)
+process_line(7, l8_enabled, l8_time, l8_price, l8_color)
+process_line(8, l9_enabled, l9_time, l9_price, l9_color)
+process_line(9, l10_enabled, l10_time, l10_price, l10_color)
