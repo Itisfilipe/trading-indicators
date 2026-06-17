@@ -2,7 +2,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © Filipe Teixeira Amaral
 // -----------------------------------------------------------------------------
-// Useful Price Lines - Multi-Timeframe Support
+// Time-Based Price Levels
 // Author: Filipe Teixeira Amaral
 // Version: 5.0
 //
@@ -26,7 +26,7 @@
 // - Works on all timeframes, minimal performance impact
 // -----------------------------------------------------------------------------
 
-indicator('Useful Price Lines - Multi-Timeframe', 'Useful Price Lines', true, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
+indicator('Time-Based Price Levels', 'Time-Based Price Levels', true, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
 
 //==============================================================================
 // INPUTS
