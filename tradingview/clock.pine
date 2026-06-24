@@ -1,0 +1,169 @@
+//@version=6
+// ===================================
+// Candle Countdown & Position Sizer
+// ===================================
+// Author: Filipe Teixeira Amaral
+// Version: 2.0
+// Last Updated: June 2026
+//
+// Description:
+// An on-chart info table that shows the current time, a live countdown to the next
+// 1m / 5m / 15m candle, and an ATR-based position-size suggestion. Tell it how many
+// dollars you are willing to risk and how wide your stop is (as a multiple of ATR),
+// and it returns the lot size that keeps the loss at that risk if the stop is hit.
+//
+// Features:
+// • Real-time clock with seconds, in the timezone of your choice
+// • Countdown to the next 1m, 5m and 15m candle, with an optional blink alert
+// • ATR-based stop distance (configurable × ATR multiple)
+// • Wilder (RMA) or exponential (EMA) ATR smoothing
+// • Suggested lot size from your risk budget, the stop distance and the symbol's
+//   point value
+//
+// Notes:
+// • Updates depend on incoming price ticks. During low-volume periods the table may
+//   not refresh every second.
+// • Lot size uses the symbol's point value (syminfo.pointvalue). Always confirm it
+//   against your broker's contract specs before trading.
+// • Countdowns are anchored to the Unix epoch (UTC): exact for intraday timeframes
+//   on 24h markets.
+// ===================================
+
+indicator('Candle Countdown & Position Sizer', overlay=true)
+
+// --- Display inputs -------------------------------------------------------
+
+timeZoneInput = input.string('Exchange', 'Timezone', options=['Exchange', 'UTC', 'America/New_York', 'Europe/London', 'Asia/Tokyo', 'Australia/Sydney'], group='Display')
+
+textColor      = input.color(color.white, 'Text Color',             group='Display')
+bgColor        = input.color(color.new(color.black, 20), 'Background Color', group='Display')
+blinkTextColor = input.color(color.black, 'Alert Text Color',       group='Display')
+blinkBgColor   = input.color(color.red,   'Alert Background Color',  group='Display')
+
+textSize      = input.string('normal',     'Text Size', options=['tiny', 'small', 'normal', 'large', 'huge', 'auto'], group='Display')
+tablePosition = input.string('top_right',  'Position',  options=['top_left', 'top_center', 'top_right', 'middle_left', 'middle_center', 'middle_right', 'bottom_left', 'bottom_center', 'bottom_right'], group='Display')
+
+// --- Alert inputs ---------------------------------------------------------
+
+enableBlink     = input.bool(true, 'Blink Countdown Before New Candle', group='Candle Alert')
+blinkSecondsStr = input.string('10 seconds', 'Alert Lead Time', options=['5 seconds', '10 seconds', '15 seconds', '30 seconds', '45 seconds', '1 minute', '2 minutes', '3 minutes', '5 minutes'], group='Candle Alert')
+
+// --- Risk inputs ----------------------------------------------------------
+
+riskDollars = input.float(100.0, 'Risk Per Trade ($)', minval=0.0, step=10.0, group='Position Sizing', tooltip='Maximum amount you are willing to lose if the stop is hit.')
+stopAtrMult = input.float(2.0, 'Stop Size (× ATR)', minval=0.0, step=0.1, group='Position Sizing', tooltip='Stop distance as a multiple of ATR. 2 means the stop sits 2×ATR away from entry.')
+atrLength   = input.int(14, 'ATR Length', minval=1, group='Position Sizing')
+atrType     = input.string('RMA (Wilder)', 'ATR Smoothing', options=['RMA (Wilder)', 'EMA (Exponential)'], group='Position Sizing', tooltip='RMA is the classic Wilder ATR. EMA reacts faster to recent volatility.')
+
+// --- String -> value lookups ----------------------------------------------
+
+getBlinkSeconds(timeStr) =>
+    switch timeStr
+        '5 seconds'  => 5
+        '10 seconds' => 10
+        '15 seconds' => 15
+        '30 seconds' => 30
+        '45 seconds' => 45
+        '1 minute'   => 60
+        '2 minutes'  => 120
+        '3 minutes'  => 180
+        '5 minutes'  => 300
+        => 10
+
+getTablePosition(pos) =>
+    switch pos
+        'top_left'      => position.top_left
+        'top_center'    => position.top_center
+        'top_right'     => position.top_right
+        'middle_left'   => position.middle_left
+        'middle_center' => position.middle_center
+        'middle_right'  => position.middle_right
+        'bottom_left'   => position.bottom_left
+        'bottom_center' => position.bottom_center
+        'bottom_right'  => position.bottom_right
+        => position.top_right
+
+getTextSize(sz) =>
+    switch sz
+        'tiny'   => size.tiny
+        'small'  => size.small
+        'normal' => size.normal
+        'large'  => size.large
+        'huge'   => size.huge
+        'auto'   => size.auto
+        => size.normal
+
+// --- Helpers --------------------------------------------------------------
+
+// Seconds left until the next candle of a timeframe of `tfSeconds` length.
+// Candle boundaries are anchored to the Unix epoch (UTC), so the result is
+// independent of the display timezone.
+secondsUntilCandle(tfSeconds) =>
+    tfSeconds - ((timenow / 1000) % tfSeconds)
+
+// Render seconds-left as M:SS (e.g. 43 -> "0:43", 612 -> "10:12").
+formatCountdown(secsLeft) =>
+    total = math.floor(secsLeft)
+    str.format('{0,number,0}:{1,number,00}', math.floor(total / 60), total % 60)
+
+// Normal vs alert colors for a value cell, returned as [textColor, bgColor].
+cellColors(blink) =>
+    [blink ? blinkTextColor : textColor, blink ? blinkBgColor : bgColor]
+
+// --- ATR & position sizing ------------------------------------------------
+
+// ta.* must run on every bar, so compute these in the global scope.
+trueRange = ta.tr(true)
+atrValue  = atrType == 'EMA (Exponential)' ? ta.ema(trueRange, atrLength) : ta.rma(trueRange, atrLength)
+
+stopDistance = stopAtrMult * atrValue              // stop width in price units
+riskPerLot   = stopDistance * syminfo.pointvalue   // dollar loss per 1 contract if stopped
+lotSize      = riskPerLot > 0 ? riskDollars / riskPerLot : na
+
+// --- Setup ----------------------------------------------------------------
+
+// "Exchange" means the chart symbol's own timezone
+tz = timeZoneInput == 'Exchange' ? syminfo.timezone : timeZoneInput
+
+blinkSeconds = getBlinkSeconds(blinkSecondsStr)
+
+var table clkTable = table.new(getTablePosition(tablePosition), 2, 7, border_width=1, border_color=color.new(color.gray, 60))
+
+// --- Render ---------------------------------------------------------------
+
+// Only the most recent bar carries the live table; older bars are skipped.
+if barstate.islast
+    now     = timenow
+    txtSize = getTextSize(textSize)
+    halfTick = now % 1000 < 500   // true for the first half of each second -> drives the blink
+
+    // Countdowns and their per-row alert state
+    cd1  = secondsUntilCandle(60)
+    cd5  = secondsUntilCandle(300)
+    cd15 = secondsUntilCandle(900)
+    [tc1,  bc1]  = cellColors(enableBlink and cd1  <= blinkSeconds and halfTick)
+    [tc5,  bc5]  = cellColors(enableBlink and cd5  <= blinkSeconds and halfTick)
+    [tc15, bc15] = cellColors(enableBlink and cd15 <= blinkSeconds and halfTick)
+
+    clockStr = str.format('{0,number,00}:{1,number,00}:{2,number,00}', hour(now, tz), minute(now, tz), second(now, tz))
+    atrStr   = str.tostring(atrValue, format.mintick)
+    stopStr  = str.tostring(stopDistance, format.mintick)
+    lotStr   = na(lotSize) ? '—' : str.tostring(lotSize, '#.##')
+
+    // Labels (column 0)
+    table.cell(clkTable, 0, 0, 'Time',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 1, '1m',    text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 2, '5m',    text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 3, '15m',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 4, 'ATR',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 5, 'Stop',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 6, 'Lot',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+
+    // Values (column 1)
+    table.cell(clkTable, 1, 0, clockStr,               text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 1, formatCountdown(cd1),   text_color=tc1,  bgcolor=bc1,  text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 2, formatCountdown(cd5),   text_color=tc5,  bgcolor=bc5,  text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 3, formatCountdown(cd15),  text_color=tc15, bgcolor=bc15, text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 4, atrStr,                 text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 5, stopStr,                text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 6, lotStr,                 text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
