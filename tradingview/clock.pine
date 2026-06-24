@@ -150,7 +150,7 @@ if barstate.islast
     clockStr = str.format('{0,number,00}:{1,number,00}:{2,number,00}', hour(now, tz), minute(now, tz), second(now, tz))
     atrStr   = str.tostring(atrValue, format.mintick)
     stopStr  = str.tostring(stopDistance, format.mintick)
-    lotStr   = na(lotSize) ? '—' : str.tostring(lotSize, '#.##')
+    lotStr   = na(lotSize) ? '—' : str.tostring(math.round(lotSize), '#')
 
     // Clock + candle countdowns (rows 0-3)
     table.cell(clkTable, 0, 0, 'Time', text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
