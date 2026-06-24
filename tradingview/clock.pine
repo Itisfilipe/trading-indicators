@@ -52,8 +52,9 @@ blinkSecondsStr = input.string('10 seconds', 'Alert Lead Time', options=['5 seco
 
 riskDollars = input.float(100.0, 'Risk Per Trade ($)', minval=0.0, step=10.0, group='Position Sizing', tooltip='Maximum amount you are willing to lose if the stop is hit.')
 stopAtrMult = input.float(2.0, 'Stop Size (× ATR)', minval=0.0, step=0.1, group='Position Sizing', tooltip='Stop distance as a multiple of ATR. 2 means the stop sits 2×ATR away from entry.')
-atrLength   = input.int(14, 'ATR Length', minval=1, group='Position Sizing')
-atrType     = input.string('RMA (Wilder)', 'ATR Smoothing', options=['RMA (Wilder)', 'EMA (Exponential)'], group='Position Sizing', tooltip='RMA is the classic Wilder ATR. EMA reacts faster to recent volatility.')
+atrLength   = input.int(100, 'ATR Length', minval=1, group='Position Sizing')
+atrType     = input.string('EMA (Exponential)', 'ATR Smoothing', options=['RMA (Wilder)', 'EMA (Exponential)'], group='Position Sizing', tooltip='RMA is the classic Wilder ATR. EMA reacts faster to recent volatility.')
+showDebug   = input.bool(false, 'Show ATR & Stop (debug)', group='Position Sizing', tooltip='Add the raw ATR value and stop distance rows used to compute the lot size.')
 
 // --- String -> value lookups ----------------------------------------------
 
@@ -127,7 +128,8 @@ tz = timeZoneInput == 'Exchange' ? syminfo.timezone : timeZoneInput
 
 blinkSeconds = getBlinkSeconds(blinkSecondsStr)
 
-var table clkTable = table.new(getTablePosition(tablePosition), 2, 7, border_width=1, border_color=color.new(color.gray, 60))
+// Debug mode adds the ATR and Stop rows below the lot size.
+var table clkTable = table.new(getTablePosition(tablePosition), 2, showDebug ? 7 : 5, border_width=1, border_color=color.new(color.gray, 60))
 
 // --- Render ---------------------------------------------------------------
 
@@ -150,20 +152,23 @@ if barstate.islast
     stopStr  = str.tostring(stopDistance, format.mintick)
     lotStr   = na(lotSize) ? '—' : str.tostring(lotSize, '#.##')
 
-    // Labels (column 0)
-    table.cell(clkTable, 0, 0, 'Time',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 1, '1m',    text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 2, '5m',    text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 3, '15m',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 4, 'ATR',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 5, 'Stop',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 6, 'Lot',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    // Clock + candle countdowns (rows 0-3)
+    table.cell(clkTable, 0, 0, 'Time', text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 1, '1m',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 2, '5m',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 0, 3, '15m',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 1, 0, clockStr,              text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 1, formatCountdown(cd1),  text_color=tc1,  bgcolor=bc1,  text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 2, formatCountdown(cd5),  text_color=tc5,  bgcolor=bc5,  text_size=txtSize, text_halign=text.align_right)
+    table.cell(clkTable, 1, 3, formatCountdown(cd15), text_color=tc15, bgcolor=bc15, text_size=txtSize, text_halign=text.align_right)
 
-    // Values (column 1)
-    table.cell(clkTable, 1, 0, clockStr,               text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 1, formatCountdown(cd1),   text_color=tc1,  bgcolor=bc1,  text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 2, formatCountdown(cd5),   text_color=tc5,  bgcolor=bc5,  text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 3, formatCountdown(cd15),  text_color=tc15, bgcolor=bc15, text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 4, atrStr,                 text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 5, stopStr,                text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 6, lotStr,                 text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    // Suggested lot size (row 4)
+    table.cell(clkTable, 0, 4, 'Lot',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 1, 4, lotStr, text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+
+    // ATR + stop distance behind the debug toggle (rows 5-6)
+    if showDebug
+        table.cell(clkTable, 0, 5, 'ATR',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+        table.cell(clkTable, 0, 6, 'Stop', text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+        table.cell(clkTable, 1, 5, atrStr,  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+        table.cell(clkTable, 1, 6, stopStr, text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
