@@ -14,7 +14,7 @@
 //
 // Features:
 // • Real-time clock with seconds, in the timezone of your choice
-// • Countdown to the next 1m, 5m and 15m candle, with an optional blink alert
+// • Countdown to the next 1m, 5m and 15m candle, with an optional highlight alert
 // • ATR-based stop distance (configurable × ATR multiple)
 // • Wilder (RMA) or exponential (EMA) ATR smoothing
 // • Suggested lot size from your risk budget, the stop distance and the symbol's
@@ -45,7 +45,7 @@ tablePosition = input.string('top_right',  'Position',  options=['top_left', 'to
 
 // --- Alert inputs ---------------------------------------------------------
 
-enableBlink     = input.bool(true, 'Blink Countdown Before New Candle', group='Candle Alert')
+enableAlert     = input.bool(true, 'Highlight Countdown Before New Candle', group='Candle Alert')
 blinkSecondsStr = input.string('10 seconds', 'Alert Lead Time', options=['5 seconds', '10 seconds', '15 seconds', '30 seconds', '45 seconds', '1 minute', '2 minutes', '3 minutes', '5 minutes'], group='Candle Alert')
 
 // --- Risk inputs ----------------------------------------------------------
@@ -137,15 +137,15 @@ var table clkTable = table.new(getTablePosition(tablePosition), 2, showDebug ? 7
 if barstate.islast
     now     = timenow
     txtSize = getTextSize(textSize)
-    halfTick = now % 1000 < 500   // true for the first half of each second -> drives the blink
 
-    // Countdowns and their per-row alert state
+    // Countdowns. Within the lead-time window a row switches to the alert colors
+    // and stays there (steady highlight, no blinking).
     cd1  = secondsUntilCandle(60)
     cd5  = secondsUntilCandle(300)
     cd15 = secondsUntilCandle(900)
-    [tc1,  bc1]  = cellColors(enableBlink and cd1  <= blinkSeconds and halfTick)
-    [tc5,  bc5]  = cellColors(enableBlink and cd5  <= blinkSeconds and halfTick)
-    [tc15, bc15] = cellColors(enableBlink and cd15 <= blinkSeconds and halfTick)
+    [tc1,  bc1]  = cellColors(enableAlert and cd1  <= blinkSeconds)
+    [tc5,  bc5]  = cellColors(enableAlert and cd5  <= blinkSeconds)
+    [tc15, bc15] = cellColors(enableAlert and cd15 <= blinkSeconds)
 
     clockStr = str.format('{0,number,00}:{1,number,00}:{2,number,00}', hour(now, tz), minute(now, tz), second(now, tz))
     atrStr   = str.tostring(atrValue, format.mintick)
