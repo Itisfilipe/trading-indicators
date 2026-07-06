@@ -17,7 +17,8 @@
 // • Real-time clock with seconds, in the timezone of your choice
 // • Optional countdowns to the next candle on up to three timeframes you select,
 //   with an optional highlight alert
-// • ATR-based stop distance (configurable × ATR), shown as a cash amount
+// • ATR-based stop distance (configurable × ATR) in points, plus the cash it
+//   risks at the suggested lot size
 // • Risk sized as a fixed dollar amount or a percentage of account size
 // • Wilder (RMA) or exponential (EMA) ATR smoothing
 // • Suggested lot size from your risk budget, the stop distance and the symbol's
@@ -156,9 +157,9 @@ tz = timeZoneInput == 'Exchange' ? syminfo.timezone : timeZoneInput
 blinkSeconds = getBlinkSeconds(blinkSecondsStr)
 txtSize      = getTextSize(textSize)
 
-// Max rows: clock + 3 countdowns + Lot + ATR + Stop. Unused rows stay empty
-// (and therefore invisible), so hidden countdowns leave no gaps.
-var table clkTable = table.new(getTablePosition(tablePosition), 2, 7, border_width=1, border_color=color.new(color.gray, 60))
+// Max rows: clock + 3 countdowns + Lot + ATR + Stop + Cash. Unused rows stay
+// empty (and therefore invisible), so hidden countdowns leave no gaps.
+var table clkTable = table.new(getTablePosition(tablePosition), 2, 8, border_width=1, border_color=color.new(color.gray, 60))
 
 // Write one label/value row. The value cell can carry alert colors; the label
 // cell always uses the base colors.
@@ -208,9 +209,14 @@ if barstate.islast
     addRow(row, 'ATR', str.tostring(atrValue, format.mintick), textColor, bgColor)
     row := row + 1
 
-    // Stop distance, labeled with its ATR multiple and valued as cash-at-risk
-    // per contract if the stop is hit.
+    // Stop distance in price/points, labeled with its ATR multiple.
     stopLabel = 'Stop (' + str.tostring(stopAtrMult) + '×ATR)'
-    stopStr   = na(riskPerLot) or riskPerLot <= 0 ? '—' : '$' + str.tostring(riskPerLot, '0.##')
-    addRow(row, stopLabel, stopStr, textColor, bgColor)
+    addRow(row, stopLabel, str.tostring(stopDistance, format.mintick), textColor, bgColor)
+    row := row + 1
+
+    // Cash actually at risk if the stop is hit, at the suggested (rounded) lots.
+    lots    = na(lotSize) ? na : math.round(lotSize)
+    cash    = na(lots) ? na : lots * riskPerLot
+    cashStr = na(cash) ? '—' : '$' + str.tostring(cash, '0.##')
+    addRow(row, 'Cash', cashStr, textColor, bgColor)
     row := row + 1
