@@ -210,7 +210,7 @@ if barstate.islast
     row := row + 1
 
     // Stop distance in price/points, labeled with its ATR multiple.
-    stopLabel = 'Stop (' + str.tostring(stopAtrMult) + '×ATR)'
+    stopLabel = 'Stop ATR (' + str.tostring(stopAtrMult) + ')'
     addRow(row, stopLabel, str.tostring(stopDistance, format.mintick), textColor, bgColor)
     row := row + 1
 
@@ -218,5 +218,5 @@ if barstate.islast
     lots    = na(lotSize) ? na : math.round(lotSize)
     cash    = na(lots) ? na : lots * riskPerLot
     cashStr = na(cash) ? '—' : '$' + str.tostring(cash, '0.##')
-    addRow(row, 'Cash', cashStr, textColor, bgColor)
+    addRow(row, 'Stop Cash', cashStr, textColor, bgColor)
     row := row + 1
