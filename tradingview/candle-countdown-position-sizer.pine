@@ -215,8 +215,11 @@ if barstate.islast
     row := row + 1
 
     // Cash actually at risk if the stop is hit, at the suggested (rounded) lots.
-    lots    = na(lotSize) ? na : math.round(lotSize)
-    cash    = na(lots) ? na : lots * riskPerLot
-    cashStr = na(cash) ? '—' : '$' + str.tostring(cash, '0.##')
-    addRow(row, 'Stop Cash', cashStr, textColor, bgColor)
-    row := row + 1
+    // Only meaningful in % of Account mode — in Fixed $ mode it just echoes the
+    // amount the user already typed in.
+    if riskMode == '% of Account'
+        lots    = na(lotSize) ? na : math.round(lotSize)
+        cash    = na(lots) ? na : lots * riskPerLot
+        cashStr = na(cash) ? '—' : '$' + str.tostring(cash, '0.##')
+        addRow(row, 'Stop Cash (' + str.tostring(riskPercent) + '%)', cashStr, textColor, bgColor)
+        row := row + 1
