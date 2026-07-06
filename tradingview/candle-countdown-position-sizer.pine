@@ -3,19 +3,22 @@
 // Candle Countdown & Position Sizer
 // ===================================
 // Author: Filipe Teixeira Amaral
-// Version: 2.0
-// Last Updated: June 2026
+// Version: 2.1
+// Last Updated: July 2026
 //
 // Description:
-// An on-chart info table that shows the current time, a live countdown to the next
-// 1m / 5m / 15m candle, and an ATR-based position-size suggestion. Tell it how many
-// dollars you are willing to risk and how wide your stop is (as a multiple of ATR),
-// and it returns the lot size that keeps the loss at that risk if the stop is hit.
+// An on-chart info table that shows the current time, live countdowns to the next
+// candle on the timeframes you choose, and an ATR-based position-size suggestion.
+// Tell it how much you are willing to risk — a fixed dollar amount or a percentage
+// of your account — and how wide your stop is (as a multiple of ATR), and it returns
+// the lot size that keeps the loss at that risk if the stop is hit.
 //
 // Features:
 // • Real-time clock with seconds, in the timezone of your choice
-// • Countdown to the next 1m, 5m and 15m candle, with an optional highlight alert
-// • ATR-based stop distance (configurable × ATR multiple)
+// • Optional countdowns to the next candle on up to three timeframes you select,
+//   with an optional highlight alert
+// • ATR-based stop distance (configurable × ATR), shown as a cash amount
+// • Risk sized as a fixed dollar amount or a percentage of account size
 // • Wilder (RMA) or exponential (EMA) ATR smoothing
 // • Suggested lot size from your risk budget, the stop distance and the symbol's
 //   point value
@@ -43,6 +46,16 @@ blinkBgColor   = input.color(color.red,   'Alert Background Color',  group='Disp
 textSize      = input.string('normal',     'Text Size', options=['tiny', 'small', 'normal', 'large', 'huge', 'auto'], group='Display')
 tablePosition = input.string('top_right',  'Position',  options=['top_left', 'top_center', 'top_right', 'middle_left', 'middle_center', 'middle_right', 'bottom_left', 'bottom_center', 'bottom_right'], group='Display')
 
+// --- Countdown inputs -----------------------------------------------------
+
+showCountdowns = input.bool(true, 'Show Countdowns', group='Countdown')
+cdShow1 = input.bool(true,  'Timeframe 1', inline='cd1', group='Countdown')
+cdTf1   = input.timeframe('1',  '', inline='cd1', group='Countdown')
+cdShow2 = input.bool(true,  'Timeframe 2', inline='cd2', group='Countdown')
+cdTf2   = input.timeframe('5',  '', inline='cd2', group='Countdown')
+cdShow3 = input.bool(true,  'Timeframe 3', inline='cd3', group='Countdown')
+cdTf3   = input.timeframe('15', '', inline='cd3', group='Countdown')
+
 // --- Alert inputs ---------------------------------------------------------
 
 enableAlert     = input.bool(true, 'Highlight Countdown Before New Candle', group='Candle Alert')
@@ -50,11 +63,13 @@ blinkSecondsStr = input.string('10 seconds', 'Alert Lead Time', options=['5 seco
 
 // --- Risk inputs ----------------------------------------------------------
 
-riskDollars = input.float(100.0, 'Risk Per Trade ($)', minval=0.0, step=10.0, group='Position Sizing', tooltip='Maximum amount you are willing to lose if the stop is hit.')
-stopAtrMult = input.float(2.0, 'Stop Size (× ATR)', minval=0.0, step=0.1, group='Position Sizing', tooltip='Stop distance as a multiple of ATR. 2 means the stop sits 2×ATR away from entry.')
-atrLength   = input.int(100, 'ATR Length', minval=1, group='Position Sizing')
+riskMode    = input.string('Fixed $', 'Risk Mode', options=['Fixed $', '% of Account'], group='Position Sizing', tooltip='Fixed $: risk a set dollar amount per trade. % of Account: risk a percentage of your account size.')
+riskDollars = input.float(100.0, 'Risk Per Trade ($)', minval=0.0, step=10.0, group='Position Sizing', tooltip='Used when Risk Mode is Fixed $. Maximum amount you are willing to lose if the stop is hit.')
+accountSize = input.float(10000.0, 'Account Size ($)', minval=0.0, step=100.0, group='Position Sizing', tooltip='Used when Risk Mode is % of Account.')
+riskPercent = input.float(1.0, 'Risk Per Trade (%)', minval=0.0, step=0.1, group='Position Sizing', tooltip='Used when Risk Mode is % of Account. Percent of account size to risk per trade.')
+stopAtrMult = input.float(1.5, 'Stop Size (× ATR)', minval=0.0, step=0.1, group='Position Sizing', tooltip='Stop distance as a multiple of ATR. 1.5 means the stop sits 1.5×ATR away from entry.')
+atrLength   = input.int(5, 'ATR Length', minval=1, group='Position Sizing')
 atrType     = input.string('EMA (Exponential)', 'ATR Smoothing', options=['RMA (Wilder)', 'EMA (Exponential)'], group='Position Sizing', tooltip='RMA is the classic Wilder ATR. EMA reacts faster to recent volatility.')
-showDebug   = input.bool(false, 'Show ATR & Stop (debug)', group='Position Sizing', tooltip='Add the raw ATR value and stop distance rows used to compute the lot size.')
 
 // --- String -> value lookups ----------------------------------------------
 
@@ -107,11 +122,23 @@ formatCountdown(secsLeft) =>
     total = math.floor(secsLeft)
     str.format('{0,number,0}:{1,number,00}', math.floor(total / 60), total % 60)
 
+// Short label for a timeframe string, e.g. "1" -> "1m", "60" -> "1h", "D" -> "1D".
+tfLabel(tf) =>
+    secs = timeframe.in_seconds(tf)
+    switch
+        secs % 86400 == 0 => str.tostring(int(secs / 86400)) + 'D'
+        secs % 3600  == 0 => str.tostring(int(secs / 3600))  + 'h'
+        secs % 60    == 0 => str.tostring(int(secs / 60))    + 'm'
+        => str.tostring(secs) + 's'
+
 // Normal vs alert colors for a value cell, returned as [textColor, bgColor].
 cellColors(blink) =>
     [blink ? blinkTextColor : textColor, blink ? blinkBgColor : bgColor]
 
 // --- ATR & position sizing ------------------------------------------------
+
+// Effective dollars at risk per trade, whichever way it's expressed.
+riskAmount = riskMode == 'Fixed $' ? riskDollars : accountSize * riskPercent / 100.0
 
 // ta.* must run on every bar, so compute these in the global scope.
 trueRange = ta.tr(true)
@@ -119,7 +146,7 @@ atrValue  = atrType == 'EMA (Exponential)' ? ta.ema(trueRange, atrLength) : ta.r
 
 stopDistance = stopAtrMult * atrValue              // stop width in price units
 riskPerLot   = stopDistance * syminfo.pointvalue   // dollar loss per 1 contract if stopped
-lotSize      = riskPerLot > 0 ? riskDollars / riskPerLot : na
+lotSize      = riskPerLot > 0 ? riskAmount / riskPerLot : na
 
 // --- Setup ----------------------------------------------------------------
 
@@ -127,48 +154,63 @@ lotSize      = riskPerLot > 0 ? riskDollars / riskPerLot : na
 tz = timeZoneInput == 'Exchange' ? syminfo.timezone : timeZoneInput
 
 blinkSeconds = getBlinkSeconds(blinkSecondsStr)
+txtSize      = getTextSize(textSize)
 
-// Debug mode adds the ATR and Stop rows below the lot size.
-var table clkTable = table.new(getTablePosition(tablePosition), 2, showDebug ? 7 : 5, border_width=1, border_color=color.new(color.gray, 60))
+// Max rows: clock + 3 countdowns + Lot + ATR + Stop. Unused rows stay empty
+// (and therefore invisible), so hidden countdowns leave no gaps.
+var table clkTable = table.new(getTablePosition(tablePosition), 2, 7, border_width=1, border_color=color.new(color.gray, 60))
+
+// Write one label/value row. The value cell can carry alert colors; the label
+// cell always uses the base colors.
+addRow(rowIdx, label, value, valTextColor, valBgColor) =>
+    table.cell(clkTable, 0, rowIdx, label, text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
+    table.cell(clkTable, 1, rowIdx, value, text_color=valTextColor, bgcolor=valBgColor, text_size=txtSize, text_halign=text.align_right)
 
 // --- Render ---------------------------------------------------------------
 
 // Only the most recent bar carries the live table; older bars are skipped.
 if barstate.islast
-    now     = timenow
-    txtSize = getTextSize(textSize)
-
-    // Countdowns. Within the lead-time window a row switches to the alert colors
-    // and stays there (steady highlight, no blinking).
-    cd1  = secondsUntilCandle(60)
-    cd5  = secondsUntilCandle(300)
-    cd15 = secondsUntilCandle(900)
-    [tc1,  bc1]  = cellColors(enableAlert and cd1  <= blinkSeconds)
-    [tc5,  bc5]  = cellColors(enableAlert and cd5  <= blinkSeconds)
-    [tc15, bc15] = cellColors(enableAlert and cd15 <= blinkSeconds)
+    now = timenow
 
     clockStr = str.format('{0,number,00}:{1,number,00}:{2,number,00}', hour(now, tz), minute(now, tz), second(now, tz))
-    atrStr   = str.tostring(atrValue, format.mintick)
-    stopStr  = str.tostring(stopDistance, format.mintick)
-    lotStr   = na(lotSize) ? '—' : str.tostring(math.round(lotSize), '#')
 
-    // Clock + candle countdowns (rows 0-3)
-    table.cell(clkTable, 0, 0, 'Time', text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 1, '1m',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 2, '5m',   text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 0, 3, '15m',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 1, 0, clockStr,              text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 1, formatCountdown(cd1),  text_color=tc1,  bgcolor=bc1,  text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 2, formatCountdown(cd5),  text_color=tc5,  bgcolor=bc5,  text_size=txtSize, text_halign=text.align_right)
-    table.cell(clkTable, 1, 3, formatCountdown(cd15), text_color=tc15, bgcolor=bc15, text_size=txtSize, text_halign=text.align_right)
+    // Rows are filled top-to-bottom with a running index so hidden rows don't
+    // leave blanks.
+    int row = 0
+    addRow(row, 'Time', clockStr, textColor, bgColor)
+    row := row + 1
 
-    // Suggested lot size (row 4)
-    table.cell(clkTable, 0, 4, 'Lot',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-    table.cell(clkTable, 1, 4, lotStr, text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    // Countdowns. Within the lead-time window a value switches to the alert
+    // colors and stays there (steady highlight, no blinking).
+    if showCountdowns
+        if cdShow1
+            cd = secondsUntilCandle(timeframe.in_seconds(cdTf1))
+            [tc, bc] = cellColors(enableAlert and cd <= blinkSeconds)
+            addRow(row, tfLabel(cdTf1), formatCountdown(cd), tc, bc)
+            row := row + 1
+        if cdShow2
+            cd = secondsUntilCandle(timeframe.in_seconds(cdTf2))
+            [tc, bc] = cellColors(enableAlert and cd <= blinkSeconds)
+            addRow(row, tfLabel(cdTf2), formatCountdown(cd), tc, bc)
+            row := row + 1
+        if cdShow3
+            cd = secondsUntilCandle(timeframe.in_seconds(cdTf3))
+            [tc, bc] = cellColors(enableAlert and cd <= blinkSeconds)
+            addRow(row, tfLabel(cdTf3), formatCountdown(cd), tc, bc)
+            row := row + 1
 
-    // ATR + stop distance behind the debug toggle (rows 5-6)
-    if showDebug
-        table.cell(clkTable, 0, 5, 'ATR',  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-        table.cell(clkTable, 0, 6, 'Stop', text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_left)
-        table.cell(clkTable, 1, 5, atrStr,  text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
-        table.cell(clkTable, 1, 6, stopStr, text_color=textColor, bgcolor=bgColor, text_size=txtSize, text_halign=text.align_right)
+    // Suggested lot size
+    lotStr = na(lotSize) ? '—' : str.tostring(math.round(lotSize), '#')
+    addRow(row, 'Lot', lotStr, textColor, bgColor)
+    row := row + 1
+
+    // Raw ATR (price units)
+    addRow(row, 'ATR', str.tostring(atrValue, format.mintick), textColor, bgColor)
+    row := row + 1
+
+    // Stop distance, labeled with its ATR multiple and valued as cash-at-risk
+    // per contract if the stop is hit.
+    stopLabel = 'Stop (' + str.tostring(stopAtrMult) + '×ATR)'
+    stopStr   = na(riskPerLot) or riskPerLot <= 0 ? '—' : '$' + str.tostring(riskPerLot, '0.##')
+    addRow(row, stopLabel, stopStr, textColor, bgColor)
+    row := row + 1
