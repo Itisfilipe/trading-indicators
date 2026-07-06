@@ -17,8 +17,8 @@
 // • Real-time clock with seconds, in the timezone of your choice
 // • Optional countdowns to the next candle on up to three timeframes you select,
 //   with an optional highlight alert
-// • ATR-based stop distance (configurable × ATR) in points, plus the cash it
-//   risks at the suggested lot size
+// • ATR-based stop distance (configurable × ATR) in points; in % of Account
+//   mode it also shows the cash risked at the suggested lot size
 // • Risk sized as a fixed dollar amount or a percentage of account size
 // • Wilder (RMA) or exponential (EMA) ATR smoothing
 // • Suggested lot size from your risk budget, the stop distance and the symbol's

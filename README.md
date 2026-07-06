@@ -1,6 +1,6 @@
 # Trading Indicators - Profit Chart (NTSL)
 
-Conjunto de indicadores e regras de coloracao para day trading no Profit Chart (Nelogica), escritos em NTSL.
+Conjunto de indicadores e regras de coloracao para day trading no Profit Chart (Nelogica), escritos em NTSL. A pasta `tradingview/` traz tambem indicadores em Pine Script para o TradingView.
 
 ## Como instalar
 
@@ -253,6 +253,50 @@ Opcional:
 - **Day Open** — referencia de abertura do dia
 - **Renko Size Calculator** — calcular tamanho do box (aplicar em grafico de tempo)
 - **Bias Coloring** — usar em grafico separado para bias de longo prazo
+
+---
+
+## TradingView (Pine Script)
+
+Indicadores em Pine Script v6, na pasta `tradingview/`. Nao rodam no Profit Chart — sao para o TradingView.
+
+**Como instalar:** abra o **Pine Editor** no TradingView, cole o conteudo do arquivo `.pine`, clique em **Add to chart**.
+
+### Candle Countdown & Position Sizer
+
+**Arquivo:** `tradingview/candle-countdown-position-sizer.pine`
+
+Tabela sobre o grafico com relogio, contagem regressiva para o proximo candle e sugestao de tamanho de posicao por ATR. Voce informa quanto quer arriscar e a largura do stop (em multiplo de ATR); ele devolve o tamanho de lote que mantem a perda nesse risco caso o stop seja atingido.
+
+**Linhas da tabela:**
+- **Time** — relogio com segundos, no fuso escolhido
+- **Countdowns** — tempo ate o proximo candle, em ate 3 timeframes selecionaveis (pode ligar/desligar cada um e o grupo todo)
+- **Lot** — tamanho de lote sugerido (arredondado)
+- **ATR** — valor bruto do ATR
+- **Stop ATR (n)** — distancia do stop em pontos/preco (n = multiplo de ATR)
+- **Stop Cash (x%)** — dinheiro em risco no lote sugerido; aparece so no modo % of Account
+
+**Parametros principais:**
+- `Risk Mode` — `Fixed $` (arrisca valor fixo) ou `% of Account` (arrisca % do saldo)
+- `Risk Per Trade ($)` / `Account Size ($)` / `Risk Per Trade (%)` — conforme o Risk Mode
+- `Stop Size (× ATR)` — distancia do stop como multiplo do ATR
+- `ATR Length(5)` / `ATR Smoothing` — periodo e suavizacao (EMA ou RMA/Wilder)
+- `Show Countdowns` + `Timeframe 1/2/3` — quais candles contar
+- `Highlight Countdown Before New Candle` + `Alert Lead Time` — destaque antes do proximo candle
+
+### Time-Based Price Levels
+
+**Arquivo:** `tradingview/time-based-price-levels.pine`
+
+Plota linhas horizontais em ate 10 niveis de preco. Cada linha e um horario intraday (HH:MM no fuso escolhido) ou a abertura de um periodo maior: Diario, Semanal, Mensal, Trimestral, Semestral ou Anual.
+
+**Por linha voce escolhe:** liga/desliga, horario/periodo, tipo de preco (O/H/L/C) e cor. Largura e estilo das linhas sao globais para manter o painel compacto.
+
+**Parametros principais:**
+- `Time Zone` — fuso dos horarios intraday
+- `Days of History to Show(0)` — dias anteriores a exibir (0 = so o dia atual)
+- `Show Labels` / `Label Offset` / `Label Size` — labels automaticos (D.O, W.O, ... ou o horario)
+- `Line Width` / `Line Style` — estilo global das linhas
 
 ## Documentacao
 
