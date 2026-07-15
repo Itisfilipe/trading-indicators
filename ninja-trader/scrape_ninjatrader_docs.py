@@ -1,466 +1,445 @@
 #!/usr/bin/env python3
 """
-NinjaTrader Documentation Scraper with Playwright
-Downloads all documentation pages using Playwright for JavaScript rendering
-Tracks progress and supports incremental updates via sitemap
+NinjaTrader developer documentation scraper.
+
+Mirrors https://developer.ninjatrader.com/docs/ as markdown.
+
+The site is a server-rendered Next.js app that ships the authored Markdoc source
+of every page inside its RSC payload. Extracting that source gives us the real
+document instead of a lossy HTML-to-markdown rendering of the page chrome, so a
+plain HTTP fetch is enough and no browser is needed.
+
+Change detection is content based: each page is keyed by the SHA-256 of its
+extracted body. The sitemap's <lastmod> cannot be used for this because the site
+stamps every URL with the same site-build time, so it changes for all 1200+ pages
+whenever any one of them is rebuilt.
 """
 
+import argparse
 import asyncio
+import hashlib
 import json
-import os
 import re
-from pathlib import Path
-from urllib.parse import urljoin, urlparse, unquote
-from playwright.async_api import async_playwright
-from bs4 import BeautifulSoup
-import html2text
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+import sys
 import xml.etree.ElementTree as ET
-from dateutil import parser as date_parser
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List, Optional
+from urllib.parse import urlparse
+
 import aiohttp
-import time
+from bs4 import BeautifulSoup
 
-class NinjaTraderPlaywrightScraper:
-    def __init__(self, base_url="https://developer.ninjatrader.com", output_dir="docs", max_concurrent=5):
-        self.base_url = base_url
-        self.docs_url = f"{base_url}/docs/desktop/"
+# Bump when the extraction logic changes in a way that alters stored markdown.
+# Pages whose recorded version differs are re-extracted even if their hash matches.
+EXTRACTOR_VERSION = 2
+
+SITEMAP_NAMESPACE = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+
+# /docs/api and /docs/api/websocket are 308 redirects to Tradovate's client-rendered
+# API docs. They render nothing without JavaScript and belong to a different product,
+# so we record them as links rather than saving two "enable JavaScript" stubs.
+OFFSITE_NAMESPACES = {"api"}
+
+# Visible text of pages the site has published but not yet written.
+PLACEHOLDER_MARKER = "content TBD"
+
+USER_AGENT = "Mozilla/5.0 (compatible; ninjatrader-docs-mirror/2.0)"
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+class ExtractionError(Exception):
+    """Raised when a page's Markdoc source cannot be recovered."""
+
+
+def decode_rsc_stream(page_html: str) -> str:
+    """Concatenate the RSC payload chunks the page pushes into self.__next_f."""
+    soup = BeautifulSoup(page_html, "html.parser")
+    chunks = []
+    for script in soup.find_all("script"):
+        script_text = script.string or script.get_text()
+        match = re.fullmatch(r"self\.__next_f\.push\((.*)\)", script_text or "", re.S)
+        if not match:
+            continue
+        try:
+            payload = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            continue
+        if len(payload) > 1 and isinstance(payload[1], str):
+            chunks.append(payload[1])
+    return "".join(chunks)
+
+
+def parse_rsc_records(stream: str) -> Dict[str, str]:
+    """
+    Map RSC text-record ids to their contents.
+
+    Records look like `1a:T5f2,<payload>` where the hex length is a count of UTF-8
+    bytes, not characters -- slicing the string directly would truncate any record
+    containing non-ASCII text.
+    """
+    records = {}
+    for match in re.finditer(r"(?:^|\n)([0-9a-f]+):T([0-9a-f]+),", stream):
+        size = int(match.group(2), 16)
+        payload = stream[match.end():].encode("utf-8")[:size]
+        try:
+            decoded = payload.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        if len(decoded.encode("utf-8")) == size:
+            records[match.group(1)] = decoded
+    return records
+
+
+def extract_markdoc_source(page_html: str) -> Optional[str]:
+    """
+    Return the authored Markdoc body of a documentation page.
+
+    The body reaches the client as a "source" prop that either holds the markdown
+    inline or points at a separate RSC record via a `$<id>` reference. A few
+    section landing pages carry their markdown as the page's only text record
+    without ever naming it in a "source" prop.
+
+    Returns None for pages that ship no document body at all -- the site has
+    published placeholders whose visible content is the literal text "content TBD".
+    Raises ExtractionError when the body is ambiguous, which is deliberately noisy:
+    silently guessing at the largest record would let a nav blob masquerade as
+    documentation.
+    """
+    stream = decode_rsc_stream(page_html)
+    if not stream:
+        raise ExtractionError("no RSC payload found")
+
+    records = parse_rsc_records(stream)
+    source_props = re.finditer(r'"source":("(?:\\.|[^"\\])*")', stream, flags=re.S)
+
+    # Later props win: the innermost page component is emitted after its layout.
+    for prop in reversed(list(source_props)):
+        try:
+            source = json.loads(prop.group(1))
+        except json.JSONDecodeError:
+            continue
+        if not source.startswith("$"):
+            return source
+        if source[1:] in records:
+            return records[source[1:]]
+        # The page named a body we cannot resolve. Anything we returned here would
+        # be a guess, and a truncated payload must not read as an empty page.
+        raise ExtractionError(f"source prop references missing record {source!r}")
+
+    if len(records) == 1:
+        return next(iter(records.values()))
+    if records:
+        raise ExtractionError(f"no source prop and {len(records)} candidate records")
+    return None
+
+
+def split_leading_heading(body: str) -> tuple[Optional[str], str]:
+    """
+    Peel off a body's own opening h1 so it can serve as the page title.
+
+    Most pages start at h2 and take their title from the rendered h1, but a few
+    landing pages author the h1 inline; without this they would get two headings.
+    """
+    stripped = body.lstrip("\n")
+    match = re.match(r"#\s+(.+?)\s*\n", stripped)
+    if not match:
+        return None, body
+    return match.group(1), stripped[match.end():]
+
+
+def extract_title(page_html: str, fallback: str) -> str:
+    """The <title> tag is site-wide boilerplate, so the h1 is the only real title."""
+    soup = BeautifulSoup(page_html, "html.parser")
+    heading = soup.find("h1")
+    if heading:
+        title = heading.get_text(strip=True)
+        if title:
+            return title
+    return fallback
+
+
+def namespace_of(url: str) -> str:
+    """The product section a docs URL belongs to: desktop, web, ecosystem, ..."""
+    path = urlparse(url).path.strip("/")
+    parts = path.split("/")
+    return parts[1] if len(parts) > 1 else ""
+
+
+class NinjaTraderDocsScraper:
+    def __init__(self, base_url="https://developer.ninjatrader.com", output_dir="docs",
+                 max_concurrent=8):
+        self.base_url = base_url.rstrip("/")
         self.output_dir = Path(output_dir)
-        self.max_concurrent = max_concurrent  # Lower concurrency for browser instances
-        self.progress_file = self.output_dir / "scraper_progress.json"
-        self.sitemap_file = self.output_dir / "sitemap.json"
-
-        # HTML to Markdown converter
-        self.h2t = html2text.HTML2Text()
-        self.h2t.ignore_links = False
-        self.h2t.ignore_images = False
-        self.h2t.body_width = 0  # Don't wrap lines
-        self.h2t.ignore_emphasis = False
-        self.h2t.single_line_break = True
-
-        # Progress tracking
-        self.progress = self.load_progress()
+        self.state_file = self.output_dir / "scraper_state.json"
+        self.max_concurrent = max_concurrent
         self.semaphore = asyncio.Semaphore(max_concurrent)
-        self.browser = None
-        self.playwright = None
+        self.state = self.load_state()
+        self.sitemap_errors: List[str] = []
+        self.results = {"new": [], "changed": [], "unchanged": [], "offsite": [],
+                        "placeholder": [], "pruned": [], "failed": []}
 
-    def load_progress(self) -> Dict:
-        """Load progress from JSON file if it exists"""
-        if self.progress_file.exists():
-            with open(self.progress_file, 'r') as f:
+    def load_state(self) -> Dict:
+        if self.state_file.exists():
+            with open(self.state_file) as f:
                 return json.load(f)
-        return {
-            "completed": {},  # URL: metadata pairs
-            "failed": [],
-            "in_progress": [],
-            "url_metadata": {},  # Store lastmod dates and other metadata
-            "stats": {
-                "total": 0,
-                "downloaded": 0,
-                "failed": 0,
-                "updated": 0,
-                "skipped": 0,
-                "start_time": datetime.now().isoformat(),
-                "last_update": datetime.now().isoformat()
-            }
-        }
+        return {"pages": {}, "runs": []}
 
-    def save_progress(self):
-        """Save current progress to JSON file"""
-        self.progress["stats"]["last_update"] = datetime.now().isoformat()
-        self.progress["stats"]["downloaded"] = len(self.progress["completed"])
-        self.progress["stats"]["failed"] = len(self.progress["failed"])
+    def save_state(self):
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        with open(self.state_file, "w") as f:
+            json.dump(self.state, f, indent=2, sort_keys=True)
 
-        self.output_dir.mkdir(exist_ok=True)
-        with open(self.progress_file, 'w') as f:
-            json.dump(self.progress, f, indent=2)
+    def discard_local_file(self, url: str) -> None:
+        """Drop a page's markdown once it stops being real documentation."""
+        filepath = self.url_to_filepath(url)
+        if filepath.exists():
+            filepath.unlink()
+            self.results["pruned"].append(str(filepath.relative_to(self.output_dir)))
 
     def url_to_filepath(self, url: str) -> Path:
-        """Convert URL to local file path"""
-        parsed = urlparse(url)
-        path = parsed.path
+        """
+        Map a docs URL to a namespaced local path.
 
-        # Remove /docs/desktop/ prefix
-        if path.startswith('/docs/desktop/'):
-            path = path[14:]
-        elif path.startswith('/docs/'):
-            path = path[6:]
+        The namespace must be preserved: desktop and web genuinely share the slugs
+        index, indicator, plots and timeseries, and a flat layout silently
+        overwrites one product's page with the other's.
+        """
+        path = urlparse(url).path.strip("/")
+        relative = path[len("docs/"):] if path.startswith("docs/") else path
+        relative = re.sub(r'[<>:"|?*]', "_", relative)
+        if not relative:
+            relative = "index"
+        return self.output_dir / f"{relative}.md"
 
-        # Clean up the path
-        path = unquote(path)
-        path = re.sub(r'[<>:"|?*]', '_', path)  # Remove invalid characters
-
-        # Handle index pages
-        if not path or path.endswith('/'):
-            path = path + 'index'
-
-        # Add .md extension
-        if not path.endswith('.md'):
-            path = path + '.md'
-
-        return self.output_dir / path
-
-    async def fetch_sitemap_urls(self, session: aiohttp.ClientSession, sitemap_url: str) -> List[Tuple[str, Optional[str]]]:
-        """Fetch and parse a sitemap XML file, returning URLs with their lastmod dates"""
-        urls_with_dates = []
+    async def fetch_sitemap_urls(self, session: aiohttp.ClientSession, sitemap_url: str) -> List[str]:
+        """Collect every documentation URL, following sitemap indexes one level down."""
         try:
-            async with session.get(sitemap_url, timeout=30) as response:
-                if response.status == 200:
-                    xml_content = await response.text()
-                    root = ET.fromstring(xml_content)
+            async with session.get(sitemap_url, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                response.raise_for_status()
+                root = ET.fromstring(await response.text())
+        except Exception as error:
+            # Recorded rather than swallowed: a half-read sitemap would look like
+            # a successful run against a shrunken set of URLs.
+            self.sitemap_errors.append(f"{sitemap_url}: {error}")
+            print(f"  ! sitemap {sitemap_url}: {error}")
+            return []
 
-                    # Handle both sitemap index and regular sitemap
-                    namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+        nested = root.findall("ns:sitemap", SITEMAP_NAMESPACE)
+        if nested:
+            urls = []
+            for entry in nested:
+                loc = entry.find("ns:loc", SITEMAP_NAMESPACE)
+                if loc is not None and loc.text:
+                    urls.extend(await self.fetch_sitemap_urls(session, loc.text))
+            return urls
 
-                    # Check if it's a sitemap index
-                    sitemaps = root.findall('ns:sitemap', namespace)
-                    if sitemaps:
-                        # It's a sitemap index, recursively fetch referenced sitemaps
-                        print(f"Found sitemap index with {len(sitemaps)} sitemaps")
-                        for sitemap in sitemaps:
-                            loc = sitemap.find('ns:loc', namespace)
-                            if loc is not None and loc.text:
-                                sub_urls = await self.fetch_sitemap_urls(session, loc.text)
-                                urls_with_dates.extend(sub_urls)
-                    else:
-                        # Regular sitemap with URLs
-                        urls = root.findall('ns:url', namespace)
-                        for url_elem in urls:
-                            loc = url_elem.find('ns:loc', namespace)
-                            lastmod = url_elem.find('ns:lastmod', namespace)
+        urls = []
+        for entry in root.findall("ns:url", SITEMAP_NAMESPACE):
+            loc = entry.find("ns:loc", SITEMAP_NAMESPACE)
+            if loc is None or not loc.text:
+                continue
+            path = urlparse(loc.text).path.strip("/")
+            if path == "docs" or path.startswith("docs/"):
+                urls.append(loc.text)
+        return urls
 
-                            if loc is not None and loc.text:
-                                # Only include documentation URLs
-                                if '/docs/' in loc.text:
-                                    lastmod_date = lastmod.text if lastmod is not None else None
-                                    urls_with_dates.append((loc.text, lastmod_date))
+    async def discover_urls(self, session: aiohttp.ClientSession) -> List[str]:
+        urls = await self.fetch_sitemap_urls(session, f"{self.base_url}/sitemap.xml")
+        unique = sorted(set(urls))
+        counts: Dict[str, int] = {}
+        for url in unique:
+            counts[namespace_of(url)] = counts.get(namespace_of(url), 0) + 1
+        print(f"Sitemap: {len(unique)} documentation URLs")
+        for name, count in sorted(counts.items()):
+            skipped = " (offsite, skipped)" if name in OFFSITE_NAMESPACES else ""
+            print(f"  {name or '<root>'}: {count}{skipped}")
+        return unique
 
-                        print(f"Extracted {len(urls_with_dates)} URLs from {sitemap_url}")
-
-        except Exception as e:
-            print(f"Error fetching sitemap {sitemap_url}: {e}")
-
-        return urls_with_dates
-
-    async def extract_all_urls_from_sitemap(self) -> Dict[str, Dict]:
-        """Extract all documentation URLs from the sitemap with their metadata"""
-        print("Extracting URLs from sitemap...")
-        url_metadata = {}
-
-        async with aiohttp.ClientSession() as session:
-            # Start with the main sitemap
-            urls_with_dates = await self.fetch_sitemap_urls(session, f"{self.base_url}/sitemap.xml")
-
-            # Process the URLs and their metadata
-            for url, lastmod in urls_with_dates:
-                # Only include desktop docs
-                if '/docs/desktop/' in url:
-                    url_metadata[url] = {
-                        'lastmod': lastmod,
-                        'last_downloaded': None,
-                        'needs_update': True
-                    }
-
-        print(f"Found {len(url_metadata)} documentation pages in sitemap")
-        return url_metadata
-
-    async def download_page_with_browser(self, page, url: str, force_update: bool = False) -> bool:
-        """Download and convert a single page to markdown using Playwright"""
-        async with self.semaphore:
-            # Check if we need to download this page
-            if url in self.progress["completed"] and not force_update:
-                # Check if the page has been updated since last download
-                if url in self.progress["url_metadata"]:
-                    metadata = self.progress["url_metadata"][url]
-                    if not metadata.get('needs_update', True):
-                        self.progress["stats"]["skipped"] = self.progress["stats"].get("skipped", 0) + 1
-                        print(f"⊙ Skipped (up-to-date): {url}")
-                        return True
-
-            # Mark as in progress
-            if url not in self.progress["in_progress"]:
-                self.progress["in_progress"].append(url)
-                self.save_progress()
-
-            try:
-                # Navigate to the page
-                print(f"Loading: {url}")
-                await page.goto(url, wait_until='networkidle', timeout=60000)
-
-                # Wait for content to load (adjust selector as needed)
-                # Try multiple possible content selectors
-                content_loaded = False
-                for selector in ['main', 'article', '.content', '.doc-content', '[class*="content"]']:
-                    try:
-                        await page.wait_for_selector(selector, timeout=5000)
-                        content_loaded = True
-                        break
-                    except:
-                        continue
-
-                # Additional wait for dynamic content
-                await page.wait_for_timeout(2000)
-
-                # Get the rendered HTML
-                html_content = await page.content()
-                soup = BeautifulSoup(html_content, 'html.parser')
-
-                # Extract main content
-                content = None
-                for selector in ['main', 'article', '.content', '#content', '.documentation', '.doc-content', '[class*="content"]']:
-                    content = soup.select_one(selector)
-                    if content:
-                        break
-
-                if not content:
-                    # Fallback to body
-                    content = soup.body if soup.body else soup
-
-                # Remove navigation, headers, footers, and other non-content elements
-                for elem in content.select('nav, header, footer, .navigation, .sidebar, .menu, script, style, [class*="nav"], [class*="header"], [class*="footer"]'):
-                    elem.decompose()
-
-                # Extract title
-                title = "Untitled"
-                # Try multiple ways to get the title
-                h1 = soup.find('h1')
-                if h1:
-                    title = h1.get_text(strip=True)
-                elif soup.title:
-                    title = soup.title.string
-                    # Remove common suffixes
-                    title = re.sub(r'\s*[-|].*$', '', title)
-
-                # Convert to markdown
-                markdown_content = self.h2t.handle(str(content))
-
-                # Clean up excessive blank lines
-                markdown_content = re.sub(r'\n\n\n+', '\n\n', markdown_content)
-
-                # Add metadata header with lastmod info
-                lastmod = self.progress["url_metadata"].get(url, {}).get('lastmod', 'Unknown')
-                metadata = f"""---
-title: {title}
-url: {url}
-scraped_at: {datetime.now().isoformat()}
-lastmod: {lastmod}
----
-
-# {title}
-
-"""
-                markdown_content = metadata + markdown_content
-
-                # Save to file
-                filepath = self.url_to_filepath(url)
-                filepath.parent.mkdir(parents=True, exist_ok=True)
-
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    f.write(markdown_content)
-
-                # Update progress with metadata
-                self.progress["completed"][url] = {
-                    "downloaded_at": datetime.now().isoformat(),
-                    "filepath": str(filepath.relative_to(self.output_dir)),
-                    "lastmod": lastmod
-                }
-
-                # Update URL metadata
-                if url in self.progress["url_metadata"]:
-                    self.progress["url_metadata"][url]["last_downloaded"] = datetime.now().isoformat()
-                    self.progress["url_metadata"][url]["needs_update"] = False
-
-                if url in self.progress["in_progress"]:
-                    self.progress["in_progress"].remove(url)
-
-                action = "Updated" if url in self.progress["completed"] else "Downloaded"
-                print(f"✓ {action}: {filepath.relative_to(self.output_dir)}")
-                return True
-
-            except Exception as e:
-                print(f"✗ Failed to download {url}: {e}")
-                self.progress["failed"].append({"url": url, "error": str(e)})
-                if url in self.progress["in_progress"]:
-                    self.progress["in_progress"].remove(url)
-                return False
-            finally:
-                self.save_progress()
-
-    async def download_all_pages(self, urls: List[str]):
-        """Download all pages using Playwright browser instances"""
-        print(f"\nDownloading {len(urls)} pages with {self.max_concurrent} concurrent browser tabs...")
-
-        # Initialize Playwright and browser
-        self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(
-            headless=True,
-            args=['--disable-blink-features=AutomationControlled']
-        )
-
-        # Create browser contexts for concurrent downloads
-        contexts = []
-        pages = []
-        for i in range(min(self.max_concurrent, len(urls))):
-            context = await self.browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            )
-            page = await context.new_page()
-            contexts.append(context)
-            pages.append(page)
-
-        start_time = time.time()
-
-        # Process URLs in batches
-        results = []
-        for i in range(0, len(urls), self.max_concurrent):
-            batch = urls[i:i+self.max_concurrent]
-            batch_tasks = []
-
-            for j, url in enumerate(batch):
-                if j < len(pages):
-                    batch_tasks.append(self.download_page_with_browser(pages[j], url))
-
-            batch_results = await asyncio.gather(*batch_tasks)
-            results.extend(batch_results)
-
-            # Small delay between batches to avoid overwhelming the server
-            if i + self.max_concurrent < len(urls):
-                await asyncio.sleep(1)
-
-        # Clean up
-        for context in contexts:
-            await context.close()
-        await self.browser.close()
-        await self.playwright.stop()
-
-        elapsed = time.time() - start_time
-        successful = sum(1 for r in results if r)
-
-        print(f"\n{'='*50}")
-        print(f"Download completed in {elapsed:.1f} seconds")
-        print(f"Successfully downloaded: {successful}/{len(urls)}")
-        print(f"Failed: {len(urls) - successful}")
-        print(f"Average speed: {len(urls)/elapsed:.1f} pages/second")
-
-    def create_enhanced_sitemap(self):
-        """Create an enhanced sitemap JSON file with metadata"""
-        sitemap = {
-            "total_pages": len(self.progress["url_metadata"]),
-            "base_url": self.base_url,
-            "scraped_at": datetime.now().isoformat(),
-            "last_check": datetime.now().isoformat(),
-            "stats": {
-                "downloaded": len(self.progress["completed"]),
-                "failed": len(self.progress["failed"]),
-                "up_to_date": self.progress["stats"].get("skipped", 0)
-            },
-            "pages": []
-        }
-
-        for url in sorted(self.progress["url_metadata"].keys()):
-            filepath = self.url_to_filepath(url)
-            relative_path = filepath.relative_to(self.output_dir)
-
-            page_info = {
-                "url": url,
-                "local_path": str(relative_path),
-                "downloaded": url in self.progress["completed"],
-                "lastmod": self.progress["url_metadata"][url].get("lastmod"),
-                "last_downloaded": self.progress["url_metadata"][url].get("last_downloaded"),
-                "needs_update": self.progress["url_metadata"][url].get("needs_update", False)
+    async def scrape_page(self, session: aiohttp.ClientSession, url: str, force: bool) -> None:
+        namespace = namespace_of(url)
+        if namespace in OFFSITE_NAMESPACES:
+            self.discard_local_file(url)
+            self.state["pages"][url] = {
+                "status": "offsite_redirect",
+                "namespace": namespace,
+                "checked_at": utc_now(),
             }
+            self.results["offsite"].append(url)
+            return
 
-            if url in self.progress["completed"]:
-                page_info["downloaded_at"] = self.progress["completed"][url].get("downloaded_at")
+        async with self.semaphore:
+            try:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=45)) as response:
+                    response.raise_for_status()
+                    final_url = str(response.url)
+                    page_html = await response.text()
+                    http_status = response.status
+            except Exception as error:
+                self.results["failed"].append({"url": url, "error": str(error)})
+                return
 
-            sitemap["pages"].append(page_info)
+        if urlparse(final_url).netloc != urlparse(self.base_url).netloc:
+            self.discard_local_file(url)
+            self.state["pages"][url] = {
+                "status": "offsite_redirect",
+                "final_url": final_url,
+                "namespace": namespace,
+                "checked_at": utc_now(),
+            }
+            self.results["offsite"].append(url)
+            return
 
-        with open(self.sitemap_file, 'w') as f:
-            json.dump(sitemap, f, indent=2)
+        try:
+            body = extract_markdoc_source(page_html)
+        except ExtractionError as error:
+            self.results["failed"].append({"url": url, "error": f"extraction: {error}"})
+            return
 
-        print(f"Enhanced sitemap saved to {self.sitemap_file}")
+        if body is None:
+            # Only trust an empty page when it says so. Otherwise an extraction
+            # regression would quietly reclassify real docs as placeholders.
+            if PLACEHOLDER_MARKER not in page_html:
+                self.results["failed"].append(
+                    {"url": url, "error": "no document body and no placeholder marker"})
+                return
+            self.discard_local_file(url)
+            self.state["pages"][url] = {
+                "status": "placeholder",
+                "namespace": namespace,
+                "final_url": final_url,
+                "checked_at": utc_now(),
+            }
+            self.results["placeholder"].append(url)
+            return
 
-    async def run(self, force_update: bool = False, test_mode: bool = False):
-        """Main scraper execution"""
-        print("NinjaTrader Documentation Scraper with Playwright")
-        print("="*50)
+        slug = urlparse(url).path.rstrip("/").split("/")[-1] or "index"
+        # Hash the body as served, before any heading is peeled off, so that an
+        # edit to that heading still registers as a change.
+        body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        authored_title, body = split_leading_heading(body)
+        title = authored_title or extract_title(page_html, fallback=slug)
 
-        # Extract all URLs from sitemap
-        url_metadata = await self.extract_all_urls_from_sitemap()
+        previous = self.state["pages"].get(url, {})
+        unchanged = (
+            previous.get("body_sha256") == body_hash
+            and previous.get("title") == title
+            and previous.get("extractor_version") == EXTRACTOR_VERSION
+            and self.url_to_filepath(url).exists()
+        )
+        if unchanged and not force:
+            self.results["unchanged"].append(url)
+            return
 
-        # Merge with existing metadata if we have it
-        if self.progress["url_metadata"]:
-            print("Merging with existing metadata...")
-            for url, metadata in url_metadata.items():
-                if url in self.progress["url_metadata"]:
-                    # Check if the page has been updated
-                    old_lastmod = self.progress["url_metadata"][url].get('lastmod')
-                    new_lastmod = metadata.get('lastmod')
+        filepath = self.url_to_filepath(url)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        frontmatter = "\n".join([
+            "---",
+            f"title: {title}",
+            f"url: {url}",
+            f"namespace: {namespace}",
+            f"scraped_at: {utc_now()}",
+            f"source_sha256: {body_hash}",
+            "---",
+            "",
+            f"# {title}",
+            "",
+            "",
+        ])
+        filepath.write_text(frontmatter + body.strip() + "\n", encoding="utf-8")
 
-                    if old_lastmod and new_lastmod and old_lastmod != new_lastmod:
-                        print(f"Page updated: {url}")
-                        self.progress["url_metadata"][url]['needs_update'] = True
-                        self.progress["url_metadata"][url]['lastmod'] = new_lastmod
-                else:
-                    # New URL
-                    self.progress["url_metadata"][url] = metadata
-        else:
-            self.progress["url_metadata"] = url_metadata
+        self.state["pages"][url] = {
+            "status": "ok",
+            "http_status": http_status,
+            "final_url": final_url,
+            "namespace": namespace,
+            "title": title,
+            "filepath": str(filepath.relative_to(self.output_dir)),
+            "body_sha256": body_hash,
+            "extractor_version": EXTRACTOR_VERSION,
+            "fetched_at": utc_now(),
+        }
+        bucket = "changed" if previous.get("body_sha256") else "new"
+        self.results[bucket].append(url)
 
-        self.progress["stats"]["total"] = len(self.progress["url_metadata"])
-        self.save_progress()
+    async def run(self, force: bool = False, limit: Optional[int] = None) -> int:
+        headers = {"User-Agent": USER_AGENT}
+        async with aiohttp.ClientSession(headers=headers) as session:
+            urls = await self.discover_urls(session)
+            if self.sitemap_errors:
+                print("\nSitemap incomplete -- aborting without touching local files:")
+                for error in self.sitemap_errors:
+                    print(f"  ! {error}")
+                return 1
+            if not urls:
+                print("No URLs discovered -- aborting without touching local files.")
+                return 1
+            if limit:
+                urls = urls[:limit]
+                print(f"\nLimited to first {limit} URLs")
 
-        # Determine which URLs need downloading
-        urls_to_download = []
-        for url, metadata in self.progress["url_metadata"].items():
-            if force_update or metadata.get('needs_update', True) or url not in self.progress["completed"]:
-                urls_to_download.append(url)
+            known = set(self.state["pages"])
+            removed = sorted(known - set(urls))
 
-        # In test mode, only download a few pages
-        if test_mode:
-            urls_to_download = urls_to_download[:5]
-            print(f"\nTEST MODE: Only downloading first 5 pages")
+            print(f"\nFetching {len(urls)} pages ({self.max_concurrent} at a time)...")
+            await asyncio.gather(*(self.scrape_page(session, url, force) for url in urls))
 
-        print(f"Total pages in sitemap: {len(self.progress['url_metadata'])}")
-        print(f"Already downloaded: {len(self.progress['completed'])}")
-        print(f"Need to download/update: {len(urls_to_download)}")
+        # Only drop pages the site really retired: a run with failures, or one
+        # narrowed by --limit, has not proved anything about the missing URLs.
+        if removed and not limit and not self.results["failed"]:
+            for url in removed:
+                self.discard_local_file(url)
+                self.state["pages"].pop(url, None)
 
-        if urls_to_download:
-            # Download all pages
-            await self.download_all_pages(urls_to_download)
+        self.state["runs"].append({
+            "finished_at": utc_now(),
+            "extractor_version": EXTRACTOR_VERSION,
+            "counts": {key: len(value) for key, value in self.results.items()},
+        })
+        self.save_state()
 
-        # Create enhanced sitemap
-        self.create_enhanced_sitemap()
+        print("\n" + "=" * 52)
+        print(f"  new:         {len(self.results['new'])}")
+        print(f"  changed:     {len(self.results['changed'])}")
+        print(f"  unchanged:   {len(self.results['unchanged'])}")
+        print(f"  offsite:     {len(self.results['offsite'])}")
+        print(f"  placeholder: {len(self.results['placeholder'])}")
+        print(f"  pruned:      {len(self.results['pruned'])}")
+        print(f"  failed:      {len(self.results['failed'])}")
 
-        # Final statistics
-        print("\n" + "="*50)
-        print("Final Statistics:")
-        print(f"Total pages: {len(self.progress['url_metadata'])}")
-        print(f"Downloaded: {len(self.progress['completed'])}")
-        print(f"Skipped (up-to-date): {self.progress['stats'].get('skipped', 0)}")
-        print(f"Failed: {len(self.progress['failed'])}")
+        for url in self.results["changed"][:40]:
+            print(f"  ~ {url}")
+        for item in self.results["failed"][:20]:
+            print(f"  ! {item['url']}: {item['error']}")
+        for path in self.results["pruned"][:20]:
+            print(f"  - removed {path}")
+        if removed and (limit or self.results["failed"]):
+            print(f"\n{len(removed)} URL(s) absent from this run; local files kept "
+                  f"because the run was incomplete:")
+            for url in removed[:20]:
+                print(f"  ? {url}")
 
-        if self.progress["failed"]:
-            print("\nFailed URLs:")
-            for item in self.progress["failed"][:10]:  # Show first 10 failures
-                if isinstance(item, dict):
-                    print(f"  - {item['url']}: {item['error']}")
-                else:
-                    print(f"  - {item}")
-            if len(self.progress["failed"]) > 10:
-                print(f"  ... and {len(self.progress['failed']) - 10} more")
+        return 1 if self.results["failed"] else 0
 
-async def main():
-    # Configuration
-    scraper = NinjaTraderPlaywrightScraper(
-        base_url="https://developer.ninjatrader.com",
-        output_dir="docs",
-        max_concurrent=3  # Lower concurrency for browser instances
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--force", action="store_true",
+                        help="rewrite every page even when its content hash is unchanged")
+    parser.add_argument("--limit", type=int, help="only process the first N URLs (smoke test)")
+    parser.add_argument("--output-dir", default=str(Path(__file__).parent / "docs"))
+    parser.add_argument("--max-concurrent", type=int, default=8)
+    args = parser.parse_args()
+
+    scraper = NinjaTraderDocsScraper(
+        output_dir=args.output_dir,
+        max_concurrent=args.max_concurrent,
     )
+    return asyncio.run(scraper.run(force=args.force, limit=args.limit))
 
-    # Run full scrape - downloads all pages
-    await scraper.run(force_update=False, test_mode=False)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(main())
