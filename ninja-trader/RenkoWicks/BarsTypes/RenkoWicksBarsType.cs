@@ -30,12 +30,12 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// <summary>
         /// Default brick size in ticks
         /// </summary>
-        private const int DEFAULT_BRICK_SIZE = 20;
+        private const int DEFAULT_BRICK_SIZE = 50;
 
         /// <summary>
         /// Default number of days to load for historical data
         /// </summary>
-        private const int DEFAULT_DAYS_TO_LOAD = 3;
+        private const int DEFAULT_DAYS_TO_LOAD = 15;
 
         /// <summary>
         /// Unique id registering this bars type and its matching chart style.

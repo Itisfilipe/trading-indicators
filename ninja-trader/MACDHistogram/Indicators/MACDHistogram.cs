@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
+using System.Xml.Serialization;
 using NinjaTrader.Cbi;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
@@ -13,7 +14,7 @@ using NinjaTrader.Core.FloatingPoint;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// MACD Histogram indicator with dynamic configurable colors and histogram bar width matching the chart’s bar width.
+    /// MACD Histogram indicator with dynamic configurable colors and histogram bar width matching the chart's bar width.
     /// - When above 0: bright if rising and dark if falling.
     /// - When below 0: bright if falling (more negative) and dark if rising (back toward 0).
     /// - A neutral color is used when the value is 0.
@@ -29,12 +30,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double constant4;
         private double constant5;
         private double constant6;
-        private Brush PositiveRisingColor;
-        private Brush PositiveFallingColor;
-        private Brush NegativeFallingColor;
-        private Brush NegativeRisingColor;
-        private Brush NeutralColor;
-
         #region MACD Parameter Properties
         [Range(1, int.MaxValue), NinjaScriptProperty]
         [Display(Name = "Fast", Order = 0, GroupName = "NinjaScriptParameters")]
@@ -47,13 +42,73 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(1, int.MaxValue), NinjaScriptProperty]
         [Display(Name = "Smooth", Order = 2, GroupName = "NinjaScriptParameters")]
         public int Smooth { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Positive rising", Order = 3, GroupName = "Colors",
+                 Description = "Histogram above zero and growing.")]
+        public Brush PositiveRisingColor { get; set; }
+
+        [Browsable(false)]
+        public string PositiveRisingColorSerializable
+        {
+            get { return Serialize.BrushToString(PositiveRisingColor); }
+            set { PositiveRisingColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Positive falling", Order = 4, GroupName = "Colors",
+                 Description = "Histogram above zero and shrinking back toward it.")]
+        public Brush PositiveFallingColor { get; set; }
+
+        [Browsable(false)]
+        public string PositiveFallingColorSerializable
+        {
+            get { return Serialize.BrushToString(PositiveFallingColor); }
+            set { PositiveFallingColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Negative falling", Order = 5, GroupName = "Colors",
+                 Description = "Histogram below zero and growing more negative.")]
+        public Brush NegativeFallingColor { get; set; }
+
+        [Browsable(false)]
+        public string NegativeFallingColorSerializable
+        {
+            get { return Serialize.BrushToString(NegativeFallingColor); }
+            set { NegativeFallingColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Negative rising", Order = 6, GroupName = "Colors",
+                 Description = "Histogram below zero and shrinking back toward it.")]
+        public Brush NegativeRisingColor { get; set; }
+
+        [Browsable(false)]
+        public string NegativeRisingColorSerializable
+        {
+            get { return Serialize.BrushToString(NegativeRisingColor); }
+            set { NegativeRisingColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Neutral", Order = 7, GroupName = "Colors",
+                 Description = "Histogram exactly at zero.")]
+        public Brush NeutralColor { get; set; }
+
+        [Browsable(false)]
+        public string NeutralColorSerializable
+        {
+            get { return Serialize.BrushToString(NeutralColor); }
+            set { NeutralColor = Serialize.StringToBrush(value); }
+        }
         #endregion
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = "MACD Histogram indicator with dynamic configurable colors based on momentum. Histogram bar width matches the chart’s bar width by default.";
+                Description = "MACD Histogram indicator with dynamic configurable colors based on momentum. Histogram bar width matches the chart's bar width by default.";
                 Name = "MACD Histogram";
                 Fast = 12;
                 Slow = 26;
@@ -135,60 +190,3 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
     }
 }
-
-#region NinjaScript generated code. Neither change nor remove.
-
-namespace NinjaTrader.NinjaScript.Indicators
-{
-	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
-	{
-		private FilipeAmaral.MACDHistogram[] cacheMACDHistogram;
-		public FilipeAmaral.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
-		{
-			return MACDHistogram(Input, fast, slow, smooth);
-		}
-
-		public FilipeAmaral.MACDHistogram MACDHistogram(ISeries<double> input, int fast, int slow, int smooth)
-		{
-			if (cacheMACDHistogram != null)
-				for (int idx = 0; idx < cacheMACDHistogram.Length; idx++)
-					if (cacheMACDHistogram[idx] != null && cacheMACDHistogram[idx].Fast == fast && cacheMACDHistogram[idx].Slow == slow && cacheMACDHistogram[idx].Smooth == smooth && cacheMACDHistogram[idx].EqualsInput(input))
-						return cacheMACDHistogram[idx];
-			return CacheIndicator<FilipeAmaral.MACDHistogram>(new FilipeAmaral.MACDHistogram(){ Fast = fast, Slow = slow, Smooth = smooth }, input, ref cacheMACDHistogram);
-		}
-	}
-}
-
-namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
-{
-	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
-	{
-		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
-		{
-			return indicator.MACDHistogram(Input, fast, slow, smooth);
-		}
-
-		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(ISeries<double> input , int fast, int slow, int smooth)
-		{
-			return indicator.MACDHistogram(input, fast, slow, smooth);
-		}
-	}
-}
-
-namespace NinjaTrader.NinjaScript.Strategies
-{
-	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
-	{
-		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
-		{
-			return indicator.MACDHistogram(Input, fast, slow, smooth);
-		}
-
-		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(ISeries<double> input , int fast, int slow, int smooth)
-		{
-			return indicator.MACDHistogram(input, fast, slow, smooth);
-		}
-	}
-}
-
-#endregion

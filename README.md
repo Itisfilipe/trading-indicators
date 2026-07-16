@@ -14,10 +14,15 @@ Personal collection of trading indicators and chart tools for three platforms:
   brick's real counter-trend extreme as a wick, and draw the synthetic bricks
   that fill price gaps faded, so what actually traded is visible at a glance.
 - **ErgonomicCharts** — natural chart interaction: scroll-wheel zoom through the
-  platform's own bar-spacing handlers, plus optional (off by default) drag-to-pan.
-- **ChartTrading** — work-in-progress click-to-trade tool: hold a modifier key to
-  preview the full order bracket (entry, stop, targets) at the pointer before
-  committing. Preview only so far; order submission is upcoming milestone work.
+  platform's own bar-spacing handlers, plus drag-to-pan.
+- **ChartTrading** — click-to-trade: hold a modifier key to preview the full
+  order bracket (entry, stop, targets) at the pointer, click to place it, with
+  sidebar buttons for on/off and stops-to-breakeven plus optional auto-breakeven.
+- **ATRRenkoSizeCalculator** — EMA-smoothed ATR with an on-chart table of ATR,
+  half ATR, and half ATR in ticks, for sizing Renko bricks.
+- **MACDHistogram** — MACD histogram with momentum-based coloring (rising vs
+  falling on each side of zero), bar width matching the chart's bars.
+- **VolumeWithEMA** — volume histogram colored by its relation to a volume EMA.
 
 See [`ninja-trader/README.md`](ninja-trader/README.md) for import instructions
 and platform quirks.
@@ -53,10 +58,12 @@ Their outputs are gitignored and stay on your machine.
 
 ## Disclaimer
 
-This is trading software shared for educational purposes. It is **not**
-financial advice, and it may contain bugs. Trading involves substantial risk of
-loss. Test everything in simulation before trading real money, and read the
-code you are about to trade with.
+I built these indicators for my own personal trading and share them as-is. I
+take **no responsibility** for their use by anyone, for any losses, missed
+trades, or misbehavior of any kind — if you use them, you do so entirely at
+your own risk. This is not financial advice, and the code may contain bugs.
+Trading involves substantial risk of loss. Test everything in simulation before
+trading real money, and read the code you are about to trade with.
 
 ## License
 

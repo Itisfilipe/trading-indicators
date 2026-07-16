@@ -6,22 +6,6 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-07-16
 
 ### ChartTrading (NinjaTrader, new)
-- Auto-breakeven ("Auto breakeven" checkbox, default off): once price runs the
-  configured trigger distance (ticks) in the position's favor, every working
-  ChartTrading stop moves to breakeven automatically — the same move as the
-  "Stops to BE" button, fired once per position and re-armed when the position
-  closes or flips. A "Breakeven offset (ticks)" setting shifts where breakeven
-  lands (e.g. 2 locks two ticks of profit) and applies to the button as well,
-  so manual and auto always agree. Like an ATM, it only acts while the chart
-  is open.
-- Breakeven moves (button and auto) never loosen protection: a stop already
-  at or beyond breakeven — manually trailed, say — stays where it is. Moves
-  clamp one tick inside the market instead of exactly at it, and the auto
-  trigger waits until the configured offset fits inside the market.
-- Auto-breakeven no longer disarms for the rest of the position if it
-  triggers in the instant before the stops go live (it retries once they
-  do), and a trigger caught mid-flight by a position change stands down
-  instead of acting on the replacement position.
 - First public milestone of a click-to-trade tool: hold a modifier key
   (Shift = buy, Alt = sell) to preview the full order bracket — entry, stop,
   and up to three targets — at the mouse pointer. Preview only; it places no
@@ -58,8 +42,46 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   quantity sizes each enabled pair, so the entry trades quantity x enabled
   pairs and the stops always cover the full position. Defaults center the tags
   and use 50-tick steps with two pairs enabled.
+- Auto-breakeven ("Auto breakeven" checkbox, default off): once price runs the
+  configured trigger distance (ticks) in the position's favor, every working
+  ChartTrading stop moves to breakeven automatically — the same move as the
+  "Stops to BE" button, fired once per position and re-armed when the position
+  closes or flips. A "Breakeven offset (ticks)" setting shifts where breakeven
+  lands (e.g. 2 locks two ticks of profit) and applies to the button as well,
+  so manual and auto always agree. Like an ATM, it only acts while the chart
+  is open.
+- Breakeven moves (button and auto) never loosen protection: a stop already
+  at or beyond breakeven — manually trailed, say — stays where it is. Moves
+  clamp one tick inside the market instead of exactly at it, and the auto
+  trigger waits until the configured offset fits inside the market.
+- Auto-breakeven no longer disarms for the rest of the position if it
+  triggers in the instant before the stops go live (it retries once they
+  do), and a trigger caught mid-flight by a position change stands down
+  instead of acting on the replacement position.
+- Partial fills are now bracketed as they happen: exits go live sized to the
+  filled quantity and grow as further fills arrive, so an entry cancelled
+  after a partial fill no longer leaves that partial unprotected. Fills are
+  assigned to bracket pairs in order (pair 1 up to its size, then pair 2).
+- New "Time in force" setting: Day (default) or GTC, applied to the entry
+  and every stop and target.
 
+### ATRRenkoSizeCalculator (NinjaTrader)
+- Removed a stale duplicate of the indicator that would break compilation if
+  both copies were imported; the surviving version renders its values table
+  with the chart's own graphics pipeline.
+
+### MACDHistogram (NinjaTrader)
+- The five momentum colors (positive rising/falling, negative falling/rising,
+  neutral) are now real settings under a "Colors" group — previously they
+  were hardcoded despite the indicator describing itself as configurable —
+  and they persist across workspace and template reloads.
+
+### VolumeWithEMA (NinjaTrader)
+- Custom colors now survive workspace and template reloads (they previously
+  reset to defaults on restore).
 ### RenkoWicks (NinjaTrader)
+- New chart defaults: 50-tick bricks and 15 days of data to load (were 20
+  and 3).
 - **Fixed: lower wicks were never drawn.** A rendering bug present since the
   first version made every down-pointing wick silently disappear; up bricks now
   show their pull-back lows and down bricks their rally highs, as intended.

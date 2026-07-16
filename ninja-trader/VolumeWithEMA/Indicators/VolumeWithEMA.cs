@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
+using System.Xml.Serialization;
 using NinjaTrader.Cbi;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
@@ -25,17 +26,38 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Period", Order = 0, GroupName = "Parameters")]
         public int Period { get; set; }
 
-        [NinjaScriptProperty]
+        [XmlIgnore]
         [Display(Name = "Volume Above Color", Order = 1, GroupName = "Colors")]
         public Brush VolumeAboveColor { get; set; }
 
-        [NinjaScriptProperty]
+        [Browsable(false)]
+        public string VolumeAboveColorSerializable
+        {
+            get { return Serialize.BrushToString(VolumeAboveColor); }
+            set { VolumeAboveColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
         [Display(Name = "Volume Below Color", Order = 2, GroupName = "Colors")]
         public Brush VolumeBelowColor { get; set; }
 
-        [NinjaScriptProperty]
+        [Browsable(false)]
+        public string VolumeBelowColorSerializable
+        {
+            get { return Serialize.BrushToString(VolumeBelowColor); }
+            set { VolumeBelowColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
         [Display(Name = "EMA Color", Order = 3, GroupName = "Colors")]
         public Brush EMAColor { get; set; }
+
+        [Browsable(false)]
+        public string EMAColorSerializable
+        {
+            get { return Serialize.BrushToString(EMAColor); }
+            set { EMAColor = Serialize.StringToBrush(value); }
+        }
 
         #endregion
 
@@ -57,7 +79,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 EMAColor = Brushes.Goldenrod;
 
                 // Add two plots:
-                // Plot 0: Volume histogram – using a Stroke to allow dynamic coloring.
+                // Plot 0: Volume histogram - using a Stroke to allow dynamic coloring.
                 Stroke volumeStroke = new Stroke(VolumeAboveColor, 2);
                 AddPlot(volumeStroke, PlotStyle.Bar, "Volume");
 				Plots[0].AutoWidth = true;
@@ -96,60 +118,3 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
     }
 }
-
-#region NinjaScript generated code. Neither change nor remove.
-
-namespace NinjaTrader.NinjaScript.Indicators
-{
-	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
-	{
-		private FilipeAmaral.VolumeWithEMA[] cacheVolumeWithEMA;
-		public FilipeAmaral.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
-		{
-			return VolumeWithEMA(Input, period, volumeAboveColor, volumeBelowColor, eMAColor);
-		}
-
-		public FilipeAmaral.VolumeWithEMA VolumeWithEMA(ISeries<double> input, int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
-		{
-			if (cacheVolumeWithEMA != null)
-				for (int idx = 0; idx < cacheVolumeWithEMA.Length; idx++)
-					if (cacheVolumeWithEMA[idx] != null && cacheVolumeWithEMA[idx].Period == period && cacheVolumeWithEMA[idx].VolumeAboveColor == volumeAboveColor && cacheVolumeWithEMA[idx].VolumeBelowColor == volumeBelowColor && cacheVolumeWithEMA[idx].EMAColor == eMAColor && cacheVolumeWithEMA[idx].EqualsInput(input))
-						return cacheVolumeWithEMA[idx];
-			return CacheIndicator<FilipeAmaral.VolumeWithEMA>(new FilipeAmaral.VolumeWithEMA(){ Period = period, VolumeAboveColor = volumeAboveColor, VolumeBelowColor = volumeBelowColor, EMAColor = eMAColor }, input, ref cacheVolumeWithEMA);
-		}
-	}
-}
-
-namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
-{
-	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
-	{
-		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
-		{
-			return indicator.VolumeWithEMA(Input, period, volumeAboveColor, volumeBelowColor, eMAColor);
-		}
-
-		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(ISeries<double> input , int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
-		{
-			return indicator.VolumeWithEMA(input, period, volumeAboveColor, volumeBelowColor, eMAColor);
-		}
-	}
-}
-
-namespace NinjaTrader.NinjaScript.Strategies
-{
-	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
-	{
-		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
-		{
-			return indicator.VolumeWithEMA(Input, period, volumeAboveColor, volumeBelowColor, eMAColor);
-		}
-
-		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(ISeries<double> input , int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
-		{
-			return indicator.VolumeWithEMA(input, period, volumeAboveColor, volumeBelowColor, eMAColor);
-		}
-	}
-}
-
-#endregion

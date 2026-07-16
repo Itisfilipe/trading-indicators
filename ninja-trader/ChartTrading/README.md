@@ -36,6 +36,8 @@ ChartTrader is hidden):
   1-lot exits on each side.
 - **Entry types** — choose Limit or MIT for clicks on the favorable side of
   the market, Stop-Market or Stop-Limit (with a tick offset) beyond it.
+- **Time in force** — Day (default) or GTC, applied to the entry and every
+  stop and target it places.
 - **Separate stacked stops** — when two pairs share a stop price, nudge each
   extra stop one tick further out so the chart shows them as individually
   draggable orders instead of one stacked marker.
@@ -58,8 +60,9 @@ applies to both the automatic move and the button.
 - Automation runs locally, like an ATM: breakeven only acts while the chart
   is open in NinjaTrader.
 - Removing the indicator leaves its working orders working, by design.
-- Time-in-force is Day. An entry cancelled after a partial fill leaves that
-  partial without a bracket (a warning is logged) — watch the Orders tab.
+- Partial fills are bracketed as they happen: exits go live sized to what has
+  actually filled and grow with further fills, assigned to bracket pairs in
+  order (pair 1 fills up first, then pair 2, and so on).
 
 ## Installing
 

@@ -48,6 +48,26 @@ and click to place it. Includes sidebar ON/OFF and stops-to-breakeven
 buttons, and an optional auto-breakeven trigger. Details:
 [ChartTrading/README.md](ChartTrading/README.md).
 
+### ATRRenkoSizeCalculator
+
+ATR smoothed with an EMA instead of Wilder's average, plotted with its half
+value and shown in an on-chart table: ATR, half ATR, and half ATR in ticks --
+the number to feed a Renko brick size. "Ignore gaps" (on by default) keeps
+session-open gaps out of the true range so overnight jumps do not inflate
+the suggested size.
+
+### MACDHistogram
+
+Just the MACD histogram, colored by momentum: bright when the move is
+strengthening (rising above zero, falling below), dark when it is fading
+back toward zero. Colors are configurable and the bars match the chart's
+bar width.
+
+### VolumeWithEMA
+
+Volume histogram with an EMA of volume; bars color differently above vs
+below the average, so activity spikes stand out. Updates tick by tick.
+
 ## Documentation tooling
 
 `scrape_ninjatrader_docs.py` builds a local markdown mirror of

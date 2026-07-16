@@ -85,6 +85,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Currency,
     }
 
+    /// <summary>
+    /// How long submitted orders stay alive: Day expires at session end, GTC
+    /// rests until filled or cancelled.
+    /// </summary>
+    public enum ChartTradingTimeInForce
+    {
+        Day,
+        Gtc,
+    }
+
     public class ChartTrading : Indicator
     {
         #region Preview state
@@ -147,13 +157,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             public Order Entry;
             public Account Account;
-            public bool ExitsSubmitted;
             public double EntryFillPrice;
             public OrderAction ExitAction;
             public double[] StopPrices;
             public double[] TargetPrices;
             public int PairQuantity;
-            public List<Order> StopOrders;
+
+            // The entry quantity the exits currently cover, and the live exit orders
+            // per pair (null until that pair first gets quantity). Fills are assigned
+            // to pairs sequentially: pair 1 up to its full size, then pair 2, and on.
+            public int CoveredQuantity;
+            public Order[] StopOrders;
+            public Order[] TargetOrders;
+
+            public int PairDesiredQuantity(int pairIndex, int filled)
+            {
+                return Math.Max(0, Math.Min(PairQuantity, filled - pairIndex * PairQuantity));
+            }
         }
         #endregion
 
@@ -239,6 +259,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "in the direction of the entry.")]
         public int StopLimitOffsetTicks { get; set; }
 
+        [Display(Name = "Time in force", Order = 9, GroupName = "Trading",
+                 Description = "Applies to the entry and to every stop and target it places. " +
+                               "Day orders expire at session end; GTC orders rest until filled " +
+                               "or cancelled.")]
+        public ChartTradingTimeInForce OrderTimeInForce { get; set; }
+
         [Display(Name = "Auto breakeven", Order = 6, GroupName = "Trading",
                  Description = "Once price runs the trigger distance in the position's favor, move every " +
                                "working ChartTrading stop to breakeven automatically -- the same move as " +
@@ -310,6 +336,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 StopSideType = ChartTradingStopSideType.StopMarket;
                 StopLimitOffsetTicks = 2;
                 SeparateStackedStops = false;
+                OrderTimeInForce = ChartTradingTimeInForce.Day;
                 AutoBreakevenEnabled = false;
                 AutoBreakevenTriggerTicks = 30;
                 BreakevenOffsetTicks = 0;
@@ -693,10 +720,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // Creation and submission run on NinjaTrader's own thread, the shape the
             // ABCompleteChartTrader reference uses. The commit registers before Submit
             // so a fast fill cannot race past the registry.
+            TimeInForce entryTif = OrderTimeInForce == ChartTradingTimeInForce.Gtc
+                ? TimeInForce.Gtc : TimeInForce.Day;
             TriggerCustomEvent(o =>
             {
                 Order entry = account.CreateOrder(Instrument, entryAction, entryType, OrderEntry.Manual,
-                    TimeInForce.Day, entryQuantity, limitPrice, stopPrice, string.Empty, "CT Entry",
+                    entryTif, entryQuantity, limitPrice, stopPrice, string.Empty, "CT Entry",
                     Core.Globals.MaxDate, null);
 
                 lock (orderLock)
@@ -799,8 +828,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        // Arrives off the UI thread. Exits go live only on the entry's full fill; a
-        // resting stop or target without a position would OPEN a trade, not close one.
+        // Arrives off the UI thread. Exits go live only against filled entry quantity;
+        // a resting stop or target without a position would OPEN a trade, not close one.
         private void OnAccountOrderUpdate(object sender, OrderEventArgs e)
         {
             // An auto-breakeven that fired before the exits were live re-arms as soon
@@ -831,60 +860,122 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (commit == null)
                 return;
 
-            if (e.OrderState == OrderState.Filled)
+            if (e.OrderState == OrderState.PartFilled || e.OrderState == OrderState.Filled)
             {
+                // Bracket whatever has filled so far: a partial fill gets exits sized
+                // to the filled amount immediately, grown as further fills arrive,
+                // instead of waiting (exposed) for the full fill.
                 bool submitNow = false;
                 lock (orderLock)
                 {
-                    if (!commit.ExitsSubmitted)
+                    if (e.Order.Filled > commit.CoveredQuantity)
                     {
-                        commit.ExitsSubmitted = true;
+                        commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         submitNow = true;
                     }
                 }
                 if (submitNow)
-                    SubmitExits(commit, sender as Account);
+                    EnsureExits(commit, sender as Account);
             }
             else if (e.OrderState == OrderState.Cancelled || e.OrderState == OrderState.Rejected)
             {
+                bool coverNow = false;
                 lock (orderLock)
+                {
                     activeCommits.Remove(commit);
-                if (e.Order.Filled > 0 && !commit.ExitsSubmitted)
-                    Log($"ChartTrading: entry cancelled after a partial fill of {e.Order.Filled}; that position has no bracket.",
-                        NinjaTrader.Cbi.LogLevel.Warning);
+                    if (e.Order.Filled > commit.CoveredQuantity)
+                    {
+                        commit.CoveredQuantity = e.Order.Filled;
+                        commit.EntryFillPrice = e.AverageFillPrice;
+                        coverNow = true;
+                    }
+                }
+                if (coverNow)
+                {
+                    EnsureExits(commit, sender as Account);
+                    Log($"ChartTrading: entry ended after a partial fill of {e.Order.Filled}; bracket sized to the filled amount.",
+                        NinjaTrader.Cbi.LogLevel.Information);
+                }
             }
         }
 
-        private void SubmitExits(BracketCommit commit, Account account)
+        /// <summary>
+        /// Makes the commit's exit orders cover its filled entry quantity: pairs that
+        /// need quantity for the first time are created (stop + target, OCO-linked),
+        /// pairs whose quantity grew are resized in place. Safe to queue repeatedly --
+        /// TriggerCustomEvent callbacks run serialized on the instrument's event
+        /// thread, and each run reads the latest covered quantity.
+        /// </summary>
+        private void EnsureExits(BracketCommit commit, Account account)
         {
             if (account == null)
                 return;
 
             TriggerCustomEvent(o =>
             {
-                var exits = new List<Order>();
-                var stopOrders = new List<Order>();
-                for (int i = 0; i < commit.StopPrices.Length; i++)
+                int filled;
+                lock (orderLock)
                 {
-                    // Each pair's stop and target cancel each other.
-                    string oco = "CT-" + Guid.NewGuid().ToString("N");
-                    Order stop = account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
-                        OrderEntry.Manual, TimeInForce.Day, commit.PairQuantity, 0, commit.StopPrices[i],
-                        oco, "CT Stop", Core.Globals.MaxDate, null);
-                    exits.Add(stop);
-                    stopOrders.Add(stop);
-                    exits.Add(account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
-                        OrderEntry.Manual, TimeInForce.Day, commit.PairQuantity, commit.TargetPrices[i], 0,
-                        oco, "CT Target", Core.Globals.MaxDate, null));
+                    filled = commit.CoveredQuantity;
+                    if (commit.StopOrders == null)
+                    {
+                        commit.StopOrders = new Order[commit.StopPrices.Length];
+                        commit.TargetOrders = new Order[commit.StopPrices.Length];
+                    }
                 }
 
-                // Tracked so the breakeven button can move exactly these stops later.
-                lock (orderLock)
-                    commit.StopOrders = stopOrders;
+                TimeInForce tif = OrderTimeInForce == ChartTradingTimeInForce.Gtc
+                    ? TimeInForce.Gtc : TimeInForce.Day;
+                var submissions = new List<Order>();
+                var changes = new List<Order>();
+                for (int i = 0; i < commit.StopPrices.Length; i++)
+                {
+                    int desired = commit.PairDesiredQuantity(i, filled);
+                    if (desired <= 0)
+                        continue;
 
-                if (exits.Count > 0)
-                    account.Submit(exits);
+                    Order stop = commit.StopOrders[i];
+                    if (stop == null)
+                    {
+                        // Each pair's stop and target cancel each other.
+                        string oco = "CT-" + Guid.NewGuid().ToString("N");
+                        stop = account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
+                            OrderEntry.Manual, tif, desired, 0, commit.StopPrices[i],
+                            oco, "CT Stop", Core.Globals.MaxDate, null);
+                        Order target = account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
+                            OrderEntry.Manual, tif, desired, commit.TargetPrices[i], 0,
+                            oco, "CT Target", Core.Globals.MaxDate, null);
+                        commit.StopOrders[i] = stop;
+                        commit.TargetOrders[i] = target;
+                        submissions.Add(stop);
+                        submissions.Add(target);
+                        continue;
+                    }
+
+                    // The pair exists from an earlier partial fill; grow it if it is
+                    // still alive. A pair the market already took out stays as-is.
+                    Order pairTarget = commit.TargetOrders[i];
+                    if (stop.Quantity != desired
+                        && (stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted)
+                        && pairTarget != null
+                        && (pairTarget.OrderState == OrderState.Working || pairTarget.OrderState == OrderState.Accepted))
+                    {
+                        stop.QuantityChanged = desired;
+                        stop.LimitPriceChanged = stop.LimitPrice;
+                        stop.StopPriceChanged = stop.StopPrice;
+                        changes.Add(stop);
+                        pairTarget.QuantityChanged = desired;
+                        pairTarget.LimitPriceChanged = pairTarget.LimitPrice;
+                        pairTarget.StopPriceChanged = pairTarget.StopPrice;
+                        changes.Add(pairTarget);
+                    }
+                }
+
+                if (submissions.Count > 0)
+                    account.Submit(submissions);
+                if (changes.Count > 0)
+                    account.Change(changes);
             }, null);
         }
 
