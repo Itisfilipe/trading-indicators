@@ -11,7 +11,7 @@ using NinjaTrader.NinjaScript;
 using System.ComponentModel.DataAnnotations;
 #endregion
 
-namespace NinjaTrader.NinjaScript.Indicators
+namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
     /// Natural chart interaction: scroll wheel zooms without holding Ctrl, and
@@ -26,7 +26,7 @@ namespace NinjaTrader.NinjaScript.Indicators
     /// platform's native Ctrl+drag do the work. That key is pressed into the Windows
     /// session, not into this chart, so a drag that never sees its mouse-up leaves Ctrl
     /// down for every application. Every reachable release path is covered below, but a
-    /// crash mid-drag cannot be, which is why the feature is off unless asked for.
+    /// crash mid-drag cannot be. It is on by default; a tap of Ctrl clears a stuck key.
     /// </remarks>
     public class ErgonomicCharts : Indicator
     {
@@ -155,10 +155,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         /// <summary>
         /// Whether left-drag pans the chart without holding Ctrl.
         /// </summary>
-        /// <remarks>
-        /// Off by default: see the class remarks for why this cannot be made safe.
-        /// </remarks>
-        [Display(Name = "Enable drag-to-pan (experimental)", Order = 1, GroupName = "Parameters",
+        [Display(Name = "Enable drag-to-pan", Order = 1, GroupName = "Parameters",
                  Description = "Left-drag pans without holding Ctrl. Works by holding a synthetic Ctrl " +
                                "key down for the whole session while dragging, so if NinjaTrader crashes " +
                                "mid-drag, Ctrl can stay stuck down in Windows until you tap it. Zoom does " +
@@ -181,7 +178,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 DrawVerticalGridLines = false;
                 PaintPriceMarkers = false;
                 ScaleJustification = ScaleJustification.Right;
-                EnableDragToPan = false;
+                EnableDragToPan = true;
             }
             else if (State == State.Historical)
             {
@@ -388,19 +385,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 {
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
-		private ErgonomicCharts[] cacheErgonomicCharts;
-		public ErgonomicCharts ErgonomicCharts()
+		private FilipeAmaral.ErgonomicCharts[] cacheErgonomicCharts;
+		public FilipeAmaral.ErgonomicCharts ErgonomicCharts()
 		{
 			return ErgonomicCharts(Input);
 		}
 
-		public ErgonomicCharts ErgonomicCharts(ISeries<double> input)
+		public FilipeAmaral.ErgonomicCharts ErgonomicCharts(ISeries<double> input)
 		{
 			if (cacheErgonomicCharts != null)
 				for (int idx = 0; idx < cacheErgonomicCharts.Length; idx++)
 					if (cacheErgonomicCharts[idx] != null &&  cacheErgonomicCharts[idx].EqualsInput(input))
 						return cacheErgonomicCharts[idx];
-			return CacheIndicator<ErgonomicCharts>(new ErgonomicCharts(), input, ref cacheErgonomicCharts);
+			return CacheIndicator<FilipeAmaral.ErgonomicCharts>(new FilipeAmaral.ErgonomicCharts(), input, ref cacheErgonomicCharts);
 		}
 	}
 }
@@ -409,12 +406,12 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.ErgonomicCharts ErgonomicCharts()
+		public Indicators.FilipeAmaral.ErgonomicCharts ErgonomicCharts()
 		{
 			return indicator.ErgonomicCharts(Input);
 		}
 
-		public Indicators.ErgonomicCharts ErgonomicCharts(ISeries<double> input )
+		public Indicators.FilipeAmaral.ErgonomicCharts ErgonomicCharts(ISeries<double> input )
 		{
 			return indicator.ErgonomicCharts(input);
 		}
@@ -425,12 +422,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.ErgonomicCharts ErgonomicCharts()
+		public Indicators.FilipeAmaral.ErgonomicCharts ErgonomicCharts()
 		{
 			return indicator.ErgonomicCharts(Input);
 		}
 
-		public Indicators.ErgonomicCharts ErgonomicCharts(ISeries<double> input )
+		public Indicators.FilipeAmaral.ErgonomicCharts ErgonomicCharts(ISeries<double> input )
 		{
 			return indicator.ErgonomicCharts(input);
 		}

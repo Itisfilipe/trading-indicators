@@ -31,7 +31,7 @@ using SharpDX.Direct2D1;
 // order quantity, for the tag text. Order submission, OCO, and grid entry are later
 // milestones layered on top.
 
-namespace NinjaTrader.NinjaScript.Indicators
+namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
     /// Which keyboard modifier arms a side of the click-to-trade preview.
@@ -105,13 +105,12 @@ namespace NinjaTrader.NinjaScript.Indicators
                  Description = "Hold this key and move over the chart to preview a sell bracket.")]
         public ChartTradingModifier SellModifier { get; set; }
 
-        [Range(1, 3)]
-        [Display(Name = "Brackets", Order = 1, GroupName = "Bracket",
-                 Description = "How many stop/target pairs a click places. The ChartTrader quantity is " +
-                               "the size of EACH pair, so the entry trades quantity x pairs -- three " +
-                               "1-lot targets need a 3-lot entry -- and each pair carries its own stop " +
-                               "and its own target.")]
-        public int BracketCount { get; set; }
+        // Each pair is enabled by its own checkbox. The ChartTrader quantity is the
+        // size of EACH enabled pair, so the entry trades quantity x enabled pairs --
+        // three 1-lot targets need a 3-lot entry. With every pair disabled, a click
+        // means a plain entry of the ChartTrader quantity with no bracket.
+        [Display(Name = "Bracket 1", Order = 1, GroupName = "Bracket")]
+        public bool Bracket1Enabled { get; set; }
 
         [Range(1, int.MaxValue)]
         [Display(Name = "Stop 1 (ticks)", Order = 2, GroupName = "Bracket")]
@@ -121,20 +120,26 @@ namespace NinjaTrader.NinjaScript.Indicators
         [Display(Name = "Target 1 (ticks)", Order = 3, GroupName = "Bracket")]
         public int Target1Ticks { get; set; }
 
+        [Display(Name = "Bracket 2", Order = 4, GroupName = "Bracket")]
+        public bool Bracket2Enabled { get; set; }
+
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 2 (ticks)", Order = 4, GroupName = "Bracket")]
+        [Display(Name = "Stop 2 (ticks)", Order = 5, GroupName = "Bracket")]
         public int Stop2Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 2 (ticks)", Order = 5, GroupName = "Bracket")]
+        [Display(Name = "Target 2 (ticks)", Order = 6, GroupName = "Bracket")]
         public int Target2Ticks { get; set; }
 
+        [Display(Name = "Bracket 3", Order = 7, GroupName = "Bracket")]
+        public bool Bracket3Enabled { get; set; }
+
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 3 (ticks)", Order = 6, GroupName = "Bracket")]
+        [Display(Name = "Stop 3 (ticks)", Order = 8, GroupName = "Bracket")]
         public int Stop3Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 3 (ticks)", Order = 7, GroupName = "Bracket")]
+        [Display(Name = "Target 3 (ticks)", Order = 9, GroupName = "Bracket")]
         public int Target3Ticks { get; set; }
 
         [Display(Name = "Tag position", Order = 1, GroupName = "Appearance",
@@ -182,7 +187,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 
                 BuyModifier = ChartTradingModifier.Shift;
                 SellModifier = ChartTradingModifier.Alt;
-                BracketCount = 2;
+                Bracket1Enabled = true;
+                Bracket2Enabled = true;
+                Bracket3Enabled = false;
                 Stop1Ticks = 50;
                 Target1Ticks = 50;
                 Stop2Ticks = 50;
@@ -511,24 +518,33 @@ namespace NinjaTrader.NinjaScript.Indicators
             SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
             try
             {
-                // The ChartTrader quantity sizes each bracket pair, so the entry
-                // trades quantity times pairs and every stop and target carries its
-                // pair's full size: three 1-lot targets need a 3-lot entry, and the
-                // stops must cover those same 3 lots. Levels sharing a price merge
-                // into one marker with the summed quantity, the way the orders would
-                // sit in the book.
+                // The ChartTrader quantity sizes each enabled bracket pair, so the
+                // entry trades quantity times enabled pairs and every stop and target
+                // carries its pair's full size: three 1-lot targets need a 3-lot
+                // entry, and the stops must cover those same 3 lots. Levels sharing a
+                // price merge into one marker with the summed quantity, the way the
+                // orders would sit in the book. With no pair enabled, the click means
+                // a plain entry of the ChartTrader quantity.
+                bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
                 int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
                 int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
-                int pairs = Math.Min(Math.Max(BracketCount, 1), 3);
+                int pairs = 0;
+                foreach (bool enabled in pairEnabled)
+                    if (enabled)
+                        pairs++;
+                int entryQuantity = pairs > 0 ? previewQuantity * pairs : previewQuantity;
 
                 DrawOrderMarker(chartScale, entryPrice, EntryStroke,
-                    $"{previewQuantity * pairs} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
+                    $"{entryQuantity} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
 
                 var stopLevels = new Dictionary<double, LevelInfo>();
                 var targetLevels = new Dictionary<double, LevelInfo>();
 
-                for (int i = 0; i < pairs; i++)
+                for (int i = 0; i < pairEnabled.Length; i++)
                 {
+                    if (!pairEnabled[i])
+                        continue;
+
                     AccumulateLevel(stopLevels,
                         master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * tick),
                         previewQuantity, -stopTicks[i]);

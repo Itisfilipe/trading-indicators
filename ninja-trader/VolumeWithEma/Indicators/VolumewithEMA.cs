@@ -10,7 +10,7 @@ using NinjaTrader.NinjaScript;
 using NinjaTrader.Core.FloatingPoint;
 #endregion
 
-namespace NinjaTrader.NinjaScript.Indicators
+namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
     /// Combines a volume histogram and an EMA of volume. Volume bars are colored based on whether the volume is above or below the EMA.
@@ -103,19 +103,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 {
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
-		private VolumeWithEMA[] cacheVolumeWithEMA;
-		public VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
+		private FilipeAmaral.VolumeWithEMA[] cacheVolumeWithEMA;
+		public FilipeAmaral.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
 		{
 			return VolumeWithEMA(Input, period, volumeAboveColor, volumeBelowColor, eMAColor);
 		}
 
-		public VolumeWithEMA VolumeWithEMA(ISeries<double> input, int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
+		public FilipeAmaral.VolumeWithEMA VolumeWithEMA(ISeries<double> input, int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
 		{
 			if (cacheVolumeWithEMA != null)
 				for (int idx = 0; idx < cacheVolumeWithEMA.Length; idx++)
 					if (cacheVolumeWithEMA[idx] != null && cacheVolumeWithEMA[idx].Period == period && cacheVolumeWithEMA[idx].VolumeAboveColor == volumeAboveColor && cacheVolumeWithEMA[idx].VolumeBelowColor == volumeBelowColor && cacheVolumeWithEMA[idx].EMAColor == eMAColor && cacheVolumeWithEMA[idx].EqualsInput(input))
 						return cacheVolumeWithEMA[idx];
-			return CacheIndicator<VolumeWithEMA>(new VolumeWithEMA(){ Period = period, VolumeAboveColor = volumeAboveColor, VolumeBelowColor = volumeBelowColor, EMAColor = eMAColor }, input, ref cacheVolumeWithEMA);
+			return CacheIndicator<FilipeAmaral.VolumeWithEMA>(new FilipeAmaral.VolumeWithEMA(){ Period = period, VolumeAboveColor = volumeAboveColor, VolumeBelowColor = volumeBelowColor, EMAColor = eMAColor }, input, ref cacheVolumeWithEMA);
 		}
 	}
 }
@@ -124,12 +124,12 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
+		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
 		{
 			return indicator.VolumeWithEMA(Input, period, volumeAboveColor, volumeBelowColor, eMAColor);
 		}
 
-		public Indicators.VolumeWithEMA VolumeWithEMA(ISeries<double> input , int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
+		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(ISeries<double> input , int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
 		{
 			return indicator.VolumeWithEMA(input, period, volumeAboveColor, volumeBelowColor, eMAColor);
 		}
@@ -140,12 +140,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
+		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
 		{
 			return indicator.VolumeWithEMA(Input, period, volumeAboveColor, volumeBelowColor, eMAColor);
 		}
 
-		public Indicators.VolumeWithEMA VolumeWithEMA(ISeries<double> input , int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
+		public Indicators.FilipeAmaral.VolumeWithEMA VolumeWithEMA(ISeries<double> input , int period, Brush volumeAboveColor, Brush volumeBelowColor, Brush eMAColor)
 		{
 			return indicator.VolumeWithEMA(input, period, volumeAboveColor, volumeBelowColor, eMAColor);
 		}

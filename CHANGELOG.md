@@ -21,10 +21,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - A "ChartTrading ON/OFF" button in the ChartTrader sidebar (floating on the
   chart when ChartTrader is hidden) disables the modifier-key gestures without
   removing the indicator, freeing the keys for other tools.
-- Configurable bracket pairs: one to three stop/target pairs per click, each
-  pair with its own stop and target. The ChartTrader quantity sizes each pair,
-  so the entry trades quantity x pairs and the stops always cover the full
-  position. Defaults now center the tags and use 50-tick steps.
+- Configurable bracket pairs: three stop/target pairs, each toggled by its own
+  "Bracket N" checkbox, each with its own stop and target. The ChartTrader
+  quantity sizes each enabled pair, so the entry trades quantity x enabled
+  pairs and the stops always cover the full position. Defaults center the tags
+  and use 50-tick steps with two pairs enabled.
 
 ### RenkoWicks (NinjaTrader)
 - **Fixed: lower wicks were never drawn.** A rendering bug present since the
@@ -40,6 +41,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   multi-panel charts they scope to the panel the indicator is loaded on.
 - Hardened the drag-to-pan key release against event suppression, closing one
   more way the synthetic Ctrl could have been left held.
+- Drag-to-pan is now enabled by default (tested working); a tap of Ctrl clears
+  a stuck key if the platform ever crashes mid-drag.
+
+### Namespacing
+- The custom indicators now live under the `FilipeAmaral` sub-namespace, so
+  they group together in NinjaTrader's lists as first-party work.
 
 ### Repository
 - Open-sourced properly: MIT license, English root README, per-platform

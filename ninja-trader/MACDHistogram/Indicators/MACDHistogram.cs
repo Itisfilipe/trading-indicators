@@ -10,7 +10,7 @@ using NinjaTrader.NinjaScript;
 using NinjaTrader.Core.FloatingPoint;
 #endregion
 
-namespace NinjaTrader.NinjaScript.Indicators
+namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
     /// MACD Histogram indicator with dynamic configurable colors and histogram bar width matching the chart’s bar width.
@@ -142,19 +142,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 {
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
-		private MACDHistogram[] cacheMACDHistogram;
-		public MACDHistogram MACDHistogram(int fast, int slow, int smooth)
+		private FilipeAmaral.MACDHistogram[] cacheMACDHistogram;
+		public FilipeAmaral.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
 		{
 			return MACDHistogram(Input, fast, slow, smooth);
 		}
 
-		public MACDHistogram MACDHistogram(ISeries<double> input, int fast, int slow, int smooth)
+		public FilipeAmaral.MACDHistogram MACDHistogram(ISeries<double> input, int fast, int slow, int smooth)
 		{
 			if (cacheMACDHistogram != null)
 				for (int idx = 0; idx < cacheMACDHistogram.Length; idx++)
 					if (cacheMACDHistogram[idx] != null && cacheMACDHistogram[idx].Fast == fast && cacheMACDHistogram[idx].Slow == slow && cacheMACDHistogram[idx].Smooth == smooth && cacheMACDHistogram[idx].EqualsInput(input))
 						return cacheMACDHistogram[idx];
-			return CacheIndicator<MACDHistogram>(new MACDHistogram(){ Fast = fast, Slow = slow, Smooth = smooth }, input, ref cacheMACDHistogram);
+			return CacheIndicator<FilipeAmaral.MACDHistogram>(new FilipeAmaral.MACDHistogram(){ Fast = fast, Slow = slow, Smooth = smooth }, input, ref cacheMACDHistogram);
 		}
 	}
 }
@@ -163,12 +163,12 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
+		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
 		{
 			return indicator.MACDHistogram(Input, fast, slow, smooth);
 		}
 
-		public Indicators.MACDHistogram MACDHistogram(ISeries<double> input , int fast, int slow, int smooth)
+		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(ISeries<double> input , int fast, int slow, int smooth)
 		{
 			return indicator.MACDHistogram(input, fast, slow, smooth);
 		}
@@ -179,12 +179,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
+		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(int fast, int slow, int smooth)
 		{
 			return indicator.MACDHistogram(Input, fast, slow, smooth);
 		}
 
-		public Indicators.MACDHistogram MACDHistogram(ISeries<double> input , int fast, int slow, int smooth)
+		public Indicators.FilipeAmaral.MACDHistogram MACDHistogram(ISeries<double> input , int fast, int slow, int smooth)
 		{
 			return indicator.MACDHistogram(input, fast, slow, smooth);
 		}
