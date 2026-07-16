@@ -61,6 +61,15 @@ apart. The preview is advisory, not guaranteed.
     price tag hugging the right edge aimed at the level. Tag placement is configurable —
     Left / Center / Right with a pixel margin off the border ("Appearance" settings) —
     and tag text picks black or white automatically for contrast against the level color.
+  - **Built — level value display.** The right-side tag on the stop and targets can show
+    the price, the signed tick distance from entry (`+20t` / `-20t`), or the signed money
+    value for the current quantity (`+$100.00` / `-$200.00`, from ticks x tick value x
+    quantity). "Level value" in the Appearance settings; the entry always shows its price.
+  - **Built — on-chart enable/disable button.** A "ChartTrading ON/OFF" toggle floats at
+    the chart's top-left (added through NinjaTrader's UserControlCollection, the supported
+    way to put a control on a chart). Switching it off releases the modifier keys for
+    other tools and clears any armed preview instantly; per-level line color, width, and
+    dash remain configurable through the three Stroke settings in the Colors group.
   - **Perf:** modifier keys now hook the chart window (panel hooks needed keyboard focus,
     so hold/release only registered on the next mouse move), and repaints call
     `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next

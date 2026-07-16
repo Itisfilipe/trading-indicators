@@ -52,6 +52,16 @@ namespace NinjaTrader.NinjaScript.Indicators
         Right,
     }
 
+    /// <summary>
+    /// What the right-side tag shows for the stop and target levels.
+    /// </summary>
+    public enum ChartTradingValueDisplay
+    {
+        Price,
+        Ticks,
+        Currency,
+    }
+
     public class ChartTrading : Indicator
     {
         #region Preview state
@@ -70,6 +80,11 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         // Quantity shown in the tags, read from ChartTrader on mouse events (UI thread).
         private int previewQuantity = 1;
+
+        // On-chart toggle so the modifier keys can be handed back to other tools
+        // without removing the indicator.
+        private System.Windows.Controls.Button toggleButton;
+        private bool tradingEnabled = true;
 
         // Tag text picks black or white per level for contrast against the tag fill.
         private SharpDX.Direct2D1.Brush textWhiteBrushDx;
@@ -114,6 +129,12 @@ namespace NinjaTrader.NinjaScript.Indicators
                  Description = "Distance kept between the tag and the chart border.")]
         public int TagMargin { get; set; }
 
+        [Display(Name = "Level value", Order = 3, GroupName = "Appearance",
+                 Description = "What the right-side tag shows on the stop and targets: the price, the " +
+                               "tick distance from entry, or the money value for the current quantity. " +
+                               "The entry always shows its price.")]
+        public ChartTradingValueDisplay ValueDisplay { get; set; }
+
         // Strokes rather than plain brushes so each level carries its own color, width,
         // and dash style, and binds to the render target the way the platform's own
         // price-line indicator does. NinjaTrader persists Stroke properties natively.
@@ -151,6 +172,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 
                 TagPosition = ChartTradingTagPosition.Left;
                 TagMargin = 40;
+                ValueDisplay = ChartTradingValueDisplay.Price;
 
                 // Solid and thin, matching how the platform draws a working order.
                 EntryStroke = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Solid, 1f);
@@ -206,6 +228,24 @@ namespace NinjaTrader.NinjaScript.Indicators
                     chartWindow.Deactivated += OnWindowDeactivated;
                 }
 
+                // On-chart toggle via UserControlCollection, the platform's supported
+                // way to put a custom control on a chart. It floats over the panel and
+                // handles its own clicks, so it never collides with chart gestures.
+                toggleButton = new System.Windows.Controls.Button
+                {
+                    Padding = new Thickness(8, 3, 8, 3),
+                    Margin = new Thickness(6),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Cursor = Cursors.Hand,
+                    Foreground = Brushes.White,
+                    BorderThickness = new Thickness(0),
+                    Opacity = 0.85,
+                };
+                toggleButton.Click += OnToggleClicked;
+                UpdateToggleVisual();
+                UserControlCollection.Add(toggleButton);
+
                 handlersAttached = true;
             }
             catch (Exception ex)
@@ -231,6 +271,12 @@ namespace NinjaTrader.NinjaScript.Indicators
                         chartWindow.PreviewKeyDown -= OnKeyChanged;
                         chartWindow.PreviewKeyUp -= OnKeyChanged;
                         chartWindow.Deactivated -= OnWindowDeactivated;
+                    }
+                    if (toggleButton != null)
+                    {
+                        toggleButton.Click -= OnToggleClicked;
+                        UserControlCollection.Remove(toggleButton);
+                        toggleButton = null;
                     }
                 }
                 catch (Exception ex)
@@ -267,12 +313,32 @@ namespace NinjaTrader.NinjaScript.Indicators
         /// </remarks>
         private Side ResolveSide()
         {
+            if (!tradingEnabled)
+                return Side.None;
+
             ModifierKeys held = Keyboard.Modifiers;
             if (held == ToModifierKeys(BuyModifier))
                 return Side.Buy;
             if (held == ToModifierKeys(SellModifier))
                 return Side.Sell;
             return Side.None;
+        }
+
+        private void OnToggleClicked(object sender, RoutedEventArgs e)
+        {
+            tradingEnabled = !tradingEnabled;
+            UpdateToggleVisual();
+            // Clears any armed preview the moment trading is switched off.
+            UpdatePreview(Side.None);
+        }
+
+        private void UpdateToggleVisual()
+        {
+            if (toggleButton == null)
+                return;
+
+            toggleButton.Content = tradingEnabled ? "ChartTrading ON" : "ChartTrading OFF";
+            toggleButton.Background = tradingEnabled ? Brushes.SeaGreen : Brushes.DimGray;
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -398,7 +464,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 
                 double stopPrice = master.RoundToTickSize(entryPrice - profitSign * StopLossTicks * tick);
                 DrawOrderMarker(chartScale, stopPrice, StopStroke,
-                    $"{previewQuantity} {exit} STP", master.FormatPrice(stopPrice), textFormat);
+                    $"{previewQuantity} {exit} STP", LevelValueLabel(master, stopPrice, -StopLossTicks), textFormat);
 
                 foreach (int targetTicks in new[] { Target1Ticks, Target2Ticks, Target3Ticks })
                 {
@@ -406,7 +472,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                         continue;
                     double targetPrice = master.RoundToTickSize(entryPrice + profitSign * targetTicks * tick);
                     DrawOrderMarker(chartScale, targetPrice, TargetStroke,
-                        $"{previewQuantity} {exit} LMT", master.FormatPrice(targetPrice), textFormat);
+                        $"{previewQuantity} {exit} LMT", LevelValueLabel(master, targetPrice, targetTicks), textFormat);
                 }
             }
             finally
@@ -514,6 +580,25 @@ namespace NinjaTrader.NinjaScript.Indicators
                     sink.Close();
                 }
                 RenderTarget.FillGeometry(geometry, brush);
+            }
+        }
+
+        /// <summary>
+        /// What the right-side tag reads on a stop or target: the level price, the
+        /// signed tick distance from entry, or the signed money value for the
+        /// current quantity (ticks * tick value * quantity).
+        /// </summary>
+        private string LevelValueLabel(MasterInstrument master, double levelPrice, int signedTicks)
+        {
+            switch (ValueDisplay)
+            {
+                case ChartTradingValueDisplay.Ticks:
+                    return string.Format(Core.Globals.GeneralOptions.CurrentCulture, "{0:+0;-0}t", signedTicks);
+                case ChartTradingValueDisplay.Currency:
+                    double money = signedTicks * master.TickSize * master.PointValue * previewQuantity;
+                    return string.Format(Core.Globals.GeneralOptions.CurrentCulture, "{0:+$#,##0.00;-$#,##0.00}", money);
+                default:
+                    return master.FormatPrice(levelPrice);
             }
         }
 

@@ -16,6 +16,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   margin).
 - Entry tag infers LMT vs STP from the pointer being below or above the last
   traded price; tag quantity follows the ChartTrader quantity selector.
+- The stop and target tags can show the price, the tick distance from entry,
+  or the money value for the current quantity ("Level value" setting).
+- An on-chart "ChartTrading ON/OFF" button disables the modifier-key gestures
+  without removing the indicator, freeing the keys for other tools.
 
 ### RenkoWicks (NinjaTrader)
 - **Fixed: lower wicks were never drawn.** A rendering bug present since the
