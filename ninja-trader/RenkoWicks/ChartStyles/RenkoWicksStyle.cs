@@ -4,6 +4,7 @@ using NinjaTrader.Gui.Chart;
 using SharpDX;
 using SharpDX.Direct2D1;
 using System;
+using System.ComponentModel.DataAnnotations;
 #endregion
 
 namespace NinjaTrader.NinjaScript.ChartStyles
@@ -41,6 +42,32 @@ namespace NinjaTrader.NinjaScript.ChartStyles
         /// value as its BarsPeriodType and DefaultChartStyle.
         /// </summary>
         private const int TYPE_ID = 2588;
+
+        /// <summary>
+        /// How faded a gap brick is drawn, by default.
+        /// </summary>
+        private const double DEFAULT_GAP_OPACITY = 0.4;
+
+        /// <summary>
+        /// Bricks the bars type synthesises to span a price jump carry no volume. Real
+        /// bricks always close on a tick, which carries volume, so this separates them.
+        /// </summary>
+        private const long GAP_BRICK_VOLUME = 0;
+        #endregion
+
+        #region Properties
+        /// <summary>
+        /// Opacity applied to bricks that only exist to fill a price jump.
+        /// </summary>
+        /// <remarks>
+        /// Fading rather than recolouring keeps the up/down direction of a gap readable,
+        /// and reuses the brushes the base class already owns, so no extra device
+        /// resource has to be created and released alongside the render target.
+        /// </remarks>
+        [Range(0.05, 1.0)]
+        [Display(Name = "Gap brick opacity", Order = 10, GroupName = "NinjaScriptGeneral",
+                 Description = "Opacity of the bricks drawn to fill a price jump. 1 draws them like any other brick.")]
+        public double GapOpacity { get; set; }
         #endregion
 
         #region Fields
@@ -117,6 +144,7 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 Description = "ChartStyle to be used with Renko Wicks bars displaying actual price extremes";
                 ChartStyleType = (ChartStyleType)TYPE_ID;
                 BarWidth = DEFAULT_BAR_WIDTH;
+                GapOpacity = DEFAULT_GAP_OPACITY;
 
                 // Defaults let the base class bind these to the render target. Without
                 // them, OnRender would have to build a Stroke per bar and read BrushDX
@@ -178,6 +206,12 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             Gui.Stroke outlineStroke = Stroke;
             Gui.Stroke wickStroke = Stroke2;
 
+            // Fade the bricks that only exist to span a price jump. The opacity is set on
+            // every bar rather than set-and-restored around the gap ones, so a fault
+            // part way through a frame cannot leave the whole chart dimmed.
+            bool isGapBrick = bars.GetVolume(idx) == GAP_BRICK_VOLUME;
+            float opacity = isGapBrick ? (float)GapOpacity : 1f;
+
             // Setup the rectangle for the bar body
             rect.X = x - barWidth * 0.5f + BAR_PADDING;
             rect.Y = Math.Min(openY, closeY);
@@ -193,6 +227,7 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                     TransformBrush(fillBrush, rect);
 
                 // Fill the bar body
+                fillBrush.Opacity = opacity;
                 RenderTarget.FillRectangle(rect, fillBrush);
             }
 
@@ -204,6 +239,7 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 if (!(outlineBrush is SolidColorBrush))
                     TransformBrush(outlineBrush, rect);
 
+                outlineBrush.Opacity = opacity;
                 RenderTarget.DrawRectangle(rect, outlineBrush, outlineStroke.Width, outlineStroke.StrokeStyle);
             }
 
@@ -211,6 +247,8 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             Brush wickBrush = overriddenOutlineBrush ?? wickStroke?.BrushDX;
             if (wickBrush != null)
             {
+                wickBrush.Opacity = opacity;
+
                 // Upper wick
                 DrawWick(x, highY, Math.Min(openY, closeY), highValue, Math.Max(openValue, closeValue),
                     wickBrush, wickStroke.Width, true);
