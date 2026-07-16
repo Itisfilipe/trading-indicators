@@ -35,6 +35,12 @@ namespace NinjaTrader.NinjaScript.ChartStyles
         /// Padding for bar rendering
         /// </summary>
         private const float BAR_PADDING = 0.5f;
+
+        /// <summary>
+        /// Unique id registering this chart style. RenkoWicksBarsType declares the same
+        /// value as its BarsPeriodType and DefaultChartStyle.
+        /// </summary>
+        private const int TYPE_ID = 2588;
         #endregion
 
         #region Fields
@@ -109,7 +115,7 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             {
                 Name = "Renko with Wicks";
                 Description = "ChartStyle to be used with Renko Wicks bars displaying actual price extremes";
-                ChartStyleType = (ChartStyleType)2588;
+                ChartStyleType = (ChartStyleType)TYPE_ID;
                 BarWidth = DEFAULT_BAR_WIDTH;
 
                 // Defaults let the base class bind these to the render target. Without

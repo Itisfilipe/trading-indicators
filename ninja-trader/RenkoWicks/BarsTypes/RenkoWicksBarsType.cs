@@ -36,6 +36,12 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// Default number of days to load for historical data
         /// </summary>
         private const int DEFAULT_DAYS_TO_LOAD = 3;
+
+        /// <summary>
+        /// Unique id registering this bars type and its matching chart style.
+        /// RenkoWickStyle declares the same value as its ChartStyleType.
+        /// </summary>
+        private const int TYPE_ID = 2588;
         #endregion
 
         #region Fields
@@ -129,8 +135,19 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         }
 
         /// <summary>
+        /// The icon shown beside this bars type in the menu.
+        /// </summary>
+        public override object Icon { get { return "▤"; } }
+
+        /// <summary>
         /// Indicates that the implementation supports removal of the last bar.
         /// </summary>
+        /// <remarks>
+        /// RemoveLastBar() is needed to restate a forming brick once it completes.
+        /// The cost is that NinjaTrader disables Tick Replay for this bars type;
+        /// see isremovelastbarsupported.md. Strategies wanting replay events cannot
+        /// use this series.
+        /// </remarks>
         public override bool IsRemoveLastBarSupported { get { return true; } }
 
         /// <summary>
@@ -262,13 +279,13 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                 Name = "Renko with Wicks";
                 BarsPeriod = new BarsPeriod
                 {
-                    BarsPeriodType = (BarsPeriodType)2588,
-                    BarsPeriodTypeName = "RenkoWicksBarsType(2588)",
+                    BarsPeriodType = (BarsPeriodType)TYPE_ID,
+                    BarsPeriodTypeName = $"RenkoWicksBarsType({TYPE_ID})",
                     MarketDataType = MarketDataType.Last
                 };
                 BuiltFrom = BarsPeriodType.Tick;
                 DaysToLoad = DEFAULT_DAYS_TO_LOAD;
-                DefaultChartStyle = (Gui.Chart.ChartStyleType)2588;
+                DefaultChartStyle = (Gui.Chart.ChartStyleType)TYPE_ID;
                 IsIntraday = true;
                 IsTimeBased = false;
             }
