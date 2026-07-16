@@ -230,8 +230,10 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 if (!(fillBrush is SolidColorBrush))
                     TransformBrush(fillBrush, rect);
 
-                // Fill the bar body
-                fillBrush.Opacity = opacity;
+                // Fade only our own brush: an override brush (bar coloring from another
+                // script or the user) carries its own opacity, which is not ours to stomp.
+                if (overriddenBrush == null)
+                    fillBrush.Opacity = opacity;
                 RenderTarget.FillRectangle(rect, fillBrush);
             }
 
@@ -243,7 +245,8 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 if (!(outlineBrush is SolidColorBrush))
                     TransformBrush(outlineBrush, rect);
 
-                outlineBrush.Opacity = opacity;
+                if (overriddenOutlineBrush == null)
+                    outlineBrush.Opacity = opacity;
                 RenderTarget.DrawRectangle(rect, outlineBrush, outlineStroke.Width, outlineStroke.StrokeStyle);
             }
 
@@ -254,7 +257,8 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             Brush wickBrush = overriddenOutlineBrush ?? wickStroke?.BrushDX;
             if (wickBrush != null)
             {
-                wickBrush.Opacity = opacity;
+                if (overriddenOutlineBrush == null)
+                    wickBrush.Opacity = opacity;
 
                 double bodyTop = Math.Max(openValue, closeValue);
                 double bodyBottom = Math.Min(openValue, closeValue);
