@@ -1,4 +1,4 @@
-# Clicker for NinjaTrader 8 — staged implementation plan
+# ChartTrading for NinjaTrader 8 — staged implementation plan
 
 Date: 2026-07-16  
 Research target: NinjaTrader 8.1.x; the worked reference was exported by NT 8.1.6.2.
@@ -52,7 +52,7 @@ Relevant reference locations are ABCompleteChartTrader.cs lines 159-181, 423-451
 
 ## Architecture
 
-### 1. ClickerIndicator shell
+### 1. ChartTradingIndicator shell
 
 - IsOverlay = true and IsChartOnly = true.
 - In State.Historical, capture ChartControl, ChartPanel, chart window, and Dispatcher; schedule an idempotent AttachUi.
@@ -141,7 +141,7 @@ Because the entry is submitted at Account level rather than owned by a running N
 - Limits: max order count, max quantity per order, max aggregate quantity, max price distance, and checked arithmetic.
 - One commit token per physical mouse-down.
 - Register created Order objects before routing; observe state, ErrorCode, and native error messages.
-- Kill switch first disarms. A separate explicit “cancel Clicker orders” action may cancel only still-working objects in this instance's registry.
+- Kill switch first disarms. A separate explicit “cancel ChartTrading orders” action may cancel only still-working objects in this instance's registry.
 - On Indicator removal/reload, default to leave already submitted orders working and report them. An optional “cancel owned working orders on termination” policy must be explicit and must never broaden to account-wide cancellation.
 - Write an audit line for account, instrument, side, type, quantity, prices, TIF, OCO ID, ATM/direct route, source gesture, timestamp, and rejection reason.
 
@@ -263,7 +263,7 @@ Evidence: GetValueByY/GetYByValue and RoundToTickSize have Tier 1 shipped-source
         limitPrice,
         stopPrice,
         ocoId,
-        "Clicker",
+        "ChartTrading",
         gtd,
         null);
 

@@ -13,7 +13,7 @@ using SharpDX;
 using SharpDX.Direct2D1;
 #endregion
 
-// Clicker -- click-to-trade indicator for NinjaTrader 8.
+// ChartTrading -- click-to-trade indicator for NinjaTrader 8.
 //
 // This file is milestone M1: the LIVE BRACKET PREVIEW only. It places NO orders.
 //
@@ -32,14 +32,14 @@ namespace NinjaTrader.NinjaScript.Indicators
     /// <summary>
     /// Which keyboard modifier arms a side of the click-to-trade preview.
     /// </summary>
-    public enum ClickerModifier
+    public enum ChartTradingModifier
     {
         Shift,
         Alt,
         Control,
     }
 
-    public class Clicker : Indicator
+    public class ChartTrading : Indicator
     {
         #region Preview state
         private enum Side { None, Buy, Sell }
@@ -63,12 +63,12 @@ namespace NinjaTrader.NinjaScript.Indicators
         [NinjaScriptProperty]
         [Display(Name = "Buy modifier", Order = 1, GroupName = "Gesture",
                  Description = "Hold this key and move over the chart to preview a buy bracket.")]
-        public ClickerModifier BuyModifier { get; set; }
+        public ChartTradingModifier BuyModifier { get; set; }
 
         [NinjaScriptProperty]
         [Display(Name = "Sell modifier", Order = 2, GroupName = "Gesture",
                  Description = "Hold this key and move over the chart to preview a sell bracket.")]
-        public ClickerModifier SellModifier { get; set; }
+        public ChartTradingModifier SellModifier { get; set; }
 
         [NinjaScriptProperty]
         [Range(1, int.MaxValue)]
@@ -138,7 +138,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (State == State.SetDefaults)
             {
                 Description = @"Preview a click-to-trade bracket by holding a modifier key. Places no orders.";
-                Name = "Clicker";
+                Name = "ChartTrading";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
                 IsChartOnly = true;
@@ -148,8 +148,8 @@ namespace NinjaTrader.NinjaScript.Indicators
                 DrawVerticalGridLines = false;
                 PaintPriceMarkers = false;
 
-                BuyModifier = ClickerModifier.Shift;
-                SellModifier = ClickerModifier.Alt;
+                BuyModifier = ChartTradingModifier.Shift;
+                SellModifier = ChartTradingModifier.Alt;
                 StopLossTicks = 20;
                 Target1Ticks = 20;
                 Target2Ticks = 40;
@@ -204,7 +204,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             catch (Exception ex)
             {
                 DetachHandlers();
-                Log("Clicker: failed to attach handlers - " + ex, LogLevel.Error);
+                Log("ChartTrading: failed to attach handlers - " + ex, LogLevel.Error);
             }
         }
 
@@ -221,7 +221,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 }
                 catch (Exception ex)
                 {
-                    Log("Clicker: failed to detach handlers - " + ex, LogLevel.Error);
+                    Log("ChartTrading: failed to detach handlers - " + ex, LogLevel.Error);
                 }
                 hookedPanel = null;
             }
@@ -233,12 +233,12 @@ namespace NinjaTrader.NinjaScript.Indicators
         #endregion
 
         #region Gesture
-        private ModifierKeys ToModifierKeys(ClickerModifier modifier)
+        private ModifierKeys ToModifierKeys(ChartTradingModifier modifier)
         {
             switch (modifier)
             {
-                case ClickerModifier.Alt: return ModifierKeys.Alt;
-                case ClickerModifier.Control: return ModifierKeys.Control;
+                case ChartTradingModifier.Alt: return ModifierKeys.Alt;
+                case ChartTradingModifier.Control: return ModifierKeys.Control;
                 default: return ModifierKeys.Shift;
             }
         }
@@ -378,19 +378,19 @@ namespace NinjaTrader.NinjaScript.Indicators
 {
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
-		private Clicker[] cacheClicker;
-		public Clicker Clicker(ClickerModifier buyModifier, ClickerModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		private ChartTrading[] cacheChartTrading;
+		public ChartTrading ChartTrading(ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
 		{
-			return Clicker(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return ChartTrading(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
 		}
 
-		public Clicker Clicker(ISeries<double> input, ClickerModifier buyModifier, ClickerModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public ChartTrading ChartTrading(ISeries<double> input, ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
 		{
-			if (cacheClicker != null)
-				for (int idx = 0; idx < cacheClicker.Length; idx++)
-					if (cacheClicker[idx] != null && cacheClicker[idx].BuyModifier == buyModifier && cacheClicker[idx].SellModifier == sellModifier && cacheClicker[idx].StopLossTicks == stopLossTicks && cacheClicker[idx].Target1Ticks == target1Ticks && cacheClicker[idx].Target2Ticks == target2Ticks && cacheClicker[idx].Target3Ticks == target3Ticks && cacheClicker[idx].LineWidth == lineWidth && cacheClicker[idx].EqualsInput(input))
-						return cacheClicker[idx];
-			return CacheIndicator<Clicker>(new Clicker(){ BuyModifier = buyModifier, SellModifier = sellModifier, StopLossTicks = stopLossTicks, Target1Ticks = target1Ticks, Target2Ticks = target2Ticks, Target3Ticks = target3Ticks, LineWidth = lineWidth }, input, ref cacheClicker);
+			if (cacheChartTrading != null)
+				for (int idx = 0; idx < cacheChartTrading.Length; idx++)
+					if (cacheChartTrading[idx] != null && cacheChartTrading[idx].BuyModifier == buyModifier && cacheChartTrading[idx].SellModifier == sellModifier && cacheChartTrading[idx].StopLossTicks == stopLossTicks && cacheChartTrading[idx].Target1Ticks == target1Ticks && cacheChartTrading[idx].Target2Ticks == target2Ticks && cacheChartTrading[idx].Target3Ticks == target3Ticks && cacheChartTrading[idx].LineWidth == lineWidth && cacheChartTrading[idx].EqualsInput(input))
+						return cacheChartTrading[idx];
+			return CacheIndicator<ChartTrading>(new ChartTrading(){ BuyModifier = buyModifier, SellModifier = sellModifier, StopLossTicks = stopLossTicks, Target1Ticks = target1Ticks, Target2Ticks = target2Ticks, Target3Ticks = target3Ticks, LineWidth = lineWidth }, input, ref cacheChartTrading);
 		}
 	}
 }
@@ -399,14 +399,14 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.Clicker Clicker(ClickerModifier buyModifier, ClickerModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading(ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
 		{
-			return indicator.Clicker(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
 		}
 
-		public Indicators.Clicker Clicker(ISeries<double> input , ClickerModifier buyModifier, ClickerModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading(ISeries<double> input , ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
 		{
-			return indicator.Clicker(input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
 		}
 	}
 }
@@ -415,14 +415,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.Clicker Clicker(ClickerModifier buyModifier, ClickerModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading(ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
 		{
-			return indicator.Clicker(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
 		}
 
-		public Indicators.Clicker Clicker(ISeries<double> input , ClickerModifier buyModifier, ClickerModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading(ISeries<double> input , ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
 		{
-			return indicator.Clicker(input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
 		}
 	}
 }
