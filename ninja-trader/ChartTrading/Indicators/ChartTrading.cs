@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml.Serialization;
+using NinjaTrader.Cbi;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
 using NinjaTrader.NinjaScript;
@@ -60,48 +61,41 @@ namespace NinjaTrader.NinjaScript.Indicators
         #endregion
 
         #region Parameters
-        [NinjaScriptProperty]
         [Display(Name = "Buy modifier", Order = 1, GroupName = "Gesture",
                  Description = "Hold this key and move over the chart to preview a buy bracket.")]
         public ChartTradingModifier BuyModifier { get; set; }
 
-        [NinjaScriptProperty]
         [Display(Name = "Sell modifier", Order = 2, GroupName = "Gesture",
                  Description = "Hold this key and move over the chart to preview a sell bracket.")]
         public ChartTradingModifier SellModifier { get; set; }
 
-        [NinjaScriptProperty]
         [Range(1, int.MaxValue)]
         [Display(Name = "Stop loss (ticks)", Order = 1, GroupName = "Bracket",
                  Description = "Distance from entry to the stop, in ticks.")]
         public int StopLossTicks { get; set; }
 
-        [NinjaScriptProperty]
         [Range(1, int.MaxValue)]
         [Display(Name = "Target 1 (ticks)", Order = 2, GroupName = "Bracket",
                  Description = "Distance from entry to the first profit target, in ticks.")]
         public int Target1Ticks { get; set; }
 
-        [NinjaScriptProperty]
         [Range(0, int.MaxValue)]
         [Display(Name = "Target 2 (ticks)", Order = 3, GroupName = "Bracket",
                  Description = "Distance from entry to the second target, in ticks. 0 hides it.")]
         public int Target2Ticks { get; set; }
 
-        [NinjaScriptProperty]
         [Range(0, int.MaxValue)]
         [Display(Name = "Target 3 (ticks)", Order = 4, GroupName = "Bracket",
                  Description = "Distance from entry to the third target, in ticks. 0 hides it.")]
         public int Target3Ticks { get; set; }
 
-        [NinjaScriptProperty]
         [Range(1, 10)]
         [Display(Name = "Line width", Order = 5, GroupName = "Bracket")]
         public int LineWidth { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Entry line", Order = 1, GroupName = "Colors")]
-        public Brush EntryLineBrush { get; set; }
+        public System.Windows.Media.Brush EntryLineBrush { get; set; }
 
         [Browsable(false)]
         public string EntryLineBrushSerialize
@@ -112,7 +106,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         [XmlIgnore]
         [Display(Name = "Stop line", Order = 2, GroupName = "Colors")]
-        public Brush StopLineBrush { get; set; }
+        public System.Windows.Media.Brush StopLineBrush { get; set; }
 
         [Browsable(false)]
         public string StopLineBrushSerialize
@@ -123,7 +117,7 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         [XmlIgnore]
         [Display(Name = "Target line", Order = 3, GroupName = "Colors")]
-        public Brush TargetLineBrush { get; set; }
+        public System.Windows.Media.Brush TargetLineBrush { get; set; }
 
         [Browsable(false)]
         public string TargetLineBrushSerialize
@@ -204,7 +198,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             catch (Exception ex)
             {
                 DetachHandlers();
-                Log("ChartTrading: failed to attach handlers - " + ex, LogLevel.Error);
+                Log("ChartTrading: failed to attach handlers - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
 
@@ -221,7 +215,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 }
                 catch (Exception ex)
                 {
-                    Log("ChartTrading: failed to detach handlers - " + ex, LogLevel.Error);
+                    Log("ChartTrading: failed to detach handlers - " + ex, NinjaTrader.Cbi.LogLevel.Error);
                 }
                 hookedPanel = null;
             }
@@ -265,7 +259,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (ChartControl == null || ChartPanel == null)
                 return;
 
-            Point pos = e.GetPosition(ChartControl as IInputElement);
+            System.Windows.Point pos = e.GetPosition(ChartControl as IInputElement);
             pointerDeviceX = ChartingExtensions.ConvertToHorizontalPixels(pos.X, ChartControl.PresentationSource);
             pointerDeviceY = ChartingExtensions.ConvertToVerticalPixels(pos.Y, ChartControl.PresentationSource);
 
@@ -379,18 +373,18 @@ namespace NinjaTrader.NinjaScript.Indicators
 	public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
 	{
 		private ChartTrading[] cacheChartTrading;
-		public ChartTrading ChartTrading(ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public ChartTrading ChartTrading()
 		{
-			return ChartTrading(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return ChartTrading(Input);
 		}
 
-		public ChartTrading ChartTrading(ISeries<double> input, ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public ChartTrading ChartTrading(ISeries<double> input)
 		{
 			if (cacheChartTrading != null)
 				for (int idx = 0; idx < cacheChartTrading.Length; idx++)
-					if (cacheChartTrading[idx] != null && cacheChartTrading[idx].BuyModifier == buyModifier && cacheChartTrading[idx].SellModifier == sellModifier && cacheChartTrading[idx].StopLossTicks == stopLossTicks && cacheChartTrading[idx].Target1Ticks == target1Ticks && cacheChartTrading[idx].Target2Ticks == target2Ticks && cacheChartTrading[idx].Target3Ticks == target3Ticks && cacheChartTrading[idx].LineWidth == lineWidth && cacheChartTrading[idx].EqualsInput(input))
+					if (cacheChartTrading[idx] != null &&  cacheChartTrading[idx].EqualsInput(input))
 						return cacheChartTrading[idx];
-			return CacheIndicator<ChartTrading>(new ChartTrading(){ BuyModifier = buyModifier, SellModifier = sellModifier, StopLossTicks = stopLossTicks, Target1Ticks = target1Ticks, Target2Ticks = target2Ticks, Target3Ticks = target3Ticks, LineWidth = lineWidth }, input, ref cacheChartTrading);
+			return CacheIndicator<ChartTrading>(new ChartTrading(), input, ref cacheChartTrading);
 		}
 	}
 }
@@ -399,14 +393,14 @@ namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
 {
 	public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
 	{
-		public Indicators.ChartTrading ChartTrading(ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading()
 		{
-			return indicator.ChartTrading(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(Input);
 		}
 
-		public Indicators.ChartTrading ChartTrading(ISeries<double> input , ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading(ISeries<double> input )
 		{
-			return indicator.ChartTrading(input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(input);
 		}
 	}
 }
@@ -415,14 +409,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
 	{
-		public Indicators.ChartTrading ChartTrading(ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading()
 		{
-			return indicator.ChartTrading(Input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(Input);
 		}
 
-		public Indicators.ChartTrading ChartTrading(ISeries<double> input , ChartTradingModifier buyModifier, ChartTradingModifier sellModifier, int stopLossTicks, int target1Ticks, int target2Ticks, int target3Ticks, int lineWidth)
+		public Indicators.ChartTrading ChartTrading(ISeries<double> input )
 		{
-			return indicator.ChartTrading(input, buyModifier, sellModifier, stopLossTicks, target1Ticks, target2Ticks, target3Ticks, lineWidth);
+			return indicator.ChartTrading(input);
 		}
 	}
 }
