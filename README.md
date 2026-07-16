@@ -116,9 +116,15 @@ preview, click to trade.
 
 - **Live accounts are refused by default.** Orders only go to accounts named
   `Sim*`/`Playback*` unless you deliberately enable "Allow live accounts".
-- Automation runs locally, like an ATM: auto-breakeven only acts while the
-  chart is open in NinjaTrader.
+- Automation runs locally: auto-breakeven only acts while the chart is open
+  in NinjaTrader.
 - Removing the indicator leaves its working orders working, by design.
+- **Don't double up on entry methods.** This tool manages its own stop and
+  target orders once you enter with its click gesture. Entering the same
+  instrument through a different automated bracket/order-management feature
+  at the same time leaves two systems trying to manage stops and targets on
+  one net position — expect confusing or conflicting orders, not double
+  protection.
 
 ### ATRRenkoSizeCalculator — ATR sized for Renko bricks
 
