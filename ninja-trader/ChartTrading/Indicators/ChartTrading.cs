@@ -225,6 +225,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "in the direction of the entry.")]
         public int StopLimitOffsetTicks { get; set; }
 
+        [Display(Name = "Separate stacked stops", Order = 5, GroupName = "Trading",
+                 Description = "When two pairs put their stops on the same price, nudge each extra stop " +
+                               "one tick further from the entry, so the chart shows them individually " +
+                               "and they can be moved one at a time. Off keeps the exact configured " +
+                               "prices; stacked stops then drag as one.")]
+        public bool SeparateStackedStops { get; set; }
+
         // Strokes rather than plain brushes so each level carries its own color, width,
         // and dash style, and binds to the render target the way the platform's own
         // price-line indicator does. NinjaTrader persists Stroke properties natively.
@@ -269,6 +276,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 LimitSideType = ChartTradingLimitSideType.Limit;
                 StopSideType = ChartTradingStopSideType.StopMarket;
                 StopLimitOffsetTicks = 2;
+                SeparateStackedStops = false;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
                 ValueDisplay = ChartTradingValueDisplay.Price;
@@ -614,13 +622,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
             int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
             int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
-            var stops = new List<double>();
+            List<double> stops = BuildStopPrices(master, entryPrice, profitSign, pairEnabled, stopTicks);
             var targets = new List<double>();
             for (int i = 0; i < pairEnabled.Length; i++)
             {
                 if (!pairEnabled[i])
                     continue;
-                stops.Add(master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * tick));
                 targets.Add(master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick));
             }
             int entryQuantity = stops.Count > 0 ? quantity * stops.Count : quantity;
@@ -743,6 +750,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (exits.Count > 0)
                     account.Submit(exits);
             }, null);
+        }
+
+        /// <summary>
+        /// The stop price for each enabled pair, in pair order. With separation on,
+        /// a stop landing on an already-used price steps one tick further from the
+        /// entry per collision, so the first pair always keeps its exact configured
+        /// distance and stacked stops become individually draggable on the chart.
+        /// </summary>
+        private List<double> BuildStopPrices(MasterInstrument master, double entryPrice,
+            int profitSign, bool[] pairEnabled, int[] stopTicks)
+        {
+            var prices = new List<double>();
+            for (int i = 0; i < pairEnabled.Length; i++)
+            {
+                if (!pairEnabled[i])
+                    continue;
+
+                double price = master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * master.TickSize);
+                if (SeparateStackedStops)
+                    while (prices.Contains(price))
+                        price = master.RoundToTickSize(price - profitSign * master.TickSize);
+                prices.Add(price);
+            }
+            return prices;
         }
 
         /// <summary>
@@ -956,14 +987,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 var stopLevels = new Dictionary<double, LevelInfo>();
                 var targetLevels = new Dictionary<double, LevelInfo>();
 
+                List<double> nudgedStops = BuildStopPrices(master, entryPrice, profitSign, pairEnabled, stopTicks);
+                int stopIndex = 0;
                 for (int i = 0; i < pairEnabled.Length; i++)
                 {
                     if (!pairEnabled[i])
                         continue;
 
-                    AccumulateLevel(stopLevels,
-                        master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * tick),
-                        previewQuantity, -stopTicks[i]);
+                    // The tag shows the stop's true distance, which with separation on
+                    // can be a tick beyond the configured one.
+                    double stopPrice = nudgedStops[stopIndex++];
+                    int stopDistance = (int)Math.Round((entryPrice - stopPrice) * profitSign / tick);
+                    AccumulateLevel(stopLevels, stopPrice, previewQuantity, -stopDistance);
                     AccumulateLevel(targetLevels,
                         master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick),
                         previewQuantity, targetTicks[i]);

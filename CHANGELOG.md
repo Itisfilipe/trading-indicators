@@ -29,6 +29,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Configurable entry order types: Limit or MIT on the favorable side of the
   market, Stop-Market or Stop-Limit (with a tick offset) beyond it; the
   preview tag always labels what the click will submit.
+- Optional "Separate stacked stops": when two pairs share a stop price, each
+  extra stop nudges one tick further from entry so the chart shows and drags
+  them individually. Off by default; the preview mirrors the nudge.
 - A "Stops to BE" button below the toggle moves every working ChartTrading
   stop on the instrument to the position's average fill price, clamped so a
   stop never crosses the market. It finds the stops on the account by name,

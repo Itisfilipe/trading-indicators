@@ -108,6 +108,13 @@ apart. The preview is advisory, not guaranteed.
   always labels what the click will really submit (`LMT`, `MIT`, `STP`, `STP LMT`,
   `MKT`). Note: MIT's use of the stop price field is documented but untested in
   Playback — verify the first MIT fill.
+- **Built — "Separate stacked stops" setting (default off).** When two pairs put their
+  stops on the same price, each extra stop nudges one tick further from the entry —
+  the first pair keeps its exact configured distance — so NinjaTrader shows them as
+  individual, individually draggable markers instead of one stacked marker that drags
+  as a unit. The preview applies the same nudge, and its tick/money tags show each
+  stop's true distance. Note "Stops to BE" re-stacks them at the average price by
+  definition.
 - **Built — "Stops to BE" sidebar button.** Below the ON/OFF toggle. One click moves
   every working ChartTrading stop on the chart's instrument to the position's average
   fill price, clamped so a stop never crosses the market — the ABCompleteChartTrader
