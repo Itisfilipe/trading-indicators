@@ -345,7 +345,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 toggleButton = new System.Windows.Controls.Button
                 {
                     Padding = new Thickness(8, 3, 8, 3),
-                    Margin = new Thickness(0, 0, 2, 0),
+                    Margin = new Thickness(0, 0, 0, 2),
                     Cursor = Cursors.Hand,
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(0),
@@ -366,10 +366,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 breakevenButton.Click += OnBreakevenClicked;
 
                 buttonPanel = new System.Windows.Controls.Grid();
-                buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
-                buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
-                System.Windows.Controls.Grid.SetColumn(toggleButton, 0);
-                System.Windows.Controls.Grid.SetColumn(breakevenButton, 1);
+                buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+                buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+                System.Windows.Controls.Grid.SetRow(toggleButton, 0);
+                System.Windows.Controls.Grid.SetRow(breakevenButton, 1);
                 buttonPanel.Children.Add(toggleButton);
                 buttonPanel.Children.Add(breakevenButton);
 
