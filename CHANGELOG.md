@@ -18,8 +18,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   traded price; tag quantity follows the ChartTrader quantity selector.
 - The stop and target tags can show the price, the tick distance from entry,
   or the money value for the current quantity ("Level value" setting).
-- An on-chart "ChartTrading ON/OFF" button disables the modifier-key gestures
-  without removing the indicator, freeing the keys for other tools.
+- A "ChartTrading ON/OFF" button in the ChartTrader sidebar (floating on the
+  chart when ChartTrader is hidden) disables the modifier-key gestures without
+  removing the indicator, freeing the keys for other tools.
+- Configurable bracket pairs: one to three stop/target pairs per click, each
+  pair with its own stop and target, quantity split evenly across pairs.
+  Defaults now center the tags and use 50-tick steps.
 
 ### RenkoWicks (NinjaTrader)
 - **Fixed: lower wicks were never drawn.** A rendering bug present since the

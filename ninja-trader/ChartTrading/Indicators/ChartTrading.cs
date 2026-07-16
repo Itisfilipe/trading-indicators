@@ -1,5 +1,6 @@
 #region Using declarations
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Windows;
 using System.Windows.Input;
@@ -19,12 +20,12 @@ using SharpDX.Direct2D1;
 //
 // Hold the buy modifier (default Shift) or the sell modifier (default Alt) and move
 // the mouse over the chart: the indicator draws the bracket a click would place at
-// the pointer, styled like NinjaTrader's own resting-order markers -- a dashed line
-// per level with a tag reading like the order itself ("1 Buy LMT 14924.25", with the
-// stop and targets labelled as the closing orders they would become). Entry LMT vs
-// STP is inferred from the pointer being below or above the last traded price. This
-// is "Option A": the indicator owns the bracket geometry, so what you see is exactly
-// what a later milestone will submit, to the tick.
+// the pointer, styled like NinjaTrader's own resting-order markers -- a chevron tag
+// naming each order ("1 Buy LMT"), a line to the right edge, and a price tag at the
+// edge. Up to three stop/target pairs split the quantity, each pair with its own
+// stop and target. Entry LMT vs STP is inferred from the pointer being below or
+// above the last traded price. This is "Option A": the indicator owns the bracket
+// geometry, so what you see is exactly what a later milestone will submit.
 //
 // Nothing here touches an account or the network; the only ChartTrader read is the
 // order quantity, for the tag text. Order submission, OCO, and grid entry are later
@@ -81,9 +82,13 @@ namespace NinjaTrader.NinjaScript.Indicators
         // Quantity shown in the tags, read from ChartTrader on mouse events (UI thread).
         private int previewQuantity = 1;
 
-        // On-chart toggle so the modifier keys can be handed back to other tools
-        // without removing the indicator.
+        // Toggle so the modifier keys can be handed back to other tools without
+        // removing the indicator. Mounted in the ChartTrader sidebar when present,
+        // floating on the chart otherwise.
         private System.Windows.Controls.Button toggleButton;
+        private System.Windows.Controls.Grid chartTraderGrid;
+        private System.Windows.Controls.RowDefinition toggleButtonRow;
+        private bool buttonInChartTrader;
         private bool tradingEnabled = true;
 
         // Tag text picks black or white per level for contrast against the tag fill.
@@ -100,24 +105,35 @@ namespace NinjaTrader.NinjaScript.Indicators
                  Description = "Hold this key and move over the chart to preview a sell bracket.")]
         public ChartTradingModifier SellModifier { get; set; }
 
-        [Range(1, int.MaxValue)]
-        [Display(Name = "Stop loss (ticks)", Order = 1, GroupName = "Bracket",
-                 Description = "Distance from entry to the stop, in ticks.")]
-        public int StopLossTicks { get; set; }
+        [Range(1, 3)]
+        [Display(Name = "Brackets", Order = 1, GroupName = "Bracket",
+                 Description = "How many stop/target pairs a click places. The order quantity splits " +
+                               "evenly across the pairs (remainder to the first), and each pair carries " +
+                               "its own stop and its own target.")]
+        public int BracketCount { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 1 (ticks)", Order = 2, GroupName = "Bracket",
-                 Description = "Distance from entry to the first profit target, in ticks.")]
+        [Display(Name = "Stop 1 (ticks)", Order = 2, GroupName = "Bracket")]
+        public int Stop1Ticks { get; set; }
+
+        [Range(1, int.MaxValue)]
+        [Display(Name = "Target 1 (ticks)", Order = 3, GroupName = "Bracket")]
         public int Target1Ticks { get; set; }
 
-        [Range(0, int.MaxValue)]
-        [Display(Name = "Target 2 (ticks)", Order = 3, GroupName = "Bracket",
-                 Description = "Distance from entry to the second target, in ticks. 0 hides it.")]
+        [Range(1, int.MaxValue)]
+        [Display(Name = "Stop 2 (ticks)", Order = 4, GroupName = "Bracket")]
+        public int Stop2Ticks { get; set; }
+
+        [Range(1, int.MaxValue)]
+        [Display(Name = "Target 2 (ticks)", Order = 5, GroupName = "Bracket")]
         public int Target2Ticks { get; set; }
 
-        [Range(0, int.MaxValue)]
-        [Display(Name = "Target 3 (ticks)", Order = 4, GroupName = "Bracket",
-                 Description = "Distance from entry to the third target, in ticks. 0 hides it.")]
+        [Range(1, int.MaxValue)]
+        [Display(Name = "Stop 3 (ticks)", Order = 6, GroupName = "Bracket")]
+        public int Stop3Ticks { get; set; }
+
+        [Range(1, int.MaxValue)]
+        [Display(Name = "Target 3 (ticks)", Order = 7, GroupName = "Bracket")]
         public int Target3Ticks { get; set; }
 
         [Display(Name = "Tag position", Order = 1, GroupName = "Appearance",
@@ -165,12 +181,15 @@ namespace NinjaTrader.NinjaScript.Indicators
 
                 BuyModifier = ChartTradingModifier.Shift;
                 SellModifier = ChartTradingModifier.Alt;
-                StopLossTicks = 20;
-                Target1Ticks = 20;
-                Target2Ticks = 40;
-                Target3Ticks = 0;
+                BracketCount = 2;
+                Stop1Ticks = 50;
+                Target1Ticks = 50;
+                Stop2Ticks = 50;
+                Target2Ticks = 100;
+                Stop3Ticks = 50;
+                Target3Ticks = 150;
 
-                TagPosition = ChartTradingTagPosition.Left;
+                TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
                 ValueDisplay = ChartTradingValueDisplay.Price;
 
@@ -228,23 +247,43 @@ namespace NinjaTrader.NinjaScript.Indicators
                     chartWindow.Deactivated += OnWindowDeactivated;
                 }
 
-                // On-chart toggle via UserControlCollection, the platform's supported
-                // way to put a custom control on a chart. It floats over the panel and
-                // handles its own clicks, so it never collides with chart gestures.
+                // The toggle prefers the ChartTrader sidebar, mounted the way the
+                // ABCompleteChartTrader reference does it: one auto-height row appended
+                // to the ChartTrader grid. With ChartTrader unavailable it falls back to
+                // floating on the chart through UserControlCollection, the platform's
+                // supported spot for custom chart controls.
                 toggleButton = new System.Windows.Controls.Button
                 {
                     Padding = new Thickness(8, 3, 8, 3),
-                    Margin = new Thickness(6),
-                    HorizontalAlignment = HorizontalAlignment.Left,
-                    VerticalAlignment = VerticalAlignment.Top,
                     Cursor = Cursors.Hand,
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(0),
-                    Opacity = 0.85,
                 };
                 toggleButton.Click += OnToggleClicked;
                 UpdateToggleVisual();
-                UserControlCollection.Add(toggleButton);
+
+                var chartTrader = (chartWindow as Chart)?.FindFirst("ChartWindowChartTraderControl") as ChartTrader;
+                chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
+                if (chartTraderGrid != null)
+                {
+                    toggleButton.Margin = new Thickness(2, 6, 2, 2);
+                    toggleButtonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
+                    chartTraderGrid.RowDefinitions.Add(toggleButtonRow);
+                    System.Windows.Controls.Grid.SetRow(toggleButton, chartTraderGrid.RowDefinitions.Count - 1);
+                    System.Windows.Controls.Grid.SetColumnSpan(toggleButton,
+                        Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
+                    chartTraderGrid.Children.Add(toggleButton);
+                    buttonInChartTrader = true;
+                }
+                else
+                {
+                    toggleButton.Margin = new Thickness(6);
+                    toggleButton.HorizontalAlignment = HorizontalAlignment.Left;
+                    toggleButton.VerticalAlignment = VerticalAlignment.Top;
+                    toggleButton.Opacity = 0.85;
+                    UserControlCollection.Add(toggleButton);
+                    buttonInChartTrader = false;
+                }
 
                 handlersAttached = true;
             }
@@ -275,8 +314,20 @@ namespace NinjaTrader.NinjaScript.Indicators
                     if (toggleButton != null)
                     {
                         toggleButton.Click -= OnToggleClicked;
-                        UserControlCollection.Remove(toggleButton);
+                        if (buttonInChartTrader)
+                        {
+                            chartTraderGrid?.Children.Remove(toggleButton);
+                            if (toggleButtonRow != null)
+                                chartTraderGrid?.RowDefinitions.Remove(toggleButtonRow);
+                        }
+                        else
+                        {
+                            UserControlCollection.Remove(toggleButton);
+                        }
                         toggleButton = null;
+                        toggleButtonRow = null;
+                        chartTraderGrid = null;
+                        buttonInChartTrader = false;
                     }
                 }
                 catch (Exception ex)
@@ -462,18 +513,39 @@ namespace NinjaTrader.NinjaScript.Indicators
                 DrawOrderMarker(chartScale, entryPrice, EntryStroke,
                     $"{previewQuantity} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
 
-                double stopPrice = master.RoundToTickSize(entryPrice - profitSign * StopLossTicks * tick);
-                DrawOrderMarker(chartScale, stopPrice, StopStroke,
-                    $"{previewQuantity} {exit} STP", LevelValueLabel(master, stopPrice, -StopLossTicks), textFormat);
+                // Each bracket pair carries its own stop and its own target, and the
+                // quantity splits evenly across pairs with the remainder on the first.
+                // Pairs that land on the same price merge into one marker with the
+                // combined quantity, the way the orders would sit in the book.
+                int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
+                int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
+                int pairs = Math.Min(Math.Max(BracketCount, 1), 3);
+                var stopLevels = new Dictionary<double, LevelInfo>();
+                var targetLevels = new Dictionary<double, LevelInfo>();
 
-                foreach (int targetTicks in new[] { Target1Ticks, Target2Ticks, Target3Ticks })
+                for (int i = 0; i < pairs; i++)
                 {
-                    if (targetTicks <= 0)
+                    int pairQuantity = previewQuantity / pairs + (i < previewQuantity % pairs ? 1 : 0);
+                    if (pairQuantity <= 0)
                         continue;
-                    double targetPrice = master.RoundToTickSize(entryPrice + profitSign * targetTicks * tick);
-                    DrawOrderMarker(chartScale, targetPrice, TargetStroke,
-                        $"{previewQuantity} {exit} LMT", LevelValueLabel(master, targetPrice, targetTicks), textFormat);
+
+                    AccumulateLevel(stopLevels,
+                        master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * tick),
+                        pairQuantity, -stopTicks[i]);
+                    AccumulateLevel(targetLevels,
+                        master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick),
+                        pairQuantity, targetTicks[i]);
                 }
+
+                foreach (KeyValuePair<double, LevelInfo> level in stopLevels)
+                    DrawOrderMarker(chartScale, level.Key, StopStroke,
+                        $"{level.Value.Quantity} {exit} STP",
+                        LevelValueLabel(master, level.Key, level.Value.SignedTicks, level.Value.Quantity), textFormat);
+
+                foreach (KeyValuePair<double, LevelInfo> level in targetLevels)
+                    DrawOrderMarker(chartScale, level.Key, TargetStroke,
+                        $"{level.Value.Quantity} {exit} LMT",
+                        LevelValueLabel(master, level.Key, level.Value.SignedTicks, level.Value.Quantity), textFormat);
             }
             finally
             {
@@ -588,18 +660,35 @@ namespace NinjaTrader.NinjaScript.Indicators
         /// signed tick distance from entry, or the signed money value for the
         /// current quantity (ticks * tick value * quantity).
         /// </summary>
-        private string LevelValueLabel(MasterInstrument master, double levelPrice, int signedTicks)
+        private string LevelValueLabel(MasterInstrument master, double levelPrice, int signedTicks, int quantity)
         {
             switch (ValueDisplay)
             {
                 case ChartTradingValueDisplay.Ticks:
                     return string.Format(Core.Globals.GeneralOptions.CurrentCulture, "{0:+0;-0}t", signedTicks);
                 case ChartTradingValueDisplay.Currency:
-                    double money = signedTicks * master.TickSize * master.PointValue * previewQuantity;
+                    double money = signedTicks * master.TickSize * master.PointValue * quantity;
                     return string.Format(Core.Globals.GeneralOptions.CurrentCulture, "{0:+$#,##0.00;-$#,##0.00}", money);
                 default:
                     return master.FormatPrice(levelPrice);
             }
+        }
+
+        private struct LevelInfo
+        {
+            public int Quantity;
+            public int SignedTicks;
+        }
+
+        private static void AccumulateLevel(Dictionary<double, LevelInfo> levels,
+            double price, int quantity, int signedTicks)
+        {
+            LevelInfo info;
+            if (levels.TryGetValue(price, out info))
+                info.Quantity += quantity;
+            else
+                info = new LevelInfo { Quantity = quantity, SignedTicks = signedTicks };
+            levels[price] = info;
         }
 
         /// <summary>

@@ -65,11 +65,18 @@ apart. The preview is advisory, not guaranteed.
     the price, the signed tick distance from entry (`+20t` / `-20t`), or the signed money
     value for the current quantity (`+$100.00` / `-$200.00`, from ticks x tick value x
     quantity). "Level value" in the Appearance settings; the entry always shows its price.
-  - **Built — on-chart enable/disable button.** A "ChartTrading ON/OFF" toggle floats at
-    the chart's top-left (added through NinjaTrader's UserControlCollection, the supported
-    way to put a control on a chart). Switching it off releases the modifier keys for
-    other tools and clears any armed preview instantly; per-level line color, width, and
-    dash remain configurable through the three Stroke settings in the Colors group.
+  - **Built — enable/disable button in the ChartTrader sidebar.** A "ChartTrading ON/OFF"
+    toggle mounts as a new row in the ChartTrader panel (the ABCompleteChartTrader
+    mounting pattern); when ChartTrader is unavailable it falls back to floating at the
+    chart's top-left via UserControlCollection. Off releases the modifier keys for other
+    tools and clears any armed preview instantly. Note ChartTrader is one panel per chart
+    window, so multiple tabs each carrying the indicator each add their own button row.
+  - **Built — configurable bracket pairs.** "Brackets" (1-3) sets how many stop/target
+    pairs a click places; each pair carries its own stop and its own target, and the
+    order quantity splits evenly across pairs (remainder to the first). Pairs landing on
+    the same price merge into one marker with the combined quantity. Defaults: tags
+    centered, 2 pairs in 50-tick steps (50/50 and 50/100), third pair pre-filled 50/150.
+    Money values in the tags are per level, using that level's aggregated quantity.
   - **Perf:** modifier keys now hook the chart window (panel hooks needed keyboard focus,
     so hold/release only registered on the next mouse move), and repaints call
     `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next
