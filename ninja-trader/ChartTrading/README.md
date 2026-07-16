@@ -55,11 +55,12 @@ apart. The preview is advisory, not guaranteed.
     targets `1 Sell LMT ... (T1)`. The quantity is read live from ChartTrader (falls
     back to the last known value). Remaining polish: a price tag on the right axis like
     the platform's own markers; the price currently lives in the left tag instead.
-  - **Owner feedback after testing:** better, but still far from NinjaTrader's native
-    order-marker look. Next visual pass should replicate the platform's marker geometry
-    properly — the pointed/chevron tag shape, the right-axis price marker, and the exact
-    typography and coloring NinjaTrader uses for working orders — rather than the current
-    plain filled rectangle.
+  - **Built — native marker geometry.** Levels now render the way the platform draws a
+    working order: a chevron tag (`1 Buy LMT`, pointed tip), a thin solid line running
+    from the tag's point to the right edge only (no full-width line), and a pointed
+    price tag hugging the right edge aimed at the level. Tag placement is configurable —
+    Left / Center / Right with a pixel margin off the border ("Appearance" settings) —
+    and tag text picks black or white automatically for contrast against the level color.
   - **Perf:** modifier keys now hook the chart window (panel hooks needed keyboard focus,
     so hold/release only registered on the next mouse move), and repaints call
     `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next

@@ -42,6 +42,16 @@ namespace NinjaTrader.NinjaScript.Indicators
         Control,
     }
 
+    /// <summary>
+    /// Where the order tags sit horizontally on the chart.
+    /// </summary>
+    public enum ChartTradingTagPosition
+    {
+        Left,
+        Center,
+        Right,
+    }
+
     public class ChartTrading : Indicator
     {
         #region Preview state
@@ -61,7 +71,9 @@ namespace NinjaTrader.NinjaScript.Indicators
         // Quantity shown in the tags, read from ChartTrader on mouse events (UI thread).
         private int previewQuantity = 1;
 
-        private SharpDX.Direct2D1.Brush tagTextBrushDx;
+        // Tag text picks black or white per level for contrast against the tag fill.
+        private SharpDX.Direct2D1.Brush textWhiteBrushDx;
+        private SharpDX.Direct2D1.Brush textBlackBrushDx;
         #endregion
 
         #region Parameters
@@ -92,6 +104,15 @@ namespace NinjaTrader.NinjaScript.Indicators
         [Display(Name = "Target 3 (ticks)", Order = 4, GroupName = "Bracket",
                  Description = "Distance from entry to the third target, in ticks. 0 hides it.")]
         public int Target3Ticks { get; set; }
+
+        [Display(Name = "Tag position", Order = 1, GroupName = "Appearance",
+                 Description = "Where the order tags sit: left, center, or right of the chart.")]
+        public ChartTradingTagPosition TagPosition { get; set; }
+
+        [Range(0, 2000)]
+        [Display(Name = "Tag margin (pixels)", Order = 2, GroupName = "Appearance",
+                 Description = "Distance kept between the tag and the chart border.")]
+        public int TagMargin { get; set; }
 
         // Strokes rather than plain brushes so each level carries its own color, width,
         // and dash style, and binds to the render target the way the platform's own
@@ -128,10 +149,13 @@ namespace NinjaTrader.NinjaScript.Indicators
                 Target2Ticks = 40;
                 Target3Ticks = 0;
 
-                // Dashed, like the platform draws a working order that is not yet filled.
-                EntryStroke = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Dash, 2f);
-                StopStroke = new Stroke(Brushes.Crimson, DashStyleHelper.Dash, 2f);
-                TargetStroke = new Stroke(Brushes.LimeGreen, DashStyleHelper.Dash, 2f);
+                TagPosition = ChartTradingTagPosition.Left;
+                TagMargin = 40;
+
+                // Solid and thin, matching how the platform draws a working order.
+                EntryStroke = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Solid, 1f);
+                StopStroke = new Stroke(Brushes.Crimson, DashStyleHelper.Solid, 1f);
+                TargetStroke = new Stroke(Brushes.LimeGreen, DashStyleHelper.Solid, 1f);
             }
             else if (State == State.Historical)
             {
@@ -321,10 +345,15 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (StopStroke != null) StopStroke.RenderTarget = RenderTarget;
             if (TargetStroke != null) TargetStroke.RenderTarget = RenderTarget;
 
-            tagTextBrushDx?.Dispose();
-            tagTextBrushDx = null;
+            textWhiteBrushDx?.Dispose();
+            textBlackBrushDx?.Dispose();
+            textWhiteBrushDx = null;
+            textBlackBrushDx = null;
             if (RenderTarget != null)
-                tagTextBrushDx = Brushes.White.ToDxBrush(RenderTarget);
+            {
+                textWhiteBrushDx = Brushes.White.ToDxBrush(RenderTarget);
+                textBlackBrushDx = Brushes.Black.ToDxBrush(RenderTarget);
+            }
         }
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
@@ -364,22 +393,20 @@ namespace NinjaTrader.NinjaScript.Indicators
             SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
             try
             {
-                DrawOrderLine(chartScale, entryPrice, EntryStroke,
-                    $"{previewQuantity} {enter} {entryType} {master.FormatPrice(entryPrice)}", textFormat);
+                DrawOrderMarker(chartScale, entryPrice, EntryStroke,
+                    $"{previewQuantity} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
 
                 double stopPrice = master.RoundToTickSize(entryPrice - profitSign * StopLossTicks * tick);
-                DrawOrderLine(chartScale, stopPrice, StopStroke,
-                    $"{previewQuantity} {exit} STP {master.FormatPrice(stopPrice)}", textFormat);
+                DrawOrderMarker(chartScale, stopPrice, StopStroke,
+                    $"{previewQuantity} {exit} STP", master.FormatPrice(stopPrice), textFormat);
 
-                int targetNumber = 0;
                 foreach (int targetTicks in new[] { Target1Ticks, Target2Ticks, Target3Ticks })
                 {
-                    targetNumber++;
                     if (targetTicks <= 0)
                         continue;
                     double targetPrice = master.RoundToTickSize(entryPrice + profitSign * targetTicks * tick);
-                    DrawOrderLine(chartScale, targetPrice, TargetStroke,
-                        $"{previewQuantity} {exit} LMT {master.FormatPrice(targetPrice)} (T{targetNumber})", textFormat);
+                    DrawOrderMarker(chartScale, targetPrice, TargetStroke,
+                        $"{previewQuantity} {exit} LMT", master.FormatPrice(targetPrice), textFormat);
                 }
             }
             finally
@@ -389,38 +416,118 @@ namespace NinjaTrader.NinjaScript.Indicators
         }
 
         /// <summary>
-        /// Draws one preview level the way the platform draws a working order: a dashed
-        /// line across the panel with a filled tag at the left edge naming the order.
+        /// Draws one preview level the way the platform draws a working order: a chevron
+        /// tag naming the order, a line running from the tag's point to the right edge,
+        /// and a price tag pointing at the level from the right.
         /// </summary>
-        private void DrawOrderLine(ChartScale chartScale, double price, Stroke stroke,
-            string label, SharpDX.DirectWrite.TextFormat textFormat)
+        private void DrawOrderMarker(ChartScale chartScale, double price, Stroke stroke,
+            string label, string priceLabel, SharpDX.DirectWrite.TextFormat textFormat)
         {
-            if (stroke?.BrushDX == null)
+            if (stroke?.BrushDX == null || textWhiteBrushDx == null || textBlackBrushDx == null)
                 return;
 
             float y = chartScale.GetYByValue(price);
             if (y < ChartPanel.Y || y > ChartPanel.Y + ChartPanel.H)
                 return;
 
-            RenderTarget.DrawLine(
-                new Vector2(ChartPanel.X, y),
-                new Vector2(ChartPanel.X + ChartPanel.W, y),
-                stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
+            SharpDX.Direct2D1.Brush textBrush = TagTextBrush(stroke);
+            float panelLeft = ChartPanel.X;
+            float panelRight = ChartPanel.X + ChartPanel.W;
+            const float padX = 5f, padY = 2f;
 
-            if (tagTextBrushDx == null)
-                return;
-
-            using (var layout = new SharpDX.DirectWrite.TextLayout(
-                Core.Globals.DirectWriteFactory, label, textFormat, ChartPanel.W, textFormat.FontSize))
+            using (var labelLayout = new SharpDX.DirectWrite.TextLayout(
+                       Core.Globals.DirectWriteFactory, label, textFormat, ChartPanel.W, textFormat.FontSize))
+            using (var priceLayout = new SharpDX.DirectWrite.TextLayout(
+                       Core.Globals.DirectWriteFactory, priceLabel, textFormat, ChartPanel.W, textFormat.FontSize))
             {
-                float padX = 5f, padY = 2f;
-                float boxWidth = layout.Metrics.Width + 2f * padX;
-                float boxHeight = layout.Metrics.Height + 2f * padY;
-                var box = new RectangleF(ChartPanel.X + 4f, y - boxHeight / 2f, boxWidth, boxHeight);
+                float tagBoxW = labelLayout.Metrics.Width + 2f * padX;
+                float tagH = labelLayout.Metrics.Height + 2f * padY;
+                float tip = tagH / 2f;
+                float priceBoxW = priceLayout.Metrics.Width + 2f * padX;
 
-                RenderTarget.FillRectangle(box, stroke.BrushDX);
-                RenderTarget.DrawTextLayout(new Vector2(box.X + padX, box.Y + padY), layout, tagTextBrushDx);
+                // The price tag hugs the right edge, its point aimed at the level.
+                float priceBoxX = panelRight - priceBoxW;
+                float priceTipX = priceBoxX - tip;
+
+                float tagX;
+                switch (TagPosition)
+                {
+                    case ChartTradingTagPosition.Center:
+                        tagX = panelLeft + (ChartPanel.W - tagBoxW - tip) / 2f;
+                        break;
+                    case ChartTradingTagPosition.Right:
+                        tagX = priceTipX - TagMargin - tagBoxW - tip;
+                        break;
+                    default:
+                        tagX = panelLeft + TagMargin;
+                        break;
+                }
+                tagX = Math.Max(panelLeft + 2f, Math.Min(tagX, priceTipX - tagBoxW - tip - 2f));
+
+                float top = y - tagH / 2f;
+                float bottom = y + tagH / 2f;
+                float tagTipX = tagX + tagBoxW + tip;
+
+                // The line runs from the tag's point to the price tag's point only --
+                // a working order's line does not cross behind its own tag.
+                if (tagTipX < priceTipX)
+                    RenderTarget.DrawLine(new Vector2(tagTipX, y), new Vector2(priceTipX, y),
+                        stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
+
+                // Order tag: rectangle with a point on its right.
+                FillTagGeometry(stroke.BrushDX, new[]
+                {
+                    new Vector2(tagX, top),
+                    new Vector2(tagX + tagBoxW, top),
+                    new Vector2(tagTipX, y),
+                    new Vector2(tagX + tagBoxW, bottom),
+                    new Vector2(tagX, bottom),
+                });
+                RenderTarget.DrawTextLayout(new Vector2(tagX + padX, top + padY), labelLayout, textBrush);
+
+                // Price tag: rectangle against the right edge with a point on its left.
+                FillTagGeometry(stroke.BrushDX, new[]
+                {
+                    new Vector2(priceBoxX, top),
+                    new Vector2(panelRight, top),
+                    new Vector2(panelRight, bottom),
+                    new Vector2(priceBoxX, bottom),
+                    new Vector2(priceTipX, y),
+                });
+                RenderTarget.DrawTextLayout(new Vector2(priceBoxX + padX, top + padY), priceLayout, textBrush);
             }
+        }
+
+        /// <summary>
+        /// Fills a closed polygon, used for the pointed order and price tags.
+        /// </summary>
+        private void FillTagGeometry(SharpDX.Direct2D1.Brush brush, Vector2[] points)
+        {
+            using (var geometry = new SharpDX.Direct2D1.PathGeometry(Core.Globals.D2DFactory))
+            {
+                using (GeometrySink sink = geometry.Open())
+                {
+                    sink.BeginFigure(points[0], FigureBegin.Filled);
+                    for (int i = 1; i < points.Length; i++)
+                        sink.AddLine(points[i]);
+                    sink.EndFigure(FigureEnd.Closed);
+                    sink.Close();
+                }
+                RenderTarget.FillGeometry(geometry, brush);
+            }
+        }
+
+        /// <summary>
+        /// Black or white tag text, whichever contrasts with the stroke's color.
+        /// </summary>
+        private SharpDX.Direct2D1.Brush TagTextBrush(Stroke stroke)
+        {
+            var solid = stroke.Brush as System.Windows.Media.SolidColorBrush;
+            if (solid == null)
+                return textWhiteBrushDx;
+
+            double luminance = 0.299 * solid.Color.R + 0.587 * solid.Color.G + 0.114 * solid.Color.B;
+            return luminance > 145 ? textBlackBrushDx : textWhiteBrushDx;
         }
         #endregion
 
