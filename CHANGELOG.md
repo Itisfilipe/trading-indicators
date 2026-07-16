@@ -29,9 +29,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Configurable entry order types: Limit or MIT on the favorable side of the
   market, Stop-Market or Stop-Limit (with a tick offset) beyond it; the
   preview tag always labels what the click will submit.
-- A "Stops to BE" button beside the toggle moves every working ChartTrading
-  stop to its own entry's fill price, clamped so a stop never crosses the
-  market. It only touches stops this indicator created.
+- A "Stops to BE" button below the toggle moves every working ChartTrading
+  stop on the instrument to the position's average fill price, clamped so a
+  stop never crosses the market. It finds the stops on the account by name,
+  so it works even after a recompile or reload, touches only stops this tool
+  created, and logs every outcome instead of failing silently.
 - Configurable bracket pairs: three stop/target pairs, each toggled by its own
   "Bracket N" checkbox, each with its own stop and target. The ChartTrader
   quantity sizes each enabled pair, so the entry trades quantity x enabled

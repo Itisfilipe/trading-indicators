@@ -801,16 +801,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// Moves every working ChartTrading stop to its own entry's fill price. Manual
-        /// for now; a future auto-breakeven will make the same move, and this button
-        /// stays as its bypass.
+        /// Moves every working ChartTrading stop on this instrument to the position's
+        /// average fill price. Manual for now; a future auto-breakeven will make the
+        /// same move, and this button stays as its bypass.
         /// </summary>
+        /// <remarks>
+        /// Deliberately reload-proof: the stops are found on the account by their
+        /// "CT Stop" name instead of through this instance's in-memory registry,
+        /// because recompiling or reloading the indicator wipes that memory while the
+        /// orders live on. Every outcome lands in the log, so a click is never silent.
+        /// </remarks>
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
         {
             double last = Bars != null && Bars.Count > 0 ? Bars.GetClose(Bars.Count - 1) : 0;
-            List<BracketCommit> commits;
-            lock (orderLock)
-                commits = new List<BracketCommit>(activeCommits);
+            Account account = ChartControl.OwnerChart?.ChartTrader?.Account;
+            if (account == null)
+            {
+                Log("ChartTrading: no ChartTrader account selected; stops not moved.",
+                    NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
 
             TriggerCustomEvent(o =>
             {
@@ -818,38 +828,58 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (master == null)
                     return;
 
-                foreach (BracketCommit commit in commits)
+                Position position = null;
+                foreach (Position candidate in account.Positions)
                 {
-                    List<Order> stopOrders;
-                    lock (orderLock)
-                        stopOrders = commit.StopOrders;
-                    if (!commit.ExitsSubmitted || stopOrders == null || commit.Account == null)
+                    if (candidate.Instrument != null
+                        && candidate.Instrument.FullName == Instrument.FullName)
+                    {
+                        position = candidate;
+                        break;
+                    }
+                }
+                if (position == null || position.MarketPosition == MarketPosition.Flat)
+                {
+                    Log("ChartTrading: no open position on " + Instrument.FullName + "; stops not moved.",
+                        NinjaTrader.Cbi.LogLevel.Information);
+                    return;
+                }
+
+                // Clamped so the stop never crosses the market -- the same guard the
+                // ABCompleteChartTrader breakeven uses: a long's stop stays at or
+                // below the last price, a short's at or above it.
+                bool isLong = position.MarketPosition == MarketPosition.Long;
+                double breakeven = position.AveragePrice;
+                if (last > 0)
+                    breakeven = isLong ? Math.Min(breakeven, last) : Math.Max(breakeven, last);
+                breakeven = master.RoundToTickSize(breakeven);
+
+                var changes = new List<Order>();
+                foreach (Order order in account.Orders)
+                {
+                    if (order.Name != "CT Stop" || order.Instrument == null
+                        || order.Instrument.FullName != Instrument.FullName)
+                        continue;
+                    if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
                         continue;
 
-                    // Clamped so the stop never crosses the market -- the same guard the
-                    // ABCompleteChartTrader breakeven uses: a long's stop stays at or
-                    // below the last price, a short's at or above it.
-                    double breakeven = commit.EntryFillPrice;
-                    if (last > 0)
-                        breakeven = commit.ExitAction == OrderAction.Sell
-                            ? Math.Min(breakeven, last)
-                            : Math.Max(breakeven, last);
-                    breakeven = master.RoundToTickSize(breakeven);
-
-                    var changes = new List<Order>();
-                    foreach (Order stop in stopOrders)
-                    {
-                        if (stop == null)
-                            continue;
-                        if (stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted)
-                        {
-                            stop.StopPriceChanged = breakeven;
-                            changes.Add(stop);
-                        }
-                    }
-                    if (changes.Count > 0)
-                        commit.Account.Change(changes);
+                    // Stage every changeable field; only the stop price moves.
+                    order.QuantityChanged = order.Quantity;
+                    order.LimitPriceChanged = order.LimitPrice;
+                    order.StopPriceChanged = breakeven;
+                    changes.Add(order);
                 }
+
+                if (changes.Count == 0)
+                {
+                    Log("ChartTrading: no working CT stops on " + Instrument.FullName + " to move.",
+                        NinjaTrader.Cbi.LogLevel.Information);
+                    return;
+                }
+
+                account.Change(changes);
+                Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}.",
+                    NinjaTrader.Cbi.LogLevel.Information);
             }, null);
         }
         #endregion

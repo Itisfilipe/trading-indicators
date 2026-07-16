@@ -108,11 +108,14 @@ apart. The preview is advisory, not guaranteed.
   always labels what the click will really submit (`LMT`, `MIT`, `STP`, `STP LMT`,
   `MKT`). Note: MIT's use of the stop price field is documented but untested in
   Playback — verify the first MIT fill.
-- **Built — "Stops to BE" sidebar button.** Next to the ON/OFF toggle. One click moves
-  every working ChartTrading stop to its own entry's fill price (per commit, so
-  separate trades each go to their own breakeven), clamped so a stop never crosses the
-  market — the ABCompleteChartTrader guard. It only ever touches stops this indicator
-  created. When auto-breakeven lands, this button stays as the manual bypass.
+- **Built — "Stops to BE" sidebar button.** Below the ON/OFF toggle. One click moves
+  every working ChartTrading stop on the chart's instrument to the position's average
+  fill price, clamped so a stop never crosses the market — the ABCompleteChartTrader
+  guard. It finds the stops on the account by their "CT Stop" name, so it survives
+  indicator reloads/recompiles (an in-memory registry would not), and it only ever
+  touches stops this tool created. Every click logs its outcome (moved N stops / no
+  position / no stops), so nothing fails silently. When auto-breakeven lands, this
+  button stays as the manual bypass.
 - **Next:** auto-breakeven (the manual button exists; what remains is the
   N-ticks-in-profit trigger that makes the same move automatically), and the
   axis-strip price marker experiment. Grid/DCA entry (the plan's M7) is deliberately
