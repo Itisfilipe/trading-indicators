@@ -34,3 +34,8 @@ codex_out.log
 ninja-trader/docs/
 ninja-trader/llms.txt
 ninja-trader/llms-full.txt
+
+# Nelogica NTSL manual and its converted output -- Nelogica's copyrighted content.
+# Convert your own copy of the manual locally with profit-chart/convert_to_md.py.
+profit-chart/ManualNTSL.pdf
+profit-chart/docs/
