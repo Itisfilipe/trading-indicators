@@ -24,3 +24,6 @@ venv/
 # Codex / agent session logs
 *_codex.log
 codex_out.log
+
+# NinjaTrader export bundles — keep the source, not the packaged zip
+*.zip
