@@ -83,25 +83,23 @@ apart. The preview is advisory, not guaranteed.
     so hold/release only registered on the next mouse move), and repaints call
     `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next
     scheduled render pass and read as lag on a quiet chart.
-- **M2 — order submission (built, untested; OFF by default).** New "Trading" settings:
-  - **Enable order submission** (default off): off means preview-only — clicks place
-    nothing. On, a click while the preview is armed submits the entry (limit,
-    stop-market, or market, exactly as the preview labels it) to the ChartTrader
-    account, sized ChartTrader quantity x enabled pairs.
+- **M2 — order submission (built, untested).** The ChartTrading button is the single
+  gate: **green ON, a click while the preview is armed places the order**; gray OFF,
+  keys and clicks do nothing.
+  - The click submits the entry (limit, stop-market, or market, exactly as the preview
+    labels it) to the ChartTrader account, sized ChartTrader quantity x enabled pairs.
   - **Exits go live only after the entry fills** (watched via `Account.OrderUpdate`):
     each enabled pair then submits its stop + target as an OCO group sized to that
     pair. A resting exit can never open a position.
-  - **Allow live accounts** (default off): orders are refused unless the account name
-    starts with `Sim`/`Playback`. Flip it deliberately for live trading.
-  - The sidebar button shows the mode: gray OFF, blue PREVIEW (submission disabled),
-    green ON.
+  - **Allow live accounts** (default off, the one setting): orders are refused unless
+    the account name starts with `Sim`/`Playback`. Flip it deliberately for live.
   - v1 caveats: TIF is Day; exits wait for the FULL entry fill, so an entry cancelled
     after a partial fill leaves that partial unbracketed (logged as a warning);
     removing the indicator leaves working orders working, by design; rejected exits
     are not retried. Watch the Orders tab while testing.
-  - **Sim test script:** Sim101 selected in ChartTrader, "Enable order submission" on,
-    Shift+click below market -> `Buy LMT` entry at the click price; when it fills, each
-    enabled pair's stop and target appear, OCO-linked per pair (fill a target, its stop
+  - **Sim test script:** Sim101 selected in ChartTrader, button green, Shift+click
+    below market -> `Buy LMT` entry at the click price; when it fills, each enabled
+    pair's stop and target appear, OCO-linked per pair (fill a target, its stop
     cancels — the other pairs stay). Alt+click above market mirrors it short.
 - **Next:** M7 grid/DCA entry, the breakeven features below, and the axis-strip price
   marker experiment. See `IMPLEMENTATION_PLAN.md`.

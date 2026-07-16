@@ -27,12 +27,12 @@ using SharpDX.Direct2D1;
 // above the last traded price. This is "Option A": the indicator owns the bracket
 // geometry, so what you see is exactly what a later milestone will submit.
 //
-// With "Enable order submission" off (the default) nothing touches an account: the
-// only ChartTrader read is the order quantity, for the tag text. Switched on, a
-// click while the preview is armed submits the entry to the ChartTrader account,
-// and each enabled pair's stop and target -- OCO-linked per pair -- go live only
-// once the entry fills, so a resting exit can never open a position. Live accounts
-// additionally require "Allow live accounts"; otherwise only Sim/Playback accepts.
+// The ChartTrading button is the single gate. ON, a click while the preview is
+// armed submits the entry to the ChartTrader account, and each enabled pair's
+// stop and target -- OCO-linked per pair -- go live only once the entry fills,
+// so a resting exit can never open a position. OFF, keys and clicks do nothing.
+// Live accounts additionally require "Allow live accounts"; Sim/Playback always
+// accepts.
 
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
@@ -181,13 +181,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "The entry always shows its price.")]
         public ChartTradingValueDisplay ValueDisplay { get; set; }
 
-        [Display(Name = "Enable order submission", Order = 1, GroupName = "Trading",
-                 Description = "OFF: preview only, clicks place nothing. ON: a click while the preview " +
-                               "is armed submits the entry to the ChartTrader account, and each enabled " +
-                               "pair's stop and target go live once the entry fills.")]
-        public bool EnableOrderSubmission { get; set; }
-
-        [Display(Name = "Allow live accounts", Order = 2, GroupName = "Trading",
+        [Display(Name = "Allow live accounts", Order = 1, GroupName = "Trading",
                  Description = "OFF: orders are only accepted on accounts named Sim* or Playback*. " +
                                "Turn on deliberately to trade a live account.")]
         public bool AllowLiveAccounts { get; set; }
@@ -232,7 +226,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Stop3Ticks = 50;
                 Target3Ticks = 150;
 
-                EnableOrderSubmission = false;
                 AllowLiveAccounts = false;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
@@ -444,21 +437,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (toggleButton == null)
                 return;
 
-            if (!tradingEnabled)
-            {
-                toggleButton.Content = "ChartTrading OFF";
-                toggleButton.Background = Brushes.DimGray;
-            }
-            else if (EnableOrderSubmission)
-            {
-                toggleButton.Content = "ChartTrading ON";
-                toggleButton.Background = Brushes.SeaGreen;
-            }
-            else
-            {
-                toggleButton.Content = "ChartTrading PREVIEW";
-                toggleButton.Background = Brushes.SteelBlue;
-            }
+            toggleButton.Content = tradingEnabled ? "ChartTrading ON" : "ChartTrading OFF";
+            toggleButton.Background = tradingEnabled ? Brushes.SeaGreen : Brushes.DimGray;
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -525,7 +505,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Order submission
         private void OnPanelClick(object sender, MouseButtonEventArgs e)
         {
-            if (!EnableOrderSubmission || !tradingEnabled || previewSide == Side.None || !pointerOverPanel)
+            if (!tradingEnabled || previewSide == Side.None || !pointerOverPanel)
                 return;
 
             MasterInstrument master = Instrument?.MasterInstrument;
