@@ -35,15 +35,17 @@ unavailable for this bars type (a platform-wide constraint for such bars).
 ### ErgonomicCharts
 
 Scroll-wheel zoom without holding Ctrl, driven through NinjaTrader's own
-bar-spacing hotkey handlers. Optional drag-to-pan (off by default) simulates
-holding Ctrl so the platform's native pan engages; the key press is
-session-wide, so a crash mid-drag can leave Ctrl logically held down -- the
-setting's description spells out that trade-off before you enable it.
+bar-spacing hotkey handlers. Drag-to-pan simulates holding Ctrl so the
+platform's native pan engages; the key press is session-wide, so a crash
+mid-drag can leave Ctrl logically held down -- the setting's description
+spells out that trade-off.
 
 ### ChartTrading
 
-Work-in-progress click-to-trade tool (live bracket preview while holding a
-modifier key; order submission not yet implemented). Design and status:
+Click-to-trade: hold Shift (buy) or Alt (sell) to preview a full order
+bracket at the mouse -- drawn like the platform's own working-order markers --
+and click to place it. Includes sidebar ON/OFF and stops-to-breakeven
+buttons, and an optional auto-breakeven trigger. Details:
 [ChartTrading/README.md](ChartTrading/README.md).
 
 ## Documentation tooling

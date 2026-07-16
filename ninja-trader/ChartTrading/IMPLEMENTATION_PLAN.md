@@ -3,6 +3,22 @@
 Date: 2026-07-16  
 Research target: NinjaTrader 8.1.x; the worked reference was exported by NT 8.1.6.2.
 
+## Current status
+
+Built and working on Sim (owner-tested): bracket preview with native-marker
+styling, order submission gated by the sidebar ON/OFF button, exits-on-fill
+OCO pairs, configurable entry types (M3), per-pair bracket checkboxes,
+stacked-stop separation, the Stops-to-BE button, and auto-breakeven with a
+shared breakeven offset. Option A won (indicator owns the bracket): ATM
+template offsets are not readable before StartAtmStrategy, so an exact preview
+requires owning the numbers. M7 (grid/DCA) is dropped — this tool mirrors
+Profit Chart's simple click trading. Still open: axis-strip price marker
+experiment, TIF from ChartTrader (hardcoded Day), partial-fill hardening,
+first MIT fill unverified in Playback.
+
+The plan below predates these decisions; where they conflict, the status
+above and the code win.
+
 ## Feasibility verdict
 
 Yes: the core product can be built as an NT8 Indicator. A chart Indicator can observe chart mouse input, convert the pointer Y coordinate through ChartScale, draw an OnRender preview, create account-level orders, submit direct orders, and start a selected ATM strategy around an entry order.
