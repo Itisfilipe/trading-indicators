@@ -135,6 +135,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double currentAvgPrice;
         private MarketPosition currentMarketPosition = MarketPosition.Flat;
         private bool autoBreakevenFired;
+        private bool positionSeedPending;
 
         private class BracketCommit
         {
@@ -439,8 +440,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // instance (a commit re-subscribes if the account changes later).
                 Account attachAccount = ChartControl.OwnerChart?.ChartTrader?.Account;
                 if (attachAccount != null)
+                {
                     lock (orderLock)
                         EnsureAccountSubscription(attachAccount);
+                    SeedPositionCache(attachAccount);
+                }
 
                 handlersAttached = true;
             }
@@ -695,6 +699,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     activeCommits.Add(commit);
                     EnsureAccountSubscription(account);
                 }
+                SeedPositionCache(account);
 
                 account.Submit(new[] { entry });
             }, null);
@@ -717,18 +722,44 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             account.OrderUpdate += OnAccountOrderUpdate;
             account.PositionUpdate += OnAccountPositionUpdate;
 
-            // Seed from the account so a reload mid-position still knows where it is.
             currentAvgPrice = 0;
             currentMarketPosition = MarketPosition.Flat;
             autoBreakevenFired = false;
-            foreach (Position position in account.Positions)
+            positionSeedPending = true;
+        }
+
+        /// <summary>
+        /// Seeds the position cache from the account so a reload mid-position still
+        /// arms auto-breakeven. Runs after (never inside) orderLock: the positions
+        /// collection needs its own lock -- the shipped market-analyzer columns take
+        /// lock(account.Positions) before enumerating -- and nesting the two would
+        /// invite lock-order inversion. A PositionUpdate that lands in between wins
+        /// over this snapshot via the positionSeedPending handshake.
+        /// </summary>
+        private void SeedPositionCache(Account account)
+        {
+            double avgPrice = 0;
+            MarketPosition marketPosition = MarketPosition.Flat;
+            lock (account.Positions)
             {
-                if (position.Instrument != null && position.Instrument.FullName == Instrument.FullName)
+                foreach (Position position in account.Positions)
                 {
-                    currentAvgPrice = position.AveragePrice;
-                    currentMarketPosition = position.MarketPosition;
-                    break;
+                    if (position.Instrument != null && position.Instrument.FullName == Instrument.FullName)
+                    {
+                        avgPrice = position.AveragePrice;
+                        marketPosition = position.MarketPosition;
+                        break;
+                    }
                 }
+            }
+
+            lock (orderLock)
+            {
+                if (!ReferenceEquals(subscribedAccount, account) || !positionSeedPending)
+                    return;
+                positionSeedPending = false;
+                currentAvgPrice = avgPrice;
+                currentMarketPosition = marketPosition;
             }
         }
 
@@ -739,12 +770,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (e.Position?.Instrument == null || e.Position.Instrument.FullName != Instrument.FullName)
                 return;
 
+            // A closed position arrives as Operation.Remove with the last direction
+            // still on it -- the shipped market-analyzer columns key off Operation for
+            // exactly this reason. MarketPosition alone would read as still open.
+            bool nowFlat = e.Operation == Operation.Remove || e.MarketPosition == MarketPosition.Flat;
+
             lock (orderLock)
             {
-                if (e.MarketPosition == MarketPosition.Flat || e.MarketPosition != currentMarketPosition)
+                // A queued event from a superseded account must not contaminate the
+                // current account's cache.
+                if (!ReferenceEquals(sender, subscribedAccount))
+                    return;
+                positionSeedPending = false;
+
+                if (nowFlat || e.MarketPosition != currentMarketPosition)
                     autoBreakevenFired = false;
-                currentMarketPosition = e.MarketPosition;
-                currentAvgPrice = e.AveragePrice;
+                currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
+                currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
             }
         }
 
@@ -956,7 +998,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (master == null)
                 return;
 
-            double trigger = AutoBreakevenTriggerTicks * master.TickSize;
+            // The offset has to land inside the market when the move fires, or the
+            // clamp would park the stop at the last price; require at least one tick
+            // of room beyond it before triggering.
+            int triggerTicks = Math.Max(AutoBreakevenTriggerTicks, BreakevenOffsetTicks + 1);
+            double trigger = triggerTicks * master.TickSize;
             double price = marketDataUpdate.Price;
             bool reached = position == MarketPosition.Long
                 ? price >= avgPrice + trigger
@@ -983,13 +1029,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     return;
 
                 Position position = null;
-                foreach (Position candidate in account.Positions)
+                lock (account.Positions)
                 {
-                    if (candidate.Instrument != null
-                        && candidate.Instrument.FullName == Instrument.FullName)
+                    foreach (Position candidate in account.Positions)
                     {
-                        position = candidate;
-                        break;
+                        if (candidate.Instrument != null
+                            && candidate.Instrument.FullName == Instrument.FullName)
+                        {
+                            position = candidate;
+                            break;
+                        }
                     }
                 }
                 if (position == null || position.MarketPosition == MarketPosition.Flat)
@@ -1006,17 +1055,40 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 double breakeven = position.AveragePrice
                     + (isLong ? 1 : -1) * BreakevenOffsetTicks * master.TickSize;
                 if (last > 0)
-                    breakeven = isLong ? Math.Min(breakeven, last) : Math.Max(breakeven, last);
+                {
+                    // One tick inside the market, not at it: a stop resting exactly at
+                    // the last price gets rejected or fills instantly.
+                    breakeven = isLong
+                        ? Math.Min(breakeven, last - master.TickSize)
+                        : Math.Max(breakeven, last + master.TickSize);
+                }
                 breakeven = master.RoundToTickSize(breakeven);
 
-                var changes = new List<Order>();
-                foreach (Order order in account.Orders)
+                var candidates = new List<Order>();
+                lock (account.Orders)
                 {
-                    if (order.Name != "CT Stop" || order.Instrument == null
-                        || order.Instrument.FullName != Instrument.FullName)
+                    foreach (Order order in account.Orders)
+                    {
+                        if (order.Name != "CT Stop" || order.Instrument == null
+                            || order.Instrument.FullName != Instrument.FullName)
+                            continue;
+                        if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
+                            continue;
+                        candidates.Add(order);
+                    }
+                }
+
+                var changes = new List<Order>();
+                int alreadySafer = 0;
+                foreach (Order order in candidates)
+                {
+                    // Never loosen protection: a stop already at or beyond breakeven
+                    // (say, manually trailed past it) stays where it is.
+                    if (isLong ? order.StopPrice >= breakeven : order.StopPrice <= breakeven)
+                    {
+                        alreadySafer++;
                         continue;
-                    if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
-                        continue;
+                    }
 
                     // Stage every changeable field; only the stop price moves.
                     order.QuantityChanged = order.Quantity;
@@ -1027,13 +1099,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (changes.Count == 0)
                 {
-                    Log("ChartTrading: no working CT stops on " + Instrument.FullName + " to move.",
+                    Log(alreadySafer > 0
+                            ? $"ChartTrading: all {alreadySafer} CT stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved ({reason})."
+                            : $"ChartTrading: no working CT stops on {Instrument.FullName} to move ({reason}).",
                         NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
                 account.Change(changes);
-                Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)} ({reason}).",
+                string skippedNote = alreadySafer > 0 ? $", {alreadySafer} already safer left alone" : string.Empty;
+                Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}{skippedNote} ({reason}).",
                     NinjaTrader.Cbi.LogLevel.Information);
             }, null);
         }

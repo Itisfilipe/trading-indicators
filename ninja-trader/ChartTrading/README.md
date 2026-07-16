@@ -24,8 +24,9 @@ ChartTrader is hidden):
   Gray: keys and clicks do nothing, freeing the modifiers for other tools.
 - **Stops to BE** — moves every working ChartTrading stop on the instrument
   to the position's average fill price (plus the configured offset), clamped
-  so a stop never crosses the market. Works after recompiles and reloads, and
-  only ever touches stops this tool created.
+  one tick inside the market. Works after recompiles and reloads, only ever
+  touches stops this tool created, and never loosens a stop that already sits
+  at or beyond breakeven (a manually trailed stop stays put).
 
 ## Bracket and entry settings
 
