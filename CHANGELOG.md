@@ -5,6 +5,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-16
 
+### MultiSeriesEMA (NinjaTrader, new)
+- Overlays an EMA computed on a bar series independent of the chart it's on
+  (different Renko brick size, higher timeframe, tick/range bars) without
+  ever drawing that series' bars or opening a second panel.
+- "Source Type" selects Minute, Renko, Tick, Range, or Day; the property
+  grid swaps between a brick-size-in-ticks field (Renko) and a period field
+  (everything else) based on the selection.
+
 ### ChartTrading (NinjaTrader, new)
 - First public milestone of a click-to-trade tool: hold a modifier key
   (Shift = buy, Alt = sell) to preview the full order bracket — entry, stop,

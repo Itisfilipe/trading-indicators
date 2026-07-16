@@ -164,6 +164,24 @@ below the average, so activity spikes stand out.
 **How to use:** add to a chart; watch for above-average bars to confirm
 moves.
 
+### MultiSeriesEMA — an EMA from a different bar series
+
+Overlays an EMA computed on a bar series independent of the chart it's on —
+a different Renko brick size, a higher timeframe, whatever you pick — without
+ever drawing that series' bars.
+
+**Features**
+
+- "Source Type" selects Minute, Renko, Tick, Range, or Day for the series the
+  EMA is computed on; picking Renko swaps the field for a brick-size-in-ticks
+  input, any other type shows a period input instead.
+- The source series is data-only: no second panel, no extra candles/bricks on
+  the chart, just the EMA line.
+- EMA period and line color configurable.
+
+**How to use:** add to any chart, pick a source type and size different from
+the chart's own, set the EMA period.
+
 ## Profit Chart (`profit-chart/`)
 
 NTSL indicators and candle-coloring rules for day trading on Nelogica's
