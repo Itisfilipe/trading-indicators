@@ -398,31 +398,17 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             renkoLow = renkoHigh - 2.0 * offset;
             renkoHigh = renkoHigh + offset;
 
-            // Fill in any "empty" bricks if the price HIGH moves several brick sizes at once
-            // Use the actual high value that was reached, not the close
+            // Fill in any "empty" bricks if the price HIGH moved several brick sizes at once
             while (currentWickHigh.ApproxCompare(renkoHigh) >= 0)
             {
-                double brickOpenEmpty = renkoHigh - offset;
-                AddBar(bars, brickOpenEmpty,
-                       Math.Max(brickOpenEmpty, renkoHigh),
-                       Math.Min(brickOpenEmpty, renkoHigh),
-                       renkoHigh, time, 0);
+                double gapOpen = renkoHigh - offset;
+                AddBar(bars, gapOpen, renkoHigh, gapOpen, renkoHigh, time, 0);
 
-                // Update boundaries for the next potential brick
                 renkoLow = renkoHigh - 2.0 * offset;
                 renkoHigh = renkoHigh + offset;
             }
 
-            // Reset wick tracking for the new brick with actual price
-            currentWickHigh = close;
-            currentWickLow = close;
-
-            double newBrickOpenUp = renkoHigh - offset;
-            // Add the new brick with the latest price data
-            AddBar(bars, newBrickOpenUp,
-                   Math.Max(newBrickOpenUp, currentWickHigh),
-                   Math.Min(newBrickOpenUp, currentWickLow),
-                   close, time, volume);
+            StartFormingBrick(bars, renkoHigh - offset, close, time, volume);
         }
 
         /// <summary>
@@ -453,30 +439,36 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             renkoHigh = renkoLow + 2.0 * offset;
             renkoLow = renkoLow - offset;
 
-            // Fill in any empty bricks if the price LOW move spans multiple brick sizes
-            // Use the actual low value that was reached, not the close
+            // Fill in any "empty" bricks if the price LOW moved several brick sizes at once
             while (currentWickLow.ApproxCompare(renkoLow) <= 0)
             {
-                double brickOpenEmptyDown = renkoLow + offset;
-                AddBar(bars, brickOpenEmptyDown,
-                       Math.Max(brickOpenEmptyDown, renkoLow),
-                       Math.Min(brickOpenEmptyDown, renkoLow),
-                       renkoLow, time, 0);
+                double gapOpen = renkoLow + offset;
+                AddBar(bars, gapOpen, gapOpen, renkoLow, renkoLow, time, 0);
 
-                // Update boundaries for subsequent bricks
                 renkoHigh = renkoLow + 2.0 * offset;
                 renkoLow = renkoLow - offset;
             }
 
-            // Reset wick tracking for the new brick with actual price
+            StartFormingBrick(bars, renkoLow + offset, close, time, volume);
+        }
+
+        /// <summary>
+        /// Starts the residual forming brick after a completion, seeding both wick
+        /// extremes with the crossing tick's actual close.
+        /// </summary>
+        /// <remarks>
+        /// Shared by both movement directions so the up/down paths stay exact price
+        /// mirrors of each other -- verified by reflection property tests: any tick
+        /// sequence and its mirror produce mirrored bricks.
+        /// </remarks>
+        private void StartFormingBrick(Bars bars, double brickOpen, double close, DateTime time, long volume)
+        {
             currentWickHigh = close;
             currentWickLow = close;
 
-            double newBrickOpenDown = renkoLow + offset;
-            // Add the new brick with updated wick information
-            AddBar(bars, newBrickOpenDown,
-                   Math.Max(newBrickOpenDown, currentWickHigh),
-                   Math.Min(newBrickOpenDown, currentWickLow),
+            AddBar(bars, brickOpen,
+                   Math.Max(brickOpen, close),
+                   Math.Min(brickOpen, close),
                    close, time, volume);
         }
         #endregion
