@@ -1,12 +1,11 @@
 #region Using declarations
 using System;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Xml.Serialization;
 using NinjaTrader.Cbi;
+using NinjaTrader.Core.FloatingPoint;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
 using NinjaTrader.NinjaScript;
@@ -20,13 +19,16 @@ using SharpDX.Direct2D1;
 //
 // Hold the buy modifier (default Shift) or the sell modifier (default Alt) and move
 // the mouse over the chart: the indicator draws the bracket a click would place at
-// the pointer -- the entry line at the pointer price, the stop below (buy) or above
-// (sell) it, and one line per profit target -- all at the tick offsets configured
-// below. This is "Option A": the indicator owns the bracket geometry, so what you see
-// is exactly what a later milestone will submit, to the tick.
+// the pointer, styled like NinjaTrader's own resting-order markers -- a dashed line
+// per level with a tag reading like the order itself ("1 Buy LMT 14924.25", with the
+// stop and targets labelled as the closing orders they would become). Entry LMT vs
+// STP is inferred from the pointer being below or above the last traded price. This
+// is "Option A": the indicator owns the bracket geometry, so what you see is exactly
+// what a later milestone will submit, to the tick.
 //
-// Nothing here touches an account, ChartTrader, or the network. Order submission,
-// order-type inference, OCO, and grid entry are later milestones layered on top.
+// Nothing here touches an account or the network; the only ChartTrader read is the
+// order quantity, for the tag text. Order submission, OCO, and grid entry are later
+// milestones layered on top.
 
 namespace NinjaTrader.NinjaScript.Indicators
 {
@@ -55,9 +57,10 @@ namespace NinjaTrader.NinjaScript.Indicators
         private ChartPanel hookedPanel;
         private bool handlersAttached;
 
-        private SharpDX.Direct2D1.Brush entryBrushDx;
-        private SharpDX.Direct2D1.Brush stopBrushDx;
-        private SharpDX.Direct2D1.Brush targetBrushDx;
+        // Quantity shown in the tags, read from ChartTrader on mouse events (UI thread).
+        private int previewQuantity = 1;
+
+        private SharpDX.Direct2D1.Brush tagTextBrushDx;
         #endregion
 
         #region Parameters
@@ -89,42 +92,17 @@ namespace NinjaTrader.NinjaScript.Indicators
                  Description = "Distance from entry to the third target, in ticks. 0 hides it.")]
         public int Target3Ticks { get; set; }
 
-        [Range(1, 10)]
-        [Display(Name = "Line width", Order = 5, GroupName = "Bracket")]
-        public int LineWidth { get; set; }
-
-        [XmlIgnore]
+        // Strokes rather than plain brushes so each level carries its own color, width,
+        // and dash style, and binds to the render target the way the platform's own
+        // price-line indicator does. NinjaTrader persists Stroke properties natively.
         [Display(Name = "Entry line", Order = 1, GroupName = "Colors")]
-        public System.Windows.Media.Brush EntryLineBrush { get; set; }
+        public Stroke EntryStroke { get; set; }
 
-        [Browsable(false)]
-        public string EntryLineBrushSerialize
-        {
-            get { return Serialize.BrushToString(EntryLineBrush); }
-            set { EntryLineBrush = Serialize.StringToBrush(value); }
-        }
-
-        [XmlIgnore]
         [Display(Name = "Stop line", Order = 2, GroupName = "Colors")]
-        public System.Windows.Media.Brush StopLineBrush { get; set; }
+        public Stroke StopStroke { get; set; }
 
-        [Browsable(false)]
-        public string StopLineBrushSerialize
-        {
-            get { return Serialize.BrushToString(StopLineBrush); }
-            set { StopLineBrush = Serialize.StringToBrush(value); }
-        }
-
-        [XmlIgnore]
         [Display(Name = "Target line", Order = 3, GroupName = "Colors")]
-        public System.Windows.Media.Brush TargetLineBrush { get; set; }
-
-        [Browsable(false)]
-        public string TargetLineBrushSerialize
-        {
-            get { return Serialize.BrushToString(TargetLineBrush); }
-            set { TargetLineBrush = Serialize.StringToBrush(value); }
-        }
+        public Stroke TargetStroke { get; set; }
         #endregion
 
         protected override void OnStateChange()
@@ -148,11 +126,11 @@ namespace NinjaTrader.NinjaScript.Indicators
                 Target1Ticks = 20;
                 Target2Ticks = 40;
                 Target3Ticks = 0;
-                LineWidth = 2;
 
-                EntryLineBrush = Brushes.DodgerBlue;
-                StopLineBrush = Brushes.Crimson;
-                TargetLineBrush = Brushes.LimeGreen;
+                // Dashed, like the platform draws a working order that is not yet filled.
+                EntryStroke = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Dash, 2f);
+                StopStroke = new Stroke(Brushes.Crimson, DashStyleHelper.Dash, 2f);
+                TargetStroke = new Stroke(Brushes.LimeGreen, DashStyleHelper.Dash, 2f);
             }
             else if (State == State.Historical)
             {
@@ -267,6 +245,17 @@ namespace NinjaTrader.NinjaScript.Indicators
                 pointerDeviceX >= ChartPanel.X && pointerDeviceX <= ChartPanel.X + ChartPanel.W &&
                 pointerDeviceY >= ChartPanel.Y && pointerDeviceY <= ChartPanel.Y + ChartPanel.H;
 
+            // The tags show the quantity ChartTrader would trade. Mouse events run on
+            // the chart UI thread, so reading the control here is thread-consistent;
+            // fall back to the last known value if ChartTrader is unavailable.
+            try
+            {
+                int quantity = ChartControl.OwnerChart.ChartTrader.Quantity;
+                if (quantity > 0)
+                    previewQuantity = quantity;
+            }
+            catch (Exception) { }
+
             UpdatePreview(ResolveSide());
         }
 
@@ -301,65 +290,112 @@ namespace NinjaTrader.NinjaScript.Indicators
         #region Rendering
         public override void OnRenderTargetChanged()
         {
-            DisposeBrushes();
+            // Strokes bind to the render target the way the platform's own price-line
+            // indicator binds its ask/bid/last strokes.
+            if (EntryStroke != null) EntryStroke.RenderTarget = RenderTarget;
+            if (StopStroke != null) StopStroke.RenderTarget = RenderTarget;
+            if (TargetStroke != null) TargetStroke.RenderTarget = RenderTarget;
 
-            if (RenderTarget == null)
-                return;
-
-            entryBrushDx = EntryLineBrush.ToDxBrush(RenderTarget);
-            stopBrushDx = StopLineBrush.ToDxBrush(RenderTarget);
-            targetBrushDx = TargetLineBrush.ToDxBrush(RenderTarget);
-        }
-
-        private void DisposeBrushes()
-        {
-            entryBrushDx?.Dispose();
-            stopBrushDx?.Dispose();
-            targetBrushDx?.Dispose();
-            entryBrushDx = null;
-            stopBrushDx = null;
-            targetBrushDx = null;
+            tagTextBrushDx?.Dispose();
+            tagTextBrushDx = null;
+            if (RenderTarget != null)
+                tagTextBrushDx = Brushes.White.ToDxBrush(RenderTarget);
         }
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
             base.OnRender(chartControl, chartScale);
 
-            if (previewSide == Side.None || !pointerOverPanel || RenderTarget == null
-                || entryBrushDx == null || stopBrushDx == null || targetBrushDx == null)
+            if (previewSide == Side.None || !pointerOverPanel || RenderTarget == null)
                 return;
 
             MasterInstrument master = Instrument?.MasterInstrument;
-            if (master == null)
+            if (master == null || EntryStroke?.BrushDX == null)
                 return;
 
             double entryPrice = master.RoundToTickSize(chartScale.GetValueByY(pointerDeviceY));
             double tick = master.TickSize;
+            bool isBuy = previewSide == Side.Buy;
 
             // Buy: stop below entry, targets above. Sell: mirror. sign is +1 in the
             // direction the trade profits.
-            int profitSign = previewSide == Side.Buy ? 1 : -1;
+            int profitSign = isBuy ? 1 : -1;
 
-            DrawPriceLine(chartScale, master.RoundToTickSize(entryPrice), entryBrushDx);
-            DrawPriceLine(chartScale, master.RoundToTickSize(entryPrice - profitSign * StopLossTicks * tick), stopBrushDx);
+            string enter = isBuy ? "Buy" : "Sell";
+            string exit = isBuy ? "Sell" : "Buy";
 
-            foreach (int targetTicks in new[] { Target1Ticks, Target2Ticks, Target3Ticks })
+            // The entry becomes a limit when it is on the favorable side of the last
+            // traded price and a stop-market beyond it -- the label previews the order
+            // type a click would actually submit.
+            string entryType = "MKT";
+            if (Bars != null && Bars.Count > 0)
             {
-                if (targetTicks <= 0)
-                    continue;
-                DrawPriceLine(chartScale, master.RoundToTickSize(entryPrice + profitSign * targetTicks * tick), targetBrushDx);
+                double last = Bars.GetClose(Bars.Count - 1);
+                bool favorable = isBuy ? entryPrice < last : entryPrice > last;
+                if (entryPrice.ApproxCompare(last) != 0)
+                    entryType = favorable ? "LMT" : "STP";
+            }
+
+            SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
+            try
+            {
+                DrawOrderLine(chartScale, entryPrice, EntryStroke,
+                    $"{previewQuantity} {enter} {entryType} {master.FormatPrice(entryPrice)}", textFormat);
+
+                double stopPrice = master.RoundToTickSize(entryPrice - profitSign * StopLossTicks * tick);
+                DrawOrderLine(chartScale, stopPrice, StopStroke,
+                    $"{previewQuantity} {exit} STP {master.FormatPrice(stopPrice)}", textFormat);
+
+                int targetNumber = 0;
+                foreach (int targetTicks in new[] { Target1Ticks, Target2Ticks, Target3Ticks })
+                {
+                    targetNumber++;
+                    if (targetTicks <= 0)
+                        continue;
+                    double targetPrice = master.RoundToTickSize(entryPrice + profitSign * targetTicks * tick);
+                    DrawOrderLine(chartScale, targetPrice, TargetStroke,
+                        $"{previewQuantity} {exit} LMT {master.FormatPrice(targetPrice)} (T{targetNumber})", textFormat);
+                }
+            }
+            finally
+            {
+                textFormat.Dispose();
             }
         }
 
-        private void DrawPriceLine(ChartScale chartScale, double price, SharpDX.Direct2D1.Brush brush)
+        /// <summary>
+        /// Draws one preview level the way the platform draws a working order: a dashed
+        /// line across the panel with a filled tag at the left edge naming the order.
+        /// </summary>
+        private void DrawOrderLine(ChartScale chartScale, double price, Stroke stroke,
+            string label, SharpDX.DirectWrite.TextFormat textFormat)
         {
+            if (stroke?.BrushDX == null)
+                return;
+
             float y = chartScale.GetYByValue(price);
             if (y < ChartPanel.Y || y > ChartPanel.Y + ChartPanel.H)
                 return;
 
-            float left = ChartPanel.X;
-            float right = ChartPanel.X + ChartPanel.W;
-            RenderTarget.DrawLine(new Vector2(left, y), new Vector2(right, y), brush, LineWidth);
+            RenderTarget.DrawLine(
+                new Vector2(ChartPanel.X, y),
+                new Vector2(ChartPanel.X + ChartPanel.W, y),
+                stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
+
+            if (tagTextBrushDx == null)
+                return;
+
+            using (var layout = new SharpDX.DirectWrite.TextLayout(
+                Core.Globals.DirectWriteFactory, label, textFormat, ChartPanel.W, textFormat.FontSize))
+            {
+                float padX = 5f, padY = 2f;
+                float boxWidth = layout.Metrics.Width + 2f * padX;
+                float boxHeight = layout.Metrics.Height + 2f * padY;
+                var box = new RectangleF(ChartPanel.X + 4f, y - boxHeight / 2f, boxWidth, boxHeight);
+
+                RenderTarget.FillRectangle(box, stroke.BrushDX);
+                RenderTarget.DrawTextLayout(new Vector2(box.X + padX, box.Y + padY), layout, tagTextBrushDx);
+            }
         }
         #endregion
 

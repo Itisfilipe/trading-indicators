@@ -46,17 +46,15 @@ apart. The preview is advisory, not guaranteed.
   offsets in the indicator settings. Buy puts the stop below and targets above; sell
   mirrors. Places NO orders and touches no account or network — safe to run live while
   you tune the feel. Not yet compiled or run in NinjaTrader.
-  - **Fixed:** the preview now repaints on every mouse move while armed, so it tracks
-    the pointer in real time. It previously only repainted when the buy/sell side
-    changed, which read as lag.
-  - **Requested — preview must match NinjaTrader's native order markers.** Right now each
-    level is a plain solid line. It should look like a real resting order (see the Volaty
-    Clicker reference): a **dashed** horizontal line, a **left-edge label tag** reading
-    `{qty} {Buy|Sell} {LMT|STP}` (e.g. "1 Buy LMT"), and a **price tag on the right axis**.
-    Entry, stop, and each target drawn this way, so the preview is visually indistinguishable
-    from the order it would place. Needs SharpDX dashed StrokeStyle + cached TextFormat/
-    TextLayout labels + drawing into the axis strip; do the labels only after the line
-    styling is stable (per the render notes in `IMPLEMENTATION_PLAN.md`).
+  - **Fixed:** the preview repaints on every mouse move while armed, so it tracks the
+    pointer in real time (it previously only repainted when the buy/sell side changed).
+  - **Built — order-marker styling.** Each level now renders like a working order:
+    a dashed line (per-level `Stroke` settings for color/width/dash) with a left-edge
+    tag reading like the order itself — entry `1 Buy LMT 14924.25` (LMT vs STP inferred
+    from the pointer being below or above the last traded price), stop `1 Sell STP ...`,
+    targets `1 Sell LMT ... (T1)`. The quantity is read live from ChartTrader (falls
+    back to the last known value). Remaining polish: a price tag on the right axis like
+    the platform's own markers; the price currently lives in the left tag instead.
 - **Next:** M2 order submission (entry + stop + targets via `Account.CreateOrder` with a
   shared OCO id, quantity from ChartTrader), then M3 order-type inference, M6 OCO groups,
   M7 grid/DCA. See `IMPLEMENTATION_PLAN.md`.
