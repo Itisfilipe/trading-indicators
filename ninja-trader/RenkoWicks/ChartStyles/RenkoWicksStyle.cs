@@ -150,11 +150,11 @@ namespace NinjaTrader.NinjaScript.ChartStyles
 
                 // Defaults let the base class bind these to the render target. Without
                 // them, OnRender would have to build a Stroke per bar and read BrushDX
-                // off a stroke that was never bound to a target. Gray, not black: it
-                // stays visible on both light and dark chart backgrounds, and matches
-                // the fallback color the original per-bar Stroke construction used.
-                Stroke = new Gui.Stroke(System.Windows.Media.Brushes.Gray, 1);
-                Stroke2 = new Gui.Stroke(System.Windows.Media.Brushes.Gray, 1);
+                // off a stroke that was never bound to a target. Black suits the white
+                // chart background in use; both are user-configurable in the chart
+                // properties ("Candle Outline" / "Candle Wick") for dark themes.
+                Stroke = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
+                Stroke2 = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
             }
             else if (State == State.Configure)
             {
