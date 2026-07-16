@@ -37,6 +37,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Properties
 
         [NinjaScriptProperty]
+        [RefreshProperties(RefreshProperties.All)]
         [Display(Name = "Source Type", Order = 0, GroupName = "Source Series", Description = "Bar type the EMA is computed on.")]
         public EmaSourceBarsType SourceType { get; set; }
 

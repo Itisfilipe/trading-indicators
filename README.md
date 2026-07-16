@@ -182,6 +182,26 @@ ever drawing that series' bars.
 **How to use:** add to any chart, pick a source type and size different from
 the chart's own, set the EMA period.
 
+### RenkoSizeTable — Renko box sizes across timeframes at once
+
+Like ATRRenkoSizeCalculator, but a table with one row per timeframe instead
+of a single value for the chart you're on — no more switching charts to
+check what box size a 5-min ATR would suggest versus a 15-min one.
+
+**Features**
+
+- Four configurable timeframes (minutes, default 2/5/15/60), each computed
+  independently on its own secondary bar series — none of them get a panel
+  or draw bars on the chart, only the table shows.
+- Each row: timeframe, ATR (points), half ATR (points), half ATR (ticks) —
+  the number to feed a Renko brick size.
+- "Ignore gaps" (on by default) keeps session-open gaps out of the true
+  range, same as ATRRenkoSizeCalculator.
+- Settings: ATR length, decimal places.
+
+**How to use:** add to any chart, set the timeframe list, read "Ticks" off
+the row for the timeframe you're sizing a Renko chart for.
+
 ## Profit Chart (`profit-chart/`)
 
 NTSL indicators and candle-coloring rules for day trading on Nelogica's

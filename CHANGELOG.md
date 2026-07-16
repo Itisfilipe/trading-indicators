@@ -13,6 +13,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   grid swaps between a brick-size-in-ticks field (Renko) and a period field
   (everything else) based on the selection.
 
+### RenkoSizeTable (NinjaTrader, new)
+- Table of suggested Renko box sizes (half ATR, points and ticks) across
+  several minute timeframes at once, each computed on its own secondary bar
+  series so nothing but the table is drawn on the chart.
+- Four fixed timeframe slots (minutes, default 2/5/15/60); "Ignore gaps" and
+  ATR length configurable, same sizing method as ATRRenkoSizeCalculator.
+
 ### ChartTrading (NinjaTrader, new)
 - First public milestone of a click-to-trade tool: hold a modifier key
   (Shift = buy, Alt = sell) to preview the full order bracket — entry, stop,
