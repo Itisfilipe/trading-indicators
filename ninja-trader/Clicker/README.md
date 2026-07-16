@@ -49,6 +49,19 @@ apart. The preview is advisory, not guaranteed.
 - **Next:** M2 order submission (entry + stop + targets via `Account.CreateOrder` with a
   shared OCO id, quantity from ChartTrader), then M3 order-type inference, M6 OCO groups,
   M7 grid/DCA. See `IMPLEMENTATION_PLAN.md`.
+- **Requested, later — position management (owner, while testing M1):**
+  - **Auto-breakeven:** once price moves a configurable number of ticks in favor, move the
+    stop to the entry price (with an optional offset in ticks).
+  - **"Move orders to breakeven" button:** a manual action that moves the working stop(s)
+    to breakeven on click.
+
+  These are the ATM auto-management we gave up by choosing Option A, so the indicator has
+  to do them itself: track the live position/orders (Account order & position events) and
+  issue `Order`/`Account.Change` on the stop. The automation runs locally, so it only acts
+  while NinjaTrader is open — same limitation as an ATM. The `ABCompleteChartTrader`
+  reference already implements breakeven buttons (`btnAutoStopBreakeven`,
+  `btnAutoLimitBreakeven`, and the `BreakevenPosition*` states), so it is the worked
+  example to learn both the button and the stop-move mechanics from.
 
 ### Testing M1 in NinjaTrader
 Import `Clicker.cs` (NinjaScript Editor → compile, or bundle with `Info.xml`), add the
