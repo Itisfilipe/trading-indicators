@@ -20,3 +20,7 @@ venv/
 
 # Claude Code
 .claude/
+
+# Codex / agent session logs
+*_codex.log
+codex_out.log
