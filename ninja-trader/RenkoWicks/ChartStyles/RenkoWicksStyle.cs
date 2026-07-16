@@ -247,44 +247,37 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 RenderTarget.DrawRectangle(rect, outlineBrush, outlineStroke.Width, outlineStroke.StrokeStyle);
             }
 
-            // Draw the wicks
+            // Draw the wicks. The extends-beyond-the-body test lives here, next to the
+            // prices it compares: the old helper took (wickValue, bodyValue) and the
+            // lower-wick call passed them swapped, so its condition read "body bottom
+            // below the low" -- never true -- and down wicks were never drawn at all.
             Brush wickBrush = overriddenOutlineBrush ?? wickStroke?.BrushDX;
             if (wickBrush != null)
             {
                 wickBrush.Opacity = opacity;
 
-                // Upper wick
-                DrawWick(x, highY, Math.Min(openY, closeY), highValue, Math.Max(openValue, closeValue),
-                    wickBrush, wickStroke.Width, true);
+                double bodyTop = Math.Max(openValue, closeValue);
+                double bodyBottom = Math.Min(openValue, closeValue);
 
-                // Lower wick
-                DrawWick(x, Math.Max(openY, closeY), lowY, Math.Min(openValue, closeValue), lowValue,
-                    wickBrush, wickStroke.Width, false);
+                // Upper wick: from the high down to the top of the body
+                if (highValue > bodyTop)
+                    DrawWickLine(x, highY, Math.Min(openY, closeY), wickBrush, wickStroke.Width);
+
+                // Lower wick: from the bottom of the body down to the low
+                if (lowValue < bodyBottom)
+                    DrawWickLine(x, Math.Max(openY, closeY), lowY, wickBrush, wickStroke.Width);
             }
         }
 
         /// <summary>
-        /// Draws a wick line (upper or lower) if the wick extends beyond the bar body
+        /// Draws one vertical wick line; the caller decides whether the wick exists.
         /// </summary>
-        private void DrawWick(float x, float wickStartY, float wickEndY, double wickValue, double bodyValue,
-            Brush brush, float strokeWidth, bool isUpperWick)
+        private void DrawWickLine(float x, float startY, float endY, Brush brush, float strokeWidth)
         {
-            // Only draw wick if it extends beyond the body
-            bool shouldDrawWick = isUpperWick
-                ? wickValue > bodyValue
-                : wickValue < bodyValue;
+            if (float.IsNaN(startY) || float.IsNaN(endY))
+                return;
 
-            if (shouldDrawWick && brush != null)
-            {
-                // Ensure we have valid coordinates
-                if (float.IsNaN(wickStartY) || float.IsNaN(wickEndY))
-                    return;
-
-                Vector2 startPoint = new Vector2(x, wickStartY);
-                Vector2 endPoint = new Vector2(x, wickEndY);
-
-                RenderTarget.DrawLine(startPoint, endPoint, brush, strokeWidth);
-            }
+            RenderTarget.DrawLine(new Vector2(x, startY), new Vector2(x, endY), brush, strokeWidth);
         }
 
         #endregion
