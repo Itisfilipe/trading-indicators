@@ -27,3 +27,10 @@ codex_out.log
 
 # NinjaTrader export bundles — keep the source, not the packaged zip
 *.zip
+
+# NinjaTrader documentation mirror -- NinjaTrader's copyrighted content, not ours
+# to republish. Build your own local mirror with ninja-trader/scrape_ninjatrader_docs.py
+# and index it with ninja-trader/build_llms_index.py.
+ninja-trader/docs/
+ninja-trader/llms.txt
+ninja-trader/llms-full.txt
