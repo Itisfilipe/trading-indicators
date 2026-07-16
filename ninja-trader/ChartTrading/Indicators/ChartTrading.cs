@@ -107,9 +107,10 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         [Range(1, 3)]
         [Display(Name = "Brackets", Order = 1, GroupName = "Bracket",
-                 Description = "How many stop/target pairs a click places. The order quantity splits " +
-                               "evenly across the pairs (remainder to the first), and each pair carries " +
-                               "its own stop and its own target.")]
+                 Description = "How many stop/target pairs a click places. The ChartTrader quantity is " +
+                               "the size of EACH pair, so the entry trades quantity x pairs -- three " +
+                               "1-lot targets need a 3-lot entry -- and each pair carries its own stop " +
+                               "and its own target.")]
         public int BracketCount { get; set; }
 
         [Range(1, int.MaxValue)]
@@ -510,31 +511,30 @@ namespace NinjaTrader.NinjaScript.Indicators
             SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
             try
             {
-                DrawOrderMarker(chartScale, entryPrice, EntryStroke,
-                    $"{previewQuantity} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
-
-                // Each bracket pair carries its own stop and its own target, and the
-                // quantity splits evenly across pairs with the remainder on the first.
-                // Pairs that land on the same price merge into one marker with the
-                // combined quantity, the way the orders would sit in the book.
+                // The ChartTrader quantity sizes each bracket pair, so the entry
+                // trades quantity times pairs and every stop and target carries its
+                // pair's full size: three 1-lot targets need a 3-lot entry, and the
+                // stops must cover those same 3 lots. Levels sharing a price merge
+                // into one marker with the summed quantity, the way the orders would
+                // sit in the book.
                 int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
                 int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
                 int pairs = Math.Min(Math.Max(BracketCount, 1), 3);
+
+                DrawOrderMarker(chartScale, entryPrice, EntryStroke,
+                    $"{previewQuantity * pairs} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
+
                 var stopLevels = new Dictionary<double, LevelInfo>();
                 var targetLevels = new Dictionary<double, LevelInfo>();
 
                 for (int i = 0; i < pairs; i++)
                 {
-                    int pairQuantity = previewQuantity / pairs + (i < previewQuantity % pairs ? 1 : 0);
-                    if (pairQuantity <= 0)
-                        continue;
-
                     AccumulateLevel(stopLevels,
                         master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * tick),
-                        pairQuantity, -stopTicks[i]);
+                        previewQuantity, -stopTicks[i]);
                     AccumulateLevel(targetLevels,
                         master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick),
-                        pairQuantity, targetTicks[i]);
+                        previewQuantity, targetTicks[i]);
                 }
 
                 foreach (KeyValuePair<double, LevelInfo> level in stopLevels)

@@ -72,11 +72,12 @@ apart. The preview is advisory, not guaranteed.
     tools and clears any armed preview instantly. Note ChartTrader is one panel per chart
     window, so multiple tabs each carrying the indicator each add their own button row.
   - **Built — configurable bracket pairs.** "Brackets" (1-3) sets how many stop/target
-    pairs a click places; each pair carries its own stop and its own target, and the
-    order quantity splits evenly across pairs (remainder to the first). Pairs landing on
-    the same price merge into one marker with the combined quantity. Defaults: tags
-    centered, 2 pairs in 50-tick steps (50/50 and 50/100), third pair pre-filled 50/150.
-    Money values in the tags are per level, using that level's aggregated quantity.
+    pairs a click places; each pair carries its own stop and its own target. The
+    ChartTrader quantity sizes EACH pair, so the entry trades quantity x pairs (three
+    1-lot targets = a 3-lot entry, stops covering the same 3 lots). Pairs landing on the
+    same price merge into one marker with the summed quantity. Defaults: tags centered,
+    2 pairs in 50-tick steps (50/50 and 50/100), third pair pre-filled 50/150. Money
+    values in the tags are per level, using that level's aggregated quantity.
   - **Perf:** modifier keys now hook the chart window (panel hooks needed keyboard focus,
     so hold/release only registered on the next mouse move), and repaints call
     `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next

@@ -22,8 +22,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   chart when ChartTrader is hidden) disables the modifier-key gestures without
   removing the indicator, freeing the keys for other tools.
 - Configurable bracket pairs: one to three stop/target pairs per click, each
-  pair with its own stop and target, quantity split evenly across pairs.
-  Defaults now center the tags and use 50-tick steps.
+  pair with its own stop and target. The ChartTrader quantity sizes each pair,
+  so the entry trades quantity x pairs and the stops always cover the full
+  position. Defaults now center the tags and use 50-tick steps.
 
 ### RenkoWicks (NinjaTrader)
 - **Fixed: lower wicks were never drawn.** A rendering bug present since the
