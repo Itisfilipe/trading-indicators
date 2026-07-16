@@ -55,6 +55,15 @@ apart. The preview is advisory, not guaranteed.
     targets `1 Sell LMT ... (T1)`. The quantity is read live from ChartTrader (falls
     back to the last known value). Remaining polish: a price tag on the right axis like
     the platform's own markers; the price currently lives in the left tag instead.
+  - **Owner feedback after testing:** better, but still far from NinjaTrader's native
+    order-marker look. Next visual pass should replicate the platform's marker geometry
+    properly — the pointed/chevron tag shape, the right-axis price marker, and the exact
+    typography and coloring NinjaTrader uses for working orders — rather than the current
+    plain filled rectangle.
+  - **Perf:** modifier keys now hook the chart window (panel hooks needed keyboard focus,
+    so hold/release only registered on the next mouse move), and repaints call
+    `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next
+    scheduled render pass and read as lag on a quiet chart.
 - **Next:** M2 order submission (entry + stop + targets via `Account.CreateOrder` with a
   shared OCO id, quantity from ChartTrader), then M3 order-type inference, M6 OCO groups,
   M7 grid/DCA. See `IMPLEMENTATION_PLAN.md`.

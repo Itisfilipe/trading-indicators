@@ -55,6 +55,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         private bool pointerOverPanel;
 
         private ChartPanel hookedPanel;
+        private Window chartWindow;
         private bool handlersAttached;
 
         // Quantity shown in the tags, read from ChartTrader on mouse events (UI thread).
@@ -169,8 +170,18 @@ namespace NinjaTrader.NinjaScript.Indicators
                 hookedPanel = ChartPanel;
                 hookedPanel.MouseMove += OnMouseMove;
                 hookedPanel.MouseLeave += OnMouseLeave;
-                hookedPanel.PreviewKeyDown += OnKeyChanged;
-                hookedPanel.PreviewKeyUp += OnKeyChanged;
+
+                // Modifier keys register at the window, not the panel: panel key events
+                // only arrive while the panel has keyboard focus, which made hold and
+                // release take effect only on the next mouse move.
+                chartWindow = Window.GetWindow(ChartControl);
+                if (chartWindow != null)
+                {
+                    chartWindow.PreviewKeyDown += OnKeyChanged;
+                    chartWindow.PreviewKeyUp += OnKeyChanged;
+                    chartWindow.Deactivated += OnWindowDeactivated;
+                }
+
                 handlersAttached = true;
             }
             catch (Exception ex)
@@ -182,20 +193,28 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         private void DetachHandlers()
         {
-            if (hookedPanel != null)
+            if (hookedPanel != null || chartWindow != null)
             {
                 try
                 {
-                    hookedPanel.MouseMove -= OnMouseMove;
-                    hookedPanel.MouseLeave -= OnMouseLeave;
-                    hookedPanel.PreviewKeyDown -= OnKeyChanged;
-                    hookedPanel.PreviewKeyUp -= OnKeyChanged;
+                    if (hookedPanel != null)
+                    {
+                        hookedPanel.MouseMove -= OnMouseMove;
+                        hookedPanel.MouseLeave -= OnMouseLeave;
+                    }
+                    if (chartWindow != null)
+                    {
+                        chartWindow.PreviewKeyDown -= OnKeyChanged;
+                        chartWindow.PreviewKeyUp -= OnKeyChanged;
+                        chartWindow.Deactivated -= OnWindowDeactivated;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Log("ChartTrading: failed to detach handlers - " + ex, NinjaTrader.Cbi.LogLevel.Error);
                 }
                 hookedPanel = null;
+                chartWindow = null;
             }
 
             previewSide = Side.None;
@@ -246,15 +265,12 @@ namespace NinjaTrader.NinjaScript.Indicators
                 pointerDeviceY >= ChartPanel.Y && pointerDeviceY <= ChartPanel.Y + ChartPanel.H;
 
             // The tags show the quantity ChartTrader would trade. Mouse events run on
-            // the chart UI thread, so reading the control here is thread-consistent;
-            // fall back to the last known value if ChartTrader is unavailable.
-            try
-            {
-                int quantity = ChartControl.OwnerChart.ChartTrader.Quantity;
-                if (quantity > 0)
-                    previewQuantity = quantity;
-            }
-            catch (Exception) { }
+            // the chart UI thread, so reading the control here is thread-consistent.
+            // Null-guarded rather than try/caught: a hidden ChartTrader would otherwise
+            // throw and swallow an exception on every single mouse move.
+            var chartTrader = ChartControl.OwnerChart?.ChartTrader;
+            if (chartTrader != null && chartTrader.Quantity > 0)
+                previewQuantity = chartTrader.Quantity;
 
             UpdatePreview(ResolveSide());
         }
@@ -265,12 +281,18 @@ namespace NinjaTrader.NinjaScript.Indicators
             UpdatePreview(Side.None);
         }
 
-        // Catches holding or releasing the modifier without moving the mouse. Best-effort:
-        // key events only arrive when the panel has focus, and the mouse handler is the
-        // reliable driver.
+        // Catches holding or releasing the modifier without moving the mouse. Hooked at
+        // the chart window, so it fires regardless of which control has keyboard focus.
         private void OnKeyChanged(object sender, KeyEventArgs e)
         {
             UpdatePreview(pointerOverPanel ? ResolveSide() : Side.None);
+        }
+
+        // A drag or alt-tab away from the window never delivers the key-up; treat
+        // deactivation as release.
+        private void OnWindowDeactivated(object sender, EventArgs e)
+        {
+            UpdatePreview(Side.None);
         }
 
         private void UpdatePreview(Side side)
@@ -278,12 +300,15 @@ namespace NinjaTrader.NinjaScript.Indicators
             bool sideChanged = side != previewSide;
             previewSide = side;
 
-            // Repaint on every pointer move while a side is armed, so the bracket tracks
-            // the mouse in real time -- not only when the side changes. Also repaint on
-            // the transition to None so the preview clears. OnRender itself is cheap
-            // (a few lines from cached state), so per-move refreshes are fine.
+            // Repaint on every pointer move while a side is armed and once on the
+            // transition to None so the preview clears. ForceRefresh alone only marks
+            // the chart dirty for NinjaTrader's next render pass, which on a quiet
+            // chart arrives noticeably late; InvalidateVisual forces the pass now.
             if (side != Side.None || sideChanged)
+            {
                 ForceRefresh();
+                ChartControl?.InvalidateVisual();
+            }
         }
         #endregion
 
