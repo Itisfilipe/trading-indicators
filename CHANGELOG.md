@@ -29,6 +29,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   opacity" setting) and no longer repaint colors carried by bar-override
   brushes from other scripts.
 
+### ErgonomicCharts (NinjaTrader)
+- Zoom and pan gestures now stop at the chart panel's edges (DPI-correct hit
+  test), so they no longer trigger over the price/time axis strips; on
+  multi-panel charts they scope to the panel the indicator is loaded on.
+- Hardened the drag-to-pan key release against event suppression, closing one
+  more way the synthetic Ctrl could have been left held.
+
 ### Repository
 - Open-sourced properly: MIT license, English root README, per-platform
   documentation, and this changelog.

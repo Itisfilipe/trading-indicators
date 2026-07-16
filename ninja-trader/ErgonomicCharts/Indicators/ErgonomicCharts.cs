@@ -221,16 +221,25 @@ namespace NinjaTrader.NinjaScript.Indicators
             try
             {
                 owner.PreviewMouseLeftButtonDown += OnMouseDown;
-                owner.PreviewMouseLeftButtonUp += OnMouseUp;
                 owner.MouseLeave += OnMouseLeave;
                 owner.LostMouseCapture += OnLostMouseCapture;
                 owner.PreviewMouseWheel += OnMouseWheel;
 
-                // A drag interrupted by alt-tab never delivers its mouse-up, so the
-                // window losing focus has to count as the end of the gesture.
                 chartWindow = Window.GetWindow(owner);
                 if (chartWindow != null)
+                {
+                    // The release must be unsuppressable: it registers at the window
+                    // with handledEventsToo, so a handler that marks the preview
+                    // mouse-up handled before it tunnels down to the chart cannot
+                    // leave the synthetic Ctrl stranded. Any button's release counts;
+                    // releasing an unheld lease is a no-op.
+                    chartWindow.AddHandler(UIElement.PreviewMouseUpEvent,
+                        new MouseButtonEventHandler(OnMouseUp), true);
+
+                    // A drag interrupted by alt-tab never delivers its mouse-up, so the
+                    // window losing focus has to count as the end of the gesture.
                     chartWindow.Deactivated += OnWindowDeactivated;
+                }
 
                 chartControl = owner;
                 eventHandlersAttached = true;
@@ -239,7 +248,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             {
                 // Roll back rather than leave a half-wired chart behind.
                 DetachEventHandlers(owner);
-                Log("ErgonomicCharts: failed to attach handlers - " + ex, LogLevel.Error);
+                Log("ErgonomicCharts: failed to attach handlers - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
 
@@ -251,17 +260,20 @@ namespace NinjaTrader.NinjaScript.Indicators
             try
             {
                 owner.PreviewMouseLeftButtonDown -= OnMouseDown;
-                owner.PreviewMouseLeftButtonUp -= OnMouseUp;
                 owner.MouseLeave -= OnMouseLeave;
                 owner.LostMouseCapture -= OnLostMouseCapture;
                 owner.PreviewMouseWheel -= OnMouseWheel;
 
                 if (chartWindow != null)
+                {
+                    chartWindow.RemoveHandler(UIElement.PreviewMouseUpEvent,
+                        new MouseButtonEventHandler(OnMouseUp));
                     chartWindow.Deactivated -= OnWindowDeactivated;
+                }
             }
             catch (Exception ex)
             {
-                Log("ErgonomicCharts: failed to detach handlers - " + ex, LogLevel.Error);
+                Log("ErgonomicCharts: failed to detach handlers - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
 
             eventHandlersAttached = false;
@@ -334,32 +346,33 @@ namespace NinjaTrader.NinjaScript.Indicators
             }
             catch (Exception ex)
             {
-                Log("ErgonomicCharts: zoom error - " + ex, LogLevel.Error);
+                Log("ErgonomicCharts: zoom error - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
         #endregion
 
         /// <summary>
-        /// Whether the pointer is over the chart itself.
+        /// Whether the pointer is over this indicator's chart panel.
         /// </summary>
         /// <remarks>
-        /// Everything here stays in the chart control's own WPF units. ChartPanel's
-        /// geometry and ChartControl's canvas bounds are both in device pixels, and
-        /// mouse positions are not, so comparing across the two silently misjudges the
-        /// edges at any display scaling other than 100%.
-        ///
-        /// The trade-off is that this does not carve the axes out of the gesture the way
-        /// the previous fixed 50/30 unit margins tried to: those numbers were guesses
-        /// that already broke on a left-hand scale or a multi-panel layout.
+        /// The WPF mouse position converts to device pixels before comparing against
+        /// ChartPanel's device-pixel bounds, so the edges hold at any display scaling.
+        /// Testing the panel rather than the whole control keeps the gestures off the
+        /// price and time axis strips, whose drag and wheel behavior belongs to the
+        /// platform. On a multi-panel chart this scopes the gestures to the panel the
+        /// indicator is loaded on.
         /// </remarks>
         private bool IsInsideOwningPanel(MouseEventArgs e)
         {
-            if (chartControl == null)
+            if (chartControl == null || ChartPanel == null)
                 return false;
 
             Point pos = e.GetPosition(chartControl);
-            return pos.X >= 0 && pos.Y >= 0
-                && pos.X <= chartControl.ActualWidth && pos.Y <= chartControl.ActualHeight;
+            int x = ChartingExtensions.ConvertToHorizontalPixels(pos.X, chartControl.PresentationSource);
+            int y = ChartingExtensions.ConvertToVerticalPixels(pos.Y, chartControl.PresentationSource);
+
+            return x >= ChartPanel.X && x <= ChartPanel.X + ChartPanel.W
+                && y >= ChartPanel.Y && y <= ChartPanel.Y + ChartPanel.H;
         }
 
         protected override void OnBarUpdate()
