@@ -75,9 +75,14 @@ the click trading in Nelogica's Profit Chart and tools like Volaty's Clicker.
 - The preview is exact: the bracket comes from the indicator's settings, so
   what you see is what gets submitted, to the tick.
 - **Bracket pairs** — up to three stop/target pairs, each with its own
-  checkbox and tick distances. The ChartTrader quantity sizes *each* enabled
-  pair: three enabled pairs at quantity 1 place a 3-lot entry with three
-  1-lot exits on each side.
+  checkbox, tick distances, and percentage share. The entry always trades
+  the ChartTrader quantity outright (never multiplied by pair count); each
+  enabled pair's stop/target gets its share of that quantity, split as
+  evenly as whole lots allow (e.g. 4 lots at 25/25/50% → 1/1/2). Percentages
+  are meant to total 100 but are renormalized across whichever pairs are
+  enabled, so a disabled pair's share always lands on the others rather than
+  going unprotected. A pair whose share rounds down to zero lots is skipped
+  entirely for that order.
 - **Entry types** — Limit or MIT on the favorable side of the market,
   Stop-Market or Stop-Limit (with a tick offset) beyond it.
 - **Time in force** — Day (default) or GTC, applied to the entry and every

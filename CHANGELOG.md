@@ -5,6 +5,17 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-16
 
+### ChartTrading (NinjaTrader, changed)
+- Bracket pair sizing no longer multiplies the entry by the number of
+  enabled pairs. The entry now always trades the ChartTrader quantity
+  outright; each pair takes a configurable percentage share of it (new
+  "Percent 1/2/3" settings, default 25/25/50), split into whole lots as
+  evenly as the math allows (e.g. 3 lots at 25/25/50% → 1/1/1). Percentages
+  are renormalized across whichever pairs are currently enabled, so a
+  disabled pair's share always lands on the others instead of leaving part
+  of the position unprotected; a pair whose share rounds down to zero lots
+  is skipped for that order.
+
 ### MultiSeriesEMA (NinjaTrader, new)
 - Overlays an EMA computed on a bar series independent of the chart it's on
   (different Renko brick size, higher timeframe, tick/range bars) without

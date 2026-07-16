@@ -161,18 +161,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public OrderAction ExitAction;
             public double[] StopPrices;
             public double[] TargetPrices;
-            public int PairQuantity;
+            public int[] PairQuantities;
 
             // The entry quantity the exits currently cover, and the live exit orders
             // per pair (null until that pair first gets quantity). Fills are assigned
-            // to pairs sequentially: pair 1 up to its full size, then pair 2, and on.
+            // to pairs sequentially: pair 1 up to its own (possibly unequal) size,
+            // then pair 2, and on -- PairQuantities[i] came from percentage
+            // apportionment, so pairs are not all the same size.
             public int CoveredQuantity;
             public Order[] StopOrders;
             public Order[] TargetOrders;
 
             public int PairDesiredQuantity(int pairIndex, int filled)
             {
-                return Math.Max(0, Math.Min(PairQuantity, filled - pairIndex * PairQuantity));
+                int priorPairsQuantity = 0;
+                for (int i = 0; i < pairIndex; i++)
+                    priorPairsQuantity += PairQuantities[i];
+                return Math.Max(0, Math.Min(PairQuantities[pairIndex], filled - priorPairsQuantity));
             }
         }
         #endregion
@@ -186,10 +191,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Hold this key and move over the chart to preview a sell bracket.")]
         public ChartTradingModifier SellModifier { get; set; }
 
-        // Each pair is enabled by its own checkbox. The ChartTrader quantity is the
-        // size of EACH enabled pair, so the entry trades quantity x enabled pairs --
-        // three 1-lot targets need a 3-lot entry. With every pair disabled, a click
-        // means a plain entry of the ChartTrader quantity with no bracket.
+        // Each pair is enabled by its own checkbox and carries a percentage share of
+        // the ChartTrader quantity -- the entry always trades exactly that quantity,
+        // never multiplied by pair count. Percentages are meant to total 100 across
+        // the three pairs, but are renormalized across whichever pairs are enabled
+        // (see ApportionQuantity), so the full entry quantity always ends up with a
+        // stop/target somewhere and a disabled pair's share never goes uncovered.
+        // With every pair disabled, a click means a plain entry with no bracket.
         [Display(Name = "Bracket 1", Order = 1, GroupName = "Bracket")]
         public bool Bracket1Enabled { get; set; }
 
@@ -201,27 +209,48 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Target 1 (ticks)", Order = 3, GroupName = "Bracket")]
         public int Target1Ticks { get; set; }
 
-        [Display(Name = "Bracket 2", Order = 4, GroupName = "Bracket")]
+        [Range(0, 100)]
+        [Display(Name = "Percent 1", Order = 4, GroupName = "Bracket",
+                 Description = "Share of the ChartTrader quantity this pair takes. The three " +
+                               "percentages should total 100; they are renormalized across " +
+                               "enabled pairs either way.")]
+        public int Percent1 { get; set; }
+
+        [Display(Name = "Bracket 2", Order = 5, GroupName = "Bracket")]
         public bool Bracket2Enabled { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 2 (ticks)", Order = 5, GroupName = "Bracket")]
+        [Display(Name = "Stop 2 (ticks)", Order = 6, GroupName = "Bracket")]
         public int Stop2Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 2 (ticks)", Order = 6, GroupName = "Bracket")]
+        [Display(Name = "Target 2 (ticks)", Order = 7, GroupName = "Bracket")]
         public int Target2Ticks { get; set; }
 
-        [Display(Name = "Bracket 3", Order = 7, GroupName = "Bracket")]
+        [Range(0, 100)]
+        [Display(Name = "Percent 2", Order = 8, GroupName = "Bracket",
+                 Description = "Share of the ChartTrader quantity this pair takes. The three " +
+                               "percentages should total 100; they are renormalized across " +
+                               "enabled pairs either way.")]
+        public int Percent2 { get; set; }
+
+        [Display(Name = "Bracket 3", Order = 9, GroupName = "Bracket")]
         public bool Bracket3Enabled { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 3 (ticks)", Order = 8, GroupName = "Bracket")]
+        [Display(Name = "Stop 3 (ticks)", Order = 10, GroupName = "Bracket")]
         public int Stop3Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 3 (ticks)", Order = 9, GroupName = "Bracket")]
+        [Display(Name = "Target 3 (ticks)", Order = 11, GroupName = "Bracket")]
         public int Target3Ticks { get; set; }
+
+        [Range(0, 100)]
+        [Display(Name = "Percent 3", Order = 12, GroupName = "Bracket",
+                 Description = "Share of the ChartTrader quantity this pair takes. The three " +
+                               "percentages should total 100; they are renormalized across " +
+                               "enabled pairs either way.")]
+        public int Percent3 { get; set; }
 
         [Display(Name = "Tag position", Order = 1, GroupName = "Appearance",
                  Description = "Where the order tags sit: left, center, or right of the chart.")]
@@ -326,10 +355,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Bracket3Enabled = false;
                 Stop1Ticks = 50;
                 Target1Ticks = 50;
+                Percent1 = 25;
                 Stop2Ticks = 50;
                 Target2Ticks = 100;
+                Percent2 = 25;
                 Stop3Ticks = 50;
                 Target3Ticks = 150;
+                Percent3 = 50;
 
                 AllowLiveAccounts = false;
                 LimitSideType = ChartTradingLimitSideType.Limit;
@@ -697,15 +729,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
             int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
             int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
-            List<double> stops = BuildStopPrices(master, entryPrice, profitSign, pairEnabled, stopTicks);
+            int[] percents = { Percent1, Percent2, Percent3 };
+
+            bool[] effectiveEnabled;
+            List<int> pairQuantities;
+            SplitByShare(quantity, pairEnabled, percents, out effectiveEnabled, out pairQuantities);
+
+            // A zero-share pair must not reach BuildStopPrices at all: SeparateStackedStops
+            // nudges colliding stop prices apart, and a pair that will never place an order
+            // must not reserve a price slot that pushes a real pair's stop away from its
+            // configured distance.
+            List<double> stops = BuildStopPrices(master, entryPrice, profitSign, effectiveEnabled, stopTicks);
             var targets = new List<double>();
-            for (int i = 0; i < pairEnabled.Length; i++)
+            for (int i = 0; i < effectiveEnabled.Length; i++)
             {
-                if (!pairEnabled[i])
+                if (!effectiveEnabled[i])
                     continue;
                 targets.Add(master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick));
             }
-            int entryQuantity = stops.Count > 0 ? quantity * stops.Count : quantity;
+
+            bool anyPairEnabled = false;
+            foreach (bool enabled in pairEnabled)
+                if (enabled) { anyPairEnabled = true; break; }
+            if (anyPairEnabled && stops.Count == 0)
+            {
+                Log("ChartTrading: enabled pairs round to 0 lots each (percentages too low or all 0%); entry would be unprotected, order not placed.",
+                    NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
+            int entryQuantity = quantity;
 
             var commit = new BracketCommit
             {
@@ -713,7 +765,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ExitAction = isBuy ? OrderAction.Sell : OrderAction.BuyToCover,
                 StopPrices = stops.ToArray(),
                 TargetPrices = targets.ToArray(),
-                PairQuantity = quantity,
+                PairQuantities = pairQuantities.ToArray(),
             };
             OrderAction entryAction = isBuy ? OrderAction.Buy : OrderAction.SellShort;
 
@@ -1001,6 +1053,93 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 prices.Add(price);
             }
             return prices;
+        }
+
+        /// <summary>
+        /// Splits totalQuantity across enabled pairs by their configured percentage, in
+        /// pair order (matching BuildStopPrices' compaction, so the result lines up
+        /// with StopPrices/TargetPrices index for index). Percentages are renormalized
+        /// across whichever pairs are enabled -- they need not sum to 100 -- so the full
+        /// quantity is always accounted for as long as at least one enabled pair has a
+        /// positive share.
+        ///
+        /// Uses largest-remainder apportionment: each pair's ideal (fractional) share is
+        /// floored, then the leftover lots from rounding go one at a time to the pairs
+        /// with the largest fractional remainder, so no lot is lost to rounding and every
+        /// pair gets as close to its configured share as an integer allows. Ties in the
+        /// remainder are broken by pair order so the result is deterministic.
+        /// </summary>
+        private static int[] ApportionQuantity(int totalQuantity, bool[] pairEnabled, int[] percents)
+        {
+            var enabledPercents = new List<int>();
+            for (int i = 0; i < pairEnabled.Length; i++)
+                if (pairEnabled[i])
+                    enabledPercents.Add(percents[i]);
+
+            int pairCount = enabledPercents.Count;
+            var quantities = new int[pairCount];
+            if (totalQuantity <= 0 || pairCount == 0)
+                return quantities;
+
+            double percentSum = 0;
+            foreach (int percent in enabledPercents)
+                percentSum += percent;
+            if (percentSum <= 0)
+                return quantities;
+
+            var idealShares = new double[pairCount];
+            var flooredShares = new int[pairCount];
+            int flooredTotal = 0;
+            for (int i = 0; i < pairCount; i++)
+            {
+                idealShares[i] = totalQuantity * (enabledPercents[i] / percentSum);
+                flooredShares[i] = (int)Math.Floor(idealShares[i]);
+                flooredTotal += flooredShares[i];
+                quantities[i] = flooredShares[i];
+            }
+
+            var byRemainderDesc = new List<int>();
+            for (int i = 0; i < pairCount; i++)
+                byRemainderDesc.Add(i);
+            byRemainderDesc.Sort((a, b) =>
+            {
+                double remainderA = idealShares[a] - flooredShares[a];
+                double remainderB = idealShares[b] - flooredShares[b];
+                int cmp = remainderB.CompareTo(remainderA);
+                return cmp != 0 ? cmp : a.CompareTo(b);
+            });
+
+            int leftoverLots = totalQuantity - flooredTotal;
+            for (int i = 0; i < leftoverLots && i < pairCount; i++)
+                quantities[byRemainderDesc[i]] += 1;
+
+            return quantities;
+        }
+
+        /// <summary>
+        /// Apportions totalQuantity via ApportionQuantity, then drops pairs whose share
+        /// rounded down to zero lots from "enabled" entirely. Shared by the click handler
+        /// and the preview so a pair that will never place an order never reaches
+        /// BuildStopPrices, in either path -- otherwise it would still reserve a stop-price
+        /// slot for SeparateStackedStops' collision separation despite placing nothing.
+        /// </summary>
+        private static void SplitByShare(int totalQuantity, bool[] pairEnabled, int[] percents,
+            out bool[] effectiveEnabled, out List<int> pairQuantities)
+        {
+            int[] rawPairQuantities = ApportionQuantity(totalQuantity, pairEnabled, percents);
+            effectiveEnabled = new bool[pairEnabled.Length];
+            pairQuantities = new List<int>();
+            int compactedIndex = 0;
+            for (int i = 0; i < pairEnabled.Length; i++)
+            {
+                if (!pairEnabled[i])
+                    continue;
+                int pairQuantity = rawPairQuantities[compactedIndex++];
+                if (pairQuantity <= 0)
+                    continue;
+                effectiveEnabled[i] = true;
+                pairQuantities.Add(pairQuantity);
+            }
         }
 
         /// <summary>
@@ -1320,21 +1459,31 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
             try
             {
-                // The ChartTrader quantity sizes each enabled bracket pair, so the
-                // entry trades quantity times enabled pairs and every stop and target
-                // carries its pair's full size: three 1-lot targets need a 3-lot
-                // entry, and the stops must cover those same 3 lots. Levels sharing a
-                // price merge into one marker with the summed quantity, the way the
-                // orders would sit in the book. With no pair enabled, the click means
-                // a plain entry of the ChartTrader quantity.
+                // The entry always trades the ChartTrader quantity outright, never
+                // multiplied by pair count; each enabled pair's stop/target instead
+                // carries its renormalized percentage share (see ApportionQuantity).
+                // Levels sharing a price merge into one marker with the summed
+                // quantity, the way the orders would sit in the book. With no pair
+                // enabled, the click means a plain entry of the ChartTrader quantity.
                 bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
                 int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
                 int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
-                int pairs = 0;
+                int[] percents = { Percent1, Percent2, Percent3 };
+
+                bool[] effectiveEnabled;
+                List<int> pairQuantities;
+                SplitByShare(previewQuantity, pairEnabled, percents, out effectiveEnabled, out pairQuantities);
+
+                bool anyPairEnabled = false;
                 foreach (bool enabled in pairEnabled)
-                    if (enabled)
-                        pairs++;
-                int entryQuantity = pairs > 0 ? previewQuantity * pairs : previewQuantity;
+                    if (enabled) { anyPairEnabled = true; break; }
+                if (anyPairEnabled && pairQuantities.Count == 0)
+                    // Every enabled pair rounds down to 0 lots -- a click would be
+                    // rejected outright (see OnPanelClick), so preview nothing rather
+                    // than show an order that can't actually be submitted.
+                    return;
+
+                int entryQuantity = previewQuantity;
 
                 DrawOrderMarker(chartScale, entryPrice, EntryStroke,
                     $"{entryQuantity} {enter} {entryType}", master.FormatPrice(entryPrice), textFormat);
@@ -1342,21 +1491,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 var stopLevels = new Dictionary<double, LevelInfo>();
                 var targetLevels = new Dictionary<double, LevelInfo>();
 
-                List<double> nudgedStops = BuildStopPrices(master, entryPrice, profitSign, pairEnabled, stopTicks);
+                List<double> nudgedStops = BuildStopPrices(master, entryPrice, profitSign, effectiveEnabled, stopTicks);
                 int stopIndex = 0;
-                for (int i = 0; i < pairEnabled.Length; i++)
+                for (int i = 0; i < effectiveEnabled.Length; i++)
                 {
-                    if (!pairEnabled[i])
+                    if (!effectiveEnabled[i])
                         continue;
 
                     // The tag shows the stop's true distance, which with separation on
                     // can be a tick beyond the configured one.
-                    double stopPrice = nudgedStops[stopIndex++];
+                    double stopPrice = nudgedStops[stopIndex];
+                    int pairQuantity = pairQuantities[stopIndex];
+                    stopIndex++;
+
                     int stopDistance = (int)Math.Round((entryPrice - stopPrice) * profitSign / tick);
-                    AccumulateLevel(stopLevels, stopPrice, previewQuantity, -stopDistance);
+                    AccumulateLevel(stopLevels, stopPrice, pairQuantity, -stopDistance);
                     AccumulateLevel(targetLevels,
                         master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick),
-                        previewQuantity, targetTicks[i]);
+                        pairQuantity, targetTicks[i]);
                 }
 
                 foreach (KeyValuePair<double, LevelInfo> level in stopLevels)
