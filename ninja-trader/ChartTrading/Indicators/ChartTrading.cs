@@ -57,6 +57,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     }
 
     /// <summary>
+    /// Entry type used when the click is on the favorable side of the market.
+    /// </summary>
+    public enum ChartTradingLimitSideType
+    {
+        Limit,
+        MIT,
+    }
+
+    /// <summary>
+    /// Entry type used when the click is beyond the market.
+    /// </summary>
+    public enum ChartTradingStopSideType
+    {
+        StopMarket,
+        StopLimit,
+    }
+
+    /// <summary>
     /// What the right-side tag shows for the stop and target levels.
     /// </summary>
     public enum ChartTradingValueDisplay
@@ -89,6 +107,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // removing the indicator. Mounted in the ChartTrader sidebar when present,
         // floating on the chart otherwise.
         private System.Windows.Controls.Button toggleButton;
+        private System.Windows.Controls.Button breakevenButton;
+        private System.Windows.Controls.Grid buttonPanel;
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition toggleButtonRow;
         private bool buttonInChartTrader;
@@ -112,11 +132,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private class BracketCommit
         {
             public Order Entry;
+            public Account Account;
             public bool ExitsSubmitted;
+            public double EntryFillPrice;
             public OrderAction ExitAction;
             public double[] StopPrices;
             public double[] TargetPrices;
             public int PairQuantity;
+            public List<Order> StopOrders;
         }
         #endregion
 
@@ -186,6 +209,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "Turn on deliberately to trade a live account.")]
         public bool AllowLiveAccounts { get; set; }
 
+        [Display(Name = "Limit-side entry", Order = 2, GroupName = "Trading",
+                 Description = "Order type when the click is on the favorable side of the market: " +
+                               "plain limit, or market-if-touched.")]
+        public ChartTradingLimitSideType LimitSideType { get; set; }
+
+        [Display(Name = "Stop-side entry", Order = 3, GroupName = "Trading",
+                 Description = "Order type when the click is beyond the market: stop-market, or " +
+                               "stop-limit with the offset below.")]
+        public ChartTradingStopSideType StopSideType { get; set; }
+
+        [Range(0, 1000)]
+        [Display(Name = "Stop-limit offset (ticks)", Order = 4, GroupName = "Trading",
+                 Description = "How far beyond the stop trigger the stop-limit's limit price sits, " +
+                               "in the direction of the entry.")]
+        public int StopLimitOffsetTicks { get; set; }
+
         // Strokes rather than plain brushes so each level carries its own color, width,
         // and dash style, and binds to the render target the way the platform's own
         // price-line indicator does. NinjaTrader persists Stroke properties natively.
@@ -227,6 +266,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Target3Ticks = 150;
 
                 AllowLiveAccounts = false;
+                LimitSideType = ChartTradingLimitSideType.Limit;
+                StopSideType = ChartTradingStopSideType.StopMarket;
+                StopLimitOffsetTicks = 2;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
                 ValueDisplay = ChartTradingValueDisplay.Price;
@@ -303,6 +345,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 toggleButton = new System.Windows.Controls.Button
                 {
                     Padding = new Thickness(8, 3, 8, 3),
+                    Margin = new Thickness(0, 0, 2, 0),
                     Cursor = Cursors.Hand,
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(0),
@@ -310,26 +353,46 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 toggleButton.Click += OnToggleClicked;
                 UpdateToggleVisual();
 
+                // Moves every working ChartTrading stop to its entry's fill price.
+                breakevenButton = new System.Windows.Controls.Button
+                {
+                    Content = "Stops to BE",
+                    Padding = new Thickness(8, 3, 8, 3),
+                    Cursor = Cursors.Hand,
+                    Foreground = Brushes.White,
+                    Background = Brushes.SteelBlue,
+                    BorderThickness = new Thickness(0),
+                };
+                breakevenButton.Click += OnBreakevenClicked;
+
+                buttonPanel = new System.Windows.Controls.Grid();
+                buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
+                buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
+                System.Windows.Controls.Grid.SetColumn(toggleButton, 0);
+                System.Windows.Controls.Grid.SetColumn(breakevenButton, 1);
+                buttonPanel.Children.Add(toggleButton);
+                buttonPanel.Children.Add(breakevenButton);
+
                 var chartTrader = (chartWindow as Chart)?.FindFirst("ChartWindowChartTraderControl") as ChartTrader;
                 chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
                 if (chartTraderGrid != null)
                 {
-                    toggleButton.Margin = new Thickness(2, 6, 2, 2);
+                    buttonPanel.Margin = new Thickness(2, 6, 2, 2);
                     toggleButtonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
                     chartTraderGrid.RowDefinitions.Add(toggleButtonRow);
-                    System.Windows.Controls.Grid.SetRow(toggleButton, chartTraderGrid.RowDefinitions.Count - 1);
-                    System.Windows.Controls.Grid.SetColumnSpan(toggleButton,
+                    System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
+                    System.Windows.Controls.Grid.SetColumnSpan(buttonPanel,
                         Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
-                    chartTraderGrid.Children.Add(toggleButton);
+                    chartTraderGrid.Children.Add(buttonPanel);
                     buttonInChartTrader = true;
                 }
                 else
                 {
-                    toggleButton.Margin = new Thickness(6);
-                    toggleButton.HorizontalAlignment = HorizontalAlignment.Left;
-                    toggleButton.VerticalAlignment = VerticalAlignment.Top;
-                    toggleButton.Opacity = 0.85;
-                    UserControlCollection.Add(toggleButton);
+                    buttonPanel.Margin = new Thickness(6);
+                    buttonPanel.HorizontalAlignment = HorizontalAlignment.Left;
+                    buttonPanel.VerticalAlignment = VerticalAlignment.Top;
+                    buttonPanel.Opacity = 0.85;
+                    UserControlCollection.Add(buttonPanel);
                     buttonInChartTrader = false;
                 }
 
@@ -360,20 +423,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         chartWindow.PreviewKeyUp -= OnKeyChanged;
                         chartWindow.Deactivated -= OnWindowDeactivated;
                     }
-                    if (toggleButton != null)
+                    if (buttonPanel != null)
                     {
-                        toggleButton.Click -= OnToggleClicked;
+                        if (toggleButton != null)
+                            toggleButton.Click -= OnToggleClicked;
+                        if (breakevenButton != null)
+                            breakevenButton.Click -= OnBreakevenClicked;
                         if (buttonInChartTrader)
                         {
-                            chartTraderGrid?.Children.Remove(toggleButton);
+                            chartTraderGrid?.Children.Remove(buttonPanel);
                             if (toggleButtonRow != null)
                                 chartTraderGrid?.RowDefinitions.Remove(toggleButtonRow);
                         }
                         else
                         {
-                            UserControlCollection.Remove(toggleButton);
+                            UserControlCollection.Remove(buttonPanel);
                         }
                         toggleButton = null;
+                        breakevenButton = null;
+                        buttonPanel = null;
                         toggleButtonRow = null;
                         chartTraderGrid = null;
                         buttonInChartTrader = false;
@@ -537,20 +605,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             int profitSign = isBuy ? 1 : -1;
             double tick = master.TickSize;
 
-            // Same inference the preview shows: favorable side of last is a limit,
-            // beyond it a stop-market, exactly at it a market order.
-            OrderType entryType = OrderType.Market;
-            if (Bars != null && Bars.Count > 0)
-            {
-                double last = Bars.GetClose(Bars.Count - 1);
-                if (entryPrice.ApproxCompare(last) != 0)
-                {
-                    bool favorable = isBuy ? entryPrice < last : entryPrice > last;
-                    entryType = favorable ? OrderType.Limit : OrderType.StopMarket;
-                }
-            }
-            double limitPrice = entryType == OrderType.Limit ? entryPrice : 0;
-            double stopPrice = entryType == OrderType.StopMarket ? entryPrice : 0;
+            string entryLabel;
+            OrderType entryType = InferEntryType(isBuy, entryPrice, out entryLabel);
+            double limitPrice;
+            double stopPrice;
+            EntryPriceFields(entryType, isBuy, entryPrice, master, out limitPrice, out stopPrice);
 
             bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
             int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
@@ -568,6 +627,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             var commit = new BracketCommit
             {
+                Account = account,
                 ExitAction = isBuy ? OrderAction.Sell : OrderAction.BuyToCover,
                 StopPrices = stops.ToArray(),
                 TargetPrices = targets.ToArray(),
@@ -636,6 +696,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (!commit.ExitsSubmitted)
                     {
                         commit.ExitsSubmitted = true;
+                        commit.EntryFillPrice = e.AverageFillPrice;
                         submitNow = true;
                     }
                 }
@@ -660,19 +721,135 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             TriggerCustomEvent(o =>
             {
                 var exits = new List<Order>();
+                var stopOrders = new List<Order>();
                 for (int i = 0; i < commit.StopPrices.Length; i++)
                 {
                     // Each pair's stop and target cancel each other.
                     string oco = "CT-" + Guid.NewGuid().ToString("N");
-                    exits.Add(account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
+                    Order stop = account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
                         OrderEntry.Manual, TimeInForce.Day, commit.PairQuantity, 0, commit.StopPrices[i],
-                        oco, "CT Stop", Core.Globals.MaxDate, null));
+                        oco, "CT Stop", Core.Globals.MaxDate, null);
+                    exits.Add(stop);
+                    stopOrders.Add(stop);
                     exits.Add(account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
                         OrderEntry.Manual, TimeInForce.Day, commit.PairQuantity, commit.TargetPrices[i], 0,
                         oco, "CT Target", Core.Globals.MaxDate, null));
                 }
+
+                // Tracked so the breakeven button can move exactly these stops later.
+                lock (orderLock)
+                    commit.StopOrders = stopOrders;
+
                 if (exits.Count > 0)
                     account.Submit(exits);
+            }, null);
+        }
+
+        /// <summary>
+        /// The entry order type a click at this price would submit: the configured
+        /// limit-side type on the favorable side of the last traded price, the
+        /// configured stop-side type beyond it, and market exactly at it.
+        /// </summary>
+        private OrderType InferEntryType(bool isBuy, double entryPrice, out string label)
+        {
+            label = "MKT";
+            if (Bars == null || Bars.Count == 0)
+                return OrderType.Market;
+
+            double last = Bars.GetClose(Bars.Count - 1);
+            if (entryPrice.ApproxCompare(last) == 0)
+                return OrderType.Market;
+
+            bool favorable = isBuy ? entryPrice < last : entryPrice > last;
+            if (favorable)
+            {
+                bool mit = LimitSideType == ChartTradingLimitSideType.MIT;
+                label = mit ? "MIT" : "LMT";
+                return mit ? OrderType.MIT : OrderType.Limit;
+            }
+
+            bool stopLimit = StopSideType == ChartTradingStopSideType.StopLimit;
+            label = stopLimit ? "STP LMT" : "STP";
+            return stopLimit ? OrderType.StopLimit : OrderType.StopMarket;
+        }
+
+        /// <summary>
+        /// The limit/stop price fields for an entry of the given type. MIT rides the
+        /// stop field, and a stop-limit's limit sits the configured offset beyond the
+        /// trigger in the direction of the entry.
+        /// </summary>
+        private void EntryPriceFields(OrderType type, bool isBuy, double entryPrice,
+            MasterInstrument master, out double limitPrice, out double stopPrice)
+        {
+            limitPrice = 0;
+            stopPrice = 0;
+            switch (type)
+            {
+                case OrderType.Limit:
+                    limitPrice = entryPrice;
+                    break;
+                case OrderType.MIT:
+                case OrderType.StopMarket:
+                    stopPrice = entryPrice;
+                    break;
+                case OrderType.StopLimit:
+                    stopPrice = entryPrice;
+                    limitPrice = master.RoundToTickSize(
+                        entryPrice + (isBuy ? 1 : -1) * StopLimitOffsetTicks * master.TickSize);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Moves every working ChartTrading stop to its own entry's fill price. Manual
+        /// for now; a future auto-breakeven will make the same move, and this button
+        /// stays as its bypass.
+        /// </summary>
+        private void OnBreakevenClicked(object sender, RoutedEventArgs e)
+        {
+            double last = Bars != null && Bars.Count > 0 ? Bars.GetClose(Bars.Count - 1) : 0;
+            List<BracketCommit> commits;
+            lock (orderLock)
+                commits = new List<BracketCommit>(activeCommits);
+
+            TriggerCustomEvent(o =>
+            {
+                MasterInstrument master = Instrument?.MasterInstrument;
+                if (master == null)
+                    return;
+
+                foreach (BracketCommit commit in commits)
+                {
+                    List<Order> stopOrders;
+                    lock (orderLock)
+                        stopOrders = commit.StopOrders;
+                    if (!commit.ExitsSubmitted || stopOrders == null || commit.Account == null)
+                        continue;
+
+                    // Clamped so the stop never crosses the market -- the same guard the
+                    // ABCompleteChartTrader breakeven uses: a long's stop stays at or
+                    // below the last price, a short's at or above it.
+                    double breakeven = commit.EntryFillPrice;
+                    if (last > 0)
+                        breakeven = commit.ExitAction == OrderAction.Sell
+                            ? Math.Min(breakeven, last)
+                            : Math.Max(breakeven, last);
+                    breakeven = master.RoundToTickSize(breakeven);
+
+                    var changes = new List<Order>();
+                    foreach (Order stop in stopOrders)
+                    {
+                        if (stop == null)
+                            continue;
+                        if (stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted)
+                        {
+                            stop.StopPriceChanged = breakeven;
+                            changes.Add(stop);
+                        }
+                    }
+                    if (changes.Count > 0)
+                        commit.Account.Change(changes);
+                }
             }, null);
         }
         #endregion
@@ -720,17 +897,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             string enter = isBuy ? "Buy" : "Sell";
             string exit = isBuy ? "Sell" : "Buy";
 
-            // The entry becomes a limit when it is on the favorable side of the last
-            // traded price and a stop-market beyond it -- the label previews the order
-            // type a click would actually submit.
-            string entryType = "MKT";
-            if (Bars != null && Bars.Count > 0)
-            {
-                double last = Bars.GetClose(Bars.Count - 1);
-                bool favorable = isBuy ? entryPrice < last : entryPrice > last;
-                if (entryPrice.ApproxCompare(last) != 0)
-                    entryType = favorable ? "LMT" : "STP";
-            }
+            // The label previews exactly the order type a click would submit.
+            string entryType;
+            InferEntryType(isBuy, entryPrice, out entryType);
 
             SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
             try

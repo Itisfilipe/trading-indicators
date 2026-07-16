@@ -26,6 +26,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   each enabled pair's stop and target go live as an OCO group once the entry
   fills; gray OFF, keys and clicks do nothing. Live accounts additionally
   require "Allow live accounts" (default off); Sim/Playback always accepts.
+- Configurable entry order types: Limit or MIT on the favorable side of the
+  market, Stop-Market or Stop-Limit (with a tick offset) beyond it; the
+  preview tag always labels what the click will submit.
+- A "Stops to BE" button beside the toggle moves every working ChartTrading
+  stop to its own entry's fill price, clamped so a stop never crosses the
+  market. It only touches stops this indicator created.
 - Configurable bracket pairs: three stop/target pairs, each toggled by its own
   "Bracket N" checkbox, each with its own stop and target. The ChartTrader
   quantity sizes each enabled pair, so the entry trades quantity x enabled

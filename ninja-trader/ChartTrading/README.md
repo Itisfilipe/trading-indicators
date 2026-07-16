@@ -101,13 +101,26 @@ apart. The preview is advisory, not guaranteed.
     below market -> `Buy LMT` entry at the click price; when it fills, each enabled
     pair's stop and target appear, OCO-linked per pair (fill a target, its stop
     cancels — the other pairs stay). Alt+click above market mirrors it short.
-- **Next:** M7 grid/DCA entry, the breakeven features below, and the axis-strip price
-  marker experiment. See `IMPLEMENTATION_PLAN.md`.
-- **Requested, later — position management (owner, while testing M1):**
-  - **Auto-breakeven:** once price moves a configurable number of ticks in favor, move the
-    stop to the entry price (with an optional offset in ticks).
-  - **"Move orders to breakeven" button:** a manual action that moves the working stop(s)
-    to breakeven on click.
+- **M3 — configurable entry types (built, untested).** "Limit-side entry" chooses
+  plain Limit or MIT for clicks on the favorable side of the market; "Stop-side entry"
+  chooses Stop-Market or Stop-Limit (with "Stop-limit offset (ticks)" placing the limit
+  beyond the trigger in the entry's direction) for clicks past it. The preview tag
+  always labels what the click will really submit (`LMT`, `MIT`, `STP`, `STP LMT`,
+  `MKT`). Note: MIT's use of the stop price field is documented but untested in
+  Playback — verify the first MIT fill.
+- **Built — "Stops to BE" sidebar button.** Next to the ON/OFF toggle. One click moves
+  every working ChartTrading stop to its own entry's fill price (per commit, so
+  separate trades each go to their own breakeven), clamped so a stop never crosses the
+  market — the ABCompleteChartTrader guard. It only ever touches stops this indicator
+  created. When auto-breakeven lands, this button stays as the manual bypass.
+- **Next:** auto-breakeven (the manual button exists; what remains is the
+  N-ticks-in-profit trigger that makes the same move automatically), and the
+  axis-strip price marker experiment. Grid/DCA entry (the plan's M7) is deliberately
+  dropped: this tool mirrors Profit Chart's simple click trading, not order ladders.
+- **Requested — position management (owner, while testing M1):**
+  - **Auto-breakeven (still to build):** once price moves a configurable number of ticks
+    in favor, move the stop to the entry price (with an optional offset in ticks).
+  - **"Move orders to breakeven" button: BUILT** — the "Stops to BE" sidebar button above.
 
   These are the ATM auto-management we gave up by choosing Option A, so the indicator has
   to do them itself: track the live position/orders (Account order & position events) and
