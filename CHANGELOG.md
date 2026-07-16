@@ -21,6 +21,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - A "ChartTrading ON/OFF" button in the ChartTrader sidebar (floating on the
   chart when ChartTrader is hidden) disables the modifier-key gestures without
   removing the indicator, freeing the keys for other tools.
+- Order submission (off by default): with "Enable order submission" on, a
+  click while the preview is armed submits the entry to the ChartTrader
+  account, and each enabled pair's stop and target go live as an OCO group
+  once the entry fills. Live accounts additionally require "Allow live
+  accounts"; otherwise only Sim/Playback accounts accept orders. The sidebar
+  button shows the mode: OFF, PREVIEW, or ON.
 - Configurable bracket pairs: three stop/target pairs, each toggled by its own
   "Bracket N" checkbox, each with its own stop and target. The ChartTrader
   quantity sizes each enabled pair, so the entry trades quantity x enabled

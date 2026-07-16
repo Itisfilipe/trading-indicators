@@ -1,7 +1,7 @@
 # ChartTrading — a click-to-trade indicator for NinjaTrader 8
 
 A clean-room reimplementation of the behavior described on Volaty's Clicker page,
-built on verified NinjaTrader 8 APIs. Not started yet; this folder holds the design.
+built on verified NinjaTrader 8 APIs.
 
 ## The one feature that matters most
 
@@ -83,9 +83,28 @@ apart. The preview is advisory, not guaranteed.
     so hold/release only registered on the next mouse move), and repaints call
     `InvalidateVisual` in addition to `ForceRefresh`, which alone waits for the next
     scheduled render pass and read as lag on a quiet chart.
-- **Next:** M2 order submission (entry + stop + targets via `Account.CreateOrder` with a
-  shared OCO id, quantity from ChartTrader), then M3 order-type inference, M6 OCO groups,
-  M7 grid/DCA. See `IMPLEMENTATION_PLAN.md`.
+- **M2 — order submission (built, untested; OFF by default).** New "Trading" settings:
+  - **Enable order submission** (default off): off means preview-only — clicks place
+    nothing. On, a click while the preview is armed submits the entry (limit,
+    stop-market, or market, exactly as the preview labels it) to the ChartTrader
+    account, sized ChartTrader quantity x enabled pairs.
+  - **Exits go live only after the entry fills** (watched via `Account.OrderUpdate`):
+    each enabled pair then submits its stop + target as an OCO group sized to that
+    pair. A resting exit can never open a position.
+  - **Allow live accounts** (default off): orders are refused unless the account name
+    starts with `Sim`/`Playback`. Flip it deliberately for live trading.
+  - The sidebar button shows the mode: gray OFF, blue PREVIEW (submission disabled),
+    green ON.
+  - v1 caveats: TIF is Day; exits wait for the FULL entry fill, so an entry cancelled
+    after a partial fill leaves that partial unbracketed (logged as a warning);
+    removing the indicator leaves working orders working, by design; rejected exits
+    are not retried. Watch the Orders tab while testing.
+  - **Sim test script:** Sim101 selected in ChartTrader, "Enable order submission" on,
+    Shift+click below market -> `Buy LMT` entry at the click price; when it fills, each
+    enabled pair's stop and target appear, OCO-linked per pair (fill a target, its stop
+    cancels — the other pairs stay). Alt+click above market mirrors it short.
+- **Next:** M7 grid/DCA entry, the breakeven features below, and the axis-strip price
+  marker experiment. See `IMPLEMENTATION_PLAN.md`.
 - **Requested, later — position management (owner, while testing M1):**
   - **Auto-breakeven:** once price moves a configurable number of ticks in favor, move the
     stop to the entry price (with an optional offset in ticks).

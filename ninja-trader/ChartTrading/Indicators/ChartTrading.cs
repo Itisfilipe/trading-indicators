@@ -16,7 +16,7 @@ using SharpDX.Direct2D1;
 
 // ChartTrading -- click-to-trade indicator for NinjaTrader 8.
 //
-// This file is milestone M1: the LIVE BRACKET PREVIEW only. It places NO orders.
+// Live bracket preview plus optional one-click submission (off by default).
 //
 // Hold the buy modifier (default Shift) or the sell modifier (default Alt) and move
 // the mouse over the chart: the indicator draws the bracket a click would place at
@@ -27,9 +27,12 @@ using SharpDX.Direct2D1;
 // above the last traded price. This is "Option A": the indicator owns the bracket
 // geometry, so what you see is exactly what a later milestone will submit.
 //
-// Nothing here touches an account or the network; the only ChartTrader read is the
-// order quantity, for the tag text. Order submission, OCO, and grid entry are later
-// milestones layered on top.
+// With "Enable order submission" off (the default) nothing touches an account: the
+// only ChartTrader read is the order quantity, for the tag text. Switched on, a
+// click while the preview is armed submits the entry to the ChartTrader account,
+// and each enabled pair's stop and target -- OCO-linked per pair -- go live only
+// once the entry fills, so a resting exit can never open a position. Live accounts
+// additionally require "Allow live accounts"; otherwise only Sim/Playback accepts.
 
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
@@ -94,6 +97,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // Tag text picks black or white per level for contrast against the tag fill.
         private SharpDX.Direct2D1.Brush textWhiteBrushDx;
         private SharpDX.Direct2D1.Brush textBlackBrushDx;
+
+        // Scale cached by OnRender so a click can map its Y to a price. Always fresh
+        // at commit time: a click only commits while the preview is armed, which is
+        // exactly when OnRender is running.
+        private ChartScale activeChartScale;
+
+        // Order submission state. Account events arrive off the UI thread, so the
+        // commit registry is guarded; every order we touch is one we created.
+        private readonly object orderLock = new object();
+        private readonly List<BracketCommit> activeCommits = new List<BracketCommit>();
+        private Account subscribedAccount;
+
+        private class BracketCommit
+        {
+            public Order Entry;
+            public bool ExitsSubmitted;
+            public OrderAction ExitAction;
+            public double[] StopPrices;
+            public double[] TargetPrices;
+            public int PairQuantity;
+        }
         #endregion
 
         #region Parameters
@@ -157,6 +181,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "The entry always shows its price.")]
         public ChartTradingValueDisplay ValueDisplay { get; set; }
 
+        [Display(Name = "Enable order submission", Order = 1, GroupName = "Trading",
+                 Description = "OFF: preview only, clicks place nothing. ON: a click while the preview " +
+                               "is armed submits the entry to the ChartTrader account, and each enabled " +
+                               "pair's stop and target go live once the entry fills.")]
+        public bool EnableOrderSubmission { get; set; }
+
+        [Display(Name = "Allow live accounts", Order = 2, GroupName = "Trading",
+                 Description = "OFF: orders are only accepted on accounts named Sim* or Playback*. " +
+                               "Turn on deliberately to trade a live account.")]
+        public bool AllowLiveAccounts { get; set; }
+
         // Strokes rather than plain brushes so each level carries its own color, width,
         // and dash style, and binds to the render target the way the platform's own
         // price-line indicator does. NinjaTrader persists Stroke properties natively.
@@ -197,6 +232,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Stop3Ticks = 50;
                 Target3Ticks = 150;
 
+                EnableOrderSubmission = false;
+                AllowLiveAccounts = false;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
                 ValueDisplay = ChartTradingValueDisplay.Price;
@@ -224,6 +261,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Terminated)
             {
+                // Working orders are deliberately left working; removing the indicator
+                // must not silently cancel a live bracket. Only the event subscription
+                // is dropped.
+                if (subscribedAccount != null)
+                {
+                    subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
+                    subscribedAccount = null;
+                }
+
                 ChartControl owner = ChartControl;
                 if (owner != null)
                     owner.Dispatcher.InvokeAsync(DetachHandlers);
@@ -243,6 +289,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 hookedPanel = ChartPanel;
                 hookedPanel.MouseMove += OnMouseMove;
                 hookedPanel.MouseLeave += OnMouseLeave;
+                hookedPanel.PreviewMouseLeftButtonDown += OnPanelClick;
 
                 // Modifier keys register at the window, not the panel: panel key events
                 // only arrive while the panel has keyboard focus, which made hold and
@@ -312,6 +359,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         hookedPanel.MouseMove -= OnMouseMove;
                         hookedPanel.MouseLeave -= OnMouseLeave;
+                        hookedPanel.PreviewMouseLeftButtonDown -= OnPanelClick;
                     }
                     if (chartWindow != null)
                     {
@@ -396,8 +444,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (toggleButton == null)
                 return;
 
-            toggleButton.Content = tradingEnabled ? "ChartTrading ON" : "ChartTrading OFF";
-            toggleButton.Background = tradingEnabled ? Brushes.SeaGreen : Brushes.DimGray;
+            if (!tradingEnabled)
+            {
+                toggleButton.Content = "ChartTrading OFF";
+                toggleButton.Background = Brushes.DimGray;
+            }
+            else if (EnableOrderSubmission)
+            {
+                toggleButton.Content = "ChartTrading ON";
+                toggleButton.Background = Brushes.SeaGreen;
+            }
+            else
+            {
+                toggleButton.Content = "ChartTrading PREVIEW";
+                toggleButton.Background = Brushes.SteelBlue;
+            }
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -461,6 +522,181 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
         #endregion
 
+        #region Order submission
+        private void OnPanelClick(object sender, MouseButtonEventArgs e)
+        {
+            if (!EnableOrderSubmission || !tradingEnabled || previewSide == Side.None || !pointerOverPanel)
+                return;
+
+            MasterInstrument master = Instrument?.MasterInstrument;
+            ChartScale scale = activeChartScale;
+            if (master == null || scale == null)
+                return;
+
+            var chartTrader = ChartControl.OwnerChart?.ChartTrader;
+            Account account = chartTrader?.Account;
+            if (account == null)
+            {
+                Log("ChartTrading: no ChartTrader account selected; order not placed.",
+                    NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
+
+            bool simAccount = account.Name.StartsWith("Sim", StringComparison.OrdinalIgnoreCase)
+                || account.Name.StartsWith("Playback", StringComparison.OrdinalIgnoreCase);
+            if (!simAccount && !AllowLiveAccounts)
+            {
+                Log($"ChartTrading: {account.Name} is a live account and 'Allow live accounts' is off; order not placed.",
+                    NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
+
+            int quantity = chartTrader.Quantity > 0 ? chartTrader.Quantity : previewQuantity;
+            double entryPrice = master.RoundToTickSize(scale.GetValueByY(pointerDeviceY));
+            bool isBuy = previewSide == Side.Buy;
+            int profitSign = isBuy ? 1 : -1;
+            double tick = master.TickSize;
+
+            // Same inference the preview shows: favorable side of last is a limit,
+            // beyond it a stop-market, exactly at it a market order.
+            OrderType entryType = OrderType.Market;
+            if (Bars != null && Bars.Count > 0)
+            {
+                double last = Bars.GetClose(Bars.Count - 1);
+                if (entryPrice.ApproxCompare(last) != 0)
+                {
+                    bool favorable = isBuy ? entryPrice < last : entryPrice > last;
+                    entryType = favorable ? OrderType.Limit : OrderType.StopMarket;
+                }
+            }
+            double limitPrice = entryType == OrderType.Limit ? entryPrice : 0;
+            double stopPrice = entryType == OrderType.StopMarket ? entryPrice : 0;
+
+            bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
+            int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
+            int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
+            var stops = new List<double>();
+            var targets = new List<double>();
+            for (int i = 0; i < pairEnabled.Length; i++)
+            {
+                if (!pairEnabled[i])
+                    continue;
+                stops.Add(master.RoundToTickSize(entryPrice - profitSign * stopTicks[i] * tick));
+                targets.Add(master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick));
+            }
+            int entryQuantity = stops.Count > 0 ? quantity * stops.Count : quantity;
+
+            var commit = new BracketCommit
+            {
+                ExitAction = isBuy ? OrderAction.Sell : OrderAction.BuyToCover,
+                StopPrices = stops.ToArray(),
+                TargetPrices = targets.ToArray(),
+                PairQuantity = quantity,
+            };
+            OrderAction entryAction = isBuy ? OrderAction.Buy : OrderAction.SellShort;
+
+            // Creation and submission run on NinjaTrader's own thread, the shape the
+            // ABCompleteChartTrader reference uses. The commit registers before Submit
+            // so a fast fill cannot race past the registry.
+            TriggerCustomEvent(o =>
+            {
+                Order entry = account.CreateOrder(Instrument, entryAction, entryType, OrderEntry.Manual,
+                    TimeInForce.Day, entryQuantity, limitPrice, stopPrice, string.Empty, "CT Entry",
+                    Core.Globals.MaxDate, null);
+
+                lock (orderLock)
+                {
+                    commit.Entry = entry;
+                    activeCommits.Add(commit);
+                    EnsureAccountSubscription(account);
+                }
+
+                account.Submit(new[] { entry });
+            }, null);
+
+            // The click belongs to the commit; the chart must not also act on it.
+            e.Handled = true;
+        }
+
+        private void EnsureAccountSubscription(Account account)
+        {
+            if (ReferenceEquals(subscribedAccount, account))
+                return;
+
+            if (subscribedAccount != null)
+                subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
+            subscribedAccount = account;
+            account.OrderUpdate += OnAccountOrderUpdate;
+        }
+
+        // Arrives off the UI thread. Exits go live only on the entry's full fill; a
+        // resting stop or target without a position would OPEN a trade, not close one.
+        private void OnAccountOrderUpdate(object sender, OrderEventArgs e)
+        {
+            BracketCommit commit = null;
+            lock (orderLock)
+            {
+                for (int i = 0; i < activeCommits.Count; i++)
+                {
+                    if (ReferenceEquals(activeCommits[i].Entry, e.Order))
+                    {
+                        commit = activeCommits[i];
+                        break;
+                    }
+                }
+            }
+            if (commit == null)
+                return;
+
+            if (e.OrderState == OrderState.Filled)
+            {
+                bool submitNow = false;
+                lock (orderLock)
+                {
+                    if (!commit.ExitsSubmitted)
+                    {
+                        commit.ExitsSubmitted = true;
+                        submitNow = true;
+                    }
+                }
+                if (submitNow)
+                    SubmitExits(commit, sender as Account);
+            }
+            else if (e.OrderState == OrderState.Cancelled || e.OrderState == OrderState.Rejected)
+            {
+                lock (orderLock)
+                    activeCommits.Remove(commit);
+                if (e.Order.Filled > 0 && !commit.ExitsSubmitted)
+                    Log($"ChartTrading: entry cancelled after a partial fill of {e.Order.Filled}; that position has no bracket.",
+                        NinjaTrader.Cbi.LogLevel.Warning);
+            }
+        }
+
+        private void SubmitExits(BracketCommit commit, Account account)
+        {
+            if (account == null)
+                return;
+
+            TriggerCustomEvent(o =>
+            {
+                var exits = new List<Order>();
+                for (int i = 0; i < commit.StopPrices.Length; i++)
+                {
+                    // Each pair's stop and target cancel each other.
+                    string oco = "CT-" + Guid.NewGuid().ToString("N");
+                    exits.Add(account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
+                        OrderEntry.Manual, TimeInForce.Day, commit.PairQuantity, 0, commit.StopPrices[i],
+                        oco, "CT Stop", Core.Globals.MaxDate, null));
+                    exits.Add(account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
+                        OrderEntry.Manual, TimeInForce.Day, commit.PairQuantity, commit.TargetPrices[i], 0,
+                        oco, "CT Target", Core.Globals.MaxDate, null));
+                }
+                if (exits.Count > 0)
+                    account.Submit(exits);
+            }, null);
+        }
+        #endregion
+
         #region Rendering
         public override void OnRenderTargetChanged()
         {
@@ -484,6 +720,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
             base.OnRender(chartControl, chartScale);
+            activeChartScale = chartScale;
 
             if (previewSide == Side.None || !pointerOverPanel || RenderTarget == null)
                 return;
