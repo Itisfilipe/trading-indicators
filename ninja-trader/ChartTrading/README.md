@@ -121,24 +121,29 @@ apart. The preview is advisory, not guaranteed.
   guard. It finds the stops on the account by their "CT Stop" name, so it survives
   indicator reloads/recompiles (an in-memory registry would not), and it only ever
   touches stops this tool created. Every click logs its outcome (moved N stops / no
-  position / no stops), so nothing fails silently. When auto-breakeven lands, this
-  button stays as the manual bypass.
-- **Next:** auto-breakeven (the manual button exists; what remains is the
-  N-ticks-in-profit trigger that makes the same move automatically), and the
-  axis-strip price marker experiment. Grid/DCA entry (the plan's M7) is deliberately
-  dropped: this tool mirrors Profit Chart's simple click trading, not order ladders.
-- **Requested — position management (owner, while testing M1):**
-  - **Auto-breakeven (still to build):** once price moves a configurable number of ticks
-    in favor, move the stop to the entry price (with an optional offset in ticks).
-  - **"Move orders to breakeven" button: BUILT** — the "Stops to BE" sidebar button above.
-
-  These are the ATM auto-management we gave up by choosing Option A, so the indicator has
-  to do them itself: track the live position/orders (Account order & position events) and
-  issue `Order`/`Account.Change` on the stop. The automation runs locally, so it only acts
-  while NinjaTrader is open — same limitation as an ATM. The `ABCompleteChartTrader`
-  reference already implements breakeven buttons (`btnAutoStopBreakeven`,
-  `btnAutoLimitBreakeven`, and the `BreakevenPosition*` states), so it is the worked
-  example to learn both the button and the stop-move mechanics from.
+  position / no stops), so nothing fails silently. It doubles as the manual bypass
+  for auto-breakeven: same move, on demand, regardless of the automatic trigger.
+- **M4 — auto-breakeven (built, untested).** "Auto breakeven" checkbox (default off)
+  plus "Auto breakeven trigger (ticks)": once price runs the trigger distance in the
+  position's favor, every working CT stop moves to breakeven automatically — the same
+  account-scan move as the button, fired **once per position** and re-armed when the
+  position goes flat or flips direction. The mechanics, all patterns from
+  ABCompleteChartTrader:
+  - The position (average price + direction) is tracked live via `Account.PositionUpdate`
+    and seeded from `Account.Positions` on attach, so a reload mid-position still arms.
+  - Live ticks are watched in `OnMarketData` (Last only); the trigger compares against
+    the position's average price, not the click price.
+  - "Breakeven offset (ticks)" (default 0) shifts where breakeven lands, in the profit
+    direction: 2 locks two ticks of profit. It applies to the **button too**, so manual
+    and auto always land on the same price. The never-cross-the-market clamp still wins.
+  - The move logs with its origin — `(auto)` vs `(button)` — so the log always says who
+    moved the stops.
+  - Caveat: it's an ATM-style local automation — it only acts while this chart is open
+    in NinjaTrader. If it fires when no CT stops exist (e.g. a position opened by other
+    means), it logs and stays consumed until the position closes or flips.
+- **Next:** the axis-strip price marker experiment. Grid/DCA entry (the plan's M7) is
+  deliberately dropped: this tool mirrors Profit Chart's simple click trading, not
+  order ladders.
 
 ### Testing M1 in NinjaTrader
 Import `ChartTrading.cs` (NinjaScript Editor → compile, or bundle with `Info.xml`), add the

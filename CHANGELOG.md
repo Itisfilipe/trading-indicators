@@ -6,6 +6,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-07-16
 
 ### ChartTrading (NinjaTrader, new)
+- Auto-breakeven ("Auto breakeven" checkbox, default off): once price runs the
+  configured trigger distance (ticks) in the position's favor, every working
+  ChartTrading stop moves to breakeven automatically — the same move as the
+  "Stops to BE" button, fired once per position and re-armed when the position
+  closes or flips. A "Breakeven offset (ticks)" setting shifts where breakeven
+  lands (e.g. 2 locks two ticks of profit) and applies to the button as well,
+  so manual and auto always agree. Like an ATM, it only acts while the chart
+  is open.
 - First public milestone of a click-to-trade tool: hold a modifier key
   (Shift = buy, Alt = sell) to preview the full order bracket — entry, stop,
   and up to three targets — at the mouse pointer. Preview only; it places no

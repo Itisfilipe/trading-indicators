@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using NinjaTrader.Cbi;
 using NinjaTrader.Core.FloatingPoint;
+using NinjaTrader.Data;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
 using NinjaTrader.NinjaScript;
@@ -129,6 +130,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private readonly List<BracketCommit> activeCommits = new List<BracketCommit>();
         private Account subscribedAccount;
 
+        // Position cache fed by Account.PositionUpdate, the way ABCompleteChartTrader
+        // tracks it; read on the market-data thread by the auto-breakeven trigger.
+        private double currentAvgPrice;
+        private MarketPosition currentMarketPosition = MarketPosition.Flat;
+        private bool autoBreakevenFired;
+
         private class BracketCommit
         {
             public Order Entry;
@@ -225,6 +232,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "in the direction of the entry.")]
         public int StopLimitOffsetTicks { get; set; }
 
+        [Display(Name = "Auto breakeven", Order = 6, GroupName = "Trading",
+                 Description = "Once price runs the trigger distance in the position's favor, move every " +
+                               "working ChartTrading stop to breakeven automatically -- the same move as " +
+                               "the Stops-to-BE button, fired once per position. The button remains the " +
+                               "manual bypass.")]
+        public bool AutoBreakevenEnabled { get; set; }
+
+        [Range(1, 10000)]
+        [Display(Name = "Auto breakeven trigger (ticks)", Order = 7, GroupName = "Trading",
+                 Description = "How many ticks in profit before the automatic move fires.")]
+        public int AutoBreakevenTriggerTicks { get; set; }
+
+        [Range(-100, 1000)]
+        [Display(Name = "Breakeven offset (ticks)", Order = 8, GroupName = "Trading",
+                 Description = "Where breakeven lands relative to the position's average price, in the " +
+                               "profit direction: 2 locks two ticks of profit, 0 is exact breakeven. " +
+                               "Applies to the button and to auto breakeven.")]
+        public int BreakevenOffsetTicks { get; set; }
+
         [Display(Name = "Separate stacked stops", Order = 5, GroupName = "Trading",
                  Description = "When two pairs put their stops on the same price, nudge each extra stop " +
                                "one tick further from the entry, so the chart shows them individually " +
@@ -277,6 +303,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 StopSideType = ChartTradingStopSideType.StopMarket;
                 StopLimitOffsetTicks = 2;
                 SeparateStackedStops = false;
+                AutoBreakevenEnabled = false;
+                AutoBreakevenTriggerTicks = 30;
+                BreakevenOffsetTicks = 0;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
                 ValueDisplay = ChartTradingValueDisplay.Price;
@@ -310,6 +339,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (subscribedAccount != null)
                 {
                     subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
+                    subscribedAccount.PositionUpdate -= OnAccountPositionUpdate;
                     subscribedAccount = null;
                 }
 
@@ -403,6 +433,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     UserControlCollection.Add(buttonPanel);
                     buttonInChartTrader = false;
                 }
+
+                // Subscribe to the ChartTrader account up front, so auto-breakeven
+                // and the position cache work for positions that predate this
+                // instance (a commit re-subscribes if the account changes later).
+                Account attachAccount = ChartControl.OwnerChart?.ChartTrader?.Account;
+                if (attachAccount != null)
+                    lock (orderLock)
+                        EnsureAccountSubscription(attachAccount);
 
                 handlersAttached = true;
             }
@@ -671,9 +709,43 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             if (subscribedAccount != null)
+            {
                 subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
+                subscribedAccount.PositionUpdate -= OnAccountPositionUpdate;
+            }
             subscribedAccount = account;
             account.OrderUpdate += OnAccountOrderUpdate;
+            account.PositionUpdate += OnAccountPositionUpdate;
+
+            // Seed from the account so a reload mid-position still knows where it is.
+            currentAvgPrice = 0;
+            currentMarketPosition = MarketPosition.Flat;
+            autoBreakevenFired = false;
+            foreach (Position position in account.Positions)
+            {
+                if (position.Instrument != null && position.Instrument.FullName == Instrument.FullName)
+                {
+                    currentAvgPrice = position.AveragePrice;
+                    currentMarketPosition = position.MarketPosition;
+                    break;
+                }
+            }
+        }
+
+        // Arrives off the UI thread; keeps the auto-breakeven trigger armed with the
+        // live position, and re-arms it whenever the position closes or flips.
+        private void OnAccountPositionUpdate(object sender, PositionEventArgs e)
+        {
+            if (e.Position?.Instrument == null || e.Position.Instrument.FullName != Instrument.FullName)
+                return;
+
+            lock (orderLock)
+            {
+                if (e.MarketPosition == MarketPosition.Flat || e.MarketPosition != currentMarketPosition)
+                    autoBreakevenFired = false;
+                currentMarketPosition = e.MarketPosition;
+                currentAvgPrice = e.AveragePrice;
+            }
         }
 
         // Arrives off the UI thread. Exits go live only on the entry's full fill; a
@@ -833,8 +905,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         /// <summary>
         /// Moves every working ChartTrading stop on this instrument to the position's
-        /// average fill price. Manual for now; a future auto-breakeven will make the
-        /// same move, and this button stays as its bypass.
+        /// average fill price. The manual bypass for auto-breakeven: it makes the same
+        /// move, on demand, whether or not the automatic trigger is enabled or has fired.
         /// </summary>
         /// <remarks>
         /// Deliberately reload-proof: the stops are found on the account by their
@@ -853,6 +925,57 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             }
 
+            MoveStopsToBreakeven(account, last, "button");
+        }
+
+        /// <summary>
+        /// Watches live ticks for the auto-breakeven trigger: once price has run the
+        /// configured distance in the position's favor, make the same move the button
+        /// makes, once per position.
+        /// </summary>
+        protected override void OnMarketData(MarketDataEventArgs marketDataUpdate)
+        {
+            if (!AutoBreakevenEnabled || marketDataUpdate.MarketDataType != MarketDataType.Last)
+                return;
+
+            double avgPrice;
+            MarketPosition position;
+            Account account;
+            lock (orderLock)
+            {
+                if (autoBreakevenFired)
+                    return;
+                avgPrice = currentAvgPrice;
+                position = currentMarketPosition;
+                account = subscribedAccount;
+            }
+            if (account == null || position == MarketPosition.Flat || avgPrice <= 0)
+                return;
+
+            MasterInstrument master = Instrument?.MasterInstrument;
+            if (master == null)
+                return;
+
+            double trigger = AutoBreakevenTriggerTicks * master.TickSize;
+            double price = marketDataUpdate.Price;
+            bool reached = position == MarketPosition.Long
+                ? price >= avgPrice + trigger
+                : price <= avgPrice - trigger;
+            if (!reached)
+                return;
+
+            lock (orderLock)
+            {
+                if (autoBreakevenFired)
+                    return;
+                autoBreakevenFired = true;
+            }
+
+            MoveStopsToBreakeven(account, price, "auto");
+        }
+
+        private void MoveStopsToBreakeven(Account account, double last, string reason)
+        {
             TriggerCustomEvent(o =>
             {
                 MasterInstrument master = Instrument?.MasterInstrument;
@@ -880,7 +1003,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // ABCompleteChartTrader breakeven uses: a long's stop stays at or
                 // below the last price, a short's at or above it.
                 bool isLong = position.MarketPosition == MarketPosition.Long;
-                double breakeven = position.AveragePrice;
+                double breakeven = position.AveragePrice
+                    + (isLong ? 1 : -1) * BreakevenOffsetTicks * master.TickSize;
                 if (last > 0)
                     breakeven = isLong ? Math.Min(breakeven, last) : Math.Max(breakeven, last);
                 breakeven = master.RoundToTickSize(breakeven);
@@ -909,7 +1033,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
 
                 account.Change(changes);
-                Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}.",
+                Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)} ({reason}).",
                     NinjaTrader.Cbi.LogLevel.Information);
             }, null);
         }
