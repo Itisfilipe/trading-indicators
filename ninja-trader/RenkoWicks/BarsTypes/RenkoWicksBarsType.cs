@@ -137,7 +137,12 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// <summary>
         /// The icon shown beside this bars type in the menu.
         /// </summary>
-        public override object Icon { get { return "▤"; } }
+        /// <remarks>
+        /// Escaped rather than written literally to keep this file pure ASCII: it has
+        /// no byte-order mark, so a literal glyph is at the mercy of whatever encoding
+        /// the reader assumes.
+        /// </remarks>
+        public override object Icon { get { return "\u25A4"; } }
 
         /// <summary>
         /// Indicates that the implementation supports removal of the last bar.
