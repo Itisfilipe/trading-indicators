@@ -4,7 +4,6 @@ using NinjaTrader.Gui.Chart;
 using SharpDX;
 using SharpDX.Direct2D1;
 using System;
-using System.Collections.Generic;
 #endregion
 
 namespace NinjaTrader.NinjaScript.ChartStyles
@@ -40,21 +39,6 @@ namespace NinjaTrader.NinjaScript.ChartStyles
 
         #region Fields
         /// <summary>
-        /// Cached bar width calculation
-        /// </summary>
-        private float cachedBarWidth = -1;
-
-        /// <summary>
-        /// Cached bar paint width
-        /// </summary>
-        private int cachedBarPaintWidth = -1;
-
-        /// <summary>
-        /// Object pool for rectangles to reduce allocations
-        /// </summary>
-        private readonly Queue<RectangleF> rectanglePool = new Queue<RectangleF>();
-
-        /// <summary>
         /// Lock object for thread-safe operations
         /// </summary>
         private readonly object renderLock = new object();
@@ -68,19 +52,12 @@ namespace NinjaTrader.NinjaScript.ChartStyles
         /// <returns>The total painted width including stroke</returns>
         public override int GetBarPaintWidth(int barWidth)
         {
-            // Validate input
             if (barWidth < MIN_BAR_WIDTH)
                 barWidth = MIN_BAR_WIDTH;
             else if (barWidth > MAX_BAR_WIDTH)
                 barWidth = MAX_BAR_WIDTH;
 
-            // Cache the result for performance
-            if (cachedBarPaintWidth < 0 || barWidth != BarWidthUI)
-            {
-                cachedBarPaintWidth = 1 + 2 * (barWidth - 1) + 2 * (int)Math.Round(Stroke?.Width ?? 1);
-            }
-
-            return cachedBarPaintWidth;
+            return 1 + 2 * (barWidth - 1) + 2 * (int)Math.Round(Stroke?.Width ?? 1);
         }
 
         /// <summary>
@@ -103,33 +80,22 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             {
                 try
                 {
-                    // Calculate bar width once
                     float barWidth = GetBarPaintWidth(BarWidthUI);
-                    if (cachedBarWidth != barWidth)
-                    {
-                        cachedBarWidth = barWidth;
-                    }
 
-                    // Get or create a rectangle for rendering
-                    RectangleF rect = GetPooledRectangle();
-
-                    // Render each visible bar
                     for (int idx = chartBars.FromIndex; idx <= chartBars.ToIndex; idx++)
                     {
                         // Validate bar index
                         if (idx < 0 || idx >= bars.Count)
                             continue;
 
-                        RenderSingleBar(chartControl, chartScale, chartBars, bars, idx, rect, cachedBarWidth);
+                        RenderSingleBar(chartControl, chartScale, chartBars, bars, idx, barWidth);
                     }
-
-                    // Return rectangle to pool
-                    ReturnRectangleToPool(rect);
                 }
                 catch (Exception ex)
                 {
-                    // Log error and continue
-                    NinjaTrader.Code.Output.Process($"RenkoWickStyle.OnRender error: {ex.Message}", PrintTo.OutputTab1);
+                    // Logged in full and swallowed on purpose: a render fault must not
+                    // tear down the chart, and the next frame recomputes from scratch.
+                    NinjaTrader.Code.Output.Process($"RenkoWickStyle.OnRender error: {ex}", PrintTo.OutputTab1);
                 }
             }
         }
@@ -145,6 +111,12 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 Description = "ChartStyle to be used with Renko Wicks bars displaying actual price extremes";
                 ChartStyleType = (ChartStyleType)2588;
                 BarWidth = DEFAULT_BAR_WIDTH;
+
+                // Defaults let the base class bind these to the render target. Without
+                // them, OnRender would have to build a Stroke per bar and read BrushDX
+                // off a stroke that was never bound to a target.
+                Stroke = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
+                Stroke2 = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
             }
             else if (State == State.Configure)
             {
@@ -158,11 +130,6 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 // Remove the Name property from UI as it's fixed
                 Properties.Remove(Properties.Find("Name", true));
             }
-            else if (State == State.Terminated)
-            {
-                // Clean up resources
-                ClearCaches();
-            }
         }
         #endregion
 
@@ -171,8 +138,10 @@ namespace NinjaTrader.NinjaScript.ChartStyles
         /// Renders a single Renko bar with wicks
         /// </summary>
         private void RenderSingleBar(ChartControl chartControl, ChartScale chartScale, ChartBars chartBars,
-            Bars bars, int idx, RectangleF rect, float barWidth)
+            Bars bars, int idx, float barWidth)
         {
+            RectangleF rect = new RectangleF();
+
             // Retrieve any override brushes (if set)
             Brush overriddenBrush = chartControl.GetBarOverrideBrush(chartBars, idx);
             Brush overriddenOutlineBrush = chartControl.GetCandleOutlineOverrideBrush(chartBars, idx);
@@ -198,10 +167,10 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             // Determine if this is an up or down bar
             bool isUpBar = closeValue >= openValue;
 
-            // Choose outline stroke based on bar direction
-            Gui.Stroke outlineStroke = isUpBar ? Stroke : Stroke2;
-            if (outlineStroke == null)
-                outlineStroke = new Gui.Stroke(System.Windows.Media.Brushes.Gray, 1);
+            // Direction selects the fill only. The strokes are chosen by role, matching
+            // the names the UI shows for them: Stroke is the outline, Stroke2 the wick.
+            Gui.Stroke outlineStroke = Stroke;
+            Gui.Stroke wickStroke = Stroke2;
 
             // Setup the rectangle for the bar body
             rect.X = x - barWidth * 0.5f + BAR_PADDING;
@@ -221,24 +190,28 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 RenderTarget.FillRectangle(rect, fillBrush);
             }
 
-            // Get or determine the outline brush
-            Brush outlineBrush = overriddenOutlineBrush ?? outlineStroke.BrushDX;
+            // Draw the bar outline
+            Brush outlineBrush = overriddenOutlineBrush ?? outlineStroke?.BrushDX;
             if (outlineBrush != null)
             {
                 // Transform brush if it's not a solid color brush
                 if (!(outlineBrush is SolidColorBrush))
                     TransformBrush(outlineBrush, rect);
 
-                // Draw the bar outline
                 RenderTarget.DrawRectangle(rect, outlineBrush, outlineStroke.Width, outlineStroke.StrokeStyle);
+            }
 
-                // Draw the upper wick if present
+            // Draw the wicks
+            Brush wickBrush = overriddenOutlineBrush ?? wickStroke?.BrushDX;
+            if (wickBrush != null)
+            {
+                // Upper wick
                 DrawWick(x, highY, Math.Min(openY, closeY), highValue, Math.Max(openValue, closeValue),
-                    outlineBrush, outlineStroke.Width, true);
+                    wickBrush, wickStroke.Width, true);
 
-                // Draw the lower wick if present
+                // Lower wick
                 DrawWick(x, Math.Max(openY, closeY), lowY, Math.Min(openValue, closeValue), lowValue,
-                    outlineBrush, outlineStroke.Width, false);
+                    wickBrush, wickStroke.Width, false);
             }
         }
 
@@ -266,35 +239,6 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             }
         }
 
-        /// <summary>
-        /// Gets a rectangle from the pool or creates a new one
-        /// </summary>
-        private RectangleF GetPooledRectangle()
-        {
-            if (rectanglePool.Count > 0)
-                return rectanglePool.Dequeue();
-
-            return new RectangleF();
-        }
-
-        /// <summary>
-        /// Returns a rectangle to the pool for reuse
-        /// </summary>
-        private void ReturnRectangleToPool(RectangleF rect)
-        {
-            if (rectanglePool.Count < 10) // Keep pool size reasonable
-                rectanglePool.Enqueue(rect);
-        }
-
-        /// <summary>
-        /// Clears all cached values
-        /// </summary>
-        private void ClearCaches()
-        {
-            cachedBarWidth = -1;
-            cachedBarPaintWidth = -1;
-            rectanglePool.Clear();
-        }
         #endregion
     }
 }

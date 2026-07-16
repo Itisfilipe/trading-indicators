@@ -184,7 +184,7 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                     // Handle session initialization or first bar scenario
                     if (bars.Count == 0 || (bars.IsResetOnNewTradingDay && newSession))
                     {
-                        HandleFirstBar(bars, close, time, volume, newSession, isBar);
+                        HandleFirstBar(bars, close, time, volume);
                         return;
                     }
 
@@ -201,13 +201,10 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                         currentWickLow = Math.Min(currentWickLow, low);
                     }
 
-                    // Cache values of the current (last) bar for performance
+                    // Only the open is needed on every tick. The rest of the last bar is
+                    // read inside the branches that close a brick, which most ticks skip.
                     int lastIndex = bars.Count - 1;
                     double barOpen = bars.GetOpen(lastIndex);
-                    double barHigh = bars.GetHigh(lastIndex);
-                    double barLow = bars.GetLow(lastIndex);
-                    long barVolume = bars.GetVolume(lastIndex);
-                    DateTime barTime = bars.GetTime(lastIndex);
 
                     // Initialize Renko boundaries if not yet set
                     if (renkoHigh.ApproxCompare(0.0) == 0 || renkoLow.ApproxCompare(0.0) == 0)
@@ -219,26 +216,24 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                     // Check if the HIGH reached the upper threshold OR close breached it
                     if (high.ApproxCompare(renkoHigh) >= 0)
                     {
-                        ProcessUpwardMovement(bars, close, time, volume, barOpen, barHigh, barLow, barTime, barVolume, isBar);
+                        ProcessUpwardMovement(bars, close, time, volume, barOpen,
+                            bars.GetHigh(lastIndex), bars.GetLow(lastIndex),
+                            bars.GetTime(lastIndex), bars.GetVolume(lastIndex));
                     }
                     // Check if the LOW reached the lower threshold OR close breached it
                     else if (low.ApproxCompare(renkoLow) <= 0)
                     {
-                        ProcessDownwardMovement(bars, close, time, volume, barOpen, barHigh, barLow, barTime, barVolume, isBar);
+                        ProcessDownwardMovement(bars, close, time, volume, barOpen,
+                            bars.GetHigh(lastIndex), bars.GetLow(lastIndex),
+                            bars.GetTime(lastIndex), bars.GetVolume(lastIndex));
                     }
                     else
                     {
-                        // No new brick; update current brick with constrained wick extremes
-                        // Constrain wicks to not extend more than one brick size beyond the bar boundaries
-                        double maxAllowedWickHigh = Math.Max(renkoHigh, renkoLow) + offset;
-                        double minAllowedWickLow = Math.Min(renkoHigh, renkoLow) - offset;
-
-                        double constrainedWickHigh = Math.Min(currentWickHigh, maxAllowedWickHigh);
-                        double constrainedWickLow = Math.Max(currentWickLow, minAllowedWickLow);
-
+                        // No brick closed, so the price stayed inside the boundaries and the
+                        // accumulated extremes cannot reach them. Record them as they are.
                         UpdateBar(bars,
-                                  Math.Max(barOpen, constrainedWickHigh),
-                                  Math.Min(barOpen, constrainedWickLow),
+                                  Math.Max(barOpen, currentWickHigh),
+                                  Math.Min(barOpen, currentWickLow),
                                   close, time, volume);
                     }
 
@@ -247,8 +242,11 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                 }
                 catch (Exception ex)
                 {
-                    // Log error and continue processing
-                    NinjaTrader.Code.Output.Process($"RenkoWicksBarsType.OnDataPoint error: {ex.Message}", PrintTo.OutputTab1);
+                    // Rethrown after logging: a fault here can land between RemoveLastBar
+                    // and its replacement AddBar, and continuing from a half-applied bar
+                    // mutation would corrupt the series silently.
+                    NinjaTrader.Code.Output.Process($"RenkoWicksBarsType.OnDataPoint error: {ex}", PrintTo.OutputTab1);
+                    throw;
                 }
             }
         }
@@ -300,20 +298,16 @@ namespace NinjaTrader.NinjaScript.BarsTypes
 
         #region Private Helper Methods
         /// <summary>
-        /// Handles the creation of the first bar or new session start
+        /// Starts a fresh brick series: the very first bar, or the first bar of a new
+        /// session when Break EOD is enabled.
         /// </summary>
-        private void HandleFirstBar(Bars bars, double close, DateTime time, long volume, bool newSession, bool isBar)
+        /// <remarks>
+        /// The preceding session's final bar is left exactly as it was built. Rewriting
+        /// it to a doji, as this once did, threw away that bar's real body and extremes.
+        /// The session iterator is advanced by the caller only.
+        /// </remarks>
+        private void HandleFirstBar(Bars bars, double close, DateTime time, long volume)
         {
-            if (bars.Count > 0)
-            {
-                // For an existing session, close out the last bar by ensuring open equals close
-                double lastBarClose = bars.GetClose(bars.Count - 1);
-                DateTime lastBarTime = bars.GetTime(bars.Count - 1);
-                long lastBarVolume = bars.GetVolume(bars.Count - 1);
-                RemoveLastBar(bars);
-                AddBar(bars, lastBarClose, lastBarClose, lastBarClose, lastBarClose, lastBarTime, lastBarVolume);
-            }
-
             // Initialize Renko boundaries around the current price
             renkoHigh = close + offset;
             renkoLow = close - offset;
@@ -321,12 +315,6 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             // Set wick extremes to the current close price
             currentWickHigh = close;
             currentWickLow = close;
-
-            // If a new session is detected, update the session iterator
-            if (newSession && cachedSessionIterator != null)
-            {
-                cachedSessionIterator.GetNextSession(time, isBar);
-            }
 
             // Add the initial bar with all price values equal to the current close
             AddBar(bars, close, close, close, close, time, volume);
@@ -368,41 +356,35 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// Process upward price movement and create bullish bricks
         /// </summary>
         private void ProcessUpwardMovement(Bars bars, double close, DateTime time, long volume,
-            double barOpen, double barHigh, double barLow, DateTime barTime, long barVolume, bool isBar)
+            double barOpen, double barHigh, double barLow, DateTime barTime, long barVolume)
         {
             // Calculate the brick's open level for upward movement
             double brickOpenUp = renkoHigh - offset;
 
-            // Constrain wicks to reasonable limits relative to the brick
-            // For upward bricks: wick high should not extend more than one brick size above the close
-            // and wick low should not extend more than one brick size below the open
-            double maxWickHigh = renkoHigh + offset;
-            double minWickLow = brickOpenUp - offset;
-
-            double effectiveWickHigh = Math.Min(currentWickHigh, maxWickHigh);
-            double effectiveWickLow = Math.Max(currentWickLow, minWickLow);
+            // The brick closes at renkoHigh, and price cannot have traded above that
+            // without completing it, so renkoHigh is the high. Any overshoot beyond it
+            // belongs to the gap bricks emitted below, not to this one.
+            //
+            // The low is the real dip that occurred while the brick was forming. It is
+            // recorded as traded, never clamped: the wicks are the whole point of this
+            // bars type, and clamping silently understates anything reading Low
+            // downstream, such as ATR or a stop.
+            double completedHigh = Math.Max(brickOpenUp, renkoHigh);
+            double completedLow = Math.Min(brickOpenUp, currentWickLow);
 
             // Update the current bar if it doesn't match expected values
             if (barOpen.ApproxCompare(brickOpenUp) != 0 ||
-                barHigh.ApproxCompare(Math.Max(brickOpenUp, effectiveWickHigh)) != 0 ||
-                barLow.ApproxCompare(Math.Min(brickOpenUp, effectiveWickLow)) != 0)
+                barHigh.ApproxCompare(completedHigh) != 0 ||
+                barLow.ApproxCompare(completedLow) != 0)
             {
                 RemoveLastBar(bars);
-                AddBar(bars, brickOpenUp,
-                       Math.Max(brickOpenUp, effectiveWickHigh),
-                       Math.Min(brickOpenUp, effectiveWickLow),
+                AddBar(bars, brickOpenUp, completedHigh, completedLow,
                        renkoHigh, barTime, barVolume);
             }
 
             // Update Renko boundaries for the next brick
             renkoLow = renkoHigh - 2.0 * offset;
             renkoHigh = renkoHigh + offset;
-
-            // Update session information if a new session is detected
-            if (cachedSessionIterator != null && cachedSessionIterator.IsNewSession(time, isBar))
-            {
-                cachedSessionIterator.GetNextSession(time, isBar);
-            }
 
             // Fill in any "empty" bricks if the price HIGH moves several brick sizes at once
             // Use the actual high value that was reached, not the close
@@ -435,41 +417,29 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// Process downward price movement and create bearish bricks
         /// </summary>
         private void ProcessDownwardMovement(Bars bars, double close, DateTime time, long volume,
-            double barOpen, double barHigh, double barLow, DateTime barTime, long barVolume, bool isBar)
+            double barOpen, double barHigh, double barLow, DateTime barTime, long barVolume)
         {
             // Calculate the brick's open level for downward movement
             double brickOpenDown = renkoLow + offset;
 
-            // Constrain wicks to reasonable limits relative to the brick
-            // For downward bricks: wick low should not extend more than one brick size below the close
-            // and wick high should not extend more than one brick size above the open
-            double maxWickHigh = brickOpenDown + offset;
-            double minWickLow = renkoLow - offset;
-
-            double effectiveWickHigh = Math.Min(currentWickHigh, maxWickHigh);
-            double effectiveWickLow = Math.Max(currentWickLow, minWickLow);
+            // Mirror of ProcessUpwardMovement: the brick closes at renkoLow, so that is
+            // the low, and the real rally that happened while it formed is the high.
+            double completedHigh = Math.Max(brickOpenDown, currentWickHigh);
+            double completedLow = Math.Min(brickOpenDown, renkoLow);
 
             // Update the current bar if it doesn't match expected values
             if (barOpen.ApproxCompare(brickOpenDown) != 0 ||
-                barHigh.ApproxCompare(Math.Max(brickOpenDown, effectiveWickHigh)) != 0 ||
-                barLow.ApproxCompare(Math.Min(brickOpenDown, effectiveWickLow)) != 0)
+                barHigh.ApproxCompare(completedHigh) != 0 ||
+                barLow.ApproxCompare(completedLow) != 0)
             {
                 RemoveLastBar(bars);
-                AddBar(bars, brickOpenDown,
-                       Math.Max(brickOpenDown, effectiveWickHigh),
-                       Math.Min(brickOpenDown, effectiveWickLow),
+                AddBar(bars, brickOpenDown, completedHigh, completedLow,
                        renkoLow, barTime, barVolume);
             }
 
             // Update Renko boundaries for the next brick
             renkoHigh = renkoLow + 2.0 * offset;
             renkoLow = renkoLow - offset;
-
-            // Update session information if needed
-            if (cachedSessionIterator != null && cachedSessionIterator.IsNewSession(time, isBar))
-            {
-                cachedSessionIterator.GetNextSession(time, isBar);
-            }
 
             // Fill in any empty bricks if the price LOW move spans multiple brick sizes
             // Use the actual low value that was reached, not the close
