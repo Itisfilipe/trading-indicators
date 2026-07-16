@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Trading indicators for three platforms, one folder each:
 
 - `ninja-trader/` — NinjaTrader 8, C# (NinjaScript). Indicators, a custom bars
-  type + chart style (RenkoWicks), and the ChartTrading click-to-trade tool
-  (design and development status live in
-  `ninja-trader/ChartTrading/IMPLEMENTATION_PLAN.md`).
+  type + chart style (RenkoWicks), and the ChartTrading click-to-trade tool.
+  Design decisions live in commit messages and code comments; features and
+  usage for every indicator live in the root `README.md`.
 - `profit-chart/` — Nelogica Profit Chart, NTSL. Has its own `CLAUDE.md` scoped
   to NTSL development.
 - `tradingview/` — Pine Script files, self-contained.
@@ -90,5 +90,7 @@ Search the mirror with `grep -i "keyword" ninja-trader/llms-full.txt`, then read
   chart-behavior terms, not internals).
 - READMEs are for GitHub visitors: what the tool does and the non-obvious
   considerations for using it — never design decisions, rationale, milestone
-  status, references, or implementation details. That material belongs in the
-  relevant `IMPLEMENTATION_PLAN.md` (or commit messages).
+  status, references, or implementation details. That material belongs in
+  commit messages and code comments. Per-indicator features and usage are
+  consolidated in the root `README.md` (the home page); platform READMEs
+  carry install steps and platform quirks only.

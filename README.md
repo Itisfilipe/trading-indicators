@@ -10,37 +10,187 @@ Personal collection of trading indicators and chart tools for three platforms:
 
 ## NinjaTrader 8 (`ninja-trader/`)
 
-- **RenkoWicks** — Renko bars type and matching chart style that preserve each
-  brick's real counter-trend extreme as a wick, and draw the synthetic bricks
-  that fill price gaps faded, so what actually traded is visible at a glance.
-- **ErgonomicCharts** — natural chart interaction: scroll-wheel zoom through the
-  platform's own bar-spacing handlers, plus drag-to-pan.
-- **ChartTrading** — click-to-trade: hold a modifier key to preview the full
-  order bracket (entry, stop, targets) at the pointer, click to place it, with
-  sidebar buttons for on/off and stops-to-breakeven plus optional auto-breakeven.
-- **ATRRenkoSizeCalculator** — EMA-smoothed ATR with an on-chart table of ATR,
-  half ATR, and half ATR in ticks, for sizing Renko bricks.
-- **MACDHistogram** — MACD histogram with momentum-based coloring (rising vs
-  falling on each side of zero), bar width matching the chart's bars.
-- **VolumeWithEMA** — volume histogram colored by its relation to a volume EMA.
+Import instructions and platform quirks (restart after compiling chart styles,
+F5 to rebuild bars, and so on): [`ninja-trader/README.md`](ninja-trader/README.md).
 
-See [`ninja-trader/README.md`](ninja-trader/README.md) for import instructions
-and platform quirks.
+### RenkoWicks — Renko bricks that keep their wicks
+
+A Renko bars type plus matching chart style. Standard Renko throws away the
+counter-trend price movement inside each brick; RenkoWicks keeps it as a wick,
+so what actually traded stays visible.
+
+**Features**
+
+- Completed up bricks carry their pull-back low as a lower wick; down bricks
+  carry their rally high as an upper wick. The trend side stays pinned to the
+  brick boundary.
+- Synthetic bricks that only exist to span a price gap render faded ("Gap
+  brick opacity" setting) and carry zero volume, so they read as filler.
+- "Candle Outline" and "Candle Wick" style settings color what their names
+  say; bar-width changes apply immediately.
+- Defaults: 50-tick bricks, 15 days of data.
+
+**How to use:** compile both files, restart NinjaTrader (chart styles register
+at startup), then pick "Renko Wicks" as the chart's bar type in Data Series;
+"Brick Size" is in ticks. After changing the brick size press F5 to rebuild.
+Tick Replay is unavailable for this bars type (a platform constraint for bars
+that restate the forming brick).
+
+### ErgonomicCharts — natural zoom and pan
+
+Chart interaction the way other platforms do it, driven through NinjaTrader's
+own handlers.
+
+**Features**
+
+- Scroll-wheel zoom without holding Ctrl, using the platform's bar-spacing
+  hotkeys, so there is no zoom drift and your bar-spacing ratio is respected.
+- Drag-to-pan ("Enable drag-to-pan", on by default): click-drag pans the
+  chart by simulating the platform's native Ctrl-drag.
+- Gestures stop at the chart panel's edges and never trigger over the price
+  or time axis; on multi-panel charts they scope to the panel that hosts the
+  indicator.
+
+**How to use:** add the indicator to any chart and scroll to zoom, drag to
+pan. The simulated Ctrl press is session-wide: if NinjaTrader ever crashes
+mid-drag, a tap of the physical Ctrl key clears the stuck state.
+
+### ChartTrading — click-to-trade with an exact bracket preview
+
+Hold a modifier key over the chart to see exactly where an order bracket
+would land — entry at the mouse, stop and profit target(s) drawn like
+NinjaTrader's own working-order markers — then click to place it. Inspired by
+the click trading in Nelogica's Profit Chart and tools like Volaty's Clicker.
+
+**Features**
+
+- **Shift + move** previews a buy bracket, **Alt + move** a sell bracket
+  (both keys configurable). The preview tracks the pointer in real time and
+  labels the exact order type a click would submit (`LMT`, `MIT`, `STP`,
+  `STP LMT`, `MKT`), inferred from which side of the market you point at.
+- **Click** submits the entry to the ChartTrader account. Stop and target
+  orders go live against filled quantity — partial fills are bracketed as
+  they happen and the exits grow with further fills — with each stop/target
+  pair OCO-linked, so a resting exit can never open a position.
+- The preview is exact: the bracket comes from the indicator's settings, so
+  what you see is what gets submitted, to the tick.
+- **Bracket pairs** — up to three stop/target pairs, each with its own
+  checkbox and tick distances. The ChartTrader quantity sizes *each* enabled
+  pair: three enabled pairs at quantity 1 place a 3-lot entry with three
+  1-lot exits on each side.
+- **Entry types** — Limit or MIT on the favorable side of the market,
+  Stop-Market or Stop-Limit (with a tick offset) beyond it.
+- **Time in force** — Day (default) or GTC, applied to the entry and every
+  stop and target it places.
+- **Separate stacked stops** — when two pairs share a stop price, nudge each
+  extra stop one tick further out so the chart shows them as individually
+  draggable orders instead of one stacked marker.
+- **Appearance** — tag position (left/center/right with a margin), and
+  whether stop/target tags show the price, tick distance from entry, or
+  money value.
+- **Sidebar buttons**, mounted into the ChartTrader panel (floating on the
+  chart if ChartTrader is hidden):
+  - **ChartTrading ON/OFF** — the single gate. Green: clicks place orders.
+    Gray: keys and clicks do nothing, freeing the modifiers for other tools.
+  - **Stops to BE** — moves every working ChartTrading stop on the
+    instrument to the position's average fill price (plus the configured
+    offset), clamped one tick inside the market. Works after recompiles and
+    reloads, touches only stops this tool created, and never loosens a stop
+    that already sits at or beyond breakeven.
+- **Auto breakeven** (off by default) — once price runs a configured number
+  of ticks in the position's favor, all working stops move to breakeven
+  automatically, once per position, re-armed when the position closes or
+  flips. "Breakeven offset (ticks)" shifts where breakeven lands (e.g. 2
+  locks two ticks of profit) and applies to the button too.
+
+**How to use:** add the indicator to a chart with ChartTrader visible, set
+your bracket pairs, click the ChartTrading button green, hold Shift or Alt to
+preview, click to trade.
+
+**Worth knowing before trading with it**
+
+- **Live accounts are refused by default.** Orders only go to accounts named
+  `Sim*`/`Playback*` unless you deliberately enable "Allow live accounts".
+- Automation runs locally, like an ATM: auto-breakeven only acts while the
+  chart is open in NinjaTrader.
+- Removing the indicator leaves its working orders working, by design.
+
+### ATRRenkoSizeCalculator — ATR sized for Renko bricks
+
+EMA-smoothed ATR with an on-chart answer to "what brick size should I use?"
+
+**Features**
+
+- ATR smoothed with an EMA instead of Wilder's average, plotted with its
+  half value.
+- On-chart table: ATR, half ATR, and half ATR in ticks — the number to feed
+  a Renko brick size.
+- "Ignore gaps" (on by default) keeps session-open gaps out of the true
+  range so overnight jumps do not inflate the suggested size.
+- Settings: ATR length, decimal places, table and half-ATR toggles.
+
+**How to use:** add it to the instrument you trade, read "Renko Size" (half
+ATR in ticks) from the table, use it as the brick size.
+
+### MACDHistogram — momentum-colored histogram
+
+Just the MACD histogram, colored by whether the move is strengthening or
+fading.
+
+**Features**
+
+- Bright color when momentum grows (rising above zero, falling below), dark
+  when it fades back toward zero; a neutral color at exactly zero.
+- All five colors configurable ("Colors" group) and they persist across
+  workspace reloads.
+- Histogram bars match the chart's bar width.
+- Settings: fast/slow/smooth periods (12/26/9 defaults) plus the colors.
+
+**How to use:** add to a chart; defaults give the standard 12/26/9 MACD
+histogram in its own panel.
+
+### VolumeWithEMA — volume vs its average
+
+Volume histogram with an EMA of volume; bars color differently above vs
+below the average, so activity spikes stand out.
+
+**Features**
+
+- Volume bars colored by their relation to the EMA (above/below colors
+  configurable, persisted across reloads).
+- EMA line plotted over the histogram; period configurable (14 default).
+- Updates tick by tick.
+
+**How to use:** add to a chart; watch for above-average bars to confirm
+moves.
 
 ## Profit Chart (`profit-chart/`)
 
-Indicators and candle-coloring rules for day trading on Nelogica's Profit Chart,
-written in NTSL: a confluence coloring system (major/minor MACD, tape reading,
-EMA pullback, rejection), signal labels, a signal board, and tape-reading and
-MACD histograms. Documentation in Portuguese:
+NTSL indicators and candle-coloring rules for day trading on Nelogica's
+Profit Chart. The centerpiece is a confluence coloring system that paints
+each candle by how many rules agree (major/minor MACD trend, tape reading,
+EMA pullback, rejection), with companion signal labels, a signal board, tape
+reading and MACD histograms, MA cloud, day open marker, and a Renko size
+calculator. Full documentation, in Portuguese, with per-indicator usage:
 [`profit-chart/README.md`](profit-chart/README.md).
 
 ## TradingView (`tradingview/`)
 
-- `candle-countdown-position-sizer.pine` — candle countdown and position-sizing helper.
-- `time-based-price-levels.pine` — price levels anchored to configurable times of day.
+### Candle Countdown & Position Sizer
 
-Paste into TradingView's Pine editor and add to the chart.
+On-chart info table: current time, live countdown to the next candle close
+(and to the next higher-timeframe close), plus a position sizer that turns
+your account risk into a contract/share quantity from the stop distance.
+
+### Time-Based Price Levels
+
+Horizontal lines at up to 10 key price levels, each anchored to an intraday
+time (any HH:MM in your time zone) or a higher-timeframe open (daily, weekly,
+monthly, quarterly, semi-annual, yearly), extended through the session with
+an end-of-day cutoff.
+
+**How to use:** paste a `.pine` file into TradingView's Pine editor, save,
+and add to the chart.
 
 ## Vendor documentation is not included
 

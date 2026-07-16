@@ -103,6 +103,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   they group together in NinjaTrader's lists as first-party work.
 
 ### Repository
+- Documentation consolidated: the root README is now the home page, with a
+  feature list and usage notes for every indicator on every platform; the
+  NinjaTrader README keeps install steps and platform quirks. ChartTrading's
+  finished planning documents were removed.
 - Open-sourced properly: MIT license, English root README, per-platform
   documentation, and this changelog.
 - Vendor documentation (NinjaTrader developer docs, Nelogica NTSL manual)
