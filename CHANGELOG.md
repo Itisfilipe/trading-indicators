@@ -18,6 +18,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   at or beyond breakeven — manually trailed, say — stays where it is. Moves
   clamp one tick inside the market instead of exactly at it, and the auto
   trigger waits until the configured offset fits inside the market.
+- Auto-breakeven no longer disarms for the rest of the position if it
+  triggers in the instant before the stops go live (it retries once they
+  do), and a trigger caught mid-flight by a position change stands down
+  instead of acting on the replacement position.
 - First public milestone of a click-to-trade tool: hold a modifier key
   (Shift = buy, Alt = sell) to preview the full order bracket — entry, stop,
   and up to three targets — at the mouse pointer. Preview only; it places no

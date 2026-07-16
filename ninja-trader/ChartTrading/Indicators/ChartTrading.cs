@@ -134,8 +134,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // tracks it; read on the market-data thread by the auto-breakeven trigger.
         private double currentAvgPrice;
         private MarketPosition currentMarketPosition = MarketPosition.Flat;
-        private bool autoBreakevenFired;
+        private AutoBreakevenState autoBreakevenState = AutoBreakevenState.Armed;
+        private int positionCacheGeneration;
         private bool positionSeedPending;
+
+        // Armed: waiting for the trigger. Pending: a move is in flight. WaitingForStops:
+        // fired before this tool's stops were live; re-arms when one is accepted. Fired:
+        // done for this position.
+        private enum AutoBreakevenState { Armed, Pending, WaitingForStops, Fired }
 
         private class BracketCommit
         {
@@ -724,7 +730,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             currentAvgPrice = 0;
             currentMarketPosition = MarketPosition.Flat;
-            autoBreakevenFired = false;
+            autoBreakevenState = AutoBreakevenState.Armed;
+            positionCacheGeneration++;
             positionSeedPending = true;
         }
 
@@ -760,6 +767,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 positionSeedPending = false;
                 currentAvgPrice = avgPrice;
                 currentMarketPosition = marketPosition;
+                positionCacheGeneration++;
             }
         }
 
@@ -784,9 +792,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 positionSeedPending = false;
 
                 if (nowFlat || e.MarketPosition != currentMarketPosition)
-                    autoBreakevenFired = false;
+                    autoBreakevenState = AutoBreakevenState.Armed;
                 currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
                 currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
+                positionCacheGeneration++;
             }
         }
 
@@ -794,6 +803,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // resting stop or target without a position would OPEN a trade, not close one.
         private void OnAccountOrderUpdate(object sender, OrderEventArgs e)
         {
+            // An auto-breakeven that fired before the exits were live re-arms as soon
+            // as one of this tool's stops is accepted, instead of polling every tick.
+            if (e.Order.Name == "CT Stop"
+                && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted))
+            {
+                lock (orderLock)
+                {
+                    if (autoBreakevenState == AutoBreakevenState.WaitingForStops
+                        && ReferenceEquals(sender, subscribedAccount))
+                        autoBreakevenState = AutoBreakevenState.Armed;
+                }
+            }
+
             BracketCommit commit = null;
             lock (orderLock)
             {
@@ -983,15 +1005,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double avgPrice;
             MarketPosition position;
             Account account;
+            int generation;
             lock (orderLock)
             {
-                if (autoBreakevenFired)
+                if (autoBreakevenState != AutoBreakevenState.Armed)
                     return;
                 avgPrice = currentAvgPrice;
                 position = currentMarketPosition;
                 account = subscribedAccount;
+                generation = positionCacheGeneration;
             }
-            if (account == null || position == MarketPosition.Flat || avgPrice <= 0)
+            if (account == null || position == MarketPosition.Flat)
                 return;
 
             MasterInstrument master = Instrument?.MasterInstrument;
@@ -1012,21 +1036,50 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (orderLock)
             {
-                if (autoBreakevenFired)
+                // The cache may have moved on (position closed, flipped, or scaled)
+                // between the snapshot and here; a stale tick must not fire on a
+                // replacement position that never reached its own trigger.
+                if (autoBreakevenState != AutoBreakevenState.Armed || generation != positionCacheGeneration)
                     return;
-                autoBreakevenFired = true;
+                autoBreakevenState = AutoBreakevenState.Pending;
             }
 
-            MoveStopsToBreakeven(account, price, "auto");
+            MoveStopsToBreakeven(account, price, "auto", generation);
         }
 
-        private void MoveStopsToBreakeven(Account account, double last, string reason)
+        private void ReArmAutoBreakeven(int expectedGeneration)
+        {
+            if (expectedGeneration < 0)
+                return;
+            lock (orderLock)
+                autoBreakevenState = AutoBreakevenState.Armed;
+        }
+
+        private void MoveStopsToBreakeven(Account account, double last, string reason, int expectedGeneration = -1)
         {
             TriggerCustomEvent(o =>
             {
+                // The auto path validates its snapshot is still current before touching
+                // orders; the button (no generation) always acts on what is live now.
+                if (expectedGeneration >= 0)
+                {
+                    lock (orderLock)
+                    {
+                        if (positionCacheGeneration != expectedGeneration
+                            || !ReferenceEquals(subscribedAccount, account))
+                        {
+                            autoBreakevenState = AutoBreakevenState.Armed;
+                            return;
+                        }
+                    }
+                }
+
                 MasterInstrument master = Instrument?.MasterInstrument;
                 if (master == null)
+                {
+                    ReArmAutoBreakeven(expectedGeneration);
                     return;
+                }
 
                 Position position = null;
                 lock (account.Positions)
@@ -1043,6 +1096,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
                 if (position == null || position.MarketPosition == MarketPosition.Flat)
                 {
+                    ReArmAutoBreakeven(expectedGeneration);
                     Log("ChartTrading: no open position on " + Instrument.FullName + "; stops not moved.",
                         NinjaTrader.Cbi.LogLevel.Information);
                     return;
@@ -1099,6 +1153,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (changes.Count == 0)
                 {
+                    // Stops already at or beyond BE count as done; no stops at all means
+                    // the exits are not live yet -- wait for one to be accepted instead
+                    // of burning the latch (or polling every tick).
+                    if (expectedGeneration >= 0)
+                        lock (orderLock)
+                            autoBreakevenState = alreadySafer > 0
+                                ? AutoBreakevenState.Fired
+                                : AutoBreakevenState.WaitingForStops;
                     Log(alreadySafer > 0
                             ? $"ChartTrading: all {alreadySafer} CT stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved ({reason})."
                             : $"ChartTrading: no working CT stops on {Instrument.FullName} to move ({reason}).",
@@ -1107,6 +1169,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
 
                 account.Change(changes);
+                if (expectedGeneration >= 0)
+                    lock (orderLock)
+                        autoBreakevenState = AutoBreakevenState.Fired;
                 string skippedNote = alreadySafer > 0 ? $", {alreadySafer} already safer left alone" : string.Empty;
                 Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}{skippedNote} ({reason}).",
                     NinjaTrader.Cbi.LogLevel.Information);
