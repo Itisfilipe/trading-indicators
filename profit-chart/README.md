@@ -1,6 +1,10 @@
-# Trading Indicators - Profit Chart (NTSL)
+# Profit Chart (NTSL)
 
-Conjunto de indicadores e regras de coloracao para day trading no Profit Chart (Nelogica), escritos em NTSL. A pasta `tradingview/` traz tambem indicadores em Pine Script para o TradingView.
+Conjunto de indicadores e regras de coloracao para day trading no Profit Chart (Nelogica), escritos em NTSL.
+
+> O manual NTSL da Nelogica nao faz parte deste repositorio (conteudo da Nelogica).
+> Para gerar uma copia local em markdown a partir do seu proprio PDF do manual, use
+> `convert_to_md.py`.
 
 ## Como instalar
 
