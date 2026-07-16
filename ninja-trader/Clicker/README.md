@@ -36,8 +36,26 @@ auto-management. But the preview can only show offsets the user separately re-en
 into this indicator to *mirror* their ATM — preview and reality diverge if they drift
 apart. The preview is advisory, not guaranteed.
 
-**Decision needed before building the preview milestone.** Option A gives the faithful
-Profit-Chart experience; Option B keeps ATM features at the cost of an approximate preview.
+**Decision: Option A.** The indicator owns the bracket, for a faithful, exact preview.
+
+## Status
+
+- **M1 — live bracket preview (built, untested).** `Indicators/Clicker.cs`. Hold the buy
+  modifier (default Shift) or sell modifier (default Alt) and move over the chart: it
+  draws the entry line at the pointer, the stop, and up to three targets at the tick
+  offsets in the indicator settings. Buy puts the stop below and targets above; sell
+  mirrors. Places NO orders and touches no account or network — safe to run live while
+  you tune the feel. Not yet compiled or run in NinjaTrader.
+- **Next:** M2 order submission (entry + stop + targets via `Account.CreateOrder` with a
+  shared OCO id, quantity from ChartTrader), then M3 order-type inference, M6 OCO groups,
+  M7 grid/DCA. See `IMPLEMENTATION_PLAN.md`.
+
+### Testing M1 in NinjaTrader
+Import `Clicker.cs` (NinjaScript Editor → compile, or bundle with `Info.xml`), add the
+Clicker indicator to a chart, hold Shift and move the mouse: a blue entry line, a red
+stop, and green target lines should track the pointer. Try 100%/125%/150% Windows
+display scaling — the lines must sit exactly under the crosshair on tick. Release the key
+or leave the panel and the preview clears.
 
 ## Verified mechanics (from ABCompleteChartTrader + shipped NT source)
 
