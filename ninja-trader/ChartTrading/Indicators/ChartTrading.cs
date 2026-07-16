@@ -286,11 +286,15 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         private void UpdatePreview(Side side)
         {
-            if (side == previewSide)
-                return;
-
+            bool sideChanged = side != previewSide;
             previewSide = side;
-            ForceRefresh();
+
+            // Repaint on every pointer move while a side is armed, so the bracket tracks
+            // the mouse in real time -- not only when the side changes. Also repaint on
+            // the transition to None so the preview clears. OnRender itself is cheap
+            // (a few lines from cached state), so per-move refreshes are fine.
+            if (side != Side.None || sideChanged)
+                ForceRefresh();
         }
         #endregion
 

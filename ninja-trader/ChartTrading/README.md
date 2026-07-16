@@ -46,6 +46,17 @@ apart. The preview is advisory, not guaranteed.
   offsets in the indicator settings. Buy puts the stop below and targets above; sell
   mirrors. Places NO orders and touches no account or network — safe to run live while
   you tune the feel. Not yet compiled or run in NinjaTrader.
+  - **Fixed:** the preview now repaints on every mouse move while armed, so it tracks
+    the pointer in real time. It previously only repainted when the buy/sell side
+    changed, which read as lag.
+  - **Requested — preview must match NinjaTrader's native order markers.** Right now each
+    level is a plain solid line. It should look like a real resting order (see the Volaty
+    Clicker reference): a **dashed** horizontal line, a **left-edge label tag** reading
+    `{qty} {Buy|Sell} {LMT|STP}` (e.g. "1 Buy LMT"), and a **price tag on the right axis**.
+    Entry, stop, and each target drawn this way, so the preview is visually indistinguishable
+    from the order it would place. Needs SharpDX dashed StrokeStyle + cached TextFormat/
+    TextLayout labels + drawing into the axis strip; do the labels only after the line
+    styling is stable (per the render notes in `IMPLEMENTATION_PLAN.md`).
 - **Next:** M2 order submission (entry + stop + targets via `Account.CreateOrder` with a
   shared OCO id, quantity from ChartTrader), then M3 order-type inference, M6 OCO groups,
   M7 grid/DCA. See `IMPLEMENTATION_PLAN.md`.
