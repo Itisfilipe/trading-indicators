@@ -1,5 +1,6 @@
 #region Using declarations
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using NinjaTrader.Cbi;
 using NinjaTrader.Data;
@@ -22,10 +23,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public class RenkoSizeTable : Indicator
     {
         private int[] timeframeMinutes;
-        private Series<double>[] trSeries;
-        private EMA[] emaATR;
         private double[] currentATR;
         private int[] currentHalfATRTicks;
+
+        // Manual-EMA state per timeframe. The ATR period is days x bars-per-day, and
+        // bars-per-day is only learned by watching a session roll over, so the period
+        // is not known when an EMA() instance would have to be constructed. A manual
+        // EMA whose smoothing constant is recomputed each bar handles the moving
+        // target (ported from the NTSL renko-size-calculator, which works the same way).
+        private double[] emaAtr;
+        private bool[] emaSeeded;
+        private int[] barsInCurrentDay;
+        private int[] barsPerDay;
+        private int[] lastProcessedBar;
+        private bool[] trackedBarFirstOfSession;
+        private List<double>[] firstSessionTrueRanges;
 
         // SharpDX resources for table rendering
         private SharpDX.Direct2D1.Brush tableBgBrush;
@@ -56,8 +68,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int Timeframe4Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR Length", Order = 4, GroupName = "Parameters")]
-        public int ATRLength { get; set; }
+        [Display(Name = "ATR Period (days)", Order = 4, GroupName = "Parameters",
+                 Description = "ATR lookback in days. Each timeframe converts this to its own bar " +
+                               "count from how many bars its sessions actually hold.")]
+        public int ATRDays { get; set; }
 
         [NinjaScriptProperty]
         [Display(Name = "Ignore Gaps", Order = 5, GroupName = "Parameters")]
@@ -66,6 +80,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 8), NinjaScriptProperty]
         [Display(Name = "Decimal Places", Order = 6, GroupName = "Parameters")]
         public int DecimalPlaces { get; set; }
+
+        [Range(0, 2000), NinjaScriptProperty]
+        [Display(Name = "Top Margin (pixels)", Order = 7, GroupName = "Parameters",
+                 Description = "Distance between the panel's top edge and the table, so the table " +
+                               "clears the chart toolbar icons in the top-right corner.")]
+        public int TopMarginPixels { get; set; }
 
         #endregion
 
@@ -82,9 +102,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Timeframe2Minutes = 5;
                 Timeframe3Minutes = 15;
                 Timeframe4Minutes = 60;
-                ATRLength = 14;
+                ATRDays = 5;
                 IgnoreGaps = true;
                 DecimalPlaces = 1;
+                TopMarginPixels = 40;
             }
             else if (State == State.Configure)
             {
@@ -98,18 +119,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             else if (State == State.DataLoaded)
             {
                 int count = timeframeMinutes.Length;
-                trSeries = new Series<double>[count];
-                emaATR = new EMA[count];
                 currentATR = new double[count];
                 currentHalfATRTicks = new int[count];
-
+                emaAtr = new double[count];
+                emaSeeded = new bool[count];
+                barsInCurrentDay = new int[count];
+                barsPerDay = new int[count];
+                lastProcessedBar = new int[count];
+                trackedBarFirstOfSession = new bool[count];
+                firstSessionTrueRanges = new List<double>[count];
                 for (int i = 0; i < count; i++)
                 {
-                    // Series<double>(this) would sync to the PRIMARY series' bar count; each
-                    // timeframe's True Range series must instead sync to its own secondary Bars
-                    // object (BarsArray[i + 1]) or every row would misalign against the chart's bars.
-                    trSeries[i] = new Series<double>(BarsArray[i + 1]);
-                    emaATR[i] = EMA(trSeries[i], ATRLength);
+                    lastProcessedBar[i] = -1;
+                    firstSessionTrueRanges[i] = new List<double>();
                 }
             }
             else if (State == State.Terminated)
@@ -133,29 +155,90 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             int seriesIndex = BarsInProgress - 1;
             int idx = BarsInProgress;
 
-            double high0 = Highs[idx][0];
-            double low0 = Lows[idx][0];
+            // Only an index advance means a bar finished. The forming bar is never
+            // folded into the EMA: under tick-based Calculate modes its high/low are
+            // not final until it closes, and a stateful EMA cannot take back a
+            // contribution. Each completed bar is folded exactly once, at the first
+            // update of its successor, whatever the Calculate mode.
+            if (CurrentBars[idx] <= lastProcessedBar[seriesIndex])
+                return;
+
+            bool firstTrackedBar = lastProcessedBar[seriesIndex] < 0;
+            if (!firstTrackedBar)
+                FoldCompletedBar(seriesIndex, idx, trackedBarFirstOfSession[seriesIndex]);
+
+            // Start tracking the new forming bar; its session flag is consumed when
+            // it completes and gets folded on the next advance.
+            trackedBarFirstOfSession[seriesIndex] = BarsArray[idx].IsFirstBarOfSession;
+            lastProcessedBar[seriesIndex] = CurrentBars[idx];
+        }
+
+        /// <summary>
+        /// Folds the just-completed bar (one bar behind the forming one) into this
+        /// timeframe's ATR. During the first session the day-derived period is still
+        /// unknown, so true ranges are parked and replayed the moment the first
+        /// session roll reveals it -- folding them early with a stand-in period would
+        /// leave a residue the real period never washes out.
+        /// </summary>
+        private void FoldCompletedBar(int seriesIndex, int idx, bool isFirstOfSession)
+        {
+            // Bars-per-day census: each session roll, the day just finished says how
+            // many bars one day holds for this timeframe.
+            if (isFirstOfSession)
+            {
+                if (barsInCurrentDay[seriesIndex] > 0)
+                    barsPerDay[seriesIndex] = barsInCurrentDay[seriesIndex];
+                barsInCurrentDay[seriesIndex] = 1;
+            }
+            else
+                barsInCurrentDay[seriesIndex]++;
+
+            double high = Highs[idx][1];
+            double low = Lows[idx][1];
             double trueRange;
 
-            if (CurrentBars[idx] == 0)
-                trueRange = high0 - low0;
-            else if (IgnoreGaps && BarsArray[idx].IsFirstBarOfSession)
-                trueRange = high0 - low0;
+            bool hasPriorClose = CurrentBars[idx] >= 2;
+            if (!hasPriorClose || (IgnoreGaps && isFirstOfSession))
+                trueRange = high - low;
             else
-                trueRange = Math.Max(high0 - low0, Math.Max(Math.Abs(high0 - Closes[idx][1]), Math.Abs(low0 - Closes[idx][1])));
-
-            trSeries[seriesIndex][0] = trueRange;
-
-            if (CurrentBars[idx] < ATRLength)
             {
-                currentATR[seriesIndex] = 0;
-                currentHalfATRTicks[seriesIndex] = 0;
+                double priorClose = Closes[idx][2];
+                trueRange = Math.Max(high - low, Math.Max(Math.Abs(high - priorClose), Math.Abs(low - priorClose)));
+            }
+
+            if (barsPerDay[seriesIndex] == 0)
+            {
+                firstSessionTrueRanges[seriesIndex].Add(trueRange);
                 return;
             }
 
-            double atr = emaATR[seriesIndex][0];
-            currentATR[seriesIndex] = atr;
-            currentHalfATRTicks[seriesIndex] = (int)Math.Round((atr / 2.0) / TickSize);
+            // ATR period in bars = days x bars per day, refreshed on every fold so the
+            // smoothing follows the census as it settles.
+            int period = Math.Max(1, ATRDays * barsPerDay[seriesIndex]);
+            double k = 2.0 / (period + 1);
+
+            if (firstSessionTrueRanges[seriesIndex] != null)
+            {
+                foreach (double parked in firstSessionTrueRanges[seriesIndex])
+                    FoldTrueRange(seriesIndex, parked, k);
+                firstSessionTrueRanges[seriesIndex] = null;
+            }
+
+            FoldTrueRange(seriesIndex, trueRange, k);
+
+            currentATR[seriesIndex] = emaAtr[seriesIndex];
+            currentHalfATRTicks[seriesIndex] = (int)Math.Round((emaAtr[seriesIndex] / 2.0) / TickSize);
+        }
+
+        private void FoldTrueRange(int seriesIndex, double trueRange, double k)
+        {
+            if (!emaSeeded[seriesIndex])
+            {
+                emaAtr[seriesIndex] = trueRange;
+                emaSeeded[seriesIndex] = true;
+            }
+            else
+                emaAtr[seriesIndex] += k * (trueRange - emaAtr[seriesIndex]);
         }
 
         // Public, not protected: the base member is public and CS0507 rejects
@@ -206,9 +289,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // ChartPanel.X/.Y are nonzero with a left-justified scale or when this isn't the
             // topmost panel; offsetting from the panel origin (not the chart canvas) keeps the
-            // table inside the panel instead of clipped or drawn over a neighboring one.
+            // table inside the panel instead of clipped or drawn over a neighboring one. The
+            // top margin drops the table below the platform's own top-right toolbar icons.
             float tableX = ChartPanel.X + ChartPanel.W - tableWidth - 10;
-            float tableY = ChartPanel.Y + 10;
+            float tableY = ChartPanel.Y + TopMarginPixels;
 
             RectangleF tableRect = new RectangleF(tableX, tableY, tableWidth, tableHeight);
             RenderTarget.FillRectangle(tableRect, tableBgBrush);
