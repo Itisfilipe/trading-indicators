@@ -22,6 +22,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   Profit-side orders also show their R multiple against the nearest
   working stop. Flat, labels show distance from the last price in neutral
   gray. Works on any working order, whatever placed it.
+- The execution (average price) line carries its own label too: position
+  side, quantity, and live unrealized P&L in ticks and money, colored by
+  whether the position is currently winning.
 
 ### RiskRewardTargets (NinjaTrader, new)
 - Risk/reward drawing tool with up to three independently draggable targets.

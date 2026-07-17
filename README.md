@@ -139,6 +139,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   remaining quantity.
 - Profit-side orders also show their R multiple against the nearest
   working stop.
+- The execution (average price) line gets its own label: position side,
+  quantity, and live unrealized P&L in ticks and money.
 - Colors by side: profit green, loss red; flat = neutral gray with
   distance from the last price instead.
 - "Right margin" setting keeps the labels clear of the platform's own

@@ -202,15 +202,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     });
                 }
             }
-            if (workingOrders.Count == 0)
-                return;
-
             // Scalars are copied inside the lock: the live Position object keeps
             // mutating after release, and mixing an old MarketPosition with a new
             // AveragePrice would label a frame inconsistently.
             bool hasPosition = false;
             bool positionIsLong = false;
             double positionAvgPrice = 0;
+            int positionQuantity = 0;
+            double pnlTicks = 0;
+            double pnlPoints = 0;
+            double pnlMoney = 0;
             lock (account.Positions)
             {
                 foreach (Position candidate in account.Positions)
@@ -222,10 +223,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         hasPosition = true;
                         positionIsLong = candidate.MarketPosition == MarketPosition.Long;
                         positionAvgPrice = candidate.AveragePrice;
+                        positionQuantity = candidate.Quantity;
+                        // The platform's own P&L, not hand math against the last bar
+                        // close: without a price argument NinjaTrader marks with last
+                        // or bid/ask exactly as its P&L display settings dictate, so
+                        // this label can never disagree in sign with ChartTrader.
+                        pnlTicks = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Ticks);
+                        pnlPoints = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Points);
+                        pnlMoney = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Currency);
                         break;
                     }
                 }
             }
+
+            // With a position, the average-price line gets its own label even when no
+            // exit orders are working; flat with no working orders, nothing to draw.
+            if (workingOrders.Count == 0 && !hasPosition)
+                return;
 
             // In a position the reference is what execution actually cost; flat, the
             // market itself is the only meaningful reference -- and without bars
@@ -258,6 +272,50 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             try
             {
                 float panelRight = ChartPanel.X + ChartPanel.W;
+
+                // The execution (average price) line: live unrealized P&L in ticks and
+                // money, so the entry line answers "where am I" without the trader
+                // toggling the platform's own P&L display.
+                if (hasPosition)
+                {
+                    bool inProfit = pnlMoney > 0;
+
+                    float avgY = chartScale.GetYByValue(positionAvgPrice);
+                    if (avgY >= ChartPanel.Y && avgY <= ChartPanel.Y + ChartPanel.H)
+                    {
+                        // Signed custom formats: fractional values keep a decimal
+                        // instead of collapsing to a signed zero that contradicts
+                        // the money value and the color.
+                        string positionLabel = string.Format("{0} {1}  {2}t",
+                            positionIsLong ? "LONG" : "SHORT", positionQuantity,
+                            pnlTicks.ToString("+0.#;-0.#;0"));
+                        if (ShowPoints)
+                            positionLabel += string.Format("  {0}pt", pnlPoints.ToString("+0.00##;-0.00##;0"));
+                        if (ShowCurrency)
+                            positionLabel += string.Format("  {0}{1}",
+                                pnlMoney > 0 ? "+" : (pnlMoney < 0 ? "-" : ""),
+                                Core.Globals.FormatCurrency(Math.Abs(pnlMoney)));
+
+                        SharpDX.Direct2D1.Brush positionBrush = pnlMoney.ApproxCompare(0) == 0
+                            ? neutralBrushDx : (inProfit ? profitBrushDx : lossBrushDx);
+                        SharpDX.DirectWrite.TextLayout positionLayout = new SharpDX.DirectWrite.TextLayout(
+                            Core.Globals.DirectWriteFactory, positionLabel, textFormat, 600, textFormat.FontSize);
+                        try
+                        {
+                            // Below the line, where order labels never draw (they sit
+                            // above it): a stop moved to breakeven rests exactly on the
+                            // average price, and the two labels must stack, not overlap.
+                            float px = panelRight - RightMarginPixels - positionLayout.Metrics.Width;
+                            RenderTarget.DrawTextLayout(new SharpDX.Vector2(px, avgY + 3),
+                                positionLayout, positionBrush);
+                        }
+                        finally
+                        {
+                            positionLayout.Dispose();
+                        }
+                    }
+                }
+
                 foreach (OrderInfo order in workingOrders)
                 {
                     float y = chartScale.GetYByValue(order.Price);
