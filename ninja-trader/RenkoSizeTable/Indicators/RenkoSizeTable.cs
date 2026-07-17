@@ -40,6 +40,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private bool[] trackedBarFirstOfSession;
         private List<double>[] firstSessionTrueRanges;
 
+        // Median-of-daily-ATRs state per timeframe: the EMA column is the live read,
+        // this one is the "typical day" read. Each completed session contributes its
+        // mean true range; the median over the row's day window rejects outlier days
+        // (one hot CPI session out of ten moves it not at all), so the suggested
+        // brick size stays put unless volatility genuinely changes regime.
+        private double[] sessionTrSum;
+        private int[] sessionTrCount;
+        private bool[] sessionOpenObserved;
+        private List<double>[] dailyAtrs;
+        private int[] currentMedianTicks;
+
         // SharpDX resources for table rendering
         private SharpDX.Direct2D1.Brush tableBgBrush;
         private SharpDX.Direct2D1.Brush headerBgBrush;
@@ -146,10 +157,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 lastProcessedBar = new int[count];
                 trackedBarFirstOfSession = new bool[count];
                 firstSessionTrueRanges = new List<double>[count];
+                sessionTrSum = new double[count];
+                sessionTrCount = new int[count];
+                sessionOpenObserved = new bool[count];
+                dailyAtrs = new List<double>[count];
+                currentMedianTicks = new int[count];
                 for (int i = 0; i < count; i++)
                 {
                     lastProcessedBar[i] = -1;
                     firstSessionTrueRanges[i] = new List<double>();
+                    dailyAtrs[i] = new List<double>();
                 }
             }
             else if (State == State.Terminated)
@@ -181,13 +198,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (CurrentBars[idx] <= lastProcessedBar[seriesIndex])
                 return;
 
+            bool formingIsFirstOfSession = BarsArray[idx].IsFirstBarOfSession;
             bool firstTrackedBar = lastProcessedBar[seriesIndex] < 0;
             if (!firstTrackedBar)
+            {
                 FoldCompletedBar(seriesIndex, idx, trackedBarFirstOfSession[seriesIndex]);
+
+                // The forming bar opening a new session means the old session's bars
+                // are all folded -- its daily mean is final right now, not one bar
+                // later when this forming bar itself gets folded. The flag is only
+                // trusted on a bar with a predecessor: NinjaTrader also flags the
+                // very first loaded bar even when the data starts mid-session, and a
+                // partial day's mean would skew the median for up to N sessions, so
+                // the session that contains bar 0 is always discarded.
+                if (formingIsFirstOfSession)
+                    FinalizeSessionDay(seriesIndex);
+            }
 
             // Start tracking the new forming bar; its session flag is consumed when
             // it completes and gets folded on the next advance.
-            trackedBarFirstOfSession[seriesIndex] = BarsArray[idx].IsFirstBarOfSession;
+            trackedBarFirstOfSession[seriesIndex] = formingIsFirstOfSession;
             lastProcessedBar[seriesIndex] = CurrentBars[idx];
         }
 
@@ -222,6 +252,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 double priorClose = Closes[idx][2];
                 trueRange = Math.Max(high - low, Math.Max(Math.Abs(high - priorClose), Math.Abs(low - priorClose)));
+            }
+
+            // Median-of-daily-ATRs accumulation. The gate opens in FinalizeSessionDay
+            // when a genuine session roll is observed, so a partial session at the
+            // left edge of the data never accumulates. This runs before the
+            // parked-EMA early return: accumulating bars belong in the daily stat
+            // even while the EMA period is still unknown.
+            if (sessionOpenObserved[seriesIndex])
+            {
+                sessionTrSum[seriesIndex] += trueRange;
+                sessionTrCount[seriesIndex]++;
             }
 
             if (barsPerDay[seriesIndex] == 0)
@@ -259,6 +300,42 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 emaAtr[seriesIndex] += k * (trueRange - emaAtr[seriesIndex]);
         }
 
+        /// <summary>
+        /// Called when the forming bar opens a new session: pushes the finished
+        /// session's mean true range into the day window (when one was accumulating)
+        /// and opens the accumulation gate for the session now starting -- a roll
+        /// observed inside the data proves this session begins at its true start.
+        /// </summary>
+        private void FinalizeSessionDay(int seriesIndex)
+        {
+            if (sessionOpenObserved[seriesIndex] && sessionTrCount[seriesIndex] > 0)
+                PushDailyAtr(seriesIndex, sessionTrSum[seriesIndex] / sessionTrCount[seriesIndex]);
+            sessionOpenObserved[seriesIndex] = true;
+            sessionTrSum[seriesIndex] = 0;
+            sessionTrCount[seriesIndex] = 0;
+        }
+
+        /// <summary>
+        /// Adds a finished session's mean true range to this timeframe's day window
+        /// (capped at the row's configured day count) and refreshes the median.
+        /// </summary>
+        private void PushDailyAtr(int seriesIndex, double dayAtr)
+        {
+            List<double> days = dailyAtrs[seriesIndex];
+            days.Add(dayAtr);
+            while (days.Count > Math.Max(1, timeframeDays[seriesIndex]))
+                days.RemoveAt(0);
+
+            List<double> sorted = new List<double>(days);
+            sorted.Sort();
+            int mid = sorted.Count / 2;
+            double median = sorted.Count % 2 == 1
+                ? sorted[mid]
+                : (sorted[mid - 1] + sorted[mid]) / 2.0;
+
+            currentMedianTicks[seriesIndex] = (int)Math.Round((median / 2.0) / TickSize);
+        }
+
         // Public, not protected: the base member is public and CS0507 rejects
         // narrowing it (same platform trap as ChartStyle.OnRender).
         public override void OnRenderTargetChanged()
@@ -286,8 +363,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private static readonly float[] ColumnWidths = { 55, 70, 80, 60 };
-        private static readonly string[] ColumnHeaders = { "TF", "ATR", "Half ATR", "Ticks" };
+        // "Ticks" is the live EMA read; "Med Ticks" is the median-of-days read that
+        // holds steady through outlier sessions.
+        private static readonly float[] ColumnWidths = { 55, 70, 80, 60, 75 };
+        private static readonly string[] ColumnHeaders = { "TF", "ATR", "Half ATR", "Ticks", "Med Ticks" };
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
@@ -318,7 +397,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             RectangleF headerRect = new RectangleF(tableX, tableY, tableWidth, headerHeight);
             RenderTarget.FillRectangle(headerRect, headerBgBrush);
-            DrawTableRow(tableY, tableX, headerHeight, ColumnHeaders, headerFormat, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite);
+            DrawTableRow(tableY, tableX, headerHeight, ColumnHeaders, headerFormat, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite);
 
             for (int i = 0; i < rowCount; i++)
             {
@@ -328,10 +407,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     timeframeMinutes[i] + "m",
                     FormatValue(currentATR[i]),
                     FormatValue(currentATR[i] / 2.0),
-                    currentHalfATRTicks[i].ToString()
+                    currentHalfATRTicks[i].ToString(),
+                    currentMedianTicks[i].ToString()
                 };
                 RenderTarget.DrawLine(new SharpDX.Vector2(tableX, rowY), new SharpDX.Vector2(tableX + tableWidth, rowY), borderBrush, 1);
-                DrawTableRow(rowY, tableX, rowHeight, cells, textFormat, textBrushWhite, textBrushBlue, textBrushGreen, textBrushGreen);
+                DrawTableRow(rowY, tableX, rowHeight, cells, textFormat, textBrushWhite, textBrushBlue, textBrushGreen, textBrushGreen, textBrushGreen);
             }
 
             float columnX = tableX;
