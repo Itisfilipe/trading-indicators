@@ -15,6 +15,22 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   bricks. Tick-built charts are unaffected (bit-identical output, verified
   by simulation), and the up/down mirror property still holds.
 
+### ChartTrading (NinjaTrader, changed)
+- "Stops to BE" (and auto breakeven) now moves every working protective
+  stop on the instrument — whatever tool placed it — instead of only the
+  stops ChartTrading created. Stop orders on the entry side (stop entries)
+  are left alone, and a moved stop-limit keeps its trigger-to-limit
+  offset.
+
+### ChartTrading (NinjaTrader, fixed)
+- A fast entry fill could leave part of the position unprotected for good:
+  exits are only resized while their orders are alive, and a fill arriving
+  before the exits finished submitting skipped the resize with no retry —
+  a 4-lot entry could stay covered by 3 lots of exits, which also made
+  "Stops to BE" look like it moved only some stops. Each exit order coming
+  alive now re-checks its bracket's quantities, so a missed resize is
+  applied as soon as the order can accept it.
+
 ### OrderDecorator (NinjaTrader, new)
 - Labels every working order on the chart's instrument with its distance
   from the position's average price — ticks, optional points, optional
@@ -25,6 +41,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The execution (average price) line carries its own label too: position
   side, quantity, and live unrealized P&L in ticks and money, colored by
   whether the position is currently winning.
+- Orders resting on the same price merge into one label with the summed
+  quantity, matching how the platform stacks their markers (e.g. several
+  bracket stops parked together at breakeven).
+- Default right margin is 50 pixels.
 
 ### RiskRewardTargets (NinjaTrader, new)
 - Risk/reward drawing tool with up to three independently draggable targets.

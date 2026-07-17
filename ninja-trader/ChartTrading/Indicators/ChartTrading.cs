@@ -169,6 +169,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // then pair 2, and on -- PairQuantities[i] came from percentage
             // apportionment, so pairs are not all the same size.
             public int CoveredQuantity;
+            // The quantity EnsureExits last actually staged (create or change) for
+            // each pair. The retry hook compares this against the pair's desired
+            // quantity: a difference means a resize was skipped while the pair's
+            // orders were in flight and must be retried when they come alive. A
+            // trader's manual quantity change leaves this equal to desired, so it
+            // never triggers a regrow of what they changed on purpose.
+            public int[] PairAppliedQuantity;
             public Order[] StopOrders;
             public Order[] TargetOrders;
 
@@ -870,8 +877,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private void OnAccountOrderUpdate(object sender, OrderEventArgs e)
         {
             // An auto-breakeven that fired before the exits were live re-arms as soon
-            // as one of this tool's stops is accepted, instead of polling every tick.
-            if (e.Order.Name == "CT Stop"
+            // as a protective stop is accepted, instead of polling every tick. Any
+            // stop-type order qualifies, matching the widened Stops-to-BE scan: an
+            // externally placed stop coming alive must wake the latch too.
+            if ((e.Order.OrderType == OrderType.StopMarket || e.Order.OrderType == OrderType.StopLimit)
+                && e.Order.Name != "CT Entry"
                 && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted))
             {
                 lock (orderLock)
@@ -880,6 +890,43 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         && ReferenceEquals(sender, subscribedAccount))
                         autoBreakevenState = AutoBreakevenState.Armed;
                 }
+            }
+
+            // A pair order coming alive is the retry point for a grow that was skipped
+            // while the order was still in flight: EnsureExits only resizes pairs in
+            // Working/Accepted states, and a fast entry fill can outrun the exits' own
+            // acceptance. Without this retry the missed quantity was never applied --
+            // a 4-lot entry could end up covered by 3 lots of exits for good. The
+            // retry fires only when THIS pair's desired quantity differs from what
+            // EnsureExits last staged for it, so a trader's own quantity change
+            // (which also emits these updates, and leaves desired == applied) never
+            // regrows what they shrank on purpose, and no flag needs to be published
+            // ahead of the acceptance events.
+            if ((e.Order.Name == "CT Stop" || e.Order.Name == "CT Target")
+                && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted))
+            {
+                BracketCommit ownerCommit = null;
+                lock (orderLock)
+                {
+                    for (int i = 0; i < activeCommits.Count && ownerCommit == null; i++)
+                    {
+                        BracketCommit candidate = activeCommits[i];
+                        if (candidate.StopOrders == null)
+                            continue;
+                        for (int p = 0; p < candidate.StopOrders.Length; p++)
+                        {
+                            if (!ReferenceEquals(candidate.StopOrders[p], e.Order)
+                                && !ReferenceEquals(candidate.TargetOrders[p], e.Order))
+                                continue;
+                            if (candidate.PairDesiredQuantity(p, candidate.CoveredQuantity)
+                                != candidate.PairAppliedQuantity[p])
+                                ownerCommit = candidate;
+                            break;
+                        }
+                    }
+                }
+                if (ownerCommit != null)
+                    EnsureExits(ownerCommit, sender as Account);
             }
 
             BracketCommit commit = null;
@@ -920,7 +967,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 bool coverNow = false;
                 lock (orderLock)
                 {
-                    activeCommits.Remove(commit);
+                    // A commit whose entry partially filled stays registered: its
+                    // exits are live and may still need the grow-retry above. Only a
+                    // clean zero-fill end drops it.
+                    if (e.Order.Filled == 0)
+                        activeCommits.Remove(commit);
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
                         commit.CoveredQuantity = e.Order.Filled;
@@ -959,6 +1010,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         commit.StopOrders = new Order[commit.StopPrices.Length];
                         commit.TargetOrders = new Order[commit.StopPrices.Length];
+                        commit.PairAppliedQuantity = new int[commit.StopPrices.Length];
                     }
                 }
 
@@ -983,20 +1035,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Order target = account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
                             OrderEntry.Manual, tif, desired, commit.TargetPrices[i], 0,
                             oco, "CT Target", Core.Globals.MaxDate, null);
-                        commit.StopOrders[i] = stop;
-                        commit.TargetOrders[i] = target;
+                        lock (orderLock)
+                        {
+                            commit.StopOrders[i] = stop;
+                            commit.TargetOrders[i] = target;
+                            commit.PairAppliedQuantity[i] = desired;
+                        }
                         submissions.Add(stop);
                         submissions.Add(target);
                         continue;
                     }
 
                     // The pair exists from an earlier partial fill; grow it if it is
-                    // still alive. A pair the market already took out stays as-is.
+                    // still alive. A pair the market already took out stays as-is. A
+                    // pair whose orders are mid-flight (submitted, or a change in
+                    // progress) cannot take a Change yet -- its PairAppliedQuantity
+                    // keeps the old value, and the retry hook re-runs when the pair's
+                    // orders come alive and sees desired != applied.
                     Order pairTarget = commit.TargetOrders[i];
-                    if (stop.Quantity != desired
-                        && (stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted)
-                        && pairTarget != null
-                        && (pairTarget.OrderState == OrderState.Working || pairTarget.OrderState == OrderState.Accepted))
+                    if (stop.Quantity == desired)
+                        continue;
+                    bool stopAlive = stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted;
+                    bool targetAlive = pairTarget != null
+                        && (pairTarget.OrderState == OrderState.Working || pairTarget.OrderState == OrderState.Accepted);
+                    if (stopAlive && targetAlive)
                     {
                         stop.QuantityChanged = desired;
                         stop.LimitPriceChanged = stop.LimitPrice;
@@ -1006,6 +1068,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         pairTarget.LimitPriceChanged = pairTarget.LimitPrice;
                         pairTarget.StopPriceChanged = pairTarget.StopPrice;
                         changes.Add(pairTarget);
+                        lock (orderLock)
+                        {
+                            commit.PairAppliedQuantity[i] = desired;
+                        }
                     }
                 }
 
@@ -1183,15 +1249,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// Moves every working ChartTrading stop on this instrument to the position's
-        /// average fill price. The manual bypass for auto-breakeven: it makes the same
-        /// move, on demand, whether or not the automatic trigger is enabled or has fired.
+        /// Moves every working protective stop on this instrument -- whatever tool
+        /// placed it -- to the position's average fill price. The manual bypass for
+        /// auto-breakeven: it makes the same move, on demand, whether or not the
+        /// automatic trigger is enabled or has fired.
         /// </summary>
         /// <remarks>
-        /// Deliberately reload-proof: the stops are found on the account by their
-        /// "CT Stop" name instead of through this instance's in-memory registry,
-        /// because recompiling or reloading the indicator wipes that memory while the
-        /// orders live on. Every outcome lands in the log, so a click is never silent.
+        /// Deliberately reload-proof: the stops are found on the account by side and
+        /// type instead of through this instance's in-memory registry, because
+        /// recompiling or reloading the indicator wipes that memory while the orders
+        /// live on. Every outcome lands in the log, so a click is never silent.
         /// </remarks>
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
         {
@@ -1333,15 +1400,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
                 breakeven = master.RoundToTickSize(breakeven);
 
+                // Every protective stop on the instrument moves, not only this tool's:
+                // any working stop-type order on the position's EXIT side is protection,
+                // whatever placed it. Same-side stop orders stay untouched -- those are
+                // stop entries (a buy stop above the market on a long, for instance),
+                // and yanking an entry to breakeven would fire it.
+                OrderAction longExit1 = OrderAction.Sell;
+                OrderAction shortExit1 = OrderAction.Buy;
+                OrderAction shortExit2 = OrderAction.BuyToCover;
                 var candidates = new List<Order>();
                 lock (account.Orders)
                 {
                     foreach (Order order in account.Orders)
                     {
-                        if (order.Name != "CT Stop" || order.Instrument == null
+                        if (order.Instrument == null
                             || order.Instrument.FullName != Instrument.FullName)
                             continue;
+                        if (order.OrderType != OrderType.StopMarket && order.OrderType != OrderType.StopLimit)
+                            continue;
                         if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
+                            continue;
+                        // This tool's own stop-side entries are exits by action but
+                        // entries by intent; while short, a resting CT buy-stop entry
+                        // would otherwise match the exit side and get yanked to BE.
+                        if (order.Name == "CT Entry")
+                            continue;
+                        bool exitSide = isLong
+                            ? order.OrderAction == longExit1
+                            : order.OrderAction == shortExit1 || order.OrderAction == shortExit2;
+                        if (!exitSide)
                             continue;
                         candidates.Add(order);
                     }
@@ -1359,9 +1446,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         continue;
                     }
 
-                    // Stage every changeable field; only the stop price moves.
+                    // Stage every changeable field. A stop-limit's limit price shifts
+                    // by the same distance as its stop, keeping the configured
+                    // trigger-to-limit offset -- leaving the limit behind would make
+                    // the order unfillable once triggered.
                     order.QuantityChanged = order.Quantity;
-                    order.LimitPriceChanged = order.LimitPrice;
+                    order.LimitPriceChanged = order.OrderType == OrderType.StopLimit
+                        ? master.RoundToTickSize(order.LimitPrice + (breakeven - order.StopPrice))
+                        : order.LimitPrice;
                     order.StopPriceChanged = breakeven;
                     changes.Add(order);
                 }
@@ -1377,8 +1469,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                 ? AutoBreakevenState.Fired
                                 : AutoBreakevenState.WaitingForStops;
                     Log(alreadySafer > 0
-                            ? $"ChartTrading: all {alreadySafer} CT stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved ({reason})."
-                            : $"ChartTrading: no working CT stops on {Instrument.FullName} to move ({reason}).",
+                            ? $"ChartTrading: all {alreadySafer} stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved ({reason})."
+                            : $"ChartTrading: no working protective stops on {Instrument.FullName} to move ({reason}).",
                         NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }

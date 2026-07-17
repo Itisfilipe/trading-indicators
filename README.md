@@ -71,10 +71,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   distance, or money value.
 - "ChartTrading ON/OFF" button (mounted in the ChartTrader panel, floating if
   ChartTrader is hidden): green = clicks place orders, gray = disabled.
-- "Stops to BE" button: moves every working ChartTrading stop to the
-  position's average fill price plus an offset, clamped inside the market;
-  survives recompiles/reloads, only touches stops it created, never loosens
-  an existing breakeven-or-better stop.
+- "Stops to BE" button: moves every working protective stop on the
+  instrument — whatever tool placed it — to the position's average fill
+  price plus an offset, clamped inside the market; survives
+  recompiles/reloads, leaves stop-entry orders alone, never loosens an
+  existing breakeven-or-better stop. Stop-limits keep their
+  trigger-to-limit offset.
 - Auto breakeven (off by default): moves stops to breakeven once price runs
   a configured tick trigger in the position's favor, once per position,
   re-arms on close/flip; shares the offset setting with the button.
@@ -143,8 +145,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   quantity, and live unrealized P&L in ticks and money.
 - Colors by side: profit green, loss red; flat = neutral gray with
   distance from the last price instead.
-- "Right margin" setting keeps the labels clear of the platform's own
-  order markers.
+- Orders at the same price merge into one label with the summed quantity,
+  matching how the platform stacks their markers.
+- "Right margin" setting (default 50 px) keeps the labels clear of the
+  platform's own order markers.
 - Reads the ChartTrader-selected account; labels update tick by tick.
 - Use: add to a chart with ChartTrader visible; working orders get their
   numbers automatically.

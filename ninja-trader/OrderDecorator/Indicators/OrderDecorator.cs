@@ -111,7 +111,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowPoints = false;
                 ShowCurrency = true;
                 ShowRMultiple = true;
-                RightMarginPixels = 220;
+                RightMarginPixels = 50;
                 ProfitColor = Brushes.SeaGreen;
                 LossColor = Brushes.Crimson;
                 NeutralColor = Brushes.DimGray;
@@ -202,6 +202,43 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     });
                 }
             }
+            // Orders resting on the same price render as one label with the summed
+            // quantity: the platform stacks their markers into a single row, and
+            // stacked label text is unreadable (typical case: several bracket stops
+            // parked together at breakeven).
+            Dictionary<long, OrderInfo> mergedByPrice = new Dictionary<long, OrderInfo>();
+            List<long> mergeOrder = new List<long>();
+            foreach (OrderInfo order in workingOrders)
+            {
+                long priceKey = (long)Math.Round(order.Price / master.TickSize);
+                OrderInfo existing;
+                if (mergedByPrice.TryGetValue(priceKey, out existing))
+                {
+                    existing.RemainingQuantity += order.RemainingQuantity;
+                    existing.IsStopType = existing.IsStopType || order.IsStopType;
+                    // Exact token comparison: substring matching would treat "STP" as
+                    // already present inside "STP LMT" and drop a distinct type.
+                    bool hasToken = false;
+                    foreach (string token in existing.TypeLabel.Split('+'))
+                        if (token == order.TypeLabel)
+                        {
+                            hasToken = true;
+                            break;
+                        }
+                    if (!hasToken)
+                        existing.TypeLabel += "+" + order.TypeLabel;
+                    mergedByPrice[priceKey] = existing;
+                }
+                else
+                {
+                    mergedByPrice[priceKey] = order;
+                    mergeOrder.Add(priceKey);
+                }
+            }
+            workingOrders.Clear();
+            foreach (long priceKey in mergeOrder)
+                workingOrders.Add(mergedByPrice[priceKey]);
+
             // Scalars are copied inside the lock: the live Position object keeps
             // mutating after release, and mixing an old MarketPosition with a new
             // AveragePrice would label a frame inconsistently.
