@@ -23,6 +23,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public class RenkoSizeTable : Indicator
     {
         private int[] timeframeMinutes;
+        private int[] timeframeDays;
         private double[] currentATR;
         private int[] currentHalfATRTicks;
 
@@ -51,27 +52,40 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
+        // Each timeframe row pairs its bar interval with its own ATR lookback in
+        // days; the day count converts to bars from how many bars that timeframe's
+        // sessions actually hold.
         [Range(1, int.MaxValue), NinjaScriptProperty]
         [Display(Name = "Timeframe 1 (minutes)", Order = 0, GroupName = "Timeframes")]
         public int Timeframe1Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 2 (minutes)", Order = 1, GroupName = "Timeframes")]
+        [Display(Name = "ATR 1 (days)", Order = 1, GroupName = "Timeframes")]
+        public int Atr1Days { get; set; }
+
+        [Range(1, int.MaxValue), NinjaScriptProperty]
+        [Display(Name = "Timeframe 2 (minutes)", Order = 2, GroupName = "Timeframes")]
         public int Timeframe2Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 3 (minutes)", Order = 2, GroupName = "Timeframes")]
+        [Display(Name = "ATR 2 (days)", Order = 3, GroupName = "Timeframes")]
+        public int Atr2Days { get; set; }
+
+        [Range(1, int.MaxValue), NinjaScriptProperty]
+        [Display(Name = "Timeframe 3 (minutes)", Order = 4, GroupName = "Timeframes")]
         public int Timeframe3Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 4 (minutes)", Order = 3, GroupName = "Timeframes")]
+        [Display(Name = "ATR 3 (days)", Order = 5, GroupName = "Timeframes")]
+        public int Atr3Days { get; set; }
+
+        [Range(1, int.MaxValue), NinjaScriptProperty]
+        [Display(Name = "Timeframe 4 (minutes)", Order = 6, GroupName = "Timeframes")]
         public int Timeframe4Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR Period (days)", Order = 4, GroupName = "Parameters",
-                 Description = "ATR lookback in days. Each timeframe converts this to its own bar " +
-                               "count from how many bars its sessions actually hold.")]
-        public int ATRDays { get; set; }
+        [Display(Name = "ATR 4 (days)", Order = 7, GroupName = "Timeframes")]
+        public int Atr4Days { get; set; }
 
         [NinjaScriptProperty]
         [Display(Name = "Ignore Gaps", Order = 5, GroupName = "Parameters")]
@@ -99,10 +113,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 IsOverlay = true;
 
                 Timeframe1Minutes = 2;
+                Atr1Days = 3;
                 Timeframe2Minutes = 5;
+                Atr2Days = 5;
                 Timeframe3Minutes = 15;
+                Atr3Days = 10;
                 Timeframe4Minutes = 60;
-                ATRDays = 5;
+                Atr4Days = 20;
                 IgnoreGaps = true;
                 DecimalPlaces = 1;
                 TopMarginPixels = 40;
@@ -113,6 +130,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // configured minute values: NinjaTrader only guarantees reliable series loading when
                 // the NUMBER of AddDataSeries calls is fixed, not derived from parsed user input.
                 timeframeMinutes = new[] { Timeframe1Minutes, Timeframe2Minutes, Timeframe3Minutes, Timeframe4Minutes };
+                timeframeDays = new[] { Atr1Days, Atr2Days, Atr3Days, Atr4Days };
                 foreach (int minutes in timeframeMinutes)
                     AddDataSeries(BarsPeriodType.Minute, minutes);
             }
@@ -212,9 +230,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             }
 
-            // ATR period in bars = days x bars per day, refreshed on every fold so the
-            // smoothing follows the census as it settles.
-            int period = Math.Max(1, ATRDays * barsPerDay[seriesIndex]);
+            // ATR period in bars = this timeframe's own day count x bars per day,
+            // refreshed on every fold so the smoothing follows the census as it settles.
+            int period = Math.Max(1, timeframeDays[seriesIndex] * barsPerDay[seriesIndex]);
             double k = 2.0 / (period + 1);
 
             if (firstSessionTrueRanges[seriesIndex] != null)

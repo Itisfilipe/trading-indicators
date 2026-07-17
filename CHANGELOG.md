@@ -6,10 +6,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-07-17
 
 ### RenkoSizeTable (NinjaTrader, changed)
-- ATR period is now set in days instead of bars ("ATR Period (days)",
-  default 5). Each timeframe converts the day count to its own bar count by
-  measuring how many bars its sessions actually hold, so 5 days means 5 days
-  on every row whether it is the 2-minute or the 60-minute series.
+- ATR period is now set in days instead of bars, and each timeframe row has
+  its own day count ("ATR 1-4 (days)"; defaults 3/5/10/20 for the
+  2/5/15/60-minute rows). A row converts its day count to a bar count by
+  measuring how many bars its sessions actually hold. Smoothing remains
+  exponential.
 - New "Top Margin (pixels)" setting (default 40) drops the table below the
   chart's top-right toolbar icons so they stay clickable.
 

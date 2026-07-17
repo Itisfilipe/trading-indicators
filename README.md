@@ -139,11 +139,13 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   on its own secondary bar series — no panel, no bars drawn, only the table
   shows.
 - Each row: timeframe, ATR (points), half ATR (points), half ATR (ticks).
-- ATR period is set in days (default 5); each timeframe converts it to its
-  own bar count from how many bars its sessions actually hold. The chart
-  needs at least that many days of data loaded, plus one.
+- Each timeframe has its own ATR lookback in days (defaults: 2min/3d,
+  5min/5d, 15min/10d, 60min/20d), converted to a bar count from how many
+  bars that timeframe's sessions actually hold. ATR smoothing is
+  exponential. The chart needs at least the largest configured day count
+  of data loaded, plus one.
 - "Ignore gaps" (default on).
-- Settings: ATR period (days), decimal places, top margin (default 40 px,
+- Settings: per-timeframe days, decimal places, top margin (default 40 px,
   keeps the table clear of the chart's top-right toolbar icons).
 - Use: add to any chart, set the timeframes, read "Ticks" off the row you're
   sizing a Renko chart for.
