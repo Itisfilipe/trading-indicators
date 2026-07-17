@@ -5,6 +5,16 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-17
 
+### RenkoWicks (NinjaTrader, fixed)
+- No more spurious brick staircases around session opens. Brick completion
+  and gap filling are now keyed on the close, exactly like the platform's
+  own Renko: when historical data arrives as whole OHLC bars instead of
+  ticks, a single spike-wick bar used to fabricate a run of faded bricks up
+  to the spike top that the close never confirmed. Such spikes now stay
+  visible as wicks — this bars type's whole point — instead of becoming
+  bricks. Tick-built charts are unaffected (bit-identical output, verified
+  by simulation), and the up/down mirror property still holds.
+
 ### OrderDecorator (NinjaTrader, new)
 - Labels every working order on the chart's instrument with its distance
   from the position's average price — ticks, optional points, optional

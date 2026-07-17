@@ -224,19 +224,22 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                         InitializeRenkoBoundaries(bars);
                     }
 
-                    // Process price movement
-                    // Check if the HIGH reached the upper threshold OR close breached it
-                    if (high.ApproxCompare(renkoHigh) >= 0)
+                    // Process price movement. Completion is keyed on CLOSE, exactly like
+                    // NinjaTrader's own Renko: when a data point is a whole OHLC bar
+                    // (minute-built history), keying on its high/low manufactured brick
+                    // staircases up to spike wicks that stock Renko never builds. A high
+                    // or low beyond the boundary that the close never confirms stays a
+                    // wick -- which is this bars type's whole point.
+                    if (close.ApproxCompare(renkoHigh) >= 0)
                     {
-                        ProcessUpwardMovement(bars, close, time, volume, barOpen,
-                            bars.GetHigh(lastIndex), bars.GetLow(lastIndex),
+                        ProcessUpwardMovement(bars, close, high, low, time, volume, barOpen,
+                            bars.GetHigh(lastIndex), bars.GetLow(lastIndex), bars.GetClose(lastIndex),
                             bars.GetTime(lastIndex), bars.GetVolume(lastIndex));
                     }
-                    // Check if the LOW reached the lower threshold OR close breached it
-                    else if (low.ApproxCompare(renkoLow) <= 0)
+                    else if (close.ApproxCompare(renkoLow) <= 0)
                     {
-                        ProcessDownwardMovement(bars, close, time, volume, barOpen,
-                            bars.GetHigh(lastIndex), bars.GetLow(lastIndex),
+                        ProcessDownwardMovement(bars, close, high, low, time, volume, barOpen,
+                            bars.GetHigh(lastIndex), bars.GetLow(lastIndex), bars.GetClose(lastIndex),
                             bars.GetTime(lastIndex), bars.GetVolume(lastIndex));
                     }
                     else
@@ -367,15 +370,15 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// <summary>
         /// Process upward price movement and create bullish bricks
         /// </summary>
-        private void ProcessUpwardMovement(Bars bars, double close, DateTime time, long volume,
-            double barOpen, double barHigh, double barLow, DateTime barTime, long barVolume)
+        private void ProcessUpwardMovement(Bars bars, double close, double high, double low,
+            DateTime time, long volume,
+            double barOpen, double barHigh, double barLow, double barClose, DateTime barTime, long barVolume)
         {
             // Calculate the brick's open level for upward movement
             double brickOpenUp = renkoHigh - offset;
 
-            // The brick closes at renkoHigh, and price cannot have traded above that
-            // without completing it, so renkoHigh is the high. Any overshoot beyond it
-            // belongs to the gap bricks emitted below, not to this one.
+            // The brick closes at renkoHigh; overshoot beyond it belongs to the gap
+            // bricks or to the next forming brick's wick, not to this one.
             //
             // The low is the real dip that occurred while the brick was forming. It is
             // recorded as traded, never clamped: the wicks are the whole point of this
@@ -384,10 +387,15 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             double completedHigh = Math.Max(brickOpenUp, renkoHigh);
             double completedLow = Math.Min(brickOpenUp, currentWickLow);
 
-            // Update the current bar if it doesn't match expected values
+            // Update the current bar if it doesn't match expected values. The close is
+            // part of the check: an OHLC point can leave the forming bar's O/H/L
+            // already matching the completed shape while its close still sits inside
+            // the brick, and skipping the restatement then would ship a completed
+            // brick whose close never reached the boundary.
             if (barOpen.ApproxCompare(brickOpenUp) != 0 ||
                 barHigh.ApproxCompare(completedHigh) != 0 ||
-                barLow.ApproxCompare(completedLow) != 0)
+                barLow.ApproxCompare(completedLow) != 0 ||
+                barClose.ApproxCompare(renkoHigh) != 0)
             {
                 RemoveLastBar(bars);
                 AddBar(bars, brickOpenUp, completedHigh, completedLow,
@@ -398,8 +406,11 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             renkoLow = renkoHigh - 2.0 * offset;
             renkoHigh = renkoHigh + offset;
 
-            // Fill in any "empty" bricks if the price HIGH moved several brick sizes at once
-            while (currentWickHigh.ApproxCompare(renkoHigh) >= 0)
+            // Fill in any "empty" bricks if the CLOSE moved several brick sizes at
+            // once. Keyed on close, like stock Renko: filling to the accumulated high
+            // turned a spike wick in OHLC-built history into a staircase of bricks
+            // at prices the close never confirmed.
+            while (close.ApproxCompare(renkoHigh) >= 0)
             {
                 double gapOpen = renkoHigh - offset;
                 AddBar(bars, gapOpen, renkoHigh, gapOpen, renkoHigh, time, 0);
@@ -408,14 +419,20 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                 renkoHigh = renkoHigh + offset;
             }
 
-            StartFormingBrick(bars, renkoHigh - offset, close, time, volume);
+            // The residual brick inherits any accumulated spike still above the close:
+            // the completed brick clamps its trend side to the boundary, so without
+            // this carry a spike that never got close-confirmed would vanish entirely.
+            double residualWickHigh = Math.Max(currentWickHigh, Math.Max(close, high));
+            double residualWickLow = Math.Min(close, low);
+            StartFormingBrick(bars, renkoHigh - offset, close, residualWickHigh, residualWickLow, time, volume);
         }
 
         /// <summary>
         /// Process downward price movement and create bearish bricks
         /// </summary>
-        private void ProcessDownwardMovement(Bars bars, double close, DateTime time, long volume,
-            double barOpen, double barHigh, double barLow, DateTime barTime, long barVolume)
+        private void ProcessDownwardMovement(Bars bars, double close, double high, double low,
+            DateTime time, long volume,
+            double barOpen, double barHigh, double barLow, double barClose, DateTime barTime, long barVolume)
         {
             // Calculate the brick's open level for downward movement
             double brickOpenDown = renkoLow + offset;
@@ -425,10 +442,12 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             double completedHigh = Math.Max(brickOpenDown, currentWickHigh);
             double completedLow = Math.Min(brickOpenDown, renkoLow);
 
-            // Update the current bar if it doesn't match expected values
+            // Update the current bar if it doesn't match expected values. See the
+            // upward mirror for why the close participates in this check.
             if (barOpen.ApproxCompare(brickOpenDown) != 0 ||
                 barHigh.ApproxCompare(completedHigh) != 0 ||
-                barLow.ApproxCompare(completedLow) != 0)
+                barLow.ApproxCompare(completedLow) != 0 ||
+                barClose.ApproxCompare(renkoLow) != 0)
             {
                 RemoveLastBar(bars);
                 AddBar(bars, brickOpenDown, completedHigh, completedLow,
@@ -439,8 +458,9 @@ namespace NinjaTrader.NinjaScript.BarsTypes
             renkoHigh = renkoLow + 2.0 * offset;
             renkoLow = renkoLow - offset;
 
-            // Fill in any "empty" bricks if the price LOW moved several brick sizes at once
-            while (currentWickLow.ApproxCompare(renkoLow) <= 0)
+            // Mirror of the upward gap loop: keyed on close, never on the accumulated
+            // low, so an unconfirmed flush shows as a wick instead of fake bricks.
+            while (close.ApproxCompare(renkoLow) <= 0)
             {
                 double gapOpen = renkoLow + offset;
                 AddBar(bars, gapOpen, gapOpen, renkoLow, renkoLow, time, 0);
@@ -449,26 +469,32 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                 renkoLow = renkoLow - offset;
             }
 
-            StartFormingBrick(bars, renkoLow + offset, close, time, volume);
+            // Mirror of the upward residual carry, on the flush side.
+            double residualWickHigh = Math.Max(close, high);
+            double residualWickLow = Math.Min(currentWickLow, Math.Min(close, low));
+            StartFormingBrick(bars, renkoLow + offset, close, residualWickHigh, residualWickLow, time, volume);
         }
 
         /// <summary>
-        /// Starts the residual forming brick after a completion, seeding both wick
-        /// extremes with the crossing tick's actual close.
+        /// Starts the residual forming brick after a completion with the wick seeds
+        /// the caller computed. For tick data both seeds equal the close; for an OHLC
+        /// bar they keep whatever part of a spike the completed bricks did not absorb
+        /// visible as this brick's wick.
         /// </summary>
         /// <remarks>
         /// Shared by both movement directions so the up/down paths stay exact price
         /// mirrors of each other -- verified by reflection property tests: any tick
-        /// sequence and its mirror produce mirrored bricks.
+        /// or OHLC sequence and its mirror produce mirrored bricks.
         /// </remarks>
-        private void StartFormingBrick(Bars bars, double brickOpen, double close, DateTime time, long volume)
+        private void StartFormingBrick(Bars bars, double brickOpen, double close, double wickHigh, double wickLow,
+            DateTime time, long volume)
         {
-            currentWickHigh = close;
-            currentWickLow = close;
+            currentWickHigh = wickHigh;
+            currentWickLow = wickLow;
 
             AddBar(bars, brickOpen,
-                   Math.Max(brickOpen, close),
-                   Math.Min(brickOpen, close),
+                   Math.Max(brickOpen, wickHigh),
+                   Math.Min(brickOpen, wickLow),
                    close, time, volume);
         }
         #endregion
