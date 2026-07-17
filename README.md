@@ -131,6 +131,20 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to any chart, pick a source type/size different from the chart's
   own, set the EMA period.
 
+### RiskRewardTargets — risk/reward drawing tool with three targets
+
+- Drawing tool (chart's Draw menu), not an indicator: two clicks place entry
+  and stop, targets appear at 1R/2R/3R.
+- Every anchor — entry, stop, and each target — drags independently; each
+  target's label shows its price, distance in ticks, and its R multiple,
+  recomputed live from the current entry/stop distance. The built-in
+  RiskReward tool instead locks target and stop to a fixed ratio.
+- 1 to 3 targets ("Targets" setting); works for long and short (stop side
+  decides direction).
+- Lines extendable left/right; entry/stop/target line colors configurable.
+- Use: Draw menu → "Risk Reward Targets", click entry, click stop, then drag
+  any level; read each target's R off its label.
+
 ### RenkoSizeTable — Renko box sizes across timeframes at once
 
 - Same sizing method as ATRRenkoSizeCalculator, but a table with one row

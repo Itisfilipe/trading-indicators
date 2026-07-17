@@ -5,6 +5,15 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-17
 
+### RiskRewardTargets (NinjaTrader, new)
+- Risk/reward drawing tool with up to three independently draggable targets.
+  Two clicks place entry and stop; targets seed at 1R/2R/3R and then every
+  level moves freely, each target labeled with its price, tick distance, and
+  R multiple recomputed live from the current entry/stop distance — unlike
+  the built-in tool, which derives one side from the other through a fixed
+  ratio. Works long and short; 1-3 targets configurable; lines extendable
+  left/right.
+
 ### RenkoSizeTable (NinjaTrader, changed)
 - New "Med ATR" and "Med Ticks" columns: the median of the row's last-N
   daily ATRs in points, and half of it in ticks (each completed session
