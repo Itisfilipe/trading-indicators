@@ -114,8 +114,9 @@ preview, click to trade.
 
 **Worth knowing before trading with it**
 
-- **Live accounts are refused by default.** Orders only go to accounts named
-  `Sim*`/`Playback*` unless you deliberately enable "Allow live accounts".
+- **No live-account gate.** Whichever account is selected in ChartTrader,
+  sim or live, is what a click trades — the ChartTrading ON/OFF button is
+  the only switch. Picking the right account is on you.
 - Automation runs locally: auto-breakeven only acts while the chart is open
   in NinjaTrader.
 - Removing the indicator leaves its working orders working, by design.

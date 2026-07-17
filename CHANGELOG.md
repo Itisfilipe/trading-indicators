@@ -3,6 +3,14 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-07-17
+
+### ChartTrading (NinjaTrader, changed)
+- Removed the "Allow live accounts" setting and its live-account gate.
+  Whichever account is selected in ChartTrader is what a click trades now;
+  the ChartTrading ON/OFF button is the only switch. Account choice is the
+  trader's own responsibility.
+
 ## 2026-07-16
 
 ### ChartTrading (NinjaTrader, changed)

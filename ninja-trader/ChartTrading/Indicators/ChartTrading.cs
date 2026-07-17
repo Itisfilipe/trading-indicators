@@ -32,8 +32,8 @@ using SharpDX.Direct2D1;
 // armed submits the entry to the ChartTrader account, and each enabled pair's
 // stop and target -- OCO-linked per pair -- go live only once the entry fills,
 // so a resting exit can never open a position. OFF, keys and clicks do nothing.
-// Live accounts additionally require "Allow live accounts"; Sim/Playback always
-// accepts.
+// Which account (sim or live) is fair game is the trader's own call via the
+// ChartTrader account selector; this tool does not second-guess it.
 
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
@@ -267,11 +267,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "The entry always shows its price.")]
         public ChartTradingValueDisplay ValueDisplay { get; set; }
 
-        [Display(Name = "Allow live accounts", Order = 1, GroupName = "Trading",
-                 Description = "OFF: orders are only accepted on accounts named Sim* or Playback*. " +
-                               "Turn on deliberately to trade a live account.")]
-        public bool AllowLiveAccounts { get; set; }
-
         [Display(Name = "Limit-side entry", Order = 2, GroupName = "Trading",
                  Description = "Order type when the click is on the favorable side of the market: " +
                                "plain limit, or market-if-touched.")]
@@ -363,7 +358,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Target3Ticks = 150;
                 Percent3 = 50;
 
-                AllowLiveAccounts = false;
                 LimitSideType = ChartTradingLimitSideType.Limit;
                 StopSideType = ChartTradingStopSideType.StopMarket;
                 StopLimitOffsetTicks = 2;
@@ -701,15 +695,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (account == null)
             {
                 Log("ChartTrading: no ChartTrader account selected; order not placed.",
-                    NinjaTrader.Cbi.LogLevel.Warning);
-                return;
-            }
-
-            bool simAccount = account.Name.StartsWith("Sim", StringComparison.OrdinalIgnoreCase)
-                || account.Name.StartsWith("Playback", StringComparison.OrdinalIgnoreCase);
-            if (!simAccount && !AllowLiveAccounts)
-            {
-                Log($"ChartTrading: {account.Name} is a live account and 'Allow live accounts' is off; order not placed.",
                     NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
