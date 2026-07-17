@@ -36,7 +36,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [NinjaScriptProperty]
+        // No [NinjaScriptProperty] here: that attribute puts the property into the
+        // signatures NinjaTrader writes into its auto-generated code region, which
+        // lives in the parent Indicators namespace and cannot see this enum (CS0246).
+        // ChartTrading's enums follow the same rule.
         [RefreshProperties(RefreshProperties.All)]
         [Display(Name = "Source Type", Order = 0, GroupName = "Source Series", Description = "Bar type the EMA is computed on.")]
         public EmaSourceBarsType SourceType { get; set; }

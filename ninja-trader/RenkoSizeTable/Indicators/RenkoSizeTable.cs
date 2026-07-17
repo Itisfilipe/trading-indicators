@@ -158,7 +158,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             currentHalfATRTicks[seriesIndex] = (int)Math.Round((atr / 2.0) / TickSize);
         }
 
-        protected override void OnRenderTargetChanged()
+        // Public, not protected: the base member is public and CS0507 rejects
+        // narrowing it (same platform trap as ChartStyle.OnRender).
+        public override void OnRenderTargetChanged()
         {
             if (tableBgBrush != null) { tableBgBrush.Dispose(); tableBgBrush = null; }
             if (headerBgBrush != null) { headerBgBrush.Dispose(); headerBgBrush = null; }

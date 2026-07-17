@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
+using System.Xml.Serialization;
 using NinjaTrader.Cbi;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
@@ -130,7 +131,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             currentHalfATRTicks = (int)Math.Round(halfATR / TickSize);
         }
 
-        protected override void OnRenderTargetChanged()
+        // Public, not protected: the base member is public and CS0507 rejects
+        // narrowing it (same platform trap as ChartStyle.OnRender).
+        public override void OnRenderTargetChanged()
         {
             // Dispose of old resources and set to null
             if (tableBgBrush != null)
