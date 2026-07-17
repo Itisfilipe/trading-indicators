@@ -139,10 +139,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   on its own secondary bar series — no panel, no bars drawn, only the table
   shows.
 - Each row: timeframe, ATR (points), half ATR (points), half ATR (ticks),
-  and "Med Ticks" — half the median of that row's last-N daily ATRs, in
-  ticks. "Ticks" is the live exponential read; "Med Ticks" holds steady
-  through outlier days (one hot session out of ten doesn't move it), so
-  it's the more stable brick-size pick on volatile instruments.
+  "Med ATR" (points) and "Med Ticks" — the median of that row's last-N
+  daily ATRs and half of it in ticks. ATR/Ticks are the live exponential
+  read; the Med columns hold steady through outlier days (one hot session
+  out of ten doesn't move them), so Med Ticks is the more stable
+  brick-size pick on volatile instruments.
 - Each timeframe has its own ATR lookback in days (defaults: 2min/3d,
   5min/5d, 15min/10d, 60min/20d), converted to a bar count from how many
   bars that timeframe's sessions actually hold. ATR smoothing is

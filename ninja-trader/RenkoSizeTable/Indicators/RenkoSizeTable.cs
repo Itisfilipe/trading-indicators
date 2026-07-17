@@ -49,6 +49,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private int[] sessionTrCount;
         private bool[] sessionOpenObserved;
         private List<double>[] dailyAtrs;
+        private double[] currentMedianATR;
         private int[] currentMedianTicks;
 
         // SharpDX resources for table rendering
@@ -161,6 +162,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 sessionTrCount = new int[count];
                 sessionOpenObserved = new bool[count];
                 dailyAtrs = new List<double>[count];
+                currentMedianATR = new double[count];
                 currentMedianTicks = new int[count];
                 for (int i = 0; i < count; i++)
                 {
@@ -333,6 +335,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ? sorted[mid]
                 : (sorted[mid - 1] + sorted[mid]) / 2.0;
 
+            currentMedianATR[seriesIndex] = median;
             currentMedianTicks[seriesIndex] = (int)Math.Round((median / 2.0) / TickSize);
         }
 
@@ -363,10 +366,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        // "Ticks" is the live EMA read; "Med Ticks" is the median-of-days read that
-        // holds steady through outlier sessions.
-        private static readonly float[] ColumnWidths = { 55, 70, 80, 60, 75 };
-        private static readonly string[] ColumnHeaders = { "TF", "ATR", "Half ATR", "Ticks", "Med Ticks" };
+        // "ATR"/"Ticks" are the live EMA read; "Med ATR"/"Med Ticks" are the
+        // median-of-days read that holds steady through outlier sessions.
+        private static readonly float[] ColumnWidths = { 55, 70, 80, 60, 75, 75 };
+        private static readonly string[] ColumnHeaders = { "TF", "ATR", "Half ATR", "Ticks", "Med ATR", "Med Ticks" };
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
@@ -397,7 +400,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             RectangleF headerRect = new RectangleF(tableX, tableY, tableWidth, headerHeight);
             RenderTarget.FillRectangle(headerRect, headerBgBrush);
-            DrawTableRow(tableY, tableX, headerHeight, ColumnHeaders, headerFormat, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite);
+            DrawTableRow(tableY, tableX, headerHeight, ColumnHeaders, headerFormat, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite, textBrushWhite);
 
             for (int i = 0; i < rowCount; i++)
             {
@@ -408,10 +411,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     FormatValue(currentATR[i]),
                     FormatValue(currentATR[i] / 2.0),
                     currentHalfATRTicks[i].ToString(),
+                    FormatValue(currentMedianATR[i]),
                     currentMedianTicks[i].ToString()
                 };
                 RenderTarget.DrawLine(new SharpDX.Vector2(tableX, rowY), new SharpDX.Vector2(tableX + tableWidth, rowY), borderBrush, 1);
-                DrawTableRow(rowY, tableX, rowHeight, cells, textFormat, textBrushWhite, textBrushBlue, textBrushGreen, textBrushGreen, textBrushGreen);
+                DrawTableRow(rowY, tableX, rowHeight, cells, textFormat, textBrushWhite, textBrushBlue, textBrushGreen, textBrushGreen, textBrushBlue, textBrushGreen);
             }
 
             float columnX = tableX;

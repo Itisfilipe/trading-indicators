@@ -6,11 +6,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-07-17
 
 ### RenkoSizeTable (NinjaTrader, changed)
-- New "Med Ticks" column: half the median of the row's last-N daily ATRs
-  (each completed session contributes its mean true range; N is the row's
-  day count). Unlike the live exponential "Ticks" read, the median doesn't
-  budge for one outlier session, giving a steadier brick-size suggestion on
-  instruments whose ATR swings day to day.
+- New "Med ATR" and "Med Ticks" columns: the median of the row's last-N
+  daily ATRs in points, and half of it in ticks (each completed session
+  contributes its mean true range; N is the row's day count). Unlike the
+  live exponential ATR/Ticks read, the median doesn't budge for one outlier
+  session, giving a steadier brick-size suggestion on instruments whose ATR
+  swings day to day.
 - ATR period is now set in days instead of bars, and each timeframe row has
   its own day count ("ATR 1-4 (days)"; defaults 3/5/10/20 for the
   2/5/15/60-minute rows). A row converts its day count to a bar count by
