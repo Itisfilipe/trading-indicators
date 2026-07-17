@@ -131,6 +131,22 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to any chart, pick a source type/size different from the chart's
   own, set the EMA period.
 
+### OrderDecorator — distances on your working orders
+
+- Labels every working order on the chart's instrument (any tool's orders,
+  not just this repo's) with its distance from the position's average
+  price: ticks, optional points, optional money value for the order's
+  remaining quantity.
+- Profit-side orders also show their R multiple against the nearest
+  working stop.
+- Colors by side: profit green, loss red; flat = neutral gray with
+  distance from the last price instead.
+- "Right margin" setting keeps the labels clear of the platform's own
+  order markers.
+- Reads the ChartTrader-selected account; labels update tick by tick.
+- Use: add to a chart with ChartTrader visible; working orders get their
+  numbers automatically.
+
 ### RiskRewardTargets — risk/reward drawing tool with three targets
 
 - Drawing tool (chart's Draw menu), not an indicator: two clicks place entry

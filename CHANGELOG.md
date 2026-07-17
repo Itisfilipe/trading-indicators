@@ -5,6 +5,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-17
 
+### OrderDecorator (NinjaTrader, new)
+- Labels every working order on the chart's instrument with its distance
+  from the position's average price — ticks, optional points, optional
+  money value for the remaining quantity — colored by side (profit/loss).
+  Profit-side orders also show their R multiple against the nearest
+  working stop. Flat, labels show distance from the last price in neutral
+  gray. Works on any working order, whatever placed it.
+
 ### RiskRewardTargets (NinjaTrader, new)
 - Risk/reward drawing tool with up to three independently draggable targets.
   Two clicks place entry and stop; targets seed at 1R/2R/3R and then every
