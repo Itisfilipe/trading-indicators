@@ -5,6 +5,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-17
 
+### RenkoWicks (NinjaTrader, changed)
+- Default "Gap brick opacity" raised from 0.4 to 0.65: a session-boundary
+  gap filled by many faded bricks read as a hole in the series on a white
+  chart. Existing charts keep their saved value — raise it in the chart
+  style properties to match.
+
 ### RiskRewardTargets (NinjaTrader, new)
 - Risk/reward drawing tool with up to three independently draggable targets.
   Two clicks place entry and stop; targets seed at 1R/2R/3R and then every

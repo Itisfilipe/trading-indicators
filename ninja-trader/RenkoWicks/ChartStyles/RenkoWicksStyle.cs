@@ -46,9 +46,11 @@ namespace NinjaTrader.NinjaScript.ChartStyles
         private const int TYPE_ID = 2588;
 
         /// <summary>
-        /// How faded a gap brick is drawn, by default.
+        /// How faded a gap brick is drawn, by default. High enough that a long
+        /// session-gap staircase still reads as bricks on a white chart -- at 0.4
+        /// it looked like a hole in the series.
         /// </summary>
-        private const double DEFAULT_GAP_OPACITY = 0.4;
+        private const double DEFAULT_GAP_OPACITY = 0.65;
 
         /// <summary>
         /// Bricks the bars type synthesises to span a price jump carry no volume. Real
