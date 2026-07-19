@@ -193,10 +193,19 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                         cachedSessionIterator.GetNextSession(time, isBar);
                     }
 
-                    // Handle session initialization or first bar scenario
-                    if (bars.Count == 0 || (bars.IsResetOnNewTradingDay && newSession))
+                    // First bar of the series: nothing exists to chain from.
+                    if (bars.Count == 0)
                     {
                         HandleFirstBar(bars, close, time, volume);
+                        return;
+                    }
+
+                    // Break-at-EOD session roll: never blank the chain. The old reset
+                    // re-anchored at the session open with a lone doji, leaving the
+                    // whole overnight move as an unspanned void on the chart.
+                    if (bars.IsResetOnNewTradingDay && newSession)
+                    {
+                        StartNewSessionChain(bars, close, high, low, time, volume);
                         return;
                     }
 
@@ -313,14 +322,8 @@ namespace NinjaTrader.NinjaScript.BarsTypes
 
         #region Private Helper Methods
         /// <summary>
-        /// Starts a fresh brick series: the very first bar, or the first bar of a new
-        /// session when Break EOD is enabled.
+        /// Starts a fresh brick series at the very first bar of the data.
         /// </summary>
-        /// <remarks>
-        /// The preceding session's final bar is left exactly as it was built. Rewriting
-        /// it to a doji, as this once did, threw away that bar's real body and extremes.
-        /// The session iterator is advanced by the caller only.
-        /// </remarks>
         private void HandleFirstBar(Bars bars, double close, DateTime time, long volume)
         {
             // Initialize Renko boundaries around the current price
@@ -337,34 +340,53 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         }
 
         /// <summary>
-        /// Initialize Renko boundaries based on previous bars
+        /// Spans a Break-at-EOD session roll without ever blanking the chain: the
+        /// previous session's forming brick stays exactly as built (rewriting it, as
+        /// this bars type once did, threw away its real body and extremes), zero-volume
+        /// bricks walk whole bricks from its close toward the new session's first
+        /// price, a zero-volume partial step covers the sub-brick residual so the
+        /// chain lands exactly on that price, and the session opens with a doji there
+        /// carrying the tick's volume. The grid re-anchors at the open; because the
+        /// doji's open equals the new anchor, a later completion's restatement of the
+        /// forming bar cannot detach it from the chain. The zero-volume bars render
+        /// faded, so the whole overnight walk reads as synthetic filler.
+        /// </summary>
+        private void StartNewSessionChain(Bars bars, double close, double high, double low, DateTime time, long volume)
+        {
+            double level = bars.GetClose(bars.Count - 1);
+            double step = close >= level ? offset : -offset;
+            while (Math.Abs(close - level).ApproxCompare(offset) >= 0)
+            {
+                double next = level + step;
+                AddBar(bars, level, Math.Max(level, next), Math.Min(level, next), next, time, 0);
+                level = next;
+            }
+            if (close.ApproxCompare(level) != 0)
+                AddBar(bars, level, Math.Max(level, close), Math.Min(level, close), close, time, 0);
+
+            double sessionWickHigh = Math.Max(close, high);
+            double sessionWickLow = Math.Min(close, low);
+            AddBar(bars, close, sessionWickHigh, sessionWickLow, close, time, volume);
+
+            renkoHigh = close + offset;
+            renkoLow = close - offset;
+            currentWickHigh = sessionWickHigh;
+            currentWickLow = sessionWickLow;
+            bars.LastPrice = close;
+        }
+
+        /// <summary>
+        /// Re-anchors the boundaries when a fresh bars-type instance continues an
+        /// existing series (reload, reconnect): symmetrically around the last close.
+        /// Guessing the grid from the second-to-last bar's direction, as this once
+        /// did, could rebuild the wrong grid right after a session roll and leave
+        /// part of a later move uncovered.
         /// </summary>
         private void InitializeRenkoBoundaries(Bars bars)
         {
-            if (bars.Count == 1)
-            {
-                double barOpen = bars.GetOpen(0);
-                renkoHigh = barOpen + offset;
-                renkoLow = barOpen - offset;
-            }
-            else if (bars.Count >= 2)
-            {
-                double previousClose = bars.GetClose(bars.Count - 2);
-                double previousOpen = bars.GetOpen(bars.Count - 2);
-
-                if (previousClose > previousOpen)
-                {
-                    // Previous bar was bullish
-                    renkoHigh = previousClose + offset;
-                    renkoLow = previousClose - 2.0 * offset;
-                }
-                else
-                {
-                    // Previous bar was bearish
-                    renkoHigh = previousClose + 2.0 * offset;
-                    renkoLow = previousClose - offset;
-                }
-            }
+            double lastClose = bars.GetClose(bars.Count - 1);
+            renkoHigh = lastClose + offset;
+            renkoLow = lastClose - offset;
         }
 
         /// <summary>

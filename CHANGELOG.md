@@ -3,6 +3,20 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-07-18
+
+### RenkoWicks (NinjaTrader, fixed)
+- With Break at EOD on, a session roll no longer leaves an unspanned
+  vertical void in the brick chain. The overnight move is now walked with
+  faded zero-volume bricks from the previous session's last brick to the
+  new session's first price (including a partial step for the sub-brick
+  remainder), and the session opens with a doji there — every bar opens on
+  the previous bar's body, at session boundaries and everywhere else. The
+  previous session's final brick keeps its real body and wicks.
+- After a chart reload or reconnect mid-series, the brick grid re-anchors
+  at the last brick's close instead of guessing from the second-to-last
+  bar, which could rebuild a wrong grid right after a session roll.
+
 ## 2026-07-17
 
 ### RenkoWicks (NinjaTrader, fixed)

@@ -19,7 +19,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Up bricks: pull-back low becomes the lower wick. Down bricks: rally high
   becomes the upper wick. Trend side stays pinned to the brick boundary.
 - Gap-filler synthetic bricks render faded ("Gap brick opacity") with zero
-  volume.
+  volume. This includes session boundaries: with Break at EOD on, the
+  overnight move is walked with faded bricks to the session open instead of
+  leaving an unspanned jump — the chain never shows a void.
 - "Candle Outline" and "Candle Wick" color settings; bar-width changes apply
   immediately.
 - Defaults: 50-tick bricks, 15 days of data.
