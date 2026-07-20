@@ -125,12 +125,14 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         /// <summary>
         /// Seeds the targets at 1R/2R/3R on the profit side of the entry, aligned to
         /// the entry's bar. Only used while building; afterwards targets move freely.
+        /// Returns false when the attachment is not resolved yet and nothing was
+        /// seeded, so the caller can leave the build step open for a retry.
         /// </summary>
-        private void SeedTargetsFromStop()
+        private bool SeedTargetsFromStop()
         {
             MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
             if (master == null)
-                return;
+                return false;
 
             double entryPrice = master.RoundToTickSize(EntryAnchor.Price);
             double signedRisk = entryPrice - master.RoundToTickSize(StopAnchor.Price);
@@ -143,6 +145,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 targets[i].SlotIndex = EntryAnchor.SlotIndex;
                 targets[i].IsEditing = false;
             }
+            return true;
         }
 
         public override void OnMouseDown(ChartControl chartControl, ChartPanel chartPanel, ChartScale chartScale, ChartAnchor dataPoint)
@@ -159,8 +162,11 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                     else if (StopAnchor.IsEditing)
                     {
                         dataPoint.CopyDataValues(StopAnchor);
-                        StopAnchor.IsEditing = false;
-                        SeedTargetsFromStop();
+                        // The stop stays editing until seeding succeeds: finalizing
+                        // it with the targets unseeded would strand the tool in
+                        // Building with nothing left editable to finish it.
+                        if (SeedTargetsFromStop())
+                            StopAnchor.IsEditing = false;
                     }
                     if (!EntryAnchor.IsEditing && !StopAnchor.IsEditing && TargetsPlaced)
                     {

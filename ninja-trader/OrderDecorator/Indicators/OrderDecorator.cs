@@ -267,17 +267,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         // close: without a price argument NinjaTrader marks with last
                         // or bid/ask exactly as its P&L display settings dictate, so
                         // this label can never disagree in sign with ChartTrader.
-                        // Before the first quotes after a connect there is no mark to
-                        // value against and that call would deref it; until they
-                        // arrive the label carries side and quantity only.
-                        MarketData marketData = candidate.Instrument.MarketData;
-                        if (marketData != null && marketData.Last != null
-                            && marketData.Bid != null && marketData.Ask != null)
+                        // Which mark that is depends on those settings and the feed,
+                        // so no null pre-check can cover every combination; between
+                        // a connect and the first quotes the call derefs the missing
+                        // mark, and the label carries side and quantity only.
+                        try
                         {
                             pnlTicks = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Ticks);
                             pnlPoints = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Points);
                             pnlMoney = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Currency);
                             pnlKnown = true;
+                        }
+                        catch (NullReferenceException)
+                        {
                         }
                         break;
                     }

@@ -5,6 +5,24 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-20
 
+### MultiSeriesEMA (NinjaTrader, fixed)
+- Fixed the endless "Unhandled exception: Object reference not set to an
+  instance of an object" errors that started on every mouse click or move
+  over the chart after a data reconnect. With Source Type set to Renko,
+  the secondary series was added under the instrument's runtime name,
+  which NinjaTrader cannot reliably resolve when it replays the
+  indicator's configuration during a reconnect; the failed reload left
+  the indicator half-initialized and every chart interaction after that
+  crashed inside the platform. The series now always follows the chart's
+  own instrument. If the secondary series ever fails to load anyway, the
+  EMA simply doesn't plot instead of erroring.
+
+### ChartTrading (NinjaTrader, changed)
+- The indicator's settings groups are now numbered (1. Gesture,
+  2. Bracket, 3. Trading, 4. Appearance, 5. Colors) so they all sort
+  together at the top of the properties window instead of interleaving
+  alphabetically with NinjaTrader's own sections.
+
 ### ChartTrading, OrderDecorator, RiskRewardTargets (NinjaTrader, fixed)
 - Hardened against platform-level "Unhandled exception" errors: closing a
   chart, recompiling, or reloading while the mouse is moving, orders are

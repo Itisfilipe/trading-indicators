@@ -93,10 +93,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // point (State.SetDefaults ran, then saved values were restored), so they are safe
                 // to use here despite AddDataSeries/AddRenko's "hardcoded arguments" warning, which
                 // targets values computed at runtime (Instrument, Bars), not configured properties.
+                // The instrument, by contrast, must NOT be named via Instrument.FullName: that is
+                // exactly the run-time variable the warning forbids. NinjaTrader replays Configure
+                // on a fresh instance during reconnects, where Instrument is not reliably set; the
+                // recorded series then no longer matches, the add fails ("tried to load additional
+                // data"), and every later read of the half-initialized series throws inside the
+                // platform on each mouse event. A null name means the primary series' instrument.
                 switch (SourceType)
                 {
                     case EmaSourceBarsType.Renko:
-                        AddRenko(Instrument.FullName, BrickSizeTicks, MarketDataType.Last);
+                        AddRenko(null, BrickSizeTicks, MarketDataType.Last);
                         break;
                     case EmaSourceBarsType.Tick:
                         AddDataSeries(BarsPeriodType.Tick, PeriodValue);
@@ -114,13 +120,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
-                ema = EMA(BarsArray[1], EmaPeriod);
+                if (BarsArray.Length > 1)
+                    ema = EMA(BarsArray[1], EmaPeriod);
             }
         }
 
         protected override void OnBarUpdate()
         {
             if (BarsInProgress != 0)
+                return;
+
+            // The secondary series can be missing entirely when its Configure-time
+            // add failed (e.g. a bad reconnect); degrade to no plot, never throw.
+            if (ema == null || CurrentBars.Length < 2)
                 return;
 
             // Secondary series warms up on its own schedule (bricks/bars form from price, not in
