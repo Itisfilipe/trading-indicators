@@ -155,7 +155,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             base.OnRender(chartControl, chartScale);
 
-            if (Bars == null || ChartControl == null || RenderTarget == null || neutralBrushDx == null)
+            if (Bars == null || ChartControl == null || ChartPanel == null
+                || RenderTarget == null || neutralBrushDx == null)
                 return;
 
             Account account = ChartControl.OwnerChart?.ChartTrader?.Account;
@@ -246,6 +247,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             bool positionIsLong = false;
             double positionAvgPrice = 0;
             int positionQuantity = 0;
+            bool pnlKnown = false;
             double pnlTicks = 0;
             double pnlPoints = 0;
             double pnlMoney = 0;
@@ -265,9 +267,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         // close: without a price argument NinjaTrader marks with last
                         // or bid/ask exactly as its P&L display settings dictate, so
                         // this label can never disagree in sign with ChartTrader.
-                        pnlTicks = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Ticks);
-                        pnlPoints = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Points);
-                        pnlMoney = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Currency);
+                        // Before the first quotes after a connect there is no mark to
+                        // value against and that call would deref it; until they
+                        // arrive the label carries side and quantity only.
+                        MarketData marketData = candidate.Instrument.MarketData;
+                        if (marketData != null && marketData.Last != null
+                            && marketData.Bid != null && marketData.Ask != null)
+                        {
+                            pnlTicks = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Ticks);
+                            pnlPoints = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Points);
+                            pnlMoney = candidate.GetUnrealizedProfitLoss(PerformanceUnit.Currency);
+                            pnlKnown = true;
+                        }
                         break;
                     }
                 }
@@ -323,17 +334,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         // Signed custom formats: fractional values keep a decimal
                         // instead of collapsing to a signed zero that contradicts
                         // the money value and the color.
-                        string positionLabel = string.Format("{0} {1}  {2}t",
-                            positionIsLong ? "LONG" : "SHORT", positionQuantity,
-                            pnlTicks.ToString("+0.#;-0.#;0"));
-                        if (ShowPoints)
-                            positionLabel += string.Format("  {0}pt", pnlPoints.ToString("+0.00##;-0.00##;0"));
-                        if (ShowCurrency)
-                            positionLabel += string.Format("  {0}{1}",
-                                pnlMoney > 0 ? "+" : (pnlMoney < 0 ? "-" : ""),
-                                Core.Globals.FormatCurrency(Math.Abs(pnlMoney)));
+                        string positionLabel = string.Format("{0} {1}",
+                            positionIsLong ? "LONG" : "SHORT", positionQuantity);
+                        if (pnlKnown)
+                        {
+                            positionLabel += string.Format("  {0}t", pnlTicks.ToString("+0.#;-0.#;0"));
+                            if (ShowPoints)
+                                positionLabel += string.Format("  {0}pt", pnlPoints.ToString("+0.00##;-0.00##;0"));
+                            if (ShowCurrency)
+                                positionLabel += string.Format("  {0}{1}",
+                                    pnlMoney > 0 ? "+" : (pnlMoney < 0 ? "-" : ""),
+                                    Core.Globals.FormatCurrency(Math.Abs(pnlMoney)));
+                        }
 
-                        SharpDX.Direct2D1.Brush positionBrush = pnlMoney.ApproxCompare(0) == 0
+                        SharpDX.Direct2D1.Brush positionBrush = !pnlKnown || pnlMoney.ApproxCompare(0) == 0
                             ? neutralBrushDx : (inProfit ? profitBrushDx : lossBrushDx);
                         SharpDX.DirectWrite.TextLayout positionLayout = new SharpDX.DirectWrite.TextLayout(
                             Core.Globals.DirectWriteFactory, positionLabel, textFormat, 600, textFormat.FontSize);

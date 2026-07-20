@@ -630,6 +630,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (ChartControl == null || ChartPanel == null)
                 return;
 
+            // The presentation source detaches while the chart is torn down (tab
+            // close, recompile) with mouse events still queued; converting
+            // coordinates through it then throws on the UI thread, where no
+            // NinjaScript wrapper catches.
+            if (ChartControl.PresentationSource == null)
+                return;
+
             System.Windows.Point pos = e.GetPosition(ChartControl as IInputElement);
             pointerDeviceX = ChartingExtensions.ConvertToHorizontalPixels(pos.X, ChartControl.PresentationSource);
             pointerDeviceY = ChartingExtensions.ConvertToVerticalPixels(pos.Y, ChartControl.PresentationSource);
@@ -694,7 +701,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             MasterInstrument master = Instrument?.MasterInstrument;
             ChartScale scale = activeChartScale;
-            if (master == null || scale == null)
+            if (master == null || scale == null || ChartControl == null)
                 return;
 
             var chartTrader = ChartControl.OwnerChart?.ChartTrader;
@@ -846,9 +853,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         // Arrives off the UI thread; keeps the auto-breakeven trigger armed with the
         // live position, and re-arms it whenever the position closes or flips.
+        // Account events run outside NinjaScript's exception wrapping: anything
+        // escaping logs only as an anonymous platform-level "Unhandled exception"
+        // naming no culprit, so failures are contained and named here instead.
         private void OnAccountPositionUpdate(object sender, PositionEventArgs e)
         {
-            if (e.Position?.Instrument == null || e.Position.Instrument.FullName != Instrument.FullName)
+            try
+            {
+                ProcessAccountPositionUpdate(sender, e);
+            }
+            catch (Exception ex)
+            {
+                Log("ChartTrading: position update handling failed - " + ex,
+                    NinjaTrader.Cbi.LogLevel.Error);
+            }
+        }
+
+        private void ProcessAccountPositionUpdate(object sender, PositionEventArgs e)
+        {
+            // A queued event can outlive this instance's teardown; Instrument may
+            // already be gone by the time it is delivered.
+            if (Instrument == null || e.Position?.Instrument == null
+                || e.Position.Instrument.FullName != Instrument.FullName)
                 return;
 
             // A closed position arrives as Operation.Remove with the last direction
@@ -874,8 +900,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         // Arrives off the UI thread. Exits go live only against filled entry quantity;
         // a resting stop or target without a position would OPEN a trade, not close one.
+        // Same containment rationale as position updates: account events run outside
+        // NinjaScript's exception wrapping.
         private void OnAccountOrderUpdate(object sender, OrderEventArgs e)
         {
+            try
+            {
+                ProcessAccountOrderUpdate(sender, e);
+            }
+            catch (Exception ex)
+            {
+                Log("ChartTrading: order update handling failed - " + ex,
+                    NinjaTrader.Cbi.LogLevel.Error);
+            }
+        }
+
+        private void ProcessAccountOrderUpdate(object sender, OrderEventArgs e)
+        {
+            if (e.Order == null || Instrument == null)
+                return;
+
             // An auto-breakeven that fired before the exits were live re-arms as soon
             // as a protective stop is accepted, instead of polling every tick. Any
             // stop-type order qualifies, matching the widened Stops-to-BE scan: an
@@ -1263,7 +1307,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
         {
             double last = Bars != null && Bars.Count > 0 ? Bars.GetClose(Bars.Count - 1) : 0;
-            Account account = ChartControl.OwnerChart?.ChartTrader?.Account;
+            Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             if (account == null)
             {
                 Log("ChartTrading: no ChartTrader account selected; stops not moved.",

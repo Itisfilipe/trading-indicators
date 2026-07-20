@@ -128,10 +128,10 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         /// </summary>
         private void SeedTargetsFromStop()
         {
-            if (AttachedTo == null)
+            MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
+            if (master == null)
                 return;
 
-            MasterInstrument master = AttachedTo.Instrument.MasterInstrument;
             double entryPrice = master.RoundToTickSize(EntryAnchor.Price);
             double signedRisk = entryPrice - master.RoundToTickSize(StopAnchor.Price);
 
@@ -361,8 +361,12 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             if (Anchors.All(a => a.IsEditing))
                 return;
 
+            // The attachment empties while the tool is deleted or the workspace is
+            // still loading; a render pass caught in that window draws nothing.
+            MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
+            if (master == null)
+                return;
             ChartPanel chartPanel = chartControl.ChartPanels[PanelIndex];
-            MasterInstrument master = AttachedTo.Instrument.MasterInstrument;
             double entryPrice = master.RoundToTickSize(EntryAnchor.Price);
             double stopPrice = master.RoundToTickSize(StopAnchor.Price);
             double signedRisk = entryPrice - stopPrice;

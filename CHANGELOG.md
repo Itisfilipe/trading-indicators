@@ -3,6 +3,21 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-07-20
+
+### ChartTrading, OrderDecorator, RiskRewardTargets (NinjaTrader, fixed)
+- Hardened against platform-level "Unhandled exception" errors: closing a
+  chart, recompiling, or reloading while the mouse is moving, orders are
+  updating, or a drawing tool is being deleted can no longer crash with
+  "Object reference not set to an instance of an object". If anything else
+  ever fails inside ChartTrading's order/position handling, the log now
+  names ChartTrading and carries the full error instead of an anonymous
+  platform message.
+- OrderDecorator: with a position open before the first quotes arrive
+  (fresh connect), the average-price label shows side and quantity in
+  neutral gray until a P&L mark exists, instead of risking the indicator
+  being disabled mid-session.
+
 ## 2026-07-18
 
 ### RenkoWicks (NinjaTrader, fixed)
