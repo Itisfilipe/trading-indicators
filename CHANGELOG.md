@@ -10,8 +10,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   style's existing "Candle outline" and "Candle wick" settings became the
   up-brick pair (saved charts keep their colors), and two new settings —
   "Candle outline (down)" and "Candle wick (down)" — control the down
-  bricks, defaulting to the same black as before until recolored. Restart
-  NinjaTrader after compiling for the new settings to appear.
+  bricks. Restart NinjaTrader after compiling for the new settings to
+  appear.
+- New default palette: up bricks green (#25D725) and down bricks red
+  (#CC0000) across fill, outline, and wick, readable on dark and light
+  backgrounds. Charts with saved colors keep them; the defaults apply to
+  newly added charts or after resetting the chart style.
 
 ### MultiSeriesEMA (NinjaTrader, fixed)
 - Follow-up to yesterday's crash fix: the error could still return when a
