@@ -64,9 +64,21 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         // All five anchors always serialize and move with the tool; a target beyond
         // the configured count is only skipped for rendering and hit testing, so
         // raising the count later brings it back where it last was.
+        //
+        // Never-placed anchors are withheld: with snap-to-object on, the platform
+        // walks every object's Anchors looking for snap candidates, and an anchor
+        // that was never given a time or slot (a build interrupted mid-placement,
+        // preserved by a workspace save) sends its snap logic through a
+        // NullReferenceException on every mouse move over the chart.
         public override IEnumerable<ChartAnchor> Anchors
         {
-            get { return new[] { EntryAnchor, StopAnchor, Target1Anchor, Target2Anchor, Target3Anchor }; }
+            get
+            {
+                ChartAnchor[] all = { EntryAnchor, StopAnchor, Target1Anchor, Target2Anchor, Target3Anchor };
+                foreach (ChartAnchor anchor in all)
+                    if (anchor != null && anchor.Time != default(DateTime))
+                        yield return anchor;
+            }
         }
 
         private IEnumerable<ChartAnchor> EnabledTargetAnchors()
@@ -125,27 +137,27 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         /// <summary>
         /// Seeds the targets at 1R/2R/3R on the profit side of the entry, aligned to
         /// the entry's bar. Only used while building; afterwards targets move freely.
-        /// Returns false when the attachment is not resolved yet and nothing was
-        /// seeded, so the caller can leave the build step open for a retry.
+        /// Never fails: tick rounding is the only thing the instrument was needed
+        /// for, and rounding is cosmetic. A seed that could bail would strand the
+        /// tool in its build state, and a half-built drawing left active grinds the
+        /// platform's snap logic through nulls on every subsequent mouse event.
         /// </summary>
-        private bool SeedTargetsFromStop()
+        private void SeedTargetsFromStop()
         {
             MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
-            if (master == null)
-                return false;
-
-            double entryPrice = master.RoundToTickSize(EntryAnchor.Price);
-            double signedRisk = entryPrice - master.RoundToTickSize(StopAnchor.Price);
+            double entryPrice = master != null ? master.RoundToTickSize(EntryAnchor.Price) : EntryAnchor.Price;
+            double stopPrice = master != null ? master.RoundToTickSize(StopAnchor.Price) : StopAnchor.Price;
+            double signedRisk = entryPrice - stopPrice;
 
             ChartAnchor[] targets = { Target1Anchor, Target2Anchor, Target3Anchor };
             for (int i = 0; i < targets.Length; i++)
             {
-                targets[i].Price = master.RoundToTickSize(entryPrice + (i + 1) * signedRisk);
+                double price = entryPrice + (i + 1) * signedRisk;
+                targets[i].Price = master != null ? master.RoundToTickSize(price) : price;
                 targets[i].Time = EntryAnchor.Time;
                 targets[i].SlotIndex = EntryAnchor.SlotIndex;
                 targets[i].IsEditing = false;
             }
-            return true;
         }
 
         public override void OnMouseDown(ChartControl chartControl, ChartPanel chartPanel, ChartScale chartScale, ChartAnchor dataPoint)
@@ -162,11 +174,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                     else if (StopAnchor.IsEditing)
                     {
                         dataPoint.CopyDataValues(StopAnchor);
-                        // The stop stays editing until seeding succeeds: finalizing
-                        // it with the targets unseeded would strand the tool in
-                        // Building with nothing left editable to finish it.
-                        if (SeedTargetsFromStop())
-                            StopAnchor.IsEditing = false;
+                        StopAnchor.IsEditing = false;
+                        SeedTargetsFromStop();
                     }
                     if (!EntryAnchor.IsEditing && !StopAnchor.IsEditing && TargetsPlaced)
                     {
