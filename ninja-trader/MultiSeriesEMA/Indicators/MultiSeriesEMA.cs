@@ -141,7 +141,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             else if (State == State.DataLoaded)
             {
                 if (BarsArray.Length > 1)
+                {
                     ema = EMA(BarsArray[1], EmaPeriod);
+                    NinjaTrader.Code.Output.Process(string.Format(
+                        "MultiSeriesEMA: source series bound, {0} bars loaded (EMA period {1}; plots once enough bars exist).",
+                        BarsArray[1].Count, EmaPeriod), PrintTo.OutputTab1);
+                }
+                else
+                {
+                    // The Configure-time add was contained after failing; say so here
+                    // too, because a silently plotless indicator is indistinguishable
+                    // from a broken one without this line.
+                    NinjaTrader.Code.Output.Process(
+                        "MultiSeriesEMA: no source series was added; the EMA will not plot (see the message above for the cause).",
+                        PrintTo.OutputTab1);
+                }
             }
         }
 
