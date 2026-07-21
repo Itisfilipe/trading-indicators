@@ -74,8 +74,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int RthEndHHMM { get; set; }
 
         [Range(1, 500), NinjaScriptProperty]
-        [Display(Name = "Granularity (ticks)", Order = 4, GroupName = "Calculation",
-                 Description = "Size of the tick bars the VWAP accumulates. Smaller is more precise and heavier to load.")]
+        [Display(Name = "Trades per sample", Order = 4, GroupName = "Calculation",
+                 Description = "How many trades are bundled into one VWAP sample. 1 = every trade, exact and heaviest to load; 10 (default) is visually identical on liquid instruments at a tenth of the data.")]
         public int GranularityTicks { get; set; }
 
         [Range(0, 10), NinjaScriptProperty]
