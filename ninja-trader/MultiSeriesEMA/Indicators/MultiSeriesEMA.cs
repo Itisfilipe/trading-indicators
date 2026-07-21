@@ -160,7 +160,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
-                emaAlpha = 2.0 / (EmaPeriod + 1);
+                // 1.0, not 1: the Range attribute permits int.MaxValue, where an
+                // int addition would wrap before promoting to double.
+                emaAlpha = 2.0 / (EmaPeriod + 1.0);
                 emaValue = 0;
                 emaFedCount = 0;
                 renkoSeeded = false;
