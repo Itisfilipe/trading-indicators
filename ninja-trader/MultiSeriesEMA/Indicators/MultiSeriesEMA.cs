@@ -93,16 +93,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // point (State.SetDefaults ran, then saved values were restored), so they are safe
                 // to use here despite AddDataSeries/AddRenko's "hardcoded arguments" warning, which
                 // targets values computed at runtime (Instrument, Bars), not configured properties.
-                // The instrument, by contrast, must NOT be named via Instrument.FullName: that is
-                // exactly the run-time variable the warning forbids. NinjaTrader replays Configure
-                // on a fresh instance during reconnects, where Instrument is not reliably set; the
-                // recorded series then no longer matches, the add fails ("tried to load additional
-                // data"), and every later read of the half-initialized series throws inside the
-                // platform on each mouse event. A null name means the primary series' instrument.
+                // The instrument, by contrast, must NOT be named at all: Instrument.FullName is
+                // exactly the run-time variable the warning forbids. NinjaTrader re-runs Configure
+                // when restoring a workspace or reconnecting, where Instrument is not reliably
+                // set; the add then fails, the indicator never binds its data, and the first
+                // read of its series ("tried to load additional data", then endless
+                // NullReferenceExceptions out of ChartPanel.SnapToPrice) wrecks the chart. The
+                // Renko series therefore goes through the instrument-less BarsPeriod overload
+                // -- the docs' own pattern for non-standard period types -- which always
+                // follows the primary series' instrument.
                 switch (SourceType)
                 {
                     case EmaSourceBarsType.Renko:
-                        AddRenko(null, BrickSizeTicks, MarketDataType.Last);
+                        AddDataSeries(new BarsPeriod
+                        {
+                            BarsPeriodType = BarsPeriodType.Renko,
+                            Value = BrickSizeTicks,
+                            MarketDataType = MarketDataType.Last,
+                        });
                         break;
                     case EmaSourceBarsType.Tick:
                         AddDataSeries(BarsPeriodType.Tick, PeriodValue);

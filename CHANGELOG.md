@@ -3,6 +3,26 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-07-21
+
+### RenkoWicks (NinjaTrader, changed)
+- Up and down bricks now have separate outline and wick colors. The chart
+  style's existing "Candle outline" and "Candle wick" settings became the
+  up-brick pair (saved charts keep their colors), and two new settings —
+  "Candle outline (down)" and "Candle wick (down)" — control the down
+  bricks, defaulting to the same black as before until recolored. Restart
+  NinjaTrader after compiling for the new settings to appear.
+
+### MultiSeriesEMA (NinjaTrader, fixed)
+- Follow-up to yesterday's crash fix: the error could still return when a
+  workspace restored with the indicator on the chart. The Renko source
+  series is now added with no instrument reference at all (it always
+  follows the chart's instrument), which survives workspace restores and
+  reconnects alike. After compiling, remove the indicator from the chart
+  and add it back once — the workspace still carries the broken instance
+  saved while the old build was crashing, and a fresh add is what purges
+  it.
+
 ## 2026-07-20
 
 ### MultiSeriesEMA (NinjaTrader, fixed)

@@ -70,6 +70,17 @@ namespace NinjaTrader.NinjaScript.ChartStyles
         [Display(Name = "Gap brick opacity", Order = 10, GroupName = "NinjaScriptGeneral",
                  Description = "Opacity of the bricks drawn to fill a price jump. 1 draws them like any other brick.")]
         public double GapOpacity { get; set; }
+
+        // Down bricks get their own outline and wick strokes; the base Stroke/Stroke2
+        // pair keeps serving the up bricks, so charts saved before this split keep
+        // their configured colors (as the up-side ones) without migration.
+        [Display(Name = "Candle outline (down)", Order = 11, GroupName = "NinjaScriptGeneral",
+                 Description = "Outline of down bricks. Up bricks use Candle outline (up).")]
+        public Gui.Stroke DownOutlineStroke { get; set; }
+
+        [Display(Name = "Candle wick (down)", Order = 12, GroupName = "NinjaScriptGeneral",
+                 Description = "Wick of down bricks. Up bricks use Candle wick (up).")]
+        public Gui.Stroke DownWickStroke { get; set; }
         #endregion
 
         #region Fields
@@ -115,6 +126,15 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             {
                 try
                 {
+                    // The base class binds only Stroke/Stroke2 to the render target;
+                    // the down-side strokes are bound here, each pass, the way the
+                    // platform's drawing tools bind theirs (setting an unchanged
+                    // target is a no-op, so this costs nothing after the first frame).
+                    if (DownOutlineStroke != null)
+                        DownOutlineStroke.RenderTarget = RenderTarget;
+                    if (DownWickStroke != null)
+                        DownWickStroke.RenderTarget = RenderTarget;
+
                     float barWidth = GetBarPaintWidth(BarWidthUI);
 
                     for (int idx = chartBars.FromIndex; idx <= chartBars.ToIndex; idx++)
@@ -151,10 +171,13 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 // Defaults let the base class bind these to the render target. Without
                 // them, OnRender would have to build a Stroke per bar and read BrushDX
                 // off a stroke that was never bound to a target. Black suits the white
-                // chart background in use; both are user-configurable in the chart
-                // properties ("Candle Outline" / "Candle Wick") for dark themes.
+                // chart background in use; all four are user-configurable in the chart
+                // properties for dark themes. The down-side strokes default to the same
+                // black so the split changes nothing until the user recolors them.
                 Stroke = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
                 Stroke2 = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
+                DownOutlineStroke = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
+                DownWickStroke = new Gui.Stroke(System.Windows.Media.Brushes.Black, 1);
             }
             else if (State == State.Configure)
             {
@@ -162,8 +185,8 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 SetPropertyName("BarWidth", Custom.Resource.NinjaScriptChartStyleBarWidth);
                 SetPropertyName("DownBrush", Custom.Resource.NinjaScriptChartStyleCandleDownBarsColor);
                 SetPropertyName("UpBrush", Custom.Resource.NinjaScriptChartStyleCandleUpBarsColor);
-                SetPropertyName("Stroke", Custom.Resource.NinjaScriptChartStyleCandleOutline);
-                SetPropertyName("Stroke2", Custom.Resource.NinjaScriptChartStyleCandleWick);
+                SetPropertyName("Stroke", "Candle outline (up)");
+                SetPropertyName("Stroke2", "Candle wick (up)");
 
                 // Remove the Name property from UI as it's fixed
                 Properties.Remove(Properties.Find("Name", true));
@@ -205,10 +228,10 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             // Determine if this is an up or down bar
             bool isUpBar = closeValue >= openValue;
 
-            // Direction selects the fill only. The strokes are chosen by role, matching
-            // the names the UI shows for them: Stroke is the outline, Stroke2 the wick.
-            Gui.Stroke outlineStroke = Stroke;
-            Gui.Stroke wickStroke = Stroke2;
+            // Direction selects fill, outline, and wick alike: Stroke/Stroke2 are the
+            // up brick's outline and wick, the Down strokes the down brick's.
+            Gui.Stroke outlineStroke = isUpBar ? Stroke : DownOutlineStroke;
+            Gui.Stroke wickStroke = isUpBar ? Stroke2 : DownWickStroke;
 
             // Fade the bricks that only exist to span a price jump. The opacity is set on
             // every bar rather than set-and-restored around the gap ones, so a fault
