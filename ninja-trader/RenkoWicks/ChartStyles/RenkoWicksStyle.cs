@@ -103,7 +103,10 @@ namespace NinjaTrader.NinjaScript.ChartStyles
             else if (barWidth > MAX_BAR_WIDTH)
                 barWidth = MAX_BAR_WIDTH;
 
-            return 1 + 2 * (barWidth - 1) + 2 * (int)Math.Round(Stroke?.Width ?? 1);
+            // Up and down bricks carry independent outlines; the painted width must
+            // cover whichever is wider, or the wider side clips or overlaps neighbors.
+            double outlineWidth = Math.Max(Stroke?.Width ?? 1, DownOutlineStroke?.Width ?? 1);
+            return 1 + 2 * (barWidth - 1) + 2 * (int)Math.Round(outlineWidth);
         }
 
         /// <summary>
