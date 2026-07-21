@@ -18,6 +18,17 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   newly added charts or after resetting the chart style.
 
 ### MultiSeriesEMA (NinjaTrader, fixed)
+- The EMA line no longer chases every bar of the chart it overlays: it
+  moves only when one of its own source bricks or bars completes, the way
+  a higher-timeframe reference line should read. The internal Renko
+  engine is also now fed from a fine tick series (a tenth of a brick)
+  instead of the chart's own bar closes, so the historical line follows
+  the true brick sequence instead of re-anchoring at each chart bar
+  (simulation: ~0.06 brick average deviation from a perfect tick feed).
+  If that tick series ever fails to load, the line falls back to
+  chart-close granularity — coarser, never a crash.
+
+### MultiSeriesEMA (NinjaTrader, fixed)
 - The Renko-source EMA no longer uses a secondary data series at all: the
   bricks are computed internally from the chart's price stream (stock-Renko
   close-keyed semantics, property-tested against the RenkoWicks brick

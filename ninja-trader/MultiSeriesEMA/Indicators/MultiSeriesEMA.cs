@@ -27,20 +27,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// <summary>
     /// Plots an EMA computed on a source series of its own bar type/size, independent
     /// of the chart it is on. Time/tick/range sources ride a real secondary series;
-    /// the Renko source is synthesized internally from the primary's price stream and
-    /// never adds a series at all.
+    /// the Renko source is synthesized internally by a brick engine fed from a plain
+    /// tick series (falling back to the chart's own closes if that series is absent).
     /// </summary>
     /// <remarks>
-    /// The internal Renko path exists because a secondary Renko series repeatedly
+    /// The internal Renko engine exists because a secondary Renko series repeatedly
     /// wrecked whole charts: whether registered via AddRenko or AddDataSeries, the
     /// platform could fail to bind it (Configure replays on workspace restore and
     /// reconnect, AddDataSeries rejects stock Renko outright), and an indicator left
     /// without bound data crashes NinjaTrader's own ChartPanel.SnapToPrice with
     /// NullReferenceExceptions on every drawing-tool interaction -- a failure that
-    /// happens inside the platform's loader, beyond any try/catch in this class. A
-    /// close-keyed brick engine fed from the primary has nothing to load and nothing
-    /// to fail. Its brick logic is the property-tested completion state machine from
-    /// RenkoWicksBarsType (stock Renko parity), reduced to closes.
+    /// happens inside the platform's loader, beyond any try/catch in this class. The
+    /// engine's brick logic is the property-tested completion state machine from
+    /// RenkoWicksBarsType (stock Renko parity), reduced to closes. Its feed is a
+    /// tenth-brick tick series -- the tamest series the platform can carry, over
+    /// data the chart already loaded to build its own bricks -- and if even that
+    /// fails to bind, the engine degrades to chart-close granularity instead of
+    /// taking the chart down.
     /// </remarks>
     [TypeConverter("NinjaTrader.NinjaScript.Indicators.FilipeAmaral.MultiSeriesEMATypeConverter")]
     public class MultiSeriesEMA : Indicator
@@ -122,8 +125,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // configured properties. No overload names an instrument: the series
                 // always follows the primary's.
                 //
-                // Renko adds nothing here on purpose -- see the class remarks.
-                //
                 // The adds are contained because a Configure that throws leaves the
                 // indicator half-initialized, and the platform then throws
                 // NullReferenceException out of ChartPanel.SnapToPrice on every chart
@@ -134,6 +135,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     switch (SourceType)
                     {
                         case EmaSourceBarsType.Renko:
+                            // Not a Renko series (see class remarks) -- a tick feed
+                            // for the internal engine. Tenth-brick granularity keeps
+                            // the historical brick sequence near-exact (simulation:
+                            // ~0.05 brick average EMA deviation; only boundary-
+                            // grazing excursions shorter than the stride are missed)
+                            // at a fraction of a 1-tick series' memory. Live, the
+                            // forming bar restates on every tick, so the engine sees
+                            // the full tick stream regardless.
+                            AddDataSeries(BarsPeriodType.Tick, Math.Max(1, BrickSizeTicks / 10));
                             break;
                         case EmaSourceBarsType.Tick:
                             AddDataSeries(BarsPeriodType.Tick, PeriodValue);
@@ -168,9 +178,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 renkoSeeded = false;
                 brickSize = BrickSizeTicks * (Instrument?.MasterInstrument?.TickSize ?? 0);
 
-                if (SourceType != EmaSourceBarsType.Renko && BarsArray.Length < 2)
-                    NinjaTrader.Code.Output.Process(
-                        "MultiSeriesEMA: no source series was added; the EMA will not plot (see the message above for the cause).",
+                if (BarsArray.Length < 2)
+                    NinjaTrader.Code.Output.Process(SourceType == EmaSourceBarsType.Renko
+                            ? "MultiSeriesEMA: tick series missing; Renko bricks fall back to chart-close granularity."
+                            : "MultiSeriesEMA: no source series was added; the EMA will not plot (see the message above for the cause).",
                         PrintTo.OutputTab1);
             }
         }
@@ -179,36 +190,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (BarsInProgress == 1)
             {
-                // A completed secondary bar commits to the EMA exactly once, on the
-                // first tick of its successor. Historical bars arrive as one call
-                // per bar, where IsFirstTickOfBar is always true.
-                if (IsFirstTickOfBar && CurrentBars[1] > 0)
+                if (SourceType == EmaSourceBarsType.Renko)
+                    // Every call carries the newest price of the tick feed:
+                    // historical bars arrive once each (their close), and live the
+                    // forming bar restates per tick.
+                    FeedRenkoEngine(Closes[1][0]);
+                // A completed time-based bar commits to the EMA exactly once, on
+                // the first tick of its successor. Historical bars arrive as one
+                // call per bar, where IsFirstTickOfBar is always true.
+                else if (IsFirstTickOfBar && CurrentBars[1] > 0)
                     FeedCompleted(Closes[1][1]);
                 return;
             }
             if (BarsInProgress != 0)
                 return;
 
-            // The value still forming -- the open brick's price, or the secondary
-            // bar in progress -- contributes provisionally below, the way the
-            // platform's own EMA restates its current bar; committed state only
-            // ever advances in FeedCompleted.
-            double formingValue;
-            if (SourceType == EmaSourceBarsType.Renko)
-            {
-                // Historically this consumes the chart's bar closes (ticks arrive
-                // only in real time), so a source brick finer than the chart's bars
-                // seeds coarsely and converges as bricks accumulate -- an EMA
-                // forgets its seed exponentially.
+            // The tick feed can be missing entirely (its add failed and was
+            // contained); the chart's own closes then drive the engine -- coarser
+            // bricks, but a line instead of a crash.
+            if (SourceType == EmaSourceBarsType.Renko && BarsArray.Length < 2)
                 FeedRenkoEngine(Close[0]);
-                formingValue = Close[0];
-            }
-            else
-            {
-                if (CurrentBars.Length < 2 || CurrentBars[1] < 0)
-                    return;
-                formingValue = Closes[1][0];
-            }
 
             // Secondary series warm up on their own schedule (bricks/bars form from
             // price, not in lockstep with the primary), so hold the plot until the
@@ -216,7 +217,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (emaFedCount < EmaPeriod)
                 return;
 
-            Value[0] = formingValue * emaAlpha + emaValue * (1 - emaAlpha);
+            // Only committed source bricks/bars move the line. Restating the plot
+            // with the forming brick, the way a same-series EMA would, makes a
+            // higher-timeframe line chase every bar of the chart it overlays --
+            // noise, where the whole point is a slow reference.
+            Value[0] = emaValue;
             PlotBrushes[0][0] = EMAColor;
         }
 
