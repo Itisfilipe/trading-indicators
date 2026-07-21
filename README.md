@@ -173,7 +173,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 - Same sizing method as ATRRenkoSizeCalculator, but a table with one row
   per timeframe instead of a single value for the chart you're on.
-- Four configurable timeframes (minutes, default 2/5/15/60), each computed
+- Four configurable timeframes (minutes, default 1/5/15/60), each computed
   on its own secondary bar series — no panel, no bars drawn, only the table
   shows.
 - Each row: timeframe, ATR (points), half ATR (points), half ATR (ticks),
@@ -192,6 +192,23 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   keeps the table clear of the chart's top-right toolbar icons).
 - Use: add to any chart, set the timeframes, read "Ticks" off the row you're
   sizing a Renko chart for.
+
+### RthVwap — daily and weekly VWAP from regular hours only
+
+- Two lines on one chart: the daily RTH session VWAP and the weekly VWAP
+  (anchored so Monday's RTH open starts the week).
+- Only regular-hours trades accumulate, even on an ETH chart: outside the
+  RTH window the lines hold flat at the last session's values, and the
+  daily line jumps to its fresh anchor at the next RTH open.
+- The RTH window is set in the instrument's exchange time zone (defaults
+  930–1600, end excluded), so it stays correct whatever time zone the
+  platform is configured to.
+- Computed from a tick series at a configurable granularity (default 10
+  ticks); smaller is more precise and loads more data. The chart must have
+  enough days loaded to cover the current week for the weekly line to be
+  complete.
+- Use: add to the chart you trade; adjust the RTH window only if your
+  instrument's regular session differs from US index hours.
 
 ## Profit Chart (`profit-chart/`)
 

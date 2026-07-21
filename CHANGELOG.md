@@ -17,6 +17,19 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   backgrounds. Charts with saved colors keep them; the defaults apply to
   newly added charts or after resetting the chart style.
 
+### RthVwap (NinjaTrader, new)
+- New indicator: daily-session and weekly VWAP computed from regular
+  trading hours only, plotted on any chart including ETH charts (lines
+  hold flat outside the RTH window). RTH window configurable in exchange
+  time (default 930–1600), calculation granularity configurable (default
+  10-tick bars).
+
+### RiskRewardTargets (NinjaTrader, fixed)
+- Placing the tool can no longer stall half-built, and a drawing saved in
+  that state by an older build no longer feeds unplaced anchors to the
+  platform's snap-to-object logic (a source of "Object reference not set"
+  errors on every mouse move while drawing with snapping enabled).
+
 ### RenkoSizeTable (NinjaTrader, changed)
 - The first timeframe now defaults to 1 minute, making the default row
   set 1/5/15/60. Instances already on a chart keep their configured
