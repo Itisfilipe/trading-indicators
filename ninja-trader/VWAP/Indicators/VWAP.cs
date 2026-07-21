@@ -141,8 +141,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
-                rthStart = new TimeSpan(RthStartHHMM / 100, RthStartHHMM % 100, 0);
-                rthEnd = new TimeSpan(RthEndHHMM / 100, RthEndHHMM % 100, 0);
+                // Minutes clamp to 59: TimeSpan would silently normalize a typo like
+                // 960 into 10:00, shifting the window without any signal.
+                rthStart = new TimeSpan(RthStartHHMM / 100, Math.Min(RthStartHHMM % 100, 59), 0);
+                rthEnd = new TimeSpan(RthEndHHMM / 100, Math.Min(RthEndHHMM % 100, 59), 0);
                 exchangeTimeZone = Bars?.TradingHours?.TimeZoneInfo;
 
                 if (BarsArray.Length < 2)
