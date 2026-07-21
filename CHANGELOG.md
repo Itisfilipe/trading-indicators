@@ -17,6 +17,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   backgrounds. Charts with saved colors keep them; the defaults apply to
   newly added charts or after resetting the chart style.
 
+### RenkoSizeTable (NinjaTrader, changed)
+- The first timeframe now defaults to 1 minute, making the default row
+  set 1/5/15/60. Instances already on a chart keep their configured
+  timeframes.
+
 ### MultiSeriesEMA (NinjaTrader, fixed)
 - The internal Renko grid now re-anchors at each session's first price,
   matching the platform's own Break-at-EOD Renko. Without this the brick

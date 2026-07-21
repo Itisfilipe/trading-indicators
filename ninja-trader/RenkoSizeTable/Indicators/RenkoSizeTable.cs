@@ -124,7 +124,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 IsSuspendedWhileInactive = true;
                 IsOverlay = true;
 
-                Timeframe1Minutes = 2;
+                Timeframe1Minutes = 1;
                 Atr1Days = 3;
                 Timeframe2Minutes = 5;
                 Atr2Days = 5;
