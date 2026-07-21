@@ -31,7 +31,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// approximation and the granularity property bounds its error. The RTH window
     /// is compared in the instrument's exchange time zone (via the trading-hours
     /// template), so a platform configured to any local time zone filters the same
-    /// exchange hours. With the window off, the daily anchor resets at the actual
+    /// exchange hours. Template time zones are the exchange's own: CME futures
+    /// templates run on Chicago time, which is why the defaults read 830-1500 and
+    /// not the New York 930-1600. With the window off, the daily anchor resets at the actual
     /// session roll (a futures trading day starts the prior evening; a midnight
     /// date change must not reset it). Bands use the volume-weighted deviation
     /// sqrt(sum(v*p^2)/sum(v) - vwap^2). If the tick series cannot be added, the
@@ -65,12 +67,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Range(0, 2359), NinjaScriptProperty]
         [Display(Name = "RTH start (HHMM)", Order = 2, GroupName = "Calculation",
-                 Description = "Regular session open in the instrument's exchange time zone, e.g. 930. Used only with the RTH window on.")]
+                 Description = "Regular session open in the trading-hours template's time zone. CME futures templates use Chicago time: US index RTH opens 830. Used only with the RTH window on.")]
         public int RthStartHHMM { get; set; }
 
         [Range(0, 2359), NinjaScriptProperty]
         [Display(Name = "RTH end (HHMM)", Order = 3, GroupName = "Calculation",
-                 Description = "Regular session close in the instrument's exchange time zone, e.g. 1600. The end minute is excluded.")]
+                 Description = "Regular session close in the trading-hours template's time zone. CME index RTH closes 1500 Chicago time. The end minute is excluded.")]
         public int RthEndHHMM { get; set; }
 
         [Range(1, 500), NinjaScriptProperty]
@@ -107,8 +109,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 Anchor = VwapAnchor.DailySession;
                 UseRthWindow = true;
-                RthStartHHMM = 930;
-                RthEndHHMM = 1600;
+                RthStartHHMM = 830;
+                RthEndHHMM = 1500;
                 GranularityTicks = 10;
                 Band1Deviations = 1;
                 Band2Deviations = 2;

@@ -17,6 +17,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   backgrounds. Charts with saved colors keep them; the defaults apply to
   newly added charts or after resetting the chart style.
 
+### CustomVWAP (NinjaTrader, fixed)
+- The RTH window defaults were one hour off: the window is compared in
+  the trading-hours template's time zone, and CME futures templates run
+  on Chicago time, so US index RTH is 830–1500 there — not the New York
+  930–1600 the defaults assumed. Instances added before this fix keep
+  their saved 930/1600 and should be set to 830/1500 (or removed and
+  re-added).
+
 ### CustomVWAP (NinjaTrader, new)
 - New indicator: VWAP with standard-deviation bands (three configurable
   pairs, defaults 1 and 2 deviations), anchored per daily session or per
