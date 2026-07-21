@@ -193,7 +193,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to any chart, set the timeframes, read "Ticks" off the row you're
   sizing a Renko chart for.
 
-### VWAP — anchored VWAP with deviation bands
+### CustomVWAP — anchored VWAP with deviation bands
 
 - Volume-weighted average price with up to three standard-deviation band
   pairs (multipliers configurable, 0 hides a pair; defaults 1 and 2).

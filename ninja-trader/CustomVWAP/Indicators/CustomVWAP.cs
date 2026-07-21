@@ -38,7 +38,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// chart's own completed bars feed the accumulators instead -- coarser, never
     /// a crash (the containment-and-fallback shape MultiSeriesEMA settled on).
     /// </remarks>
-    public class VWAP : Indicator
+    public class CustomVWAP : Indicator
     {
         private double sumPriceVolume;
         private double sumVolume;
@@ -100,7 +100,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (State == State.SetDefaults)
             {
                 Description = "VWAP with deviation bands, anchored per daily session or per week, optionally limited to regular trading hours.";
-                Name = "VWAP";
+                Name = "CustomVWAP";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
                 BarsRequiredToPlot = 0;
@@ -135,7 +135,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 catch (Exception ex)
                 {
                     NinjaTrader.Code.Output.Process(
-                        "VWAP: could not add the tick series - " + ex.Message,
+                        "CustomVWAP: could not add the tick series - " + ex.Message,
                         PrintTo.OutputTab1);
                 }
             }
@@ -149,7 +149,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (BarsArray.Length < 2)
                     NinjaTrader.Code.Output.Process(
-                        "VWAP: tick series missing; accumulating from the chart's own bars instead.",
+                        "CustomVWAP: tick series missing; accumulating from the chart's own bars instead.",
                         PrintTo.OutputTab1);
             }
         }

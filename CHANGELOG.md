@@ -17,7 +17,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   backgrounds. Charts with saved colors keep them; the defaults apply to
   newly added charts or after resetting the chart style.
 
-### VWAP (NinjaTrader, new)
+### CustomVWAP (NinjaTrader, new)
 - New indicator: VWAP with standard-deviation bands (three configurable
   pairs, defaults 1 and 2 deviations), anchored per daily session or per
   week — add it twice for both lines. The RTH-only window is optional
