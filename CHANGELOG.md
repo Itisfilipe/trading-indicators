@@ -18,6 +18,21 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   newly added charts or after resetting the chart style.
 
 ### MultiSeriesEMA (NinjaTrader, fixed)
+- The Renko-source EMA no longer uses a secondary data series at all: the
+  bricks are computed internally from the chart's price stream (stock-Renko
+  close-keyed semantics, property-tested against the RenkoWicks brick
+  logic). This removes the entire class of crashes where a secondary Renko
+  series failed to load — on workspace restore, reconnect, or the
+  platform's own rejection — and every drawing-tool click then blew up the
+  chart with "Object reference not set to an instance of an object". There
+  is nothing left to load, so there is nothing left to fail. One visible
+  nuance: chart history feeds the bricks at the chart's own bar
+  granularity (live data is exact, tick by tick), so an EMA on bricks
+  finer than the chart's bars starts from a coarser seed and converges
+  within a brick fraction over the loaded history. Minute/Tick/Range/Day
+  sources still use a real secondary series as before.
+
+### MultiSeriesEMA (NinjaTrader, superseded same day)
 - Follow-up to yesterday's crash fix: the error could still return when a
   workspace restored with the indicator on the chart. The Renko source
   series now follows the chart's instrument with no instrument lookup at
