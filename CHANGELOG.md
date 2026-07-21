@@ -18,6 +18,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   newly added charts or after resetting the chart style.
 
 ### MultiSeriesEMA (NinjaTrader, fixed)
+- The internal Renko grid now re-anchors at each session's first price,
+  matching the platform's own Break-at-EOD Renko. Without this the brick
+  levels drifted from stock Renko's from the second session on, putting
+  the EMA a little off everywhere.
+
+### MultiSeriesEMA (NinjaTrader, fixed)
 - The EMA line no longer chases every bar of the chart it overlays: it
   moves only when one of its own source bricks or bars completes, the way
   a higher-timeframe reference line should read. The internal Renko

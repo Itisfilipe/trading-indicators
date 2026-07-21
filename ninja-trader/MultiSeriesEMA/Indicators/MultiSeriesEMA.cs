@@ -191,10 +191,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (BarsInProgress == 1)
             {
                 if (SourceType == EmaSourceBarsType.Renko)
+                {
+                    // Stock Renko breaks its grid at EOD and re-anchors at each
+                    // session's first price. Without matching that, the internal
+                    // grid diverges from the second session on and every brick
+                    // lands a little off the levels the platform's own Renko
+                    // would print.
+                    if (IsFirstTickOfBar && Bars.IsFirstBarOfSession)
+                        renkoSeeded = false;
                     // Every call carries the newest price of the tick feed:
                     // historical bars arrive once each (their close), and live the
                     // forming bar restates per tick.
                     FeedRenkoEngine(Closes[1][0]);
+                }
                 // A completed time-based bar commits to the EMA exactly once, on
                 // the first tick of its successor. Historical bars arrive as one
                 // call per bar, where IsFirstTickOfBar is always true.
@@ -207,9 +216,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // The tick feed can be missing entirely (its add failed and was
             // contained); the chart's own closes then drive the engine -- coarser
-            // bricks, but a line instead of a crash.
+            // bricks, but a line instead of a crash. Same session re-anchoring as
+            // the tick path.
             if (SourceType == EmaSourceBarsType.Renko && BarsArray.Length < 2)
+            {
+                if (IsFirstTickOfBar && Bars.IsFirstBarOfSession)
+                    renkoSeeded = false;
                 FeedRenkoEngine(Close[0]);
+            }
 
             // Secondary series warm up on their own schedule (bricks/bars form from
             // price, not in lockstep with the primary), so hold the plot until the
