@@ -16,12 +16,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ### MultiSeriesEMA (NinjaTrader, fixed)
 - Follow-up to yesterday's crash fix: the error could still return when a
   workspace restored with the indicator on the chart. The Renko source
-  series is now added with no instrument reference at all (it always
-  follows the chart's instrument), which survives workspace restores and
-  reconnects alike. After compiling, remove the indicator from the chart
-  and add it back once — the workspace still carries the broken instance
-  saved while the old build was crashing, and a fresh add is what purges
-  it.
+  series now follows the chart's instrument with no instrument lookup at
+  configure time, which survives workspace restores and reconnects alike.
+  If adding the source series ever fails anyway, the indicator now simply
+  plots nothing (with a note in the Output window) instead of leaving the
+  chart in a state where every click errors. After compiling, remove the
+  indicator from the chart and add it back once — the workspace still
+  carries the broken instance saved while the old build was crashing, and
+  a fresh add is what purges it.
 
 ## 2026-07-20
 

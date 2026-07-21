@@ -93,37 +93,49 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // point (State.SetDefaults ran, then saved values were restored), so they are safe
                 // to use here despite AddDataSeries/AddRenko's "hardcoded arguments" warning, which
                 // targets values computed at runtime (Instrument, Bars), not configured properties.
-                // The instrument, by contrast, must NOT be named at all: Instrument.FullName is
-                // exactly the run-time variable the warning forbids. NinjaTrader re-runs Configure
-                // when restoring a workspace or reconnecting, where Instrument is not reliably
-                // set; the add then fails, the indicator never binds its data, and the first
-                // read of its series ("tried to load additional data", then endless
-                // NullReferenceExceptions out of ChartPanel.SnapToPrice) wrecks the chart. The
-                // Renko series therefore goes through the instrument-less BarsPeriod overload
-                // -- the docs' own pattern for non-standard period types -- which always
-                // follows the primary series' instrument.
-                switch (SourceType)
+                // The instrument, by contrast, must NOT be named via Instrument.FullName: that
+                // is exactly the run-time variable the warning forbids. NinjaTrader re-runs
+                // Configure when restoring a workspace or reconnecting, where Instrument is not
+                // reliably set. A null instrument name follows the primary series' instrument
+                // (AddDataSeries docs, note 4 -- the parameter is shared across the family).
+                // Renko must go through AddRenko: the platform rejects stock Renko through
+                // AddDataSeries at run time ("Please use the alternate method 'AddRenko()'"),
+                // observed in a trace -- the docs' BarsPeriod initializer pattern is for
+                // custom bars types only.
+                //
+                // The whole block is contained because a Configure that throws leaves the
+                // indicator half-initialized, and the platform then throws
+                // NullReferenceException out of ChartPanel.SnapToPrice on every chart
+                // interaction that reads its series. Degrading to a healthy indicator that
+                // plots nothing is strictly better than that.
+                try
                 {
-                    case EmaSourceBarsType.Renko:
-                        AddDataSeries(new BarsPeriod
-                        {
-                            BarsPeriodType = BarsPeriodType.Renko,
-                            Value = BrickSizeTicks,
-                            MarketDataType = MarketDataType.Last,
-                        });
-                        break;
-                    case EmaSourceBarsType.Tick:
-                        AddDataSeries(BarsPeriodType.Tick, PeriodValue);
-                        break;
-                    case EmaSourceBarsType.Range:
-                        AddDataSeries(BarsPeriodType.Range, PeriodValue);
-                        break;
-                    case EmaSourceBarsType.Day:
-                        AddDataSeries(BarsPeriodType.Day, PeriodValue);
-                        break;
-                    default:
-                        AddDataSeries(BarsPeriodType.Minute, PeriodValue);
-                        break;
+                    switch (SourceType)
+                    {
+                        case EmaSourceBarsType.Renko:
+                            AddRenko(null, BrickSizeTicks, MarketDataType.Last);
+                            break;
+                        case EmaSourceBarsType.Tick:
+                            AddDataSeries(BarsPeriodType.Tick, PeriodValue);
+                            break;
+                        case EmaSourceBarsType.Range:
+                            AddDataSeries(BarsPeriodType.Range, PeriodValue);
+                            break;
+                        case EmaSourceBarsType.Day:
+                            AddDataSeries(BarsPeriodType.Day, PeriodValue);
+                            break;
+                        default:
+                            AddDataSeries(BarsPeriodType.Minute, PeriodValue);
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Output window rather than Log: Log routing is not guaranteed this
+                    // early in the lifecycle, and this handler must never throw itself.
+                    NinjaTrader.Code.Output.Process(
+                        "MultiSeriesEMA: could not add the source series - " + ex.Message,
+                        PrintTo.OutputTab1);
                 }
             }
             else if (State == State.DataLoaded)
