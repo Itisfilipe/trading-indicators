@@ -193,22 +193,25 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to any chart, set the timeframes, read "Ticks" off the row you're
   sizing a Renko chart for.
 
-### RthVwap — daily and weekly VWAP from regular hours only
+### VWAP — anchored VWAP with deviation bands
 
-- Two lines on one chart: the daily RTH session VWAP and the weekly VWAP
-  (anchored so Monday's RTH open starts the week).
-- Only regular-hours trades accumulate, even on an ETH chart: outside the
-  RTH window the lines hold flat at the last session's values, and the
-  daily line jumps to its fresh anchor at the next RTH open.
-- The RTH window is set in the instrument's exchange time zone (defaults
-  930–1600, end excluded), so it stays correct whatever time zone the
-  platform is configured to.
+- Volume-weighted average price with up to three standard-deviation band
+  pairs (multipliers configurable, 0 hides a pair; defaults 1 and 2).
+- Anchor per instance: daily session or weekly (Sunday-keyed). Add the
+  indicator twice for a daily and a weekly line side by side.
+- Optional RTH window (on by default, 930–1600 exchange time, end
+  excluded): only regular-hours trades accumulate, even on an ETH chart —
+  outside the window the lines hold flat. With the window off, the whole
+  session accumulates and the daily anchor resets at the session roll,
+  not at midnight.
+- The window is compared in the instrument's exchange time zone, so it
+  stays correct whatever time zone the platform is configured to.
 - Computed from a tick series at a configurable granularity (default 10
   ticks); smaller is more precise and loads more data. The chart must have
-  enough days loaded to cover the current week for the weekly line to be
+  enough days loaded to cover the current week for the weekly anchor to be
   complete.
-- Use: add to the chart you trade; adjust the RTH window only if your
-  instrument's regular session differs from US index hours.
+- Use: add to the chart you trade; set the anchor, toggle the RTH window
+  to taste, and size the bands with the deviation multipliers.
 
 ## Profit Chart (`profit-chart/`)
 

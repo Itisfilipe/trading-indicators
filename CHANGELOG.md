@@ -17,11 +17,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   backgrounds. Charts with saved colors keep them; the defaults apply to
   newly added charts or after resetting the chart style.
 
-### RthVwap (NinjaTrader, new)
-- New indicator: daily-session and weekly VWAP computed from regular
-  trading hours only, plotted on any chart including ETH charts (lines
-  hold flat outside the RTH window). RTH window configurable in exchange
-  time (default 930–1600), calculation granularity configurable (default
+### VWAP (NinjaTrader, new)
+- New indicator: VWAP with standard-deviation bands (three configurable
+  pairs, defaults 1 and 2 deviations), anchored per daily session or per
+  week — add it twice for both lines. The RTH-only window is optional
+  (on by default, 930–1600 exchange time); with it off the whole session
+  accumulates and the daily anchor resets at the session roll. Works on
+  any chart including ETH charts, where the lines hold flat outside an
+  enabled RTH window. Calculation granularity configurable (default
   10-tick bars).
 
 ### RiskRewardTargets (NinjaTrader, fixed)
