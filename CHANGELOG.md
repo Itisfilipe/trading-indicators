@@ -5,6 +5,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-07-22
 
+### Renko Size Table (TradingView, new)
+- TradingView (Pine v6) port of the NinjaTrader Renko Size Table: a table
+  of suggested Renko brick sizes (half ATR, in price and ticks) across four
+  timeframes at once, each with a live EMA ATR and a steadier
+  median-of-days ATR. Place it on a chart timeframe at or below the
+  smallest row (a 1-minute chart for the 1/5/15/60 defaults); a row below
+  the chart timeframe is flagged rather than shown wrong.
+
 ### ChartTrading (NinjaTrader, fixed)
 - Stops and targets now sit their configured distance from where the entry
   actually fills, not from where it was first clicked. Placing a limit and

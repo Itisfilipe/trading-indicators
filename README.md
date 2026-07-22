@@ -240,8 +240,23 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   higher-timeframe open (daily, weekly, monthly, quarterly, semi-annual,
   yearly).
 - Extended through the session with an end-of-day cutoff.
-- Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
-  chart.
+
+### Renko Size Table
+
+- On-chart table of suggested Renko brick sizes (half ATR, in price and in
+  ticks) across four timeframes at once — the TradingView port of the
+  NinjaTrader indicator of the same name.
+- Two reads per row: the live EMA ATR, and the median of each recent day's
+  mean true range, which holds steady through an outlier session.
+- Each timeframe has its own ATR lookback in days; "Ignore gaps" excludes
+  the session-open gap.
+- Place it on a chart timeframe at or below the smallest row (a 1-minute
+  chart for the 1/5/15/60 defaults) — TradingView can only feed a
+  higher-or-equal timeframe into each row; a row below the chart is flagged
+  instead of showing a wrong number.
+
+Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
+chart.
 
 ## Vendor documentation is not included
 
