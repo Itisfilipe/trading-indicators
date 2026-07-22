@@ -3,6 +3,17 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-07-22
+
+### ChartTrading (NinjaTrader, fixed)
+- Stops and targets now sit their configured distance from where the entry
+  actually fills, not from where it was first clicked. Placing a limit and
+  then moving it — dragging it, or attaching it to a moving average so it
+  rides along — used to leave the stop and targets at the original click
+  distances once it filled; they now track the real fill. Unmoved entries
+  are unaffected; a stop or MIT entry that fills with slippage now measures
+  its exits from the true fill.
+
 ## 2026-07-21
 
 ### RenkoWicks (NinjaTrader, changed)

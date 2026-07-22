@@ -51,7 +51,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   (`LMT`, `MIT`, `STP`, `STP LMT`, `MKT`).
 - Click submits the entry to the ChartTrader account. Stop/target orders go
   live against filled quantity, grow with partial fills, and are OCO-linked
-  per pair.
+  per pair. They sit their configured distance from where the entry actually
+  fills, so a limit moved after placement (dragged, or attached to a moving
+  average) still gets its stop and targets at the right distance.
 - Preview is exact — comes from the indicator's own settings, so it matches
   what gets submitted to the tick.
 - Up to three stop/target pairs, each with its own checkbox, tick distances,

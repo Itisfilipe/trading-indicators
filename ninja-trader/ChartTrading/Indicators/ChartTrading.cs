@@ -163,6 +163,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double[] TargetPrices;
             public int[] PairQuantities;
 
+            // The configured exit distances the prices are derived from, compacted to
+            // the enabled pairs and index-aligned with PairQuantities. Prices are
+            // resolved from the entry's actual fill, not the click location: an entry
+            // dragged or riding an attached indicator (a moving average) fills away
+            // from where it was placed, and the stops and targets must sit their
+            // configured distance from THAT, not from the original click. StopPrices/
+            // TargetPrices above start as the click-relative estimate and are
+            // overwritten once, the first time exits are created and EntryFillPrice is
+            // known (PricesResolved). Freezing at first fill keeps a later partial's
+            // drift in the average from moving stops that are already working.
+            public int[] StopTicks;
+            public int[] TargetTicks;
+            public int ProfitSign;
+            public bool PricesResolved;
+
             // The entry quantity the exits currently cover, and the live exit orders
             // per pair (null until that pair first gets quantity). Fills are assigned
             // to pairs sequentially: pair 1 up to its own (possibly unequal) size,
@@ -740,11 +755,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // configured distance.
             List<double> stops = BuildStopPrices(master, entryPrice, profitSign, effectiveEnabled, stopTicks);
             var targets = new List<double>();
+            // Compacted to the enabled pairs, same order as stops/PairQuantities, so
+            // the exit prices can be re-derived from the real fill in EnsureExits.
+            var enabledStopTicks = new List<int>();
+            var enabledTargetTicks = new List<int>();
             for (int i = 0; i < effectiveEnabled.Length; i++)
             {
                 if (!effectiveEnabled[i])
                     continue;
                 targets.Add(master.RoundToTickSize(entryPrice + profitSign * targetTicks[i] * tick));
+                enabledStopTicks.Add(stopTicks[i]);
+                enabledTargetTicks.Add(targetTicks[i]);
             }
 
             bool anyPairEnabled = false;
@@ -765,6 +786,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 StopPrices = stops.ToArray(),
                 TargetPrices = targets.ToArray(),
                 PairQuantities = pairQuantities.ToArray(),
+                StopTicks = enabledStopTicks.ToArray(),
+                TargetTicks = enabledTargetTicks.ToArray(),
+                ProfitSign = profitSign,
             };
             OrderAction entryAction = isBuy ? OrderAction.Buy : OrderAction.SellShort;
 
@@ -1050,6 +1074,40 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 lock (orderLock)
                 {
                     filled = commit.CoveredQuantity;
+
+                    // Resolve the exit prices from the actual fill, once, before any
+                    // pair is created -- in the same critical section as the arrays
+                    // below, so a grow-retry callback can never read prices that are
+                    // half-swapped. After this the prices are immutable, matching the
+                    // create-once invariant the rest of EnsureExits relies on.
+                    if (!commit.PricesResolved)
+                    {
+                        MasterInstrument exitMaster = Instrument?.MasterInstrument;
+                        if (exitMaster != null && commit.EntryFillPrice > 0 && commit.StopTicks != null)
+                        {
+                            bool[] allEnabled = new bool[commit.StopTicks.Length];
+                            for (int k = 0; k < allEnabled.Length; k++)
+                                allEnabled[k] = true;
+                            commit.StopPrices = BuildStopPrices(exitMaster, commit.EntryFillPrice,
+                                commit.ProfitSign, allEnabled, commit.StopTicks).ToArray();
+                            var resolvedTargets = new double[commit.TargetTicks.Length];
+                            for (int k = 0; k < resolvedTargets.Length; k++)
+                                resolvedTargets[k] = exitMaster.RoundToTickSize(
+                                    commit.EntryFillPrice + commit.ProfitSign * commit.TargetTicks[k] * exitMaster.TickSize);
+                            commit.TargetPrices = resolvedTargets;
+                        }
+                        else if (commit.CoveredQuantity > 0 && commit.EntryFillPrice <= 0)
+                        {
+                            // Exits are only ever created after a fill, so a fill with
+                            // no average price should be impossible; keep the
+                            // click-relative estimate but say so, because it silently
+                            // reproduces the bug this resolution fixes.
+                            Log("ChartTrading: entry filled without an average fill price; exits placed at their click-relative estimate.",
+                                NinjaTrader.Cbi.LogLevel.Warning);
+                        }
+                        commit.PricesResolved = true;
+                    }
+
                     if (commit.StopOrders == null)
                     {
                         commit.StopOrders = new Order[commit.StopPrices.Length];
