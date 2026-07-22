@@ -148,13 +148,10 @@ f_textSize(string s) =>
         => size.normal
 txtSize = f_textSize(textSize)
 
+// math.round with a precision, not str.tostring with a format string: the format
+// argument wants a compile-time constant, and the decimals here come from an input.
 f_fmt(float value) =>
-    fmtStr = "0"
-    if decimals > 0
-        fmtStr := "0."
-        for i = 1 to decimals
-            fmtStr := fmtStr + "0"
-    na(value) ? "—" : str.tostring(value, fmtStr)
+    na(value) ? "—" : str.tostring(math.round(value, decimals))
 
 f_ticks(float atr) =>
     na(atr) or syminfo.mintick == 0 ? "—" : str.tostring(math.round((atr / 2.0) / syminfo.mintick))
