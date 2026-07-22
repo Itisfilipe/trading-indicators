@@ -161,7 +161,7 @@ f_ticks(float atr) =>
 f_reliable(string rowTf) =>
     timeframe.in_seconds(rowTf) >= timeframe.in_seconds(timeframe.period)
 
-var table t = table.new(tablePos, 6, 5, bgcolor = bgColor, border_width = 1, border_color = color.new(color.gray, 40))
+var table t = table.new(tablePos, 7, 5, bgcolor = bgColor, border_width = 1, border_color = color.new(color.gray, 40))
 
 f_dataRow(int rowIdx, string rowTf, float atr, float med) =>
     reliable = f_reliable(rowTf)
@@ -171,21 +171,24 @@ f_dataRow(int rowIdx, string rowTf, float atr, float med) =>
         table.cell(t, 2, rowIdx, f_fmt(na(atr) ? na : atr / 2.0), text_color = tickColor, text_size = txtSize, text_halign = text.align_right)
         table.cell(t, 3, rowIdx, f_ticks(atr),      text_color = tickColor, text_size = txtSize, text_halign = text.align_right)
         table.cell(t, 4, rowIdx, f_fmt(med),        text_color = atrColor,  text_size = txtSize, text_halign = text.align_right)
-        table.cell(t, 5, rowIdx, f_ticks(med),      text_color = tickColor, text_size = txtSize, text_halign = text.align_right)
+        table.cell(t, 5, rowIdx, f_fmt(na(med) ? na : med / 2.0), text_color = tickColor, text_size = txtSize, text_halign = text.align_right)
+        table.cell(t, 6, rowIdx, f_ticks(med),      text_color = tickColor, text_size = txtSize, text_halign = text.align_right)
     else
         table.cell(t, 1, rowIdx, "chart TF too high", text_color = warnColor, text_size = txtSize, text_halign = text.align_right)
         table.cell(t, 2, rowIdx, "—", text_color = warnColor, text_size = txtSize, text_halign = text.align_right)
         table.cell(t, 3, rowIdx, "—", text_color = warnColor, text_size = txtSize, text_halign = text.align_right)
         table.cell(t, 4, rowIdx, "—", text_color = warnColor, text_size = txtSize, text_halign = text.align_right)
         table.cell(t, 5, rowIdx, "—", text_color = warnColor, text_size = txtSize, text_halign = text.align_right)
+        table.cell(t, 6, rowIdx, "—", text_color = warnColor, text_size = txtSize, text_halign = text.align_right)
 
 if barstate.islast
-    table.cell(t, 0, 0, "TF",        text_color = textColor, text_size = txtSize, bgcolor = headerColor)
-    table.cell(t, 1, 0, "ATR",       text_color = textColor, text_size = txtSize, bgcolor = headerColor)
-    table.cell(t, 2, 0, "Half ATR",  text_color = textColor, text_size = txtSize, bgcolor = headerColor)
-    table.cell(t, 3, 0, "Ticks",     text_color = textColor, text_size = txtSize, bgcolor = headerColor)
-    table.cell(t, 4, 0, "Med ATR",   text_color = textColor, text_size = txtSize, bgcolor = headerColor)
-    table.cell(t, 5, 0, "Med Ticks", text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 0, 0, "TF",           text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 1, 0, "ATR",          text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 2, 0, "Half ATR",     text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 3, 0, "Ticks",        text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 4, 0, "Med ATR",      text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 5, 0, "Med Half ATR", text_color = textColor, text_size = txtSize, bgcolor = headerColor)
+    table.cell(t, 6, 0, "Med Ticks",    text_color = textColor, text_size = txtSize, bgcolor = headerColor)
     f_dataRow(1, tf1, atr1, med1)
     f_dataRow(2, tf2, atr2, med2)
     f_dataRow(3, tf3, atr3, med3)
