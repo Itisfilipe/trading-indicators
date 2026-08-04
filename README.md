@@ -255,6 +255,24 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   higher-or-equal timeframe into each row; a row below the chart is flagged
   instead of showing a wrong number.
 
+### ICT Macros
+
+- Boxes the eight ICT macro windows (New York time): 02:33–03:00,
+  04:03–04:30, 08:50–09:10, 09:50–10:10, 10:50–11:10, 11:50–12:10,
+  13:10–13:40, 15:15–15:45. Each toggles on its own.
+- Draws the next windows **before** they happen, projected onto the empty
+  space to the right of the last bar, with a countdown on the label.
+- A box grows with its window's own high and low; "Recent range" height
+  turns them into tall vertical time zones instead.
+- Optional dotted rays from a finished window's high and low to the end of
+  that day.
+- Alerts a set number of minutes before a window, and at its open and close.
+  Create the alert with the condition "Any alert() function call".
+- Meant for 1–5 minute charts. Give the chart some right margin (Chart
+  settings → Appearance → Right margin, or drag the chart left) — a window
+  an hour out sits an hour's worth of bars past the last one, and
+  TradingView will not scroll there on its own.
+
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.
 

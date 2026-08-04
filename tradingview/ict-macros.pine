@@ -1,0 +1,287 @@
+//@version=6
+// ===================================
+// ICT Macros
+// ===================================
+// Author: Filipe Teixeira Amaral
+// Version: 1.0
+// Last Updated: August 2026
+//
+// Description:
+// The ICT macros are fixed intraday windows -- 20 to 30 minutes each, most of
+// them straddling the top of the hour -- where price delivery tends to run a
+// stop pool and rebalance. This indicator boxes them, and, unlike a plain
+// session-box script, draws the next ones *before* they arrive: upcoming
+// windows are projected into the empty space to the right of the last bar with
+// a live countdown, so a macro is on screen while there is still time to
+// prepare for it.
+//
+// Windows (New York time, the reference clock for all of them):
+//   02:33 - 03:00   London
+//   04:03 - 04:30   London close
+//   08:50 - 09:10   NY open
+//   09:50 - 10:10   NY AM
+//   10:50 - 11:10   NY AM
+//   11:50 - 12:10   NY lunch
+//   13:10 - 13:40   NY PM
+//   15:15 - 15:45   NY close
+//
+// Features:
+// - Every window boxed; the box grows with the window's own high and low
+// - Upcoming windows projected past the last bar, with a countdown label
+// - Optional rays from a finished window's high and low (macro liquidity)
+// - Alerts a set number of minutes before a macro, and at its open and close
+// - Per-window toggles, time zone, and days of history
+//
+// Notes:
+// - Meant for 1 to 5 minute charts: the windows are minutes wide.
+// - Alerts fire through alert() calls, so create the alert on this indicator
+//   with the condition "Any alert() function call".
+// - How far a projected box actually renders is up to TradingView: drawings
+//   reach at most 500 bars past the last one, and the projected time axis is an
+//   extrapolation, so a window many hours out may be clipped or land slightly
+//   off until real bars catch up to it.
+// -----------------------------------------------------------------------------
+
+indicator('ICT Macros', 'ICT Macros', overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
+
+MS_PER_MINUTE = 60000
+MS_PER_DAY = 86400000
+
+//==============================================================================
+// INPUTS
+//==============================================================================
+GRP_GENERAL = 'General'
+GRP_WINDOWS = 'Macro Windows'
+GRP_UPCOMING = 'Upcoming Macros'
+GRP_STYLE = 'Style'
+GRP_ALERTS = 'Alerts'
+
+tz = input.string('America/New_York', 'Time Zone', options = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'GMT-12', 'GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT', 'GMT+1', 'GMT+2', 'GMT+3', 'GMT+4', 'GMT+5', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'], tooltip = 'Clock the macro times are read in. They are defined in New York time, so leave this alone unless you deliberately want the same clock times in another zone.', group = GRP_GENERAL)
+
+history_days = input.int(2, 'Days of History', 0, 30, tooltip = 'How many previous calendar days keep their macro boxes. 0 = today only.', group = GRP_GENERAL)
+
+use_0233 = input.bool(true, '02:33 - 03:00   London', group = GRP_WINDOWS)
+use_0403 = input.bool(true, '04:03 - 04:30   London close', group = GRP_WINDOWS)
+use_0850 = input.bool(true, '08:50 - 09:10   NY open', group = GRP_WINDOWS)
+use_0950 = input.bool(true, '09:50 - 10:10   NY AM', group = GRP_WINDOWS)
+use_1050 = input.bool(true, '10:50 - 11:10   NY AM', group = GRP_WINDOWS)
+use_1150 = input.bool(true, '11:50 - 12:10   NY lunch', group = GRP_WINDOWS)
+use_1310 = input.bool(true, '13:10 - 13:40   NY PM', group = GRP_WINDOWS)
+use_1515 = input.bool(true, '15:15 - 15:45   NY close', group = GRP_WINDOWS)
+
+show_upcoming = input.bool(true, 'Project Upcoming Macros', tooltip = 'Draw the next windows to the right of the last bar, before price gets there.', group = GRP_UPCOMING)
+
+upcoming_count = input.int(3, 'How Many Ahead', 1, 8, tooltip = 'Number of future windows drawn at once.', group = GRP_UPCOMING)
+
+show_countdown = input.bool(true, 'Countdown On Label', tooltip = 'Add the time left until the window opens to its label.', group = GRP_UPCOMING)
+
+height_mode = input.string('Macro high/low', 'Box Height', options = ['Macro high/low', 'Recent range'], tooltip = '"Macro high/low" grows each box with the range its own window makes. "Recent range" makes every box a tall vertical zone spanning the recent-range lookback, which reads more like a time marker than a level.', group = GRP_STYLE)
+
+range_lookback = input.int(120, 'Recent Range Lookback (bars)', 10, 1000, tooltip = 'Height of a "Recent range" box, and always the height of a projected box, which has no price data of its own yet.', group = GRP_STYLE)
+
+macro_color = input.color(#2962FF, 'Macro Color', group = GRP_STYLE)
+upcoming_color = input.color(#F57C00, 'Upcoming Color', group = GRP_STYLE)
+fill_transp = input.int(92, 'Fill Transparency', 0, 100, group = GRP_STYLE)
+border_transp = input.int(35, 'Border Transparency', 0, 100, group = GRP_STYLE)
+show_labels = input.bool(true, 'Show Labels', group = GRP_STYLE)
+label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_STYLE)
+show_levels = input.bool(false, 'Extend Macro High/Low', tooltip = 'Ray each finished window\'s high and low forward to the end of that calendar day. The extremes a macro leaves behind are the liquidity the next one tends to reach for.', group = GRP_STYLE)
+
+warn_minutes = input.int(5, 'Warn Minutes Before', 0, 120, tooltip = 'Fire an alert this many minutes before a window opens. 0 = off.', group = GRP_ALERTS)
+alert_on_open = input.bool(true, 'Alert On Open', group = GRP_ALERTS)
+alert_on_close = input.bool(false, 'Alert On Close', group = GRP_ALERTS)
+
+//==============================================================================
+// TYPES
+//==============================================================================
+// One macro window's definition. Times are wall-clock in the selected zone; the
+// dates come from whichever bar or day is being drawn.
+type MacroWindow
+    int start_hour
+    int start_minute
+    int end_hour
+    int end_minute
+    string name
+    bool enabled
+
+// The drawings for the window a macro is currently in, plus the running extremes
+// that size the box. window_start doubles as the identity of that window: a bar
+// carrying a different start timestamp means a new window has opened.
+type MacroDrawing
+    int window_start
+    int window_end
+    box zone
+    label tag
+    float hi
+    float lo
+    bool active
+
+//==============================================================================
+// HELPERS
+//==============================================================================
+pad_two(int value) =>
+    (value < 10 ? '0' : '') + str.tostring(value)
+
+clock_text(int hour_of_day, int minute_of_hour) =>
+    pad_two(hour_of_day) + ':' + pad_two(minute_of_hour)
+
+window_text(MacroWindow macro) =>
+    clock_text(macro.start_hour, macro.start_minute) + '-' + clock_text(macro.end_hour, macro.end_minute)
+
+// mm:ss while under an hour, then Hh MMm -- the seconds stop being useful once
+// the window is that far out.
+countdown_text(int milliseconds) =>
+    total_seconds = int(math.max(0, milliseconds) / 1000)
+    hours = int(total_seconds / 3600)
+    minutes = int(total_seconds % 3600 / 60)
+    seconds = total_seconds % 60
+    hours > 0 ? str.tostring(hours) + 'h ' + pad_two(minutes) + 'm' : pad_two(minutes) + ':' + pad_two(seconds)
+
+midnight_of(int reference_time) =>
+    timestamp(tz, year(reference_time, tz), month(reference_time, tz), dayofmonth(reference_time, tz), 0, 0)
+
+label_size_constant() =>
+    switch label_size
+        'tiny' => size.tiny
+        'small' => size.small
+        'large' => size.large
+        => size.normal
+
+//==============================================================================
+// MACRO TABLE
+//==============================================================================
+var array<MacroWindow> macros = array.new<MacroWindow>()
+var array<MacroDrawing> drawings = array.new<MacroDrawing>()
+
+if barstate.isfirst
+    array.push(macros, MacroWindow.new(2, 33, 3, 0, 'London', use_0233))
+    array.push(macros, MacroWindow.new(4, 3, 4, 30, 'London close', use_0403))
+    array.push(macros, MacroWindow.new(8, 50, 9, 10, 'NY open', use_0850))
+    array.push(macros, MacroWindow.new(9, 50, 10, 10, 'NY AM', use_0950))
+    array.push(macros, MacroWindow.new(10, 50, 11, 10, 'NY AM', use_1050))
+    array.push(macros, MacroWindow.new(11, 50, 12, 10, 'NY lunch', use_1150))
+    array.push(macros, MacroWindow.new(13, 10, 13, 40, 'NY PM', use_1310))
+    array.push(macros, MacroWindow.new(15, 15, 15, 45, 'NY close', use_1515))
+    for i = 1 to array.size(macros)
+        array.push(drawings, MacroDrawing.new(0, 0, na, na, na, na, false))
+
+//==============================================================================
+// STYLE
+//==============================================================================
+macro_fill = color.new(macro_color, fill_transp)
+macro_border = color.new(macro_color, border_transp)
+upcoming_fill = color.new(upcoming_color, fill_transp)
+upcoming_border = color.new(upcoming_color, border_transp)
+
+//==============================================================================
+// PAST AND ACTIVE WINDOWS
+//==============================================================================
+// A box is born on the first bar that falls inside a window and grows with the
+// window's extremes; its right edge is pinned to the window's end from the
+// start, so an opening macro already shows how far it runs.
+recent_high = ta.highest(high, range_lookback)
+recent_low = ta.lowest(low, range_lookback)
+
+bar_year = year(time, tz)
+bar_month = month(time, tz)
+bar_day = dayofmonth(time, tz)
+
+// Calendar days between this bar and the chart's last one. Rounding absorbs the
+// hour that daylight saving adds to or removes from a day.
+days_ago = math.round((midnight_of(last_bar_time) - midnight_of(time)) / MS_PER_DAY)
+within_history = days_ago >= 0 and days_ago <= history_days
+
+for i = 0 to array.size(macros) - 1
+    macro = array.get(macros, i)
+    drawing = array.get(drawings, i)
+    if macro.enabled
+        start_time = timestamp(tz, bar_year, bar_month, bar_day, macro.start_hour, macro.start_minute)
+        end_time = timestamp(tz, bar_year, bar_month, bar_day, macro.end_hour, macro.end_minute)
+        inside_window = time >= start_time and time < end_time and within_history
+
+        if inside_window
+            if drawing.window_start != start_time
+                drawing.window_start := start_time
+                drawing.window_end := end_time
+                drawing.hi := high
+                drawing.lo := low
+                drawing.active := true
+                drawing.zone := box.new(start_time, high, end_time, low, xloc = xloc.bar_time, border_color = macro_border, bgcolor = macro_fill)
+                drawing.tag := show_labels ? label.new(start_time, high, window_text(macro), xloc = xloc.bar_time, yloc = yloc.price, style = label.style_label_down, color = color.new(macro_color, 100), textcolor = macro_border, size = label_size_constant()) : na
+                if alert_on_open
+                    alert('ICT macro open: ' + window_text(macro) + ' ' + macro.name, alert.freq_once_per_bar)
+            else
+                drawing.hi := math.max(drawing.hi, high)
+                drawing.lo := math.min(drawing.lo, low)
+
+            box_top = height_mode == 'Recent range' ? recent_high : drawing.hi
+            box_bottom = height_mode == 'Recent range' ? recent_low : drawing.lo
+            box.set_top(drawing.zone, box_top)
+            box.set_bottom(drawing.zone, box_bottom)
+            if not na(drawing.tag)
+                label.set_y(drawing.tag, box_top)
+
+        else if drawing.active
+            drawing.active := false
+            if show_levels
+                // Rays stop at the end of the window's own calendar day so a
+                // level never bleeds into the next day's chart.
+                day_end = midnight_of(drawing.window_start) + MS_PER_DAY - MS_PER_MINUTE
+                line.new(drawing.window_end, drawing.hi, day_end, drawing.hi, xloc = xloc.bar_time, color = macro_border, style = line.style_dotted)
+                line.new(drawing.window_end, drawing.lo, day_end, drawing.lo, xloc = xloc.bar_time, color = macro_border, style = line.style_dotted)
+            if alert_on_close
+                alert('ICT macro closed: ' + window_text(macro) + ' ' + macro.name, alert.freq_once_per_bar)
+
+//==============================================================================
+// UPCOMING WINDOWS
+//==============================================================================
+// Everything here is anchored to real timestamps rather than bar indices, which
+// is what lets a box sit past the last bar. The list is built on the last bar
+// whether or not it gets drawn, because the warning alert needs the next window
+// even when the projection is switched off.
+var array<box> upcoming_boxes = array.new<box>()
+var array<label> upcoming_labels = array.new<label>()
+
+if barstate.islast
+    for existing_box in upcoming_boxes
+        box.delete(existing_box)
+    for existing_label in upcoming_labels
+        label.delete(existing_label)
+    array.clear(upcoming_boxes)
+    array.clear(upcoming_labels)
+
+    int next_start = 0
+    string next_name = ''
+    int wanted = math.max(upcoming_count, 1)
+    int found = 0
+
+    // Today and tomorrow are enough: after the last macro of the day the next
+    // one is the following morning's, and anything beyond that is too far out
+    // to render anyway.
+    for day_offset = 0 to 1
+        day_reference = midnight_of(timenow) + day_offset * MS_PER_DAY
+        reference_year = year(day_reference, tz)
+        reference_month = month(day_reference, tz)
+        reference_day = dayofmonth(day_reference, tz)
+        for i = 0 to array.size(macros) - 1
+            macro = array.get(macros, i)
+            if macro.enabled and found < wanted
+                start_time = timestamp(tz, reference_year, reference_month, reference_day, macro.start_hour, macro.start_minute)
+                if start_time > timenow
+                    end_time = timestamp(tz, reference_year, reference_month, reference_day, macro.end_hour, macro.end_minute)
+                    if found == 0
+                        next_start := start_time
+                        next_name := window_text(macro) + ' ' + macro.name
+                    found += 1
+                    if show_upcoming
+                        array.push(upcoming_boxes, box.new(start_time, recent_high, end_time, recent_low, xloc = xloc.bar_time, border_color = upcoming_border, border_style = line.style_dashed, bgcolor = upcoming_fill))
+                        if show_labels
+                            tag_text = window_text(macro) + (show_countdown ? '\n' + countdown_text(start_time - timenow) : '')
+                            array.push(upcoming_labels, label.new(start_time, recent_high, tag_text, xloc = xloc.bar_time, yloc = yloc.price, style = label.style_label_down, color = color.new(upcoming_color, 100), textcolor = upcoming_border, size = label_size_constant()))
+
+    // Fire on the bar whose span contains the warning moment, so the alert goes
+    // out exactly once per macro instead of on every bar inside the warning.
+    if warn_minutes > 0 and next_start > 0
+        warning_moment = next_start - warn_minutes * MS_PER_MINUTE
+        if warning_moment >= time and warning_moment < time_close
+            alert('ICT macro in ' + str.tostring(warn_minutes) + ' min: ' + next_name, alert.freq_once_per_bar)

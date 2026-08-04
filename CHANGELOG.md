@@ -3,6 +3,16 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-08-04
+
+### ICT Macros (TradingView, new)
+- Marks the eight ICT macro windows on the chart, and draws the next ones
+  before they arrive: upcoming windows are projected onto the empty space
+  to the right of the last bar with a countdown, so a macro is visible
+  while there is still time to prepare for it. Each window boxes its own
+  high and low as it forms, can leave dotted rays behind at those
+  extremes, and can alert a set number of minutes ahead of time.
+
 ## 2026-07-22
 
 ### Renko Size Table (TradingView, new)
