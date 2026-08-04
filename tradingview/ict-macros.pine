@@ -3,7 +3,7 @@
 // ICT Macros
 // ===================================
 // Author: Filipe Teixeira Amaral
-// Version: 2.0
+// Version: 3.0
 // Last Updated: August 2026
 //
 // Description:
@@ -12,15 +12,15 @@
 // stop pool and rebalance. This indicator answers one question and stays out of
 // the way while it does: when is the next macro, and am I in one right now.
 //
-// It lives in its own pane, as a ribbon of blocks laid out along the time axis:
-// grey for windows already gone, a live color for the one running, and an
-// accent color for the ones still ahead. The upcoming blocks are drawn *before*
-// price gets there, in the empty space past the last bar, so a macro is on
-// screen while there is still time to prepare for it. Drag the pane as short as
-// you like -- the blocks keep their shape.
+// Each window is a block on the chart, sitting at its own place on the time
+// axis but pinned to the bottom (or top) edge of whatever is on screen. It does
+// not follow price up and down, it does not tint the background, and there is
+// no rail running the width of the chart: outside a macro window there is
+// nothing there at all.
 //
-// Nothing is ever drawn on the price chart: no background tint, no rails at the
-// top and bottom of the candles, no levels.
+// Upcoming windows are drawn *before* price gets to them, in the empty space
+// past the last bar, so a macro is visible while there is still time to prepare
+// for it.
 //
 // Windows (New York time, the reference clock for all of them):
 //   02:33 - 03:00   London
@@ -37,35 +37,31 @@
 // session definition and works on any symbol.
 //
 // Features:
-// - Ribbon of macro blocks in a pane of its own, aligned to the time axis
-// - Upcoming windows drawn past the last bar, with a countdown on each block
-// - A readout pinned to the pane corner: time left in the running macro, or
-//   time until the next one. It stays put no matter where the chart is scrolled
+// - A block per macro window, at its real place on the time axis, edge-pinned
+// - Upcoming windows drawn past the last bar, with a countdown in each block
+// - Grey once gone, live color while running, accent color while still ahead
 // - Alerts a set number of minutes before a window, and at its open and close
 // - Per-window toggles, time zone, and days of history
 //
 // Notes:
 // - Meant for 1 to 5 minute charts: the windows are minutes wide.
+// - The band re-anchors whenever the visible bars change, so it stays welded to
+//   the edge of the screen through any scroll or zoom. It is sized as a share of
+//   the visible price range and drawn inside it, never past it, so it cannot
+//   drag the chart's own scaling around.
 // - Alerts fire through alert() calls, so create the alert on this indicator
 //   with the condition "Any alert() function call".
 // - How far an upcoming block renders is up to TradingView: drawings reach at
-//   most 500 bars past the last one, and the time axis out there is an
-//   extrapolation. A block an hour out sits an hour of bars past price, so
-//   widen the chart's right margin to see it -- or just read the corner
-//   readout, which is always visible.
+//   most 500 bars past the last one. A block an hour out sits an hour of bars
+//   past price, so widen the chart's right margin (Chart settings > Appearance)
+//   to keep the next macro on screen.
 // -----------------------------------------------------------------------------
 
-indicator('ICT Macros', 'ICT Macros', overlay = false, max_boxes_count = 500, max_labels_count = 500)
+indicator('ICT Macros', 'ICT Macros', overlay = true, max_boxes_count = 500, max_labels_count = 500)
 
 MS_PER_MINUTE = 60000
 MS_PER_DAY = 86400000
-
-// The pane is a fixed 0..1 canvas so a block always looks the same height,
-// whatever the pane is resized to.
-PANE_FLOOR = 0.0
-PANE_CEILING = 1.0
-BLOCK_BOTTOM = 0.2
-BLOCK_TOP = 0.8
+FALLBACK_LOOKBACK = 100
 
 //==============================================================================
 // INPUTS
@@ -73,12 +69,13 @@ BLOCK_TOP = 0.8
 GRP_GENERAL = 'General'
 GRP_WINDOWS = 'Macro Windows'
 GRP_UPCOMING = 'Upcoming Macros'
-GRP_STYLE = 'Style'
+GRP_BAND = 'Band'
+GRP_READOUT = 'Readout'
 GRP_ALERTS = 'Alerts'
 
 tz = input.string('America/New_York', 'Time Zone', options = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'GMT-12', 'GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT', 'GMT+1', 'GMT+2', 'GMT+3', 'GMT+4', 'GMT+5', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'], tooltip = 'Clock the macro times are read in. They are defined in New York time, so leave this alone unless you deliberately want the same clock times in another zone.', group = GRP_GENERAL)
 
-history_days = input.int(2, 'Days of History', 0, 30, tooltip = 'How many previous calendar days keep their blocks. 0 = today only.', group = GRP_GENERAL)
+history_days = input.int(2, 'Days of History', 0, 10, tooltip = 'How many previous calendar days keep their blocks. 0 = today only.', group = GRP_GENERAL)
 
 use_0233 = input.bool(true, '02:33 - 03:00   London', group = GRP_WINDOWS)
 use_0403 = input.bool(true, '04:03 - 04:30   London close', group = GRP_WINDOWS)
@@ -89,20 +86,26 @@ use_1150 = input.bool(true, '11:50 - 12:10   NY lunch', group = GRP_WINDOWS)
 use_1310 = input.bool(true, '13:10 - 13:40   NY PM', group = GRP_WINDOWS)
 use_1515 = input.bool(true, '15:15 - 15:45   NY close', group = GRP_WINDOWS)
 
-show_upcoming = input.bool(true, 'Draw Upcoming Macros', tooltip = 'Lay the next windows out past the last bar, before price gets there.', group = GRP_UPCOMING)
+show_upcoming = input.bool(true, 'Draw Upcoming Macros', tooltip = 'Lay the next windows out past the last bar, before price gets there. They need right margin on the chart to be visible.', group = GRP_UPCOMING)
 
 upcoming_count = input.int(3, 'How Many Ahead', 1, 8, tooltip = 'Number of future windows drawn at once.', group = GRP_UPCOMING)
 
 show_countdown = input.bool(true, 'Countdown On Block', tooltip = 'Print the time left until each upcoming window opens inside its block.', group = GRP_UPCOMING)
 
-past_color = input.color(#787B86, 'Past', group = GRP_STYLE)
-live_color = input.color(#2962FF, 'Live', group = GRP_STYLE)
-upcoming_color = input.color(#F57C00, 'Upcoming', group = GRP_STYLE)
-fill_transp = input.int(70, 'Block Transparency', 0, 100, group = GRP_STYLE)
-show_labels = input.bool(true, 'Label Blocks', group = GRP_STYLE)
-label_size = input.string('tiny', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_STYLE)
-show_readout = input.bool(true, 'Corner Readout', tooltip = 'A cell pinned to the pane corner with the time left in the running macro, or the time until the next one. Visible wherever the chart is scrolled.', group = GRP_STYLE)
-readout_position = input.string('Top Right', 'Readout Position', options = ['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right'], group = GRP_STYLE)
+band_position = input.string('Bottom', 'Pinned To', options = ['Bottom', 'Top'], tooltip = 'Which edge of the visible chart the blocks are welded to.', group = GRP_BAND)
+
+band_height_pct = input.float(6, 'Band Height (%)', 1, 30, step = 0.5, tooltip = 'Height of a block as a share of the visible price range, so it keeps its thickness at any zoom.', group = GRP_BAND)
+
+past_color = input.color(#787B86, 'Past', group = GRP_BAND)
+live_color = input.color(#2962FF, 'Live', group = GRP_BAND)
+upcoming_color = input.color(#F57C00, 'Upcoming', group = GRP_BAND)
+fill_transp = input.int(60, 'Block Transparency', 0, 100, group = GRP_BAND)
+show_labels = input.bool(true, 'Label Blocks', group = GRP_BAND)
+label_size = input.string('tiny', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_BAND)
+
+show_readout = input.bool(false, 'Corner Readout', tooltip = 'A cell pinned to a chart corner with the time left in the running macro, or the time until the next one. Visible wherever the chart is scrolled, and the only part that survives having no right margin.', group = GRP_READOUT)
+
+readout_position = input.string('Top Right', 'Readout Position', options = ['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right'], group = GRP_READOUT)
 
 warn_minutes = input.int(5, 'Warn Minutes Before', 0, 120, tooltip = 'Fire an alert this many minutes before a window opens. 0 = off.', group = GRP_ALERTS)
 alert_on_open = input.bool(true, 'Alert On Open', group = GRP_ALERTS)
@@ -121,16 +124,21 @@ type MacroWindow
     string name
     bool enabled
 
-// The block drawn for the window a macro is currently in. window_start doubles
-// as the identity of that window: a bar carrying a different start timestamp
+// Which window of a given macro the bars are currently inside. The start
+// timestamp doubles as that window's identity: a bar carrying a different start
 // means a new window has opened, which covers the day rollover with no separate
-// date check.
-type MacroBlock
-    int window_start
-    int window_end
-    box zone
-    label tag
-    bool live
+// date check. Both fields are zero between windows.
+type MacroState
+    int start_time
+    int end_time
+
+// A window the chart actually has bars for. Windows are logged as the bars walk
+// through them rather than generated from the calendar, so a session the market
+// was closed for never leaves a block behind.
+type MacroOccurrence
+    int start_time
+    int end_time
+    string caption
 
 //==============================================================================
 // HELPERS
@@ -174,7 +182,8 @@ readout_position_constant() =>
 // MACRO TABLE
 //==============================================================================
 var array<MacroWindow> macros = array.new<MacroWindow>()
-var array<MacroBlock> blocks = array.new<MacroBlock>()
+var array<MacroState> states = array.new<MacroState>()
+var array<MacroOccurrence> occurrences = array.new<MacroOccurrence>()
 
 if barstate.isfirst
     array.push(macros, MacroWindow.new(2, 33, 3, 0, 'London', use_0233))
@@ -186,26 +195,31 @@ if barstate.isfirst
     array.push(macros, MacroWindow.new(13, 10, 13, 40, 'NY PM', use_1310))
     array.push(macros, MacroWindow.new(15, 15, 15, 45, 'NY close', use_1515))
     for i = 1 to array.size(macros)
-        array.push(blocks, MacroBlock.new(0, 0, na, na, false))
+        array.push(states, MacroState.new(0, 0))
 
 //==============================================================================
-// STYLE
+// VISIBLE PRICE RANGE
 //==============================================================================
-past_fill = color.new(past_color, fill_transp)
-live_fill = color.new(live_color, fill_transp)
-upcoming_fill = color.new(upcoming_color, fill_transp)
+// The band is welded to the edge of the screen, so it needs the price range the
+// screen is actually showing. Reading chart.left_visible_bar_time and
+// chart.right_visible_bar_time is also what makes TradingView re-run the script
+// on a scroll or a zoom, which is what keeps the band welded there.
+var float visible_high = na
+var float visible_low = na
 
-// Two invisible plots pin the pane to a 0..1 range. They have to be plotted
-// rather than hidden outright, because a hidden plot is left out of the pane's
-// autoscale and the range would then drift with whatever boxes exist.
-plot(PANE_FLOOR, 'Pane Floor', color = color.new(color.gray, 100), display = display.pane, editable = false)
-plot(PANE_CEILING, 'Pane Ceiling', color = color.new(color.gray, 100), display = display.pane, editable = false)
+bar_is_visible = not na(chart.left_visible_bar_time) and time >= chart.left_visible_bar_time and time <= chart.right_visible_bar_time
+if bar_is_visible
+    visible_high := na(visible_high) ? high : math.max(visible_high, high)
+    visible_low := na(visible_low) ? low : math.min(visible_low, low)
+
+// Only reached before the chart reports a visible range at all; the last stretch
+// of bars is a fair stand-in for what is on screen.
+fallback_high = ta.highest(high, FALLBACK_LOOKBACK)
+fallback_low = ta.lowest(low, FALLBACK_LOOKBACK)
 
 //==============================================================================
-// PAST AND LIVE WINDOWS
+// LOGGING THE WINDOWS THE BARS WALK THROUGH
 //==============================================================================
-// A block is born on the first bar that falls inside its window, already the
-// full width of the window, and turns grey on the first bar past it.
 bar_year = year(time, tz)
 bar_month = month(time, tz)
 bar_day = dayofmonth(time, tz)
@@ -217,66 +231,75 @@ within_history = days_ago >= 0 and days_ago <= history_days
 
 for i = 0 to array.size(macros) - 1
     macro = array.get(macros, i)
-    block = array.get(blocks, i)
+    state = array.get(states, i)
     if macro.enabled
         start_time = timestamp(tz, bar_year, bar_month, bar_day, macro.start_hour, macro.start_minute)
         end_time = timestamp(tz, bar_year, bar_month, bar_day, macro.end_hour, macro.end_minute)
-        inside_window = time >= start_time and time < end_time and within_history
 
-        if inside_window and block.window_start != start_time
-            block.window_start := start_time
-            block.window_end := end_time
-            block.live := true
-            block.zone := box.new(start_time, BLOCK_TOP, end_time, BLOCK_BOTTOM, xloc = xloc.bar_time, border_color = live_color, bgcolor = live_fill)
-            block.tag := show_labels ? label.new(int(math.avg(start_time, end_time)), math.avg(BLOCK_TOP, BLOCK_BOTTOM), window_text(macro), xloc = xloc.bar_time, yloc = yloc.price, style = label.style_none, textcolor = live_color, size = label_size_constant()) : na
+        if time >= start_time and time < end_time and within_history and state.start_time != start_time
+            state.start_time := start_time
+            state.end_time := end_time
+            array.push(occurrences, MacroOccurrence.new(start_time, end_time, window_text(macro)))
             if alert_on_open
                 alert('ICT macro open: ' + window_text(macro) + ' ' + macro.name, alert.freq_once_per_bar)
 
-        else if not inside_window and block.live
-            block.live := false
-            box.set_border_color(block.zone, past_color)
-            box.set_bgcolor(block.zone, past_fill)
-            if not na(block.tag)
-                label.set_textcolor(block.tag, past_color)
+        else if state.end_time > 0 and time >= state.end_time
+            state.start_time := 0
+            state.end_time := 0
             if alert_on_close
                 alert('ICT macro closed: ' + window_text(macro) + ' ' + macro.name, alert.freq_once_per_bar)
 
 //==============================================================================
-// UPCOMING WINDOWS AND READOUT
+// DRAWING
 //==============================================================================
-// Blocks out here are anchored to real timestamps through xloc.bar_time, which
-// is what lets them sit past the last bar: a bar index cannot address a bar that
-// does not exist yet, a timestamp can. They are rebuilt on every last-bar pass
-// so the countdowns stay current.
-var array<box> upcoming_boxes = array.new<box>()
-var array<label> upcoming_labels = array.new<label>()
+// Everything is redrawn on each last-bar pass: the blocks have to follow the
+// visible range, and the countdowns have to stay current. Blocks are anchored to
+// real timestamps through xloc.bar_time, which is also what lets an upcoming one
+// sit past the last bar -- a bar index cannot address a bar that does not exist
+// yet, a timestamp can.
+var array<box> drawn_boxes = array.new<box>()
+var array<label> drawn_labels = array.new<label>()
 var table readout = table.new(position.top_right, 1, 1)
 
-if barstate.islast
-    for existing_box in upcoming_boxes
-        box.delete(existing_box)
-    for existing_label in upcoming_labels
-        label.delete(existing_label)
-    array.clear(upcoming_boxes)
-    array.clear(upcoming_labels)
+draw_block(int start_time, int end_time, string caption, float top_price, float bottom_price, color block_color, bool dashed) =>
+    array.push(drawn_boxes, box.new(start_time, top_price, end_time, bottom_price, xloc = xloc.bar_time, border_color = block_color, border_style = dashed ? line.style_dashed : line.style_solid, bgcolor = color.new(block_color, fill_transp)))
+    if show_labels
+        array.push(drawn_labels, label.new(int(math.avg(start_time, end_time)), math.avg(top_price, bottom_price), caption, xloc = xloc.bar_time, yloc = yloc.price, style = label.style_none, textcolor = block_color, size = label_size_constant()))
 
-    // The running macro, if any. Its date is today's, since it contains now.
-    string live_name = ''
-    int live_end = 0
-    today_year = year(timenow, tz)
-    today_month = month(timenow, tz)
-    today_day = dayofmonth(timenow, tz)
-    for i = 0 to array.size(macros) - 1
-        macro = array.get(macros, i)
-        if macro.enabled
-            start_time = timestamp(tz, today_year, today_month, today_day, macro.start_hour, macro.start_minute)
-            end_time = timestamp(tz, today_year, today_month, today_day, macro.end_hour, macro.end_minute)
-            if timenow >= start_time and timenow < end_time
-                live_name := window_text(macro)
-                live_end := end_time
+if barstate.islast
+    for existing_box in drawn_boxes
+        box.delete(existing_box)
+    for existing_label in drawn_labels
+        label.delete(existing_label)
+    array.clear(drawn_boxes)
+    array.clear(drawn_labels)
+
+    // Blocks older than the history setting stop being drawn. Occurrences are
+    // logged in time order, so the stale ones are always at the front.
+    cutoff = midnight_of(last_bar_time) - history_days * MS_PER_DAY
+    while array.size(occurrences) > 0
+        oldest = array.get(occurrences, 0)
+        if oldest.start_time >= cutoff
+            break
+        array.shift(occurrences)
+
+    // A share of the visible range, laid inside it rather than past it: a block
+    // that reached beyond the visible high or low would pull the chart's own
+    // scaling out to meet it, which would move the edge the band is pinned to.
+    screen_high = na(visible_high) ? fallback_high : visible_high
+    screen_low = na(visible_low) ? fallback_low : visible_low
+    band_height = (screen_high - screen_low) * band_height_pct / 100
+    band_bottom = band_position == 'Top' ? screen_high - band_height : screen_low
+    band_top = band_bottom + band_height
+
+    for occurrence in occurrences
+        is_live = timenow >= occurrence.start_time and timenow < occurrence.end_time
+        draw_block(occurrence.start_time, occurrence.end_time, occurrence.caption, band_top, band_bottom, is_live ? live_color : past_color, false)
 
     int next_start = 0
     string next_name = ''
+    int live_end = 0
+    string live_name = ''
     int wanted = math.max(upcoming_count, 1)
     int found = 0
 
@@ -291,19 +314,22 @@ if barstate.islast
         reference_day = dayofmonth(day_reference, tz)
         for i = 0 to array.size(macros) - 1
             macro = array.get(macros, i)
-            if macro.enabled and found < wanted
+            if macro.enabled
                 start_time = timestamp(tz, reference_year, reference_month, reference_day, macro.start_hour, macro.start_minute)
-                if start_time > timenow
-                    end_time = timestamp(tz, reference_year, reference_month, reference_day, macro.end_hour, macro.end_minute)
+                end_time = timestamp(tz, reference_year, reference_month, reference_day, macro.end_hour, macro.end_minute)
+
+                if timenow >= start_time and timenow < end_time
+                    live_name := window_text(macro)
+                    live_end := end_time
+
+                if start_time > timenow and found < wanted
                     if found == 0
                         next_start := start_time
                         next_name := window_text(macro) + ' ' + macro.name
                     found += 1
                     if show_upcoming
-                        array.push(upcoming_boxes, box.new(start_time, BLOCK_TOP, end_time, BLOCK_BOTTOM, xloc = xloc.bar_time, border_color = upcoming_color, border_style = line.style_dashed, bgcolor = upcoming_fill))
-                        if show_labels
-                            tag_text = window_text(macro) + (show_countdown ? '\n' + countdown_text(start_time - timenow) : '')
-                            array.push(upcoming_labels, label.new(int(math.avg(start_time, end_time)), math.avg(BLOCK_TOP, BLOCK_BOTTOM), tag_text, xloc = xloc.bar_time, yloc = yloc.price, style = label.style_none, textcolor = upcoming_color, size = label_size_constant()))
+                        caption = window_text(macro) + (show_countdown ? '\n' + countdown_text(start_time - timenow) : '')
+                        draw_block(start_time, end_time, caption, band_top, band_bottom, upcoming_color, true)
 
     if show_readout
         string readout_text = 'no macro scheduled'

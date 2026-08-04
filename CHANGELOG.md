@@ -6,16 +6,16 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-08-04
 
 ### ICT Macros (TradingView, new)
-- The eight ICT macro windows as a ribbon of blocks along the time axis, in
-  a pane of its own: grey for the ones already gone, a live color for the
-  one running, and an accent color for the ones still ahead. The upcoming
-  blocks are drawn before price gets there, out past the last bar, with a
+- The eight ICT macro windows, each a block sitting at its own place on the
+  time axis but welded to the bottom (or top) edge of the visible chart, so
+  it never follows price up and down and stays put through a scroll or a
+  zoom. Grey for the windows already gone, a live color for the one
+  running, an accent color for the ones still ahead. The upcoming blocks
+  are drawn before price gets there, out past the last bar, with a
   countdown in each, so a macro is on screen while there is still time to
-  prepare for it. A corner readout gives the time left in the running macro
-  or the time until the next one, and stays visible wherever the chart is
-  scrolled. Alerts can fire a set number of minutes ahead of a window. The
-  price chart is never drawn on: no background tint, no rails above and
-  below the candles, no levels.
+  prepare for it. Alerts can fire a set number of minutes ahead of a
+  window. Outside a macro window nothing is drawn: no background tint, no
+  rail across the chart, no levels.
 
 ## 2026-07-22
 

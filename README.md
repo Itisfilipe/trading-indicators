@@ -257,25 +257,25 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 ### ICT Macros
 
-- The eight ICT macro windows (New York time) as a ribbon of blocks along
-  the time axis: 02:33–03:00, 04:03–04:30, 08:50–09:10, 09:50–10:10,
+- The eight ICT macro windows (New York time), each a block at its own place
+  on the time axis: 02:33–03:00, 04:03–04:30, 08:50–09:10, 09:50–10:10,
   10:50–11:10, 11:50–12:10, 13:10–13:40, 15:15–15:45. Each toggles on its
   own.
+- Blocks are pinned to the bottom (or top) edge of the visible chart, so
+  they never follow price up and down, and they re-anchor to the edge on
+  every scroll and zoom. Outside a macro window there is nothing drawn —
+  no background tint, no rail across the chart, no levels.
 - Upcoming windows are drawn **before** they happen, out in the empty space
-  past the last bar, with a countdown inside each block.
-- Lives in its own pane and never touches the price chart — no background
-  tint, no rails above and below the candles, no levels. Drag the pane as
-  short as you like; the blocks keep their shape.
-- A readout pinned to a pane corner shows the time left in the running
-  macro, or the time until the next one. It stays visible wherever the
-  chart is scrolled.
+  past the last bar, with a countdown inside each block. Grey once gone,
+  live color while running, accent color while still ahead.
+- Optional corner readout with the time left in the running macro, or the
+  time until the next one.
 - Alerts a set number of minutes before a window, and at its open and close.
   Create the alert with the condition "Any alert() function call".
-- Meant for 1–5 minute charts. To see the upcoming blocks themselves, widen
+- Meant for 1–5 minute charts. To keep the upcoming blocks on screen, widen
   the chart's right margin (Chart settings → Appearance → Right margin, or
   drag the chart left) — a window an hour out sits an hour's worth of bars
-  past the last one, and TradingView will not scroll there on its own. The
-  corner readout needs no margin.
+  past the last one, and TradingView will not scroll there on its own.
 
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.
