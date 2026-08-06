@@ -23,8 +23,11 @@
 //   11:50 - 12:10   12:50 - 13:10                   lunch,       11:30 - 13:30
 //   13:50 - 14:10   14:50 - 15:10
 //   15:15 - 15:45   15:45 - 16:00                   PM session,  13:30 - 16:00
-// The last two slots hold the London macros, 02:33 - 03:00 and 04:03 - 04:30,
-// switched off.
+// The last two slots hold London Macro 1 (02:33 - 03:00) and London Macro 2
+// (04:03 - 04:30), switched off. They belong to the London session rather than
+// to a New York block, which is why they do not share the :50 - :10 shape of
+// the rest, and they are the two windows above whose times come from ICT
+// teaching material rather than from a primary source -- hence off by default.
 //
 // Features:
 // - 10 line slots, one compact row each: on/off, HH:MM, label, color, style
