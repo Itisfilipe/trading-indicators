@@ -8,7 +8,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ### Time-Based Vertical Lines (TradingView, new)
 - Vertical lines at the clock times that matter during a session: New York
   midnight, the 09:30 open, the 08:30 news. Ten slots, each with its own
-  time, label, color and style, plus eight macro slots that default to the
+  time, label, color and style, plus twelve macro slots that default to the
   ICT windows, keep their own on/off and start and end times, and are
   bracketed by a line at each end with a captioned rectangle joining the
   pair. Captions and rectangles share one strip set clear of the bars, so

@@ -263,13 +263,17 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
 - Every line is drawn for the whole day, **including the ones still ahead**,
   each carrying a countdown to it.
-- 8 more slots for macro windows, defaulting to the ICT ones (02:33–03:00,
-  04:03–04:30, 08:50–09:10, 09:50–10:10, 10:50–11:10, 11:50–12:10,
-  13:10–13:40, 15:15–15:45). Each has its own on/off and its own start and
-  end time, is bracketed by a line at both ends, and has those two lines
-  joined by a rectangle carrying its name: `Macro 09:50-10:10`. The caption
-  changes tense with the window — counting down to the open while it is
-  ahead, counting out what is left once inside it.
+- 12 more slots for macro windows, defaulting to the ICT ones grouped by
+  session: 07:50–08:10 and 08:50–09:10 ahead of the bell, 09:50–10:10 and
+  10:50–11:10 in the AM session, 11:50–12:10 and 12:50–13:10 over lunch,
+  then 13:50–14:10, 14:50–15:10, 15:15–15:45 and 15:45–16:00 through the PM
+  session. Two spare rows hold the London macros (02:33–03:00,
+  04:03–04:30), switched off.
+- Each macro has its own on/off and its own start and end time, is
+  bracketed by a line at both ends, and has those two lines joined by a
+  rectangle carrying its name: `Macro 09:50-10:10`. The caption changes
+  tense with the window — counting down to the open while it is ahead,
+  counting out what is left once inside it.
 - Captions and macro rectangles share one strip below (or above) the bars,
   set clear of them by an adjustable gap, welded there through any scroll
   or zoom. Nothing is drawn over the candles. Captions read across rather

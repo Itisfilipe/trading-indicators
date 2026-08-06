@@ -11,16 +11,28 @@
 // countdown to them. The companion to Time-Based Price Levels: that one answers
 // "at what price", this one answers "at what time, and how long until it".
 //
-// Ten line slots, each with its own time, label, color and style, plus eight
-// macro slots that default to the ICT windows, each bracketed by a line at both
-// ends, so the line slots stay free for everything else.
+// Ten line slots, each with its own time, label, color and style, plus twelve
+// macro slots, each bracketed by a line at both ends with a captioned rectangle
+// joining the pair, so the line slots stay free for everything else.
+//
+// The macro slots default to the ICT windows, in New York time, grouped by the
+// session each falls in:
+//   07:50 - 08:10                                   pre-market
+//   08:50 - 09:10                                   into the open
+//   09:50 - 10:10   10:50 - 11:10                   AM session,  09:30 - 11:30
+//   11:50 - 12:10   12:50 - 13:10                   lunch,       11:30 - 13:30
+//   13:50 - 14:10   14:50 - 15:10
+//   15:15 - 15:45   15:45 - 16:00                   PM session,  13:30 - 16:00
+// The last two slots hold the London macros, 02:33 - 03:00 and 04:03 - 04:30,
+// switched off.
 //
 // Features:
 // - 10 line slots, one compact row each: on/off, HH:MM, label, color, style
 // - Every line drawn for the whole day, future ones included
 // - Countdown on a line that has not happened yet
-// - 8 macro slots, each bracketed by a line at its start and one at its end
-// - Labels sit beside the line, at the top, middle or bottom of the chart
+// - 12 macro slots, each bracketed by a line at its start and one at its end,
+//   with a captioned rectangle joining the pair
+// - Captions and rectangles share one strip, set clear of the bars
 // - Time zone support and historical-days control
 //
 // Notes:
@@ -30,9 +42,6 @@
 //   drawing does. A script cannot reach that drawing -- Pine's lines and labels
 //   are a separate system from the chart's drawing tools -- and a label has no
 //   rotation of its own, so across it is, hung off the side of the line.
-// - Top and Bottom put the caption in the chart's own edge margin, past the
-//   highest or lowest bar. A chart set to very tight margins has less room out
-//   there and can clip a two-row caption; Middle never does.
 // - A line's own time places it, so a line later today sits past the last bar.
 //   Two things bound how far ahead that stays legible: TradingView draws at most
 //   500 bars past the last one, which is a little over eight hours on a
@@ -48,7 +57,7 @@ MS_PER_DAY = 86400000
 HALF_DAY_MS = 43200000
 FALLBACK_LOOKBACK = 100
 
-// Distinct days kept in the log: comfortably more than the ten the history
+// Distinct days kept in the log: comfortably more than the five the history
 // cutoff can ask for, so the oldest day still wanted is always still in there.
 MAX_TRACKED_DAYS = 20
 
@@ -57,12 +66,12 @@ MAX_TRACKED_DAYS = 20
 //==============================================================================
 GRP_GENERAL = 'General Settings'
 GRP_LABELS = 'Label Settings'
-GRP_MACROS = 'ICT Macro Preset'
+GRP_MACROS = 'Macros'
 GRP_LINES = 'Lines'
 
 tz = input.string('America/New_York', 'Time Zone', options = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'GMT-12', 'GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT', 'GMT+1', 'GMT+2', 'GMT+3', 'GMT+4', 'GMT+5', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'], tooltip = 'Zone every line time below is read in.', group = GRP_GENERAL)
 
-history_days = input.int(1, 'Days of History to Show', 0, 10, tooltip = 'Number of previous days that keep their lines, counted back from the last day the chart has bars for. 0 = today only.', group = GRP_GENERAL)
+history_days = input.int(1, 'Days of History to Show', 0, 5, tooltip = 'Number of previous days that keep their lines, counted back from the last day the chart has bars for. 0 = today only.', group = GRP_GENERAL)
 
 include_tomorrow = input.bool(false, 'Include Tomorrow', tooltip = 'Also draw tomorrow\'s lines. Useful late in the session, when everything for today has already happened. Only worth it from about the 5-minute timeframe up: TradingView draws at most 500 bars past the last one.', group = GRP_GENERAL)
 
@@ -78,7 +87,7 @@ label_distance = input.float(1.5, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = '
 
 show_countdown = input.bool(true, 'Countdown On Future Lines', tooltip = 'Add the time left to the label of a line whose time has not come yet.', group = GRP_LABELS)
 
-show_macros = input.bool(true, 'Show Macros', tooltip = 'Master switch for the eight rows below.', group = GRP_MACROS)
+show_macros = input.bool(true, 'Show Macros', tooltip = 'Master switch for the twelve rows below.', group = GRP_MACROS)
 
 macro_color = input.color(#F57C00, 'Color', inline = 'macro', group = GRP_MACROS)
 macro_style = input.string('Dotted', 'Style', options = ['Solid', 'Dashed', 'Dotted'], inline = 'macro', group = GRP_MACROS)
@@ -87,107 +96,59 @@ macro_band_height = input.float(4, 'Band Height (%)', 0, 40, step = 0.5, tooltip
 
 macro_band_transp = input.int(85, 'Band Transparency', 0, 100, group = GRP_MACROS)
 
-// Eight slots, three inputs each. Defaults are the ICT macros in New York time;
-// they are inputs rather than constants because the window a desk actually
-// trades drifts from the published one, and because the same eight rows serve
-// any other recurring span just as well.
+// Twelve slots, three inputs each. Defaults are the ICT macros in New York
+// time; they are inputs rather than constants because the window a desk
+// actually trades drifts from the published one, and because the same rows
+// serve any other recurring span just as well.
 MACRO_TOOLTIP = 'On/off, then the window\'s start and end as HH:MM in the selected zone.'
 
 macro1_on = input.bool(true, '1', inline = 'm1', tooltip = MACRO_TOOLTIP, group = GRP_MACROS)
-macro1_start = input.string('02:33', '', inline = 'm1', group = GRP_MACROS)
-macro1_end = input.string('03:00', '-', inline = 'm1', group = GRP_MACROS)
+macro1_start = input.string('07:50', '', inline = 'm1', group = GRP_MACROS)
+macro1_end = input.string('08:10', '-', inline = 'm1', group = GRP_MACROS)
 
 macro2_on = input.bool(true, '2', inline = 'm2', group = GRP_MACROS)
-macro2_start = input.string('04:03', '', inline = 'm2', group = GRP_MACROS)
-macro2_end = input.string('04:30', '-', inline = 'm2', group = GRP_MACROS)
+macro2_start = input.string('08:50', '', inline = 'm2', group = GRP_MACROS)
+macro2_end = input.string('09:10', '-', inline = 'm2', group = GRP_MACROS)
 
 macro3_on = input.bool(true, '3', inline = 'm3', group = GRP_MACROS)
-macro3_start = input.string('08:50', '', inline = 'm3', group = GRP_MACROS)
-macro3_end = input.string('09:10', '-', inline = 'm3', group = GRP_MACROS)
+macro3_start = input.string('09:50', '', inline = 'm3', group = GRP_MACROS)
+macro3_end = input.string('10:10', '-', inline = 'm3', group = GRP_MACROS)
 
 macro4_on = input.bool(true, '4', inline = 'm4', group = GRP_MACROS)
-macro4_start = input.string('09:50', '', inline = 'm4', group = GRP_MACROS)
-macro4_end = input.string('10:10', '-', inline = 'm4', group = GRP_MACROS)
+macro4_start = input.string('10:50', '', inline = 'm4', group = GRP_MACROS)
+macro4_end = input.string('11:10', '-', inline = 'm4', group = GRP_MACROS)
 
 macro5_on = input.bool(true, '5', inline = 'm5', group = GRP_MACROS)
-macro5_start = input.string('10:50', '', inline = 'm5', group = GRP_MACROS)
-macro5_end = input.string('11:10', '-', inline = 'm5', group = GRP_MACROS)
+macro5_start = input.string('11:50', '', inline = 'm5', group = GRP_MACROS)
+macro5_end = input.string('12:10', '-', inline = 'm5', group = GRP_MACROS)
 
 macro6_on = input.bool(true, '6', inline = 'm6', group = GRP_MACROS)
-macro6_start = input.string('11:50', '', inline = 'm6', group = GRP_MACROS)
-macro6_end = input.string('12:10', '-', inline = 'm6', group = GRP_MACROS)
+macro6_start = input.string('12:50', '', inline = 'm6', group = GRP_MACROS)
+macro6_end = input.string('13:10', '-', inline = 'm6', group = GRP_MACROS)
 
 macro7_on = input.bool(true, '7', inline = 'm7', group = GRP_MACROS)
-macro7_start = input.string('13:10', '', inline = 'm7', group = GRP_MACROS)
-macro7_end = input.string('13:40', '-', inline = 'm7', group = GRP_MACROS)
+macro7_start = input.string('13:50', '', inline = 'm7', group = GRP_MACROS)
+macro7_end = input.string('14:10', '-', inline = 'm7', group = GRP_MACROS)
 
 macro8_on = input.bool(true, '8', inline = 'm8', group = GRP_MACROS)
-macro8_start = input.string('15:15', '', inline = 'm8', group = GRP_MACROS)
-macro8_end = input.string('15:45', '-', inline = 'm8', group = GRP_MACROS)
+macro8_start = input.string('14:50', '', inline = 'm8', group = GRP_MACROS)
+macro8_end = input.string('15:10', '-', inline = 'm8', group = GRP_MACROS)
 
-// Ten slots, five inputs each, sharing an inline id so the panel lays a slot out
-// as one row.
-LINE_TOOLTIP = 'On/off, time as HH:MM in the selected zone, label text (leave empty for no label), color, style.'
+macro9_on = input.bool(true, '9', inline = 'm9', group = GRP_MACROS)
+macro9_start = input.string('15:15', '', inline = 'm9', group = GRP_MACROS)
+macro9_end = input.string('15:45', '-', inline = 'm9', group = GRP_MACROS)
 
-line1_on = input.bool(true, '1', inline = 'l1', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line1_time = input.string('00:00', '', inline = 'l1', group = GRP_LINES)
-line1_text = input.string('NY Midnight', '', inline = 'l1', group = GRP_LINES)
-line1_color = input.color(#787B86, '', inline = 'l1', group = GRP_LINES)
-line1_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l1', group = GRP_LINES)
+macro10_on = input.bool(true, '10', inline = 'm10', group = GRP_MACROS)
+macro10_start = input.string('15:45', '', inline = 'm10', group = GRP_MACROS)
+macro10_end = input.string('16:00', '-', inline = 'm10', group = GRP_MACROS)
 
-line2_on = input.bool(true, '2', inline = 'l2', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line2_time = input.string('08:30', '', inline = 'l2', group = GRP_LINES)
-line2_text = input.string('8:30 News', '', inline = 'l2', group = GRP_LINES)
-line2_color = input.color(#EF5350, '', inline = 'l2', group = GRP_LINES)
-line2_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l2', group = GRP_LINES)
+macro11_on = input.bool(false, '11', inline = 'm11', group = GRP_MACROS)
+macro11_start = input.string('02:33', '', inline = 'm11', group = GRP_MACROS)
+macro11_end = input.string('03:00', '-', inline = 'm11', group = GRP_MACROS)
 
-line3_on = input.bool(true, '3', inline = 'l3', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line3_time = input.string('09:30', '', inline = 'l3', group = GRP_LINES)
-line3_text = input.string('NY Open', '', inline = 'l3', group = GRP_LINES)
-line3_color = input.color(#2962FF, '', inline = 'l3', group = GRP_LINES)
-line3_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l3', group = GRP_LINES)
-
-line4_on = input.bool(true, '4', inline = 'l4', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line4_time = input.string('16:00', '', inline = 'l4', group = GRP_LINES)
-line4_text = input.string('NY Close', '', inline = 'l4', group = GRP_LINES)
-line4_color = input.color(#2962FF, '', inline = 'l4', group = GRP_LINES)
-line4_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l4', group = GRP_LINES)
-
-line5_on = input.bool(true, '5', inline = 'l5', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line5_time = input.string('18:00', '', inline = 'l5', group = GRP_LINES)
-line5_text = input.string('Futures Open', '', inline = 'l5', group = GRP_LINES)
-line5_color = input.color(#787B86, '', inline = 'l5', group = GRP_LINES)
-line5_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l5', group = GRP_LINES)
-
-line6_on = input.bool(false, '6', inline = 'l6', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line6_time = input.string('03:00', '', inline = 'l6', group = GRP_LINES)
-line6_text = input.string('London Open', '', inline = 'l6', group = GRP_LINES)
-line6_color = input.color(#26A69A, '', inline = 'l6', group = GRP_LINES)
-line6_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l6', group = GRP_LINES)
-
-line7_on = input.bool(false, '7', inline = 'l7', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line7_time = input.string('11:30', '', inline = 'l7', group = GRP_LINES)
-line7_text = input.string('London Close', '', inline = 'l7', group = GRP_LINES)
-line7_color = input.color(#26A69A, '', inline = 'l7', group = GRP_LINES)
-line7_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l7', group = GRP_LINES)
-
-line8_on = input.bool(false, '8', inline = 'l8', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line8_time = input.string('14:00', '', inline = 'l8', group = GRP_LINES)
-line8_text = input.string('FOMC', '', inline = 'l8', group = GRP_LINES)
-line8_color = input.color(#EF5350, '', inline = 'l8', group = GRP_LINES)
-line8_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l8', group = GRP_LINES)
-
-line9_on = input.bool(false, '9', inline = 'l9', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line9_time = input.string('17:00', '', inline = 'l9', group = GRP_LINES)
-line9_text = input.string('Session Break', '', inline = 'l9', group = GRP_LINES)
-line9_color = input.color(#787B86, '', inline = 'l9', group = GRP_LINES)
-line9_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l9', group = GRP_LINES)
-
-line10_on = input.bool(false, '10', inline = 'l10', tooltip = LINE_TOOLTIP, group = GRP_LINES)
-line10_time = input.string('12:00', '', inline = 'l10', group = GRP_LINES)
-line10_text = input.string('', '', inline = 'l10', group = GRP_LINES)
-line10_color = input.color(#787B86, '', inline = 'l10', group = GRP_LINES)
-line10_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l10', group = GRP_LINES)
+macro12_on = input.bool(false, '12', inline = 'm12', group = GRP_MACROS)
+macro12_start = input.string('04:03', '', inline = 'm12', group = GRP_MACROS)
+macro12_end = input.string('04:30', '-', inline = 'm12', group = GRP_MACROS)
 
 //==============================================================================
 // TYPES
@@ -317,6 +278,10 @@ if barstate.isfirst
     add_macro(macro6_on, macro6_start, macro6_end)
     add_macro(macro7_on, macro7_start, macro7_end)
     add_macro(macro8_on, macro8_start, macro8_end)
+    add_macro(macro9_on, macro9_start, macro9_end)
+    add_macro(macro10_on, macro10_start, macro10_end)
+    add_macro(macro11_on, macro11_start, macro11_end)
+    add_macro(macro12_on, macro12_start, macro12_end)
 
 //==============================================================================
 // THE DAYS TO DRAW THEM ON
