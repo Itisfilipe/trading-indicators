@@ -255,27 +255,26 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   higher-or-equal timeframe into each row; a row below the chart is flagged
   instead of showing a wrong number.
 
-### ICT Macros
+### Time-Based Vertical Lines
 
-- The eight ICT macro windows (New York time), each a block at its own place
-  on the time axis: 02:33–03:00, 04:03–04:30, 08:50–09:10, 09:50–10:10,
-  10:50–11:10, 11:50–12:10, 13:10–13:40, 15:15–15:45. Each toggles on its
-  own.
-- Blocks are pinned to the bottom (or top) edge of the visible chart, so
-  they never follow price up and down, and they re-anchor to the edge on
-  every scroll and zoom. Outside a macro window there is nothing drawn —
-  no background tint, no rail across the chart, no levels.
-- Upcoming windows are drawn **before** they happen, out in the empty space
-  past the last bar, with a countdown inside each block. Grey once gone,
-  live color while running, accent color while still ahead.
-- Optional corner readout with the time left in the running macro, or the
-  time until the next one.
-- Alerts a set number of minutes before a window, and at its open and close.
-  Create the alert with the condition "Any alert() function call".
-- Meant for 1–5 minute charts. To keep the upcoming blocks on screen, widen
-  the chart's right margin (Chart settings → Appearance → Right margin, or
-  drag the chart left) — a window an hour out sits an hour's worth of bars
-  past the last one, and TradingView will not scroll there on its own.
+- Vertical lines at the clock times that matter during a session — New York
+  midnight, the 09:30 open, a news release. The companion to Time-Based
+  Price Levels: that one answers "at what price", this one "at what time".
+- 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
+- Every line is drawn for the whole day, **including the ones still ahead**,
+  each carrying a countdown to it.
+- One checkbox lays down the eight ICT macro windows (02:33–03:00,
+  04:03–04:30, 08:50–09:10, 09:50–10:10, 10:50–11:10, 11:50–12:10,
+  13:10–13:40, 15:15–15:45), marked at the start or bracketed start and
+  end, so the slots stay free for everything else.
+- Labels ride the top or bottom edge of the visible chart and stay there
+  through any scroll or zoom.
+- Lines are only drawn on days the chart has bars for, so a weekend never
+  collects a set of lines nothing traded under.
+- To keep the lines still ahead on screen, widen the chart's right margin
+  (Chart settings → Appearance → Right margin, or drag the chart left) — a
+  line an hour out sits an hour's worth of bars past the last one, and
+  TradingView will not scroll there on its own.
 
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.

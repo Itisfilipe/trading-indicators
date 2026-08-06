@@ -3,19 +3,22 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
-## 2026-08-04
+## 2026-08-06
 
-### ICT Macros (TradingView, new)
-- The eight ICT macro windows, each a block sitting at its own place on the
-  time axis but welded to the bottom (or top) edge of the visible chart, so
-  it never follows price up and down and stays put through a scroll or a
-  zoom. Grey for the windows already gone, a live color for the one
-  running, an accent color for the ones still ahead. The upcoming blocks
-  are drawn before price gets there, out past the last bar, with a
-  countdown in each, so a macro is on screen while there is still time to
-  prepare for it. Alerts can fire a set number of minutes ahead of a
-  window. Outside a macro window nothing is drawn: no background tint, no
-  rail across the chart, no levels.
+### Time-Based Vertical Lines (TradingView, new)
+- Vertical lines at the clock times that matter during a session: New York
+  midnight, the 09:30 open, a news release. Ten slots, each with its own
+  time, label, color and style, and one checkbox that lays down the eight
+  ICT macro windows so the slots stay free for everything else. Every line
+  is drawn for the whole day, the ones still ahead included, each with a
+  countdown to it, so the chart shows what is coming and how long there is
+  until it. Labels ride the top or bottom edge of the chart and stay there
+  through a scroll or a zoom.
+
+### ICT Macros (TradingView, removed)
+- The macro-block indicator added on 2026-08-04 is gone. Time-Based
+  Vertical Lines covers the same eight windows as part of a general
+  time-marking tool.
 
 ## 2026-07-22
 
