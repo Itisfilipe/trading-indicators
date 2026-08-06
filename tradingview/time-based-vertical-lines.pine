@@ -20,7 +20,7 @@
 // - Every line drawn for the whole day, future ones included
 // - Countdown on a line that has not happened yet
 // - 8 macro slots, each with its own on/off and start/end times
-// - Labels read down the line, at the top, middle or bottom of the chart
+// - Labels sit beside the line, at the top, middle or bottom of the chart
 // - Time zone support and historical-days control
 //
 // Notes:
@@ -65,7 +65,7 @@ show_labels = input.bool(true, 'Show Labels', tooltip = 'Print each line\'s labe
 
 label_position = input.string('Top', 'Label Position', options = ['Top', 'Middle', 'Bottom'], tooltip = 'Where on the line the label sits. Top and Bottom ride the edge of the visible chart and stay welded to it through any scroll or zoom; Middle tracks the centre of it.', group = GRP_LABELS)
 
-label_orientation = input.string('Vertical', 'Label Orientation', options = ['Vertical', 'Horizontal'], tooltip = 'Vertical reads down the line, like the label on a drawn vertical line. Pine cannot rotate text, so it is stacked one character per row -- keep those captions short.', group = GRP_LABELS)
+label_orientation = input.string('Horizontal', 'Label Orientation', options = ['Horizontal', 'Vertical'], tooltip = 'Pine cannot rotate label text the way a drawn vertical line can, so Vertical stacks the caption one character per row. It is an approximation and a sprawling one: keep captions to a few characters if you use it.', group = GRP_LABELS)
 
 label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_LABELS)
 
@@ -249,11 +249,15 @@ stack_vertically(string flat_text) =>
             stacked := stacked + (position > 0 ? '\n' : '') + str.substring(flat_text, position, position + 1)
     stacked
 
+// The style names the corner the line passes through, so the body always
+// extends into the chart and to the right, clear of the line itself. Anchoring
+// the body over the line instead puts the text on top of it, and at an edge it
+// hangs outside the visible range and gets clipped.
 label_style_constant() =>
     switch label_position
-        'Middle' => label.style_label_center
-        'Bottom' => label.style_label_up
-        => label.style_label_down
+        'Middle' => label.style_label_left
+        'Bottom' => label.style_label_lower_left
+        => label.style_label_upper_left
 
 label_size_constant() =>
     switch label_size

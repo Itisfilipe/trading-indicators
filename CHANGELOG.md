@@ -12,8 +12,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   ICT windows and keep their own on/off and start and end times. Every line
   is drawn for the whole day, the ones still ahead included, each with a
   countdown to it, so the chart shows what is coming and how long there is
-  until it. Labels read down the line, so labels at nearby times do not
-  collide, and sit at the top, middle or bottom of the chart.
+  until it. Labels sit beside the line at the top, middle or bottom of the
+  chart.
 
 ### ICT Macros (TradingView, removed)
 - The macro-block indicator added on 2026-08-04 is gone. Time-Based

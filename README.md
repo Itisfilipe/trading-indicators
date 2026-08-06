@@ -267,10 +267,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   04:03–04:30, 08:50–09:10, 09:50–10:10, 10:50–11:10, 11:50–12:10,
   13:10–13:40, 15:15–15:45). Each has its own on/off and its own start and
   end time, and can be marked at the start or bracketed at both ends.
-- Labels read down the line, one character per row, so labels at nearby
-  times do not collide. Top, middle or bottom, and horizontal if preferred.
-  Top and bottom ride the edge of the visible chart and stay there through
-  any scroll or zoom.
+- Labels sit beside the line at the top, middle or bottom. Top and bottom
+  ride the edge of the visible chart and stay there through any scroll or
+  zoom. A vertical orientation is available, but Pine cannot rotate text
+  the way a drawn vertical line can — it stacks one character per row, so
+  it only suits captions of a few characters.
 - Lines are only drawn on days the chart has bars for, so a weekend never
   collects a set of lines nothing traded under.
 - To keep the lines still ahead on screen, widen the chart's right margin
