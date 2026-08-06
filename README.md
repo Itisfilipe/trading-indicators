@@ -263,12 +263,14 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
 - Every line is drawn for the whole day, **including the ones still ahead**,
   each carrying a countdown to it.
-- One checkbox lays down the eight ICT macro windows (02:33–03:00,
+- 8 more slots for macro windows, defaulting to the ICT ones (02:33–03:00,
   04:03–04:30, 08:50–09:10, 09:50–10:10, 10:50–11:10, 11:50–12:10,
-  13:10–13:40, 15:15–15:45), marked at the start or bracketed start and
-  end, so the slots stay free for everything else.
-- Labels ride the top or bottom edge of the visible chart and stay there
-  through any scroll or zoom.
+  13:10–13:40, 15:15–15:45). Each has its own on/off and its own start and
+  end time, and can be marked at the start or bracketed at both ends.
+- Labels read down the line, one character per row, so labels at nearby
+  times do not collide. Top, middle or bottom, and horizontal if preferred.
+  Top and bottom ride the edge of the visible chart and stay there through
+  any scroll or zoom.
 - Lines are only drawn on days the chart has bars for, so a weekend never
   collects a set of lines nothing traded under.
 - To keep the lines still ahead on screen, widen the chart's right margin

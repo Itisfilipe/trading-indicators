@@ -7,13 +7,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ### Time-Based Vertical Lines (TradingView, new)
 - Vertical lines at the clock times that matter during a session: New York
-  midnight, the 09:30 open, a news release. Ten slots, each with its own
-  time, label, color and style, and one checkbox that lays down the eight
-  ICT macro windows so the slots stay free for everything else. Every line
+  midnight, the 09:30 open, the 08:30 news. Ten slots, each with its own
+  time, label, color and style, plus eight macro slots that default to the
+  ICT windows and keep their own on/off and start and end times. Every line
   is drawn for the whole day, the ones still ahead included, each with a
   countdown to it, so the chart shows what is coming and how long there is
-  until it. Labels ride the top or bottom edge of the chart and stay there
-  through a scroll or a zoom.
+  until it. Labels read down the line, so labels at nearby times do not
+  collide, and sit at the top, middle or bottom of the chart.
 
 ### ICT Macros (TradingView, removed)
 - The macro-block indicator added on 2026-08-04 is gone. Time-Based
