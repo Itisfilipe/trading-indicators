@@ -30,6 +30,9 @@
 //   drawing does. A script cannot reach that drawing -- Pine's lines and labels
 //   are a separate system from the chart's drawing tools -- and a label has no
 //   rotation of its own, so across it is, hung off the side of the line.
+// - Top and Bottom put the caption in the chart's own edge margin, past the
+//   highest or lowest bar. A chart set to very tight margins has less room out
+//   there and can clip a two-row caption; Middle never does.
 // - A line's own time places it, so a line later today sits past the last bar.
 //   Two things bound how far ahead that stays legible: TradingView draws at most
 //   500 bars past the last one, which is a little over eight hours on a
@@ -240,15 +243,17 @@ line_style_constant(string name) =>
         'Dotted' => line.style_dotted
         => line.style_solid
 
-// The style names the corner the line passes through, so the body always
-// extends into the chart and to the right, clear of the line itself. Anchoring
-// the body over the line instead puts the text on top of it, and at an edge it
-// hangs outside the visible range and gets clipped.
+// The style names the corner the anchor sits on, so the body always extends to
+// the right of the line, clear of it. At an edge it also extends outward, into
+// the margin the chart keeps past the highest and lowest bars: only the anchor
+// counts towards auto-scaling, so a body rendered out there costs no price room
+// and the caption ends up hard against the edge of the pane instead of floating
+// a margin's worth inside it.
 label_style_constant() =>
     switch label_position
         'Middle' => label.style_label_left
-        'Bottom' => label.style_label_lower_left
-        => label.style_label_upper_left
+        'Bottom' => label.style_label_upper_left
+        => label.style_label_lower_left
 
 label_size_constant() =>
     switch label_size

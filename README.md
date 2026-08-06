@@ -270,10 +270,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   names the window, the closing one its own time, so each counts down
   separately and you can see how much of a running macro is left.
 - Labels hang off the side of the line at the top, middle or bottom. Top
-  and bottom ride the edge of the visible chart and stay there through any
-  scroll or zoom. They read across rather than down the line: a script
-  cannot use the chart's own vertical-line drawing, and a Pine label has no
-  rotation, so short captions work best.
+  and bottom sit out in the chart's edge margin, past the highest or lowest
+  bar, and stay welded there through any scroll or zoom — clear of the
+  candles, hard against the edge of the pane. They read across rather than
+  down the line: a script cannot use the chart's own vertical-line drawing,
+  and a Pine label has no rotation, so short captions work best.
 - Lines are only drawn on days the chart has bars for, so a weekend never
   collects a set of lines nothing traded under.
 - To keep the lines still ahead on screen, widen the chart's right margin
