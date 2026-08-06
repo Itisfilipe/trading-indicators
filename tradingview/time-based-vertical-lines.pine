@@ -12,14 +12,14 @@
 // "at what price", this one answers "at what time, and how long until it".
 //
 // Ten line slots, each with its own time, label, color and style, plus eight
-// macro slots that default to the ICT windows and keep their own start and end
-// times, so the line slots stay free for everything else.
+// macro slots that default to the ICT windows, each bracketed by a line at both
+// ends, so the line slots stay free for everything else.
 //
 // Features:
 // - 10 line slots, one compact row each: on/off, HH:MM, label, color, style
 // - Every line drawn for the whole day, future ones included
 // - Countdown on a line that has not happened yet
-// - 8 macro slots, each with its own on/off and start/end times
+// - 8 macro slots, each bracketed by a line at its start and one at its end
 // - Labels sit beside the line, at the top, middle or bottom of the chart
 // - Time zone support and historical-days control
 //
@@ -74,8 +74,6 @@ label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'no
 show_countdown = input.bool(true, 'Countdown On Future Lines', tooltip = 'Add the time left to the label of a line whose time has not come yet.', group = GRP_LABELS)
 
 show_macros = input.bool(true, 'Show Macros', tooltip = 'Master switch for the eight rows below.', group = GRP_MACROS)
-
-macro_marks = input.string('Start only', 'Mark', options = ['Start only', 'Start and end'], tooltip = '"Start and end" brackets each window with a second line, so the macro reads as a span rather than a moment.', group = GRP_MACROS)
 
 macro_color = input.color(#F57C00, 'Color', inline = 'macro', group = GRP_MACROS)
 macro_style = input.string('Dotted', 'Style', options = ['Solid', 'Dashed', 'Dotted'], inline = 'macro', group = GRP_MACROS)
@@ -283,11 +281,12 @@ add_macro(bool enabled, string start_text, string end_text) =>
             start_minute = start_minutes % 60
             end_hour = int(end_minutes / 60)
             end_minute = end_minutes % 60
+            // Both edges, always: a macro is a span, and one line can only say
+            // when it opens. The opening line names the whole window, the
+            // closing one just its own time -- so each carries its own
+            // countdown, and the pair still reads as one bracket.
             array.push(events, TimeLine.new(start_hour, start_minute, clock_text(start_hour, start_minute) + '-' + clock_text(end_hour, end_minute), macro_color, macro_style))
-            if macro_marks == 'Start and end'
-                // The closing line carries no caption: it is the same window, and
-                // a second label would only crowd the first.
-                array.push(events, TimeLine.new(end_hour, end_minute, '', macro_color, macro_style))
+            array.push(events, TimeLine.new(end_hour, end_minute, clock_text(end_hour, end_minute), macro_color, macro_style))
 
 if barstate.isfirst
     add_line(line1_on, line1_time, line1_text, line1_color, line1_style)

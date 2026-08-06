@@ -9,7 +9,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Vertical lines at the clock times that matter during a session: New York
   midnight, the 09:30 open, the 08:30 news. Ten slots, each with its own
   time, label, color and style, plus eight macro slots that default to the
-  ICT windows and keep their own on/off and start and end times. Every line
+  ICT windows, keep their own on/off and start and end times, and are
+  bracketed by a line at each end. Every line
   is drawn for the whole day, the ones still ahead included, each with a
   countdown to it, so the chart shows what is coming and how long there is
   until it. Labels sit beside the line at the top, middle or bottom of the

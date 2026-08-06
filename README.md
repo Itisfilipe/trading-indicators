@@ -266,7 +266,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - 8 more slots for macro windows, defaulting to the ICT ones (02:33–03:00,
   04:03–04:30, 08:50–09:10, 09:50–10:10, 10:50–11:10, 11:50–12:10,
   13:10–13:40, 15:15–15:45). Each has its own on/off and its own start and
-  end time, and can be marked at the start or bracketed at both ends.
+  end time, and is bracketed by a line at both ends — the opening line
+  names the window, the closing one its own time, so each counts down
+  separately and you can see how much of a running macro is left.
 - Labels hang off the side of the line at the top, middle or bottom. Top
   and bottom ride the edge of the visible chart and stay there through any
   scroll or zoom. They read across rather than down the line: a script
