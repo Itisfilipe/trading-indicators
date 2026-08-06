@@ -26,6 +26,10 @@
 // Notes:
 // - Times are read as HH:MM in the selected zone. An entry that is not a valid
 //   time is skipped, with a note in the Pine Logs pane.
+// - Labels read across, not down the line the way the chart's own vertical-line
+//   drawing does. A script cannot reach that drawing -- Pine's lines and labels
+//   are a separate system from the chart's drawing tools -- and a label has no
+//   rotation of its own, so across it is, hung off the side of the line.
 // - A line's own time places it, so a line later today sits past the last bar.
 //   Two things bound how far ahead that stays legible: TradingView draws at most
 //   500 bars past the last one, which is a little over eight hours on a
@@ -64,8 +68,6 @@ line_width = input.int(1, 'Line Width', 1, 5, tooltip = 'Width applied to all li
 show_labels = input.bool(true, 'Show Labels', tooltip = 'Print each line\'s label at the edge of the chart.', group = GRP_LABELS)
 
 label_position = input.string('Top', 'Label Position', options = ['Top', 'Middle', 'Bottom'], tooltip = 'Where on the line the label sits. Top and Bottom ride the edge of the visible chart and stay welded to it through any scroll or zoom; Middle tracks the centre of it.', group = GRP_LABELS)
-
-label_orientation = input.string('Horizontal', 'Label Orientation', options = ['Horizontal', 'Vertical'], tooltip = 'Pine cannot rotate label text the way a drawn vertical line can, so Vertical stacks the caption one character per row. It is an approximation and a sprawling one: keep captions to a few characters if you use it.', group = GRP_LABELS)
 
 label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_LABELS)
 
@@ -240,19 +242,6 @@ line_style_constant(string name) =>
         'Dotted' => line.style_dotted
         => line.style_solid
 
-// Pine has no way to rotate label text, so a vertical label is the caption
-// stacked one character per row. A newline already in the caption is a row
-// break in its own right, so it goes in unseparated and reads as the single
-// blank row that spaces the countdown off the name.
-stack_vertically(string flat_text) =>
-    string stacked = ''
-    if str.length(flat_text) > 0
-        for position = 0 to str.length(flat_text) - 1
-            character = str.substring(flat_text, position, position + 1)
-            needs_separator = position > 0 and character != '\n'
-            stacked := stacked + (needs_separator ? '\n' : '') + character
-    stacked
-
 // The style names the corner the line passes through, so the body always
 // extends into the chart and to the right, clear of the line itself. Anchoring
 // the body over the line instead puts the text on top of it, and at an edge it
@@ -418,6 +407,4 @@ if barstate.islast
                 caption = marker.caption
                 if show_countdown and event_time > timenow
                     caption := caption + '\n' + countdown_text(event_time - timenow)
-                if label_orientation == 'Vertical'
-                    caption := stack_vertically(caption)
                 array.push(drawn_labels, label.new(event_time, label_y, caption, xloc = xloc.bar_time, yloc = yloc.price, style = label_style_constant(), color = color.new(color.white, 100), textcolor = marker.tint, size = label_size_constant()))
