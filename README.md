@@ -280,8 +280,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   than
   down the line: a script cannot use the chart's own vertical-line drawing,
   and a Pine label has no rotation, so short captions work best.
-- Lines are only drawn on days the chart has bars for, so a weekend never
-  collects a set of lines nothing traded under.
+- History days are only drawn if the chart has bars for them, so a past
+  weekend never collects a set of lines nothing traded under. Today is
+  always drawn whether or not it has bars yet, and tomorrow too if you
+  switch it on — their lines are the ones still ahead, which is the point
+  of them.
 - To keep the lines still ahead on screen, widen the chart's right margin
   (Chart settings → Appearance → Right margin, or drag the chart left) — a
   line an hour out sits an hour's worth of bars past the last one, and

@@ -26,8 +26,9 @@
 // The last two slots hold London Macro 1 (02:33 - 03:00) and London Macro 2
 // (04:03 - 04:30), switched off. They belong to the London session rather than
 // to a New York block, which is why they do not share the :50 - :10 shape of
-// the rest, and they are the two windows above whose times come from ICT
-// teaching material rather than from a primary source -- hence off by default.
+// the rest. They are also the only two whose times are corroborated across ICT
+// teaching material rather than against a primary source -- hence off by
+// default.
 //
 // Features:
 // - 10 line slots, one compact row each: on/off, HH:MM, label, color, style
@@ -74,7 +75,7 @@ GRP_LINES = 'Lines'
 
 tz = input.string('America/New_York', 'Time Zone', options = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'GMT-12', 'GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT', 'GMT+1', 'GMT+2', 'GMT+3', 'GMT+4', 'GMT+5', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'], tooltip = 'Zone every line time below is read in.', group = GRP_GENERAL)
 
-history_days = input.int(1, 'Days of History to Show', 0, 5, tooltip = 'Number of previous days that keep their lines, counted back from the last day the chart has bars for. 0 = today only.', group = GRP_GENERAL)
+history_days = input.int(1, 'Days of History to Show', 0, 5, tooltip = 'How far back to keep drawing lines, counted from the last day the chart has bars for -- that day always keeps its own. 0 = that day and today.', group = GRP_GENERAL)
 
 include_tomorrow = input.bool(false, 'Include Tomorrow', tooltip = 'Also draw tomorrow\'s lines. Useful late in the session, when everything for today has already happened. Only worth it from about the 5-minute timeframe up: TradingView draws at most 500 bars past the last one.', group = GRP_GENERAL)
 
@@ -86,7 +87,7 @@ label_position = input.string('Top', 'Label Position', options = ['Top', 'Middle
 
 label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_LABELS)
 
-label_distance = input.float(1.5, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = 'Clear space between the bars and the strip of captions and macro rectangles below or above them, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. Middle ignores it.', group = GRP_LABELS)
+edge_gap_percent = input.float(1.5, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = 'Clear space between the bars and the strip of captions and macro rectangles below or above them, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. Middle sends the captions across the chart instead, but the rectangles still sit in the strip.', group = GRP_LABELS)
 
 show_countdown = input.bool(true, 'Countdown On Future Lines', tooltip = 'Add the time left to the label of a line whose time has not come yet.', group = GRP_LABELS)
 
@@ -95,7 +96,7 @@ show_macros = input.bool(true, 'Show Macros', tooltip = 'Master switch for the t
 macro_color = input.color(#F57C00, 'Color', inline = 'macro', group = GRP_MACROS)
 macro_style = input.string('Dotted', 'Style', options = ['Solid', 'Dashed', 'Dotted'], inline = 'macro', group = GRP_MACROS)
 
-macro_band_height = input.float(4, 'Band Height (%)', 0, 40, step = 0.5, tooltip = 'Height of the rectangle joining a macro\'s two lines, as a share of the visible price range. It carries the macro\'s caption, so it needs enough room to print it -- the chart clips text to the rectangle. 0 hides both.', group = GRP_MACROS)
+macro_band_percent = input.float(4.0, 'Band Height (%)', 0, 40, step = 0.5, tooltip = 'Thickness of the rectangle joining a macro\'s two lines, as a share of the visible price range. The caption rides its centre and spills past a narrow rectangle rather than being cut off, so this is about how the band looks, not whether the text fits. 0 draws neither.', group = GRP_MACROS)
 
 macro_band_transp = input.int(85, 'Band Transparency', 0, 100, group = GRP_MACROS)
 
@@ -152,6 +153,70 @@ macro11_end = input.string('03:00', '-', inline = 'm11', group = GRP_MACROS)
 macro12_on = input.bool(false, '12', inline = 'm12', group = GRP_MACROS)
 macro12_start = input.string('04:03', '', inline = 'm12', group = GRP_MACROS)
 macro12_end = input.string('04:30', '-', inline = 'm12', group = GRP_MACROS)
+
+// Ten slots, five inputs each, sharing an inline id so the panel lays a slot out
+// as one row.
+LINE_TOOLTIP = 'On/off, time as HH:MM in the selected zone, label text (leave empty for no label), color, style.'
+
+line1_on = input.bool(true, '1', inline = 'l1', tooltip = LINE_TOOLTIP, group = GRP_LINES)
+line1_time = input.string('00:00', '', inline = 'l1', group = GRP_LINES)
+line1_text = input.string('NY Midnight', '', inline = 'l1', group = GRP_LINES)
+line1_color = input.color(#787B86, '', inline = 'l1', group = GRP_LINES)
+line1_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l1', group = GRP_LINES)
+
+line2_on = input.bool(true, '2', inline = 'l2', group = GRP_LINES)
+line2_time = input.string('08:30', '', inline = 'l2', group = GRP_LINES)
+line2_text = input.string('8:30 News', '', inline = 'l2', group = GRP_LINES)
+line2_color = input.color(#EF5350, '', inline = 'l2', group = GRP_LINES)
+line2_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l2', group = GRP_LINES)
+
+line3_on = input.bool(true, '3', inline = 'l3', group = GRP_LINES)
+line3_time = input.string('09:30', '', inline = 'l3', group = GRP_LINES)
+line3_text = input.string('NY Open', '', inline = 'l3', group = GRP_LINES)
+line3_color = input.color(#2962FF, '', inline = 'l3', group = GRP_LINES)
+line3_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l3', group = GRP_LINES)
+
+line4_on = input.bool(true, '4', inline = 'l4', group = GRP_LINES)
+line4_time = input.string('16:00', '', inline = 'l4', group = GRP_LINES)
+line4_text = input.string('NY Close', '', inline = 'l4', group = GRP_LINES)
+line4_color = input.color(#2962FF, '', inline = 'l4', group = GRP_LINES)
+line4_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l4', group = GRP_LINES)
+
+line5_on = input.bool(true, '5', inline = 'l5', group = GRP_LINES)
+line5_time = input.string('18:00', '', inline = 'l5', group = GRP_LINES)
+line5_text = input.string('Futures Open', '', inline = 'l5', group = GRP_LINES)
+line5_color = input.color(#787B86, '', inline = 'l5', group = GRP_LINES)
+line5_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l5', group = GRP_LINES)
+
+line6_on = input.bool(false, '6', inline = 'l6', group = GRP_LINES)
+line6_time = input.string('03:00', '', inline = 'l6', group = GRP_LINES)
+line6_text = input.string('London Open', '', inline = 'l6', group = GRP_LINES)
+line6_color = input.color(#26A69A, '', inline = 'l6', group = GRP_LINES)
+line6_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l6', group = GRP_LINES)
+
+line7_on = input.bool(false, '7', inline = 'l7', group = GRP_LINES)
+line7_time = input.string('11:30', '', inline = 'l7', group = GRP_LINES)
+line7_text = input.string('London Close', '', inline = 'l7', group = GRP_LINES)
+line7_color = input.color(#26A69A, '', inline = 'l7', group = GRP_LINES)
+line7_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l7', group = GRP_LINES)
+
+line8_on = input.bool(false, '8', inline = 'l8', group = GRP_LINES)
+line8_time = input.string('14:00', '', inline = 'l8', group = GRP_LINES)
+line8_text = input.string('FOMC', '', inline = 'l8', group = GRP_LINES)
+line8_color = input.color(#EF5350, '', inline = 'l8', group = GRP_LINES)
+line8_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l8', group = GRP_LINES)
+
+line9_on = input.bool(false, '9', inline = 'l9', group = GRP_LINES)
+line9_time = input.string('17:00', '', inline = 'l9', group = GRP_LINES)
+line9_text = input.string('Session Break', '', inline = 'l9', group = GRP_LINES)
+line9_color = input.color(#787B86, '', inline = 'l9', group = GRP_LINES)
+line9_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l9', group = GRP_LINES)
+
+line10_on = input.bool(false, '10', inline = 'l10', group = GRP_LINES)
+line10_time = input.string('12:00', '', inline = 'l10', group = GRP_LINES)
+line10_text = input.string('', '', inline = 'l10', group = GRP_LINES)
+line10_color = input.color(#787B86, '', inline = 'l10', group = GRP_LINES)
+line10_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l10', group = GRP_LINES)
 
 //==============================================================================
 // TYPES
@@ -211,8 +276,10 @@ parse_clock_minutes(string time_text) =>
     if array.size(parts) == 2
         hour_value = str.tonumber(array.get(parts, 0))
         minute_value = str.tonumber(array.get(parts, 1))
+        both_numeric = not na(hour_value) and not na(minute_value)
         whole_numbers = hour_value == math.floor(hour_value) and minute_value == math.floor(minute_value)
-        if not na(hour_value) and not na(minute_value) and whole_numbers and hour_value >= 0 and hour_value <= 23 and minute_value >= 0 and minute_value <= 59
+        in_clock_range = hour_value >= 0 and hour_value <= 23 and minute_value >= 0 and minute_value <= 59
+        if both_numeric and whole_numbers and in_clock_range
             minutes_since_midnight := int(hour_value) * 60 + int(minute_value)
     minutes_since_midnight
 
@@ -232,7 +299,7 @@ label_size_constant() =>
 //==============================================================================
 // THE LINES TO DRAW
 //==============================================================================
-var array<TimeLine> events = array.new<TimeLine>()
+var array<TimeLine> markers = array.new<TimeLine>()
 var array<MacroSpan> macro_spans = array.new<MacroSpan>()
 
 add_line(bool enabled, string time_text, string caption, color tint, string style_name) =>
@@ -241,7 +308,7 @@ add_line(bool enabled, string time_text, string caption, color tint, string styl
         if minutes_since_midnight < 0
             log.warning('Time-Based Vertical Lines: skipping "{0}", expected a time as HH:MM', time_text)
         else
-            array.push(events, TimeLine.new(int(minutes_since_midnight / 60), minutes_since_midnight % 60, caption, tint, style_name))
+            array.push(markers, TimeLine.new(int(minutes_since_midnight / 60), minutes_since_midnight % 60, caption, tint, style_name))
 
 add_macro(bool enabled, string start_text, string end_text) =>
     if show_macros and enabled
@@ -249,6 +316,8 @@ add_macro(bool enabled, string start_text, string end_text) =>
         end_minutes = parse_clock_minutes(end_text)
         if start_minutes < 0 or end_minutes < 0
             log.warning('Time-Based Vertical Lines: skipping macro "{0}" to "{1}", expected times as HH:MM', start_text, end_text)
+        else if end_minutes <= start_minutes
+            log.warning('Time-Based Vertical Lines: skipping macro "{0}" to "{1}", a window has to end after it starts on the same day', start_text, end_text)
         else
             start_hour = int(start_minutes / 60)
             start_minute = start_minutes % 60
@@ -258,8 +327,8 @@ add_macro(bool enabled, string start_text, string end_text) =>
             // when it opens. Neither line is captioned -- the rectangle between
             // them carries the name, which is what makes the pair read as one
             // window instead of two loose lines.
-            array.push(events, TimeLine.new(start_hour, start_minute, '', macro_color, macro_style))
-            array.push(events, TimeLine.new(end_hour, end_minute, '', macro_color, macro_style))
+            array.push(markers, TimeLine.new(start_hour, start_minute, '', macro_color, macro_style))
+            array.push(markers, TimeLine.new(end_hour, end_minute, '', macro_color, macro_style))
             array.push(macro_spans, MacroSpan.new(start_hour, start_minute, end_hour, end_minute, 'Macro ' + clock_text(start_hour, start_minute) + '-' + clock_text(end_hour, end_minute)))
 
 if barstate.isfirst
@@ -319,9 +388,11 @@ if bar_is_visible
 // Stand-in for the visible range until the chart reports one: the last stretch
 // of bars is a fair likeness of what is on screen. Computed on every bar because
 // ta.* only sees the bars it runs on, so these cannot move inside the last-bar
-// block that uses them.
-fallback_high = ta.highest(high, FALLBACK_LOOKBACK)
-fallback_low = ta.lowest(low, FALLBACK_LOOKBACK)
+// block that uses them. The span is capped at the bars that exist, because
+// ta.highest over a longer window than the chart holds yields na.
+fallback_span = math.min(FALLBACK_LOOKBACK, bar_index + 1)
+fallback_high = ta.highest(high, fallback_span)
+fallback_low = ta.lowest(low, fallback_span)
 
 //==============================================================================
 // DRAWING
@@ -357,8 +428,8 @@ if barstate.islast
     // much scale to hold them. That is the price of keeping them off the
     // candles rather than over them.
     price_range = screen_high - screen_low
-    edge_gap = price_range * label_distance / 100
-    band_height = price_range * macro_band_height / 100
+    edge_gap = price_range * edge_gap_percent / 100
+    band_height = price_range * macro_band_percent / 100
     at_top = label_position == 'Top'
 
     // The strip is laid out from the bars outward: clear space first, then the
@@ -371,9 +442,14 @@ if barstate.islast
     band_top = at_top ? band_outer : band_inner
     band_bottom = at_top ? band_inner : band_outer
 
+    // Captions straddle the band with the rectangles, but with no macros drawn
+    // there is nothing to straddle, and sitting half a band out anyway would
+    // make the gap setting mean less than it says.
+    strip_centre = array.size(macro_spans) > 0 ? math.avg(band_top, band_bottom) : band_inner
+
     // Middle leaves no edge to hang a rectangle off, so the rectangles stay at
     // the bottom while the captions cross the chart.
-    label_y = label_position == 'Middle' ? math.avg(screen_low, screen_high) : math.avg(band_top, band_bottom)
+    label_y = label_position == 'Middle' ? math.avg(screen_low, screen_high) : strip_centre
 
     today_midnight = midnight_of(timenow)
 
@@ -399,7 +475,7 @@ if barstate.islast
         day_year = year(day_start, tz)
         day_month = month(day_start, tz)
         day_of_month = dayofmonth(day_start, tz)
-        for marker in events
+        for marker in markers
             event_time = timestamp(tz, day_year, day_month, day_of_month, marker.at_hour, marker.at_minute)
             array.push(drawn_lines, line.new(event_time, screen_low, event_time, screen_high, xloc = xloc.bar_time, extend = extend.both, color = marker.tint, style = line_style_constant(marker.style), width = line_width))
 
@@ -417,9 +493,11 @@ if barstate.islast
             // counting down to the open while the window is ahead, counting out
             // what is left of it once inside.
             caption = span.caption
-            if show_countdown and timenow < span_start
-                caption := caption + '   in ' + countdown_text(span_start - timenow)
-            else if show_countdown and timenow < span_end
-                caption := caption + '   ' + countdown_text(span_end - timenow) + ' left'
+            if show_countdown
+                if timenow < span_start
+                    caption := caption + '   in ' + countdown_text(span_start - timenow)
+                else if timenow < span_end
+                    caption := caption + '   ' + countdown_text(span_end - timenow) + ' left'
 
-            array.push(drawn_boxes, box.new(span_start, band_top, span_end, band_bottom, xloc = xloc.bar_time, border_color = macro_color, border_width = line_width, border_style = line_style_constant(macro_style), bgcolor = color.new(macro_color, macro_band_transp), text = show_labels ? caption : '', text_color = macro_color, text_halign = text.align_center, text_valign = text.align_center, text_size = label_size_constant()))
+            if macro_band_percent > 0
+                array.push(drawn_boxes, box.new(span_start, band_top, span_end, band_bottom, xloc = xloc.bar_time, border_color = macro_color, border_width = line_width, border_style = line_style_constant(macro_style), bgcolor = color.new(macro_color, macro_band_transp), text = show_labels ? caption : '', text_color = macro_color, text_halign = text.align_center, text_valign = text.align_center, text_size = label_size_constant()))

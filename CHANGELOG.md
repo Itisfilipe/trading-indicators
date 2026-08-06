@@ -11,17 +11,17 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   time, label, color and style, plus twelve macro slots that default to the
   ICT windows, keep their own on/off and start and end times, and are
   bracketed by a line at each end with a captioned rectangle joining the
-  pair. Captions and rectangles share one strip set clear of the bars, so
-  nothing is drawn over the candles. Every line
-  is drawn for the whole day, the ones still ahead included, each with a
-  countdown to it, so the chart shows what is coming and how long there is
-  until it. Labels sit beside the line at the top, middle or bottom of the
-  chart.
+  pair, whose caption counts down to the window and then counts out what is
+  left of it. Every line is drawn for the whole day, the ones still ahead
+  included, each with a countdown to it, so the chart shows what is coming
+  and how long there is until it. Captions and rectangles share one strip
+  set clear of the bars, above or below them, so nothing is drawn over the
+  candles.
 
 ### ICT Macros (TradingView, removed)
 - The macro-block indicator added on 2026-08-04 is gone. Time-Based
-  Vertical Lines covers the same eight windows as part of a general
-  time-marking tool.
+  Vertical Lines covers the macro windows as part of a general time-marking
+  tool.
 
 ## 2026-07-22
 
