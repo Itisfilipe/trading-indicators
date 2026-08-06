@@ -74,7 +74,7 @@ label_position = input.string('Top', 'Label Position', options = ['Top', 'Middle
 
 label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_LABELS)
 
-label_distance = input.float(4, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = 'Clear space between the bars and the strip of captions and macro rectangles below or above them, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. Middle ignores it.', group = GRP_LABELS)
+label_distance = input.float(1.5, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = 'Clear space between the bars and the strip of captions and macro rectangles below or above them, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. Middle ignores it.', group = GRP_LABELS)
 
 show_countdown = input.bool(true, 'Countdown On Future Lines', tooltip = 'Add the time left to the label of a line whose time has not come yet.', group = GRP_LABELS)
 
