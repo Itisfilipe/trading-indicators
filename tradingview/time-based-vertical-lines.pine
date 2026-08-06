@@ -229,7 +229,8 @@ parse_clock_minutes(string time_text) =>
     if array.size(parts) == 2
         hour_value = str.tonumber(array.get(parts, 0))
         minute_value = str.tonumber(array.get(parts, 1))
-        if not na(hour_value) and not na(minute_value) and hour_value >= 0 and hour_value <= 23 and minute_value >= 0 and minute_value <= 59
+        whole_numbers = hour_value == math.floor(hour_value) and minute_value == math.floor(minute_value)
+        if not na(hour_value) and not na(minute_value) and whole_numbers and hour_value >= 0 and hour_value <= 23 and minute_value >= 0 and minute_value <= 59
             minutes_since_midnight := int(hour_value) * 60 + int(minute_value)
     minutes_since_midnight
 
@@ -240,13 +241,16 @@ line_style_constant(string name) =>
         => line.style_solid
 
 // Pine has no way to rotate label text, so a vertical label is the caption
-// stacked one character per row. A newline already in the caption survives the
-// stacking as a blank row, which is what spaces the countdown off the name.
+// stacked one character per row. A newline already in the caption is a row
+// break in its own right, so it goes in unseparated and reads as the single
+// blank row that spaces the countdown off the name.
 stack_vertically(string flat_text) =>
     string stacked = ''
     if str.length(flat_text) > 0
         for position = 0 to str.length(flat_text) - 1
-            stacked := stacked + (position > 0 ? '\n' : '') + str.substring(flat_text, position, position + 1)
+            character = str.substring(flat_text, position, position + 1)
+            needs_separator = position > 0 and character != '\n'
+            stacked := stacked + (needs_separator ? '\n' : '') + character
     stacked
 
 // The style names the corner the line passes through, so the body always
