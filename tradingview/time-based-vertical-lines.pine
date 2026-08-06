@@ -74,7 +74,7 @@ label_position = input.string('Top', 'Label Position', options = ['Top', 'Middle
 
 label_size = input.string('small', 'Label Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_LABELS)
 
-label_distance = input.float(6, 'Label Distance (%)', 0, 40, step = 0.5, tooltip = 'How far past the highest or lowest bar a Top or Bottom label sits, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. Middle ignores it.', group = GRP_LABELS)
+label_distance = input.float(4, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = 'Clear space between the bars and the strip of captions and macro rectangles below or above them, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. Middle ignores it.', group = GRP_LABELS)
 
 show_countdown = input.bool(true, 'Countdown On Future Lines', tooltip = 'Add the time left to the label of a line whose time has not come yet.', group = GRP_LABELS)
 
@@ -258,18 +258,6 @@ line_style_constant(string name) =>
         'Dotted' => line.style_dotted
         => line.style_solid
 
-// The style names the corner the anchor sits on, so the body always extends to
-// the right of the line, clear of it. At an edge it also extends outward, into
-// the margin the chart keeps past the highest and lowest bars: only the anchor
-// counts towards auto-scaling, so a body rendered out there costs no price room
-// and the caption ends up hard against the edge of the pane instead of floating
-// a margin's worth inside it.
-label_style_constant() =>
-    switch label_position
-        'Middle' => label.style_label_left
-        'Bottom' => label.style_label_upper_left
-        => label.style_label_lower_left
-
 label_size_constant() =>
     switch label_size
         'tiny' => size.tiny
@@ -401,19 +389,23 @@ if barstate.islast
     // much scale to hold them. That is the price of keeping them off the
     // candles rather than over them.
     price_range = screen_high - screen_low
-    label_gap = price_range * label_distance / 100
+    edge_gap = price_range * label_distance / 100
     band_height = price_range * macro_band_height / 100
     at_top = label_position == 'Top'
 
-    label_y = switch label_position
-        'Middle' => math.avg(screen_low, screen_high)
-        'Bottom' => screen_low - label_gap
-        => screen_high + label_gap
+    // The strip is laid out from the bars outward: clear space first, then the
+    // band. Starting the band at the bar extreme instead put its edge exactly
+    // on the lowest low, so any bar that made the low sat on top of it.
+    // Captions ride the middle of the band, which puts them and the rectangles
+    // on one line rather than in two tiers.
+    band_inner = at_top ? screen_high + edge_gap : screen_low - edge_gap
+    band_outer = at_top ? band_inner + band_height : band_inner - band_height
+    band_top = at_top ? band_outer : band_inner
+    band_bottom = at_top ? band_inner : band_outer
 
-    // Middle leaves no edge to hang a rectangle off, so it falls to the bottom
-    // rather than being laid across the candles.
-    band_top = at_top ? screen_high + band_height : screen_low
-    band_bottom = at_top ? screen_high : screen_low - band_height
+    // Middle leaves no edge to hang a rectangle off, so the rectangles stay at
+    // the bottom while the captions cross the chart.
+    label_y = label_position == 'Middle' ? math.avg(screen_low, screen_high) : math.avg(band_top, band_bottom)
 
     today_midnight = midnight_of(timenow)
 
@@ -447,7 +439,7 @@ if barstate.islast
                 caption = marker.caption
                 if show_countdown and event_time > timenow
                     caption := caption + '\n' + countdown_text(event_time - timenow)
-                array.push(drawn_labels, label.new(event_time, label_y, caption, xloc = xloc.bar_time, yloc = yloc.price, style = label_style_constant(), color = color.new(color.white, 100), textcolor = marker.tint, size = label_size_constant()))
+                array.push(drawn_labels, label.new(event_time, label_y, caption, xloc = xloc.bar_time, yloc = yloc.price, style = label.style_label_left, color = color.new(color.white, 100), textcolor = marker.tint, size = label_size_constant()))
 
         for span in macro_spans
             span_start = timestamp(tz, day_year, day_month, day_of_month, span.start_hour, span.start_minute)

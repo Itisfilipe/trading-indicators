@@ -11,7 +11,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   time, label, color and style, plus eight macro slots that default to the
   ICT windows, keep their own on/off and start and end times, and are
   bracketed by a line at each end with a captioned rectangle joining the
-  pair. Every line
+  pair. Captions and rectangles share one strip set clear of the bars, so
+  nothing is drawn over the candles. Every line
   is drawn for the whole day, the ones still ahead included, each with a
   countdown to it, so the chart shows what is coming and how long there is
   until it. Labels sit beside the line at the top, middle or bottom of the

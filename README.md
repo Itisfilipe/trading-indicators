@@ -270,10 +270,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   joined by a rectangle carrying its name: `Macro 09:50-10:10`. The caption
   changes tense with the window — counting down to the open while it is
   ahead, counting out what is left once inside it.
-- Labels hang off the side of the line at the top, middle or bottom. Top
-  and bottom sit past the highest or lowest bar, at a distance you set, and
-  stay welded there through any scroll or zoom — clear of the candles
-  entirely. They read across rather than
+- Captions and macro rectangles share one strip below (or above) the bars,
+  set clear of them by an adjustable gap, welded there through any scroll
+  or zoom. Nothing is drawn over the candles. Captions read across rather
+  than
   down the line: a script cannot use the chart's own vertical-line drawing,
   and a Pine label has no rotation, so short captions work best.
 - Lines are only drawn on days the chart has bars for, so a weekend never
