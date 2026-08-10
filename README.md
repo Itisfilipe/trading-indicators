@@ -227,6 +227,67 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart you trade; set the anchor, toggle the RTH window
   to taste, and size the bands with the deviation multipliers.
 
+### Candle Countdown & Position Sizer — clock, candle countdowns, lot size
+
+- NinjaTrader port of the TradingView tool of the same name: an on-chart
+  table with the current time, live countdowns to the next candle on up to
+  three timeframes, and an ATR-based position-size suggestion.
+- Countdown timeframes are entered in minutes (defaults 1/5/15); candle
+  boundaries are anchored to the Unix epoch (UTC), so both platforms flip
+  on the same second. A countdown inside the alert lead time (default 10 s)
+  switches its cell to the alert colors and stays there.
+- Risk sized as a fixed dollar amount or a percent of account; stop
+  distance is a multiple of ATR (EMA or Wilder smoothing); the Lot row is
+  the contract count that keeps the loss at the risk budget if that stop is
+  hit, from the instrument's point value. Percent mode adds a Stop Cash row
+  with the dollars actually at risk at the rounded lot count.
+- Clock timezone selectable (Exchange, UTC, New York, London, Tokyo,
+  Sydney); Exchange means the instrument's own trading-hours zone. Table
+  corner and colors configurable; text uses the chart's label font.
+- Use: add to the chart you trade; confirm the point value against your
+  broker's contract specs before trusting the lot size.
+
+### Time-Based Price Levels — lines at the prices of key times
+
+- NinjaTrader port of the TradingView tool of the same name: horizontal
+  lines at up to 10 price levels, each anchored to an intraday clock time
+  or to a higher-timeframe period (D, W, M, 3M, 6M, 12M).
+- An intraday slot marks the O/H/L/C of the bar spanning that time each
+  day, on any chart timeframe, with an end-of-day cutoff and a days-of-
+  history control. An HTF slot tracks the developing period's O/H/L/C
+  live from the chart's own bars — no secondary series.
+- Labels are generated from the slot (D.O, W.O, ... / the time for
+  intraday, with a price suffix when it is not the Open).
+- Per-slot on/off, time, price type, and stroke (color, width, dash);
+  timezone selectable (New York default) for the intraday times. Period
+  slots roll with the instrument's trading day, so a daily level on an
+  overnight instrument resets at the session open, not at midnight.
+- Use: add to an intraday chart, type each level's time or period into its
+  slot; a slot that fails to parse is skipped and logged, never fatal.
+
+### Time-Based Vertical Lines — session times and the ICT macros
+
+- NinjaTrader port of the TradingView tool of the same name: vertical lines
+  at the clock times that matter during a session, drawn for the whole day,
+  so the ones still ahead are already on the chart with a countdown to them.
+- Ten line slots (on/off, HH:MM, label, stroke), defaults covering NY
+  midnight, 08:30 news, the open, the close, futures open; plus twelve
+  macro slots defaulting to the ICT windows in New York time, each
+  bracketed by a line at both ends with a captioned band joining the pair.
+  The band's caption counts down to the window, then counts out what is
+  left of it.
+- Captions and bands share one strip fixed to the top or bottom of the
+  viewport by a configurable gap — pinned through scroll and zoom, costing
+  no chart scale (unlike the TradingView version, which had to give up
+  price range for the room); Middle sends the captions across the chart
+  while the bands stay at the bottom.
+- Days of history counted from the last day with bars (a weekend never
+  strands the lines); "Include Tomorrow" adds the next day late in the
+  session. A time past the last bar is placed by extending the recent bars'
+  own pace, so on Renko/tick charts a future line's spot is an estimate.
+- Use: add to the chart you trade; times are read as HH:MM in the selected
+  zone, and an entry that does not parse is skipped and logged.
+
 ## Profit Chart (`profit-chart/`)
 
 - Confluence coloring system: paints each candle by how many rules agree

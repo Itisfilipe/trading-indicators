@@ -5,6 +5,33 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-08-10
 
+### Candle Countdown & Position Sizer (NinjaTrader, new)
+- Port of the TradingView tool: an on-chart table with the current time in
+  a chosen timezone, live countdowns to the next candle on up to three
+  minute-based timeframes (highlighting when a new candle is seconds
+  away), the ATR, the stop distance at a configured ATR multiple, and the
+  lot size that keeps the loss at the risk budget if that stop is hit.
+  Countdown timeframes are entered in minutes, and the table text follows
+  the chart's label font.
+
+### Time-Based Price Levels (NinjaTrader, new)
+- Port of the TradingView tool: horizontal lines at up to ten price
+  levels, each from an intraday clock time or a higher-timeframe period
+  (D, W, M, 3M, 6M, 12M), with auto labels, per-line stroke, and a
+  days-of-history control. Intraday levels now catch their bar on any
+  chart timeframe (the Pine version needed a bar stamped exactly at the
+  minute), and higher-timeframe High/Low/Close track the developing
+  period live.
+
+### Time-Based Vertical Lines (NinjaTrader, new)
+- Port of the TradingView tool: vertical lines at chosen clock times drawn
+  for the whole day — future ones included, each with a countdown — plus
+  twelve macro slots defaulting to the ICT windows, each bracketed by a
+  line at both ends with a captioned band joining the pair, the caption
+  counting down to the window and then counting out what is left of it.
+  Captions and bands share a strip at the top or bottom of the panel, and
+  a time past the last bar is placed by extending the recent bars' pace.
+
 ### Rectangle Midline (NinjaTrader, new)
 - Drawing tool: the chart's rectangle with a horizontal line across its
   middle, the way TradingView's rectangle draws one. It is drawn, dragged
