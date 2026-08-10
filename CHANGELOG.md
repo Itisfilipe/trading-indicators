@@ -25,12 +25,19 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ### Time-Based Vertical Lines (NinjaTrader, new)
 - Port of the TradingView tool: vertical lines at chosen clock times drawn
-  for the whole day — future ones included, each with a countdown — plus
-  twelve macro slots defaulting to the ICT windows, each bracketed by a
-  line at both ends with a captioned band joining the pair, the caption
-  counting down to the window and then counting out what is left of it.
-  Captions and bands share a strip at the top or bottom of the panel, and
-  a time past the last bar is placed by extending the recent bars' pace.
+  for the whole day — future ones included, each with a countdown pinned
+  near the viewport edge. A time past the last bar is placed by extending
+  the recent bars' pace.
+
+### ICT Macros (NinjaTrader, new)
+- The macro windows from the Time-Based Vertical Lines port, split into
+  their own indicator: each window bracketed by a line at both ends with a
+  captioned band joining the pair, the caption counting down to the window
+  and then counting out what is left of it. The bands ride a strip at the
+  bottom (or top) of the viewport. On by default: the six :50-:10 windows
+  inside regular hours plus the Final Hour and Market On Close windows —
+  the playbook's tradeable set; the pre-market and London pairs are
+  carried but off.
 
 ### Rectangle Midline (NinjaTrader, new)
 - Drawing tool: the chart's rectangle with a horizontal line across its

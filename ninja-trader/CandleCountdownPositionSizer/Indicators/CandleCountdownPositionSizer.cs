@@ -8,6 +8,7 @@ using NinjaTrader.Cbi;
 using NinjaTrader.Data;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
+using NinjaTrader.Gui.Tools;
 using NinjaTrader.NinjaScript;
 #endregion
 
@@ -56,12 +57,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private const float CellPaddingY = 4f;
         private const float TableMargin = 10f;
 
-        // ATR as two series so the recursion stays correct under OnPriceChange:
+        // ATR as a series so the recursion stays correct under OnPriceChange:
         // the forming bar overwrites its own slot on every tick while [1] keeps
         // holding the completed prior bar. The render pass reads the snapshot
         // field instead of the series: a barsAgo indexer is only guaranteed to
         // be in sync inside the market-data callbacks.
-        private Series<double> trueRangeSeries;
         private Series<double> atrSeries;
         private double currentAtr;
 
@@ -243,7 +243,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
-                trueRangeSeries = new Series<double>(this);
                 atrSeries = new Series<double>(this);
                 displayZone = ResolveDisplayZone();
             }
@@ -307,7 +306,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double trueRange = CurrentBar == 0
                 ? High[0] - Low[0]
                 : Math.Max(High[0] - Low[0], Math.Max(Math.Abs(High[0] - Close[1]), Math.Abs(Low[0] - Close[1])));
-            trueRangeSeries[0] = trueRange;
 
             // Both smoothings are one recursion apart: k * tr + (1 - k) * prev,
             // with k = 2/(n+1) (EMA) or 1/n (Wilder). The first AtrLength bars
@@ -425,14 +423,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // rounding would show 0 contracts where the original shows 1.
             rows.Add(new TableRow { Label = "Lot", Value = double.IsNaN(lotSize) ? "-" : Math.Round(lotSize, MidpointRounding.AwayFromZero).ToString("0") });
             rows.Add(new TableRow { Label = "ATR", Value = master.FormatPrice(atr) });
-            rows.Add(new TableRow { Label = "Stop ATR (" + StopAtrMultiple + ")", Value = master.FormatPrice(stopDistance) });
+            // Invariant culture so the multiple reads "1.5" everywhere; on a
+            // comma-decimal Windows the default would print "Stop ATR (1,5)".
+            rows.Add(new TableRow { Label = "Stop ATR (" + StopAtrMultiple.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")", Value = master.FormatPrice(stopDistance) });
 
             // Cash at risk at the rounded lot count is only informative in percent
             // mode; in Fixed $ mode it would echo the number the user typed in.
             if (RiskMode == CountdownRiskMode.PercentOfAccount && !double.IsNaN(lotSize))
                 rows.Add(new TableRow
                 {
-                    Label = "Stop Cash (" + RiskPercent + "%)",
+                    Label = "Stop Cash (" + RiskPercent.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%)",
                     Value = "$" + (Math.Round(lotSize, MidpointRounding.AwayFromZero) * riskPerLot).ToString("0.##")
                 });
 

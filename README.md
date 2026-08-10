@@ -265,28 +265,45 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to an intraday chart, type each level's time or period into its
   slot; a slot that fails to parse is skipped and logged, never fatal.
 
-### Time-Based Vertical Lines — session times and the ICT macros
+### Time-Based Vertical Lines — the day's times, ahead of time
 
 - NinjaTrader port of the TradingView tool of the same name: vertical lines
   at the clock times that matter during a session, drawn for the whole day,
   so the ones still ahead are already on the chart with a countdown to them.
+  The macro windows that the TradingView version carries live in the ICT
+  Macros indicator instead.
 - Ten line slots (on/off, HH:MM, label, stroke), defaults covering NY
-  midnight, 08:30 news, the open, the close, futures open; plus twelve
-  macro slots defaulting to the ICT windows in New York time, each
-  bracketed by a line at both ends with a captioned band joining the pair.
-  The band's caption counts down to the window, then counts out what is
-  left of it.
-- Captions and bands share one strip fixed to the top or bottom of the
-  viewport by a configurable gap — pinned through scroll and zoom, costing
-  no chart scale (unlike the TradingView version, which had to give up
-  price range for the room); Middle sends the captions across the chart
-  while the bands stay at the bottom.
+  midnight, 08:30 news, the open, the close, futures open.
+- Labels are pinned to the viewport near the top or bottom edge (or the
+  middle), riding there through scroll and zoom at no cost in chart scale —
+  unlike the TradingView version, which had to give up price range for the
+  room.
 - Days of history counted from the last day with bars (a weekend never
   strands the lines); "Include Tomorrow" adds the next day late in the
   session. A time past the last bar is placed by extending the recent bars'
   own pace, so on Renko/tick charts a future line's spot is an estimate.
 - Use: add to the chart you trade; times are read as HH:MM in the selected
   zone, and an entry that does not parse is skipped and logged.
+
+### ICT Macros — the macro windows, bracketed and counted down
+
+- The ICT macro windows as first-class chart objects: each window bracketed
+  by a vertical line at its start and end, joined by a captioned band whose
+  caption counts down to the window ("in 4:32") and then counts out what is
+  left of it ("12:10 left"). Windows are drawn for the whole day, the ones
+  still ahead included.
+- Twelve slots. The on-by-default set is the tradeable one: the six :50-:10
+  windows inside regular hours plus the Final Hour (15:15-15:45) and Market
+  On Close (15:45-16:00) windows. The pre-market pair (07:50, 08:50) and
+  the two London macros are carried but start off.
+- Bands ride a strip pinned to the bottom (or top) of the viewport — bottom
+  by default so the strip never collides with Time-Based Vertical Lines
+  captions at the top when both are on the same chart.
+- Same timezone, history and include-tomorrow controls as Time-Based
+  Vertical Lines; one stroke sets the color, width and dash of every
+  window's lines and band border, with fill opacity separate.
+- Use: add to the chart you trade; on anything but NY-time instruments set
+  the zone accordingly.
 
 ## Profit Chart (`profit-chart/`)
 

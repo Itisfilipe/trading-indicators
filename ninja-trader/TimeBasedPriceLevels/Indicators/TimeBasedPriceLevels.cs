@@ -9,6 +9,7 @@ using NinjaTrader.Cbi;
 using NinjaTrader.Data;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
+using NinjaTrader.Gui.Tools;
 using NinjaTrader.NinjaScript;
 #endregion
 
@@ -428,27 +429,39 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // slot moment.
         private void UpdateIntradaySlot(LevelSlot slot, DateTime tzTime, DateTime previousTzTime, DateTime tzDate, DateTime chartZoneTime)
         {
-            DateTime slotMoment = tzDate.AddMinutes(slot.MinutesOfDay);
+            // A bar that crosses midnight ends on the next date, but a late slot
+            // it spans still belongs to the day it started on: a 4-hour bar
+            // ending 02:00 is the one that spans yesterday's 23:00. Both
+            // candidate days are tested; at most one of the two slot moments can
+            // fall inside any one bar.
+            if (previousTzTime != DateTime.MaxValue && previousTzTime.Date != tzDate)
+                TryCapture(slot, previousTzTime.Date, tzTime, previousTzTime, chartZoneTime);
+            TryCapture(slot, tzDate, tzTime, previousTzTime, chartZoneTime);
 
-            if (slot.LastCapturedDate != tzDate && tzTime > slotMoment && previousTzTime <= slotMoment)
+            // High/Low/Close of the capture bar keep forming until it closes.
+            if (slot.Records.Count > 0)
             {
-                slot.LastCapturedDate = tzDate;
-                slot.Records.Add(new LevelRecord
-                {
-                    TzDate = tzDate,
-                    Price = PriceForType(slot.PriceType),
-                    StartChartTime = chartZoneTime,
-                    EndChartTime = SafeConvert(tzDate.AddDays(1), displayZone, Core.Globals.GeneralOptions.TimeZoneInfo),
-                    CaptureBar = CurrentBar
-                });
-            }
-            else if (slot.Records.Count > 0)
-            {
-                // High/Low/Close of the capture bar keep forming until it closes.
                 LevelRecord last = slot.Records[slot.Records.Count - 1];
                 if (last.CaptureBar == CurrentBar)
                     last.Price = PriceForType(slot.PriceType);
             }
+        }
+
+        private void TryCapture(LevelSlot slot, DateTime day, DateTime tzTime, DateTime previousTzTime, DateTime chartZoneTime)
+        {
+            DateTime slotMoment = day.AddMinutes(slot.MinutesOfDay);
+            if (slot.LastCapturedDate == day || tzTime <= slotMoment || previousTzTime > slotMoment)
+                return;
+
+            slot.LastCapturedDate = day;
+            slot.Records.Add(new LevelRecord
+            {
+                TzDate = day,
+                Price = PriceForType(slot.PriceType),
+                StartChartTime = chartZoneTime,
+                EndChartTime = SafeConvert(day.AddDays(1), displayZone, Core.Globals.GeneralOptions.TimeZoneInfo),
+                CaptureBar = CurrentBar
+            });
         }
 
         private double PriceForType(PriceLevelPriceType priceType)
