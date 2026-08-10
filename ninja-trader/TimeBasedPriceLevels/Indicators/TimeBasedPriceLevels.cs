@@ -373,6 +373,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DateTime previousTzTime = CurrentBar > 0
                 ? TimeZoneInfo.ConvertTime(Time[1], Core.Globals.GeneralOptions.TimeZoneInfo, displayZone)
                 : DateTime.MaxValue;
+            // The capture bar's left edge is its open -- the previous bar's end.
+            // Anchoring the line there instead of at the bar's close keeps a
+            // midnight-crossing capture's start before its end-of-day cutoff.
+            DateTime leftEdgeChartTime = CurrentBar > 0 ? Time[1] : chartZoneTime;
 
             lock (sync)
             {
@@ -388,7 +392,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (slot.IsHtf)
                         UpdateHtfSlot(slot, tradingDay, chartZoneTime);
                     else
-                        UpdateIntradaySlot(slot, tzTime, previousTzTime, tzDate, chartZoneTime);
+                        UpdateIntradaySlot(slot, tzTime, previousTzTime, tzDate, leftEdgeChartTime);
                 }
             }
         }
@@ -427,7 +431,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // is exactly the one opening at the slot time. A bar that spans a session
         // gap still captures -- its open is the first traded price after the
         // slot moment.
-        private void UpdateIntradaySlot(LevelSlot slot, DateTime tzTime, DateTime previousTzTime, DateTime tzDate, DateTime chartZoneTime)
+        private void UpdateIntradaySlot(LevelSlot slot, DateTime tzTime, DateTime previousTzTime, DateTime tzDate, DateTime leftEdgeChartTime)
         {
             // A bar that crosses midnight ends on the next date, but a late slot
             // it spans still belongs to the day it started on: a 4-hour bar
@@ -435,8 +439,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // candidate days are tested; at most one of the two slot moments can
             // fall inside any one bar.
             if (previousTzTime != DateTime.MaxValue && previousTzTime.Date != tzDate)
-                TryCapture(slot, previousTzTime.Date, tzTime, previousTzTime, chartZoneTime);
-            TryCapture(slot, tzDate, tzTime, previousTzTime, chartZoneTime);
+                TryCapture(slot, previousTzTime.Date, tzTime, previousTzTime, leftEdgeChartTime);
+            TryCapture(slot, tzDate, tzTime, previousTzTime, leftEdgeChartTime);
 
             // High/Low/Close of the capture bar keep forming until it closes.
             if (slot.Records.Count > 0)
@@ -447,7 +451,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private void TryCapture(LevelSlot slot, DateTime day, DateTime tzTime, DateTime previousTzTime, DateTime chartZoneTime)
+        private void TryCapture(LevelSlot slot, DateTime day, DateTime tzTime, DateTime previousTzTime, DateTime leftEdgeChartTime)
         {
             DateTime slotMoment = day.AddMinutes(slot.MinutesOfDay);
             if (slot.LastCapturedDate == day || tzTime <= slotMoment || previousTzTime > slotMoment)
@@ -458,7 +462,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 TzDate = day,
                 Price = PriceForType(slot.PriceType),
-                StartChartTime = chartZoneTime,
+                StartChartTime = leftEdgeChartTime,
                 EndChartTime = ToChartZone(day.AddDays(1)),
                 CaptureBar = CurrentBar
             });

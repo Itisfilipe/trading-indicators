@@ -63,7 +63,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private readonly object sync = new object();
         private readonly List<ZoneSlot> slots = new List<ZoneSlot>();
         private TimeZoneInfo displayZone;
-        private DateTime lastSeenTzDate = DateTime.MinValue;
 
         #region Properties
 
@@ -363,12 +362,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (sync)
             {
-                if (tzTime.Date != lastSeenTzDate)
-                {
-                    lastSeenTzDate = tzTime.Date;
-                    foreach (ZoneSlot slot in slots)
-                        slot.Records.RemoveAll(r => (tzTime.Date - r.Day).TotalDays > DaysToShow);
-                }
+                // Age alone must not evict a record whose window is still open:
+                // with 0 days of history, the Asia box straddling midnight would
+                // otherwise be pruned on the date change and rebuilt from only
+                // the after-midnight bars, losing the evening's high and low.
+                foreach (ZoneSlot slot in slots)
+                    slot.Records.RemoveAll(r => (tzTime.Date - r.Day).TotalDays > DaysToShow
+                        && tzTime > r.Day.AddMinutes(slot.EndMinutes));
 
                 foreach (ZoneSlot slot in slots)
                 {

@@ -591,21 +591,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DateTime now = PlatformNow();
             HashSet<string> currencies = ActiveCurrencies();
 
-            // The visibility cutoff for past releases; future ones always show.
-            DateTime historyCutoff;
-            switch (ChartHistory)
-            {
-                case NewsHistory.Today: historyCutoff = now.Date; break;
-                case NewsHistory.ManualDays: historyCutoff = now.Date.AddDays(-ManualDays); break;
-                default: // this week, back to Monday
-                    historyCutoff = now.Date.AddDays(-(((int)now.Date.DayOfWeek + 6) % 7));
-                    break;
-            }
-
+            // Impact and currency filter both surfaces; the chart-history cutoff
+            // belongs to the lines alone, or a short history would also starve
+            // the week table of its earlier rows.
             List<NewsEvent> visible = new List<NewsEvent>();
             foreach (NewsEvent newsEvent in snapshot)
-                if (ImpactVisible(newsEvent.Impact) && currencies.Contains(newsEvent.Currency)
-                    && newsEvent.ChartZoneTime >= historyCutoff)
+                if (ImpactVisible(newsEvent.Impact) && currencies.Contains(newsEvent.Currency))
                     visible.Add(newsEvent);
             if (visible.Count == 0)
                 return;
@@ -634,6 +625,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             float panelTop = ChartPanel.Y;
             float panelBottom = ChartPanel.Y + ChartPanel.H;
 
+            // How far back past releases keep their lines; future ones always draw.
+            DateTime historyCutoff;
+            switch (ChartHistory)
+            {
+                case NewsHistory.Today: historyCutoff = now.Date; break;
+                case NewsHistory.ManualDays: historyCutoff = now.Date.AddDays(-ManualDays); break;
+                default: // this week, back to Monday
+                    historyCutoff = now.Date.AddDays(-(((int)now.Date.DayOfWeek + 6) % 7));
+                    break;
+            }
+
             DateTime lastBarTime = Bars.GetTime(Bars.Count - 1);
             double lastBarX = chartControl.GetXByTime(lastBarTime);
             int paceBackIndex = Math.Max(0, Bars.Count - 1 - 20);
@@ -648,6 +650,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             foreach (NewsEvent newsEvent in visible)
             {
+                if (newsEvent.ChartZoneTime < historyCutoff)
+                    continue;
                 if (newsEvent.ChartZoneTime <= now && LineTime == NewsLineTime.Future)
                     continue;
                 double x = XForTime(chartControl, newsEvent.ChartZoneTime, lastBarTime, lastBarX, pixelsPerMs);
