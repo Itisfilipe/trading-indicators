@@ -47,7 +47,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The macro windows from the Time-Based Vertical Lines port, split into
   their own indicator: each window bracketed by a line at both ends with a
   captioned band joining the pair, the caption counting down to the window
-  and then counting out what is left of it. The bands ride a strip at the
+  and then counting out what is left of it on its own line under the
+  window's name. The bands ride a strip at the
   bottom (or top) of the viewport. On by default: the six :50-:10 windows
   inside regular hours plus the Final Hour and Market On Close windows —
   the playbook's tradeable set; the pre-market and London pairs are

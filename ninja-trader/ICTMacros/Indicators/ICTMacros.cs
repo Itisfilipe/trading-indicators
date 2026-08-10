@@ -527,16 +527,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                         if (!ShowLabels)
                             continue;
-                        // One caption for the whole window, changing tense with
-                        // it: counting down to the open while the window is
-                        // ahead, counting out what is left of it once inside.
+                        // One caption for the whole window, the countdown on its
+                        // own line under the name, changing tense with the
+                        // window: counting down to the open while it is ahead,
+                        // counting out what is left of it once inside.
                         string caption = span.Caption;
                         if (ShowCountdown)
                         {
                             if (now < spanStart)
-                                caption += "   in " + CountdownText(spanStart - now);
+                                caption += "\nin " + CountdownText(spanStart - now);
                             else if (now < spanEnd)
-                                caption += "   " + CountdownText(spanEnd - now) + " left";
+                                caption += "\n" + CountdownText(spanEnd - now) + " left";
                         }
                         DrawCaption(caption, (float)((startX + endX) / 2), bandTop + bandHeight / 2, textFormat);
                     }
@@ -549,14 +550,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
+        // The layout is a fixed-width box centered on the band's middle with
+        // centered text alignment, so the name line and the (shorter)
+        // countdown line under it each center themselves rather than sharing
+        // the block's left edge.
         private void DrawCaption(string caption, float centreX, float centreY, SharpDX.DirectWrite.TextFormat textFormat)
         {
+            const float LayoutWidth = 600f;
             SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
-                Core.Globals.DirectWriteFactory, caption, textFormat, 600, textFormat.FontSize);
+                Core.Globals.DirectWriteFactory, caption, textFormat, LayoutWidth, textFormat.FontSize);
             try
             {
+                layout.TextAlignment = SharpDX.DirectWrite.TextAlignment.Center;
                 RenderTarget.DrawTextLayout(
-                    new SharpDX.Vector2(centreX - layout.Metrics.Width / 2, centreY - layout.Metrics.Height / 2),
+                    new SharpDX.Vector2(centreX - LayoutWidth / 2, centreY - layout.Metrics.Height / 2),
                     layout, MacroStroke.BrushDX, SharpDX.Direct2D1.DrawTextOptions.NoSnap);
             }
             finally
