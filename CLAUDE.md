@@ -26,6 +26,10 @@ a CSV export from the NinjaScript editor). Before handing code over:
 - Watch namespace ambiguities: these files import both WPF (`System.Windows.*`)
   and SharpDX namespaces, which BOTH define `Brush`, `Point`, `PathGeometry`,
   and `SolidColorBrush`. Fully qualify or the file will not compile.
+- Never name an identifier with a C# contextual keyword (`when`, `var`,
+  `value`, `record`, ...). Legal C#, but the NinjaScript editor's parser
+  rejected a local named `when` with a 26-error cascade whose columns all
+  pointed at its uses.
 - For bars-type / price logic, verify behavior by porting the algorithm to a
   Python simulation and property-testing it (see the reflection/negation test
   approach: any tick sequence and its price mirror must produce mirrored bricks).
