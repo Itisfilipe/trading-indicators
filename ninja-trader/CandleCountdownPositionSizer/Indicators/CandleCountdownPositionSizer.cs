@@ -52,6 +52,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// loss at the configured risk if a stop the chosen multiple of ATR away is hit.
     /// Port of the TradingView "Candle Countdown &amp; Position Sizer".
     /// </summary>
+    [TypeConverter("NinjaTrader.NinjaScript.Indicators.FilipeAmaral.CandleCountdownPositionSizerTypeConverter")]
     public class CandleCountdownPositionSizer : Indicator
     {
         private const float CellPaddingX = 8f;
@@ -125,13 +126,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "A countdown at or under this many seconds switches to the alert colors.")]
         public int AlertLeadSeconds { get; set; }
 
+        // RefreshProperties makes the grid re-query on change, so the fields of
+        // the unselected mode disappear instead of sitting there dead (the
+        // MultiSeriesEMA source-type pattern).
+        [RefreshProperties(RefreshProperties.All)]
         [Display(Name = "Risk Mode", GroupName = "3. Position Sizing", Order = 1,
                  Description = "Fixed $: risk a set dollar amount per trade. Percent of account: risk a share of the account size.")]
         public CountdownRiskMode RiskMode { get; set; }
 
         [Range(0.0, double.MaxValue)]
         [Display(Name = "Risk Per Trade ($)", GroupName = "3. Position Sizing", Order = 2,
-                 Description = "Used in Fixed $ mode. Maximum loss if the stop is hit.")]
+                 Description = "Maximum loss if the stop is hit.")]
         public double RiskDollars { get; set; }
 
         [Range(0.0, double.MaxValue)]
@@ -140,7 +145,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Range(0.0, 100.0)]
         [Display(Name = "Risk Per Trade (%)", GroupName = "3. Position Sizing", Order = 4,
-                 Description = "Used in Percent of Account mode.")]
+                 Description = "Share of the account size to risk per trade.")]
         public double RiskPercent { get; set; }
 
         [Range(0.0, double.MaxValue)]
@@ -574,6 +579,41 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     layout.Dispose();
                 textFormat.Dispose();
             }
+        }
+    }
+
+    // Shows only the selected risk mode's fields: Fixed $ keeps Risk Per Trade
+    // ($); Percent of Account keeps Account Size and Risk Per Trade (%). The
+    // hidden ones still serialize, so switching modes round-trips their values.
+    public class CandleCountdownPositionSizerTypeConverter : IndicatorBaseConverter
+    {
+        public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object component, Attribute[] attributes)
+        {
+            CandleCountdownPositionSizer indicator = component as CandleCountdownPositionSizer;
+
+            PropertyDescriptorCollection properties = GetPropertiesSupported(context)
+                ? base.GetProperties(context, component, attributes)
+                : TypeDescriptor.GetProperties(component, attributes);
+
+            if (indicator == null || properties == null)
+                return properties;
+
+            string[] hiddenProperties = indicator.RiskMode == CountdownRiskMode.FixedDollar
+                ? new[] { "AccountSize", "RiskPercent" }
+                : new[] { "RiskDollars" };
+            foreach (string hiddenProperty in hiddenProperties)
+            {
+                PropertyDescriptor descriptorToHide = properties[hiddenProperty];
+                if (descriptorToHide != null)
+                    properties.Remove(descriptorToHide);
+            }
+
+            return properties;
+        }
+
+        public override bool GetPropertiesSupported(ITypeDescriptorContext context)
+        {
+            return true;
         }
     }
 }

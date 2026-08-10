@@ -236,7 +236,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   boundaries are anchored to the Unix epoch (UTC), so both platforms flip
   on the same second. A countdown inside the alert lead time (default 10 s)
   switches its cell to the alert colors and stays there.
-- Risk sized as a fixed dollar amount or a percent of account; stop
+- Risk sized as a fixed dollar amount or a percent of account — the
+  settings panel only shows the fields of the selected mode; stop
   distance is a multiple of ATR (EMA or Wilder smoothing); the Lot row is
   the contract count that keeps the loss at the risk budget if that stop is
   hit, from the instrument's point value. Percent mode adds a Stop Cash row

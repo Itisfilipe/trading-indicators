@@ -13,7 +13,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   lot size that keeps the loss at the risk budget if that stop is hit.
   Countdown timeframes are entered in minutes, and the table text follows
   the chart's label font. The margin between the table and the viewport
-  edges is adjustable, and the ATR and Stop ATR rows can be hidden.
+  edges is adjustable, and the ATR and Stop ATR rows can be hidden. The
+  settings panel shows only the selected risk mode's fields: Fixed $
+  keeps the dollar amount, Percent of Account keeps the account size
+  and percentage.
 - "Auto-Set ChartTrader Quantity" (off by default) mirrors the suggested
   lot into ChartTrader's quantity field whenever the suggestion changes,
   so orders placed from ChartTrader trade that size without retyping it.
