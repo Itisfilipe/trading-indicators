@@ -60,6 +60,15 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   New York time) start on, the session blocks start off. Windows may run
   past midnight; history is kept a configurable number of days.
 
+### Breakeven Stops (NinjaTrader, new)
+- ChartTrading's breakeven feature as a standalone indicator: a "Stops
+  to BE" button in the ChartTrader sidebar plus an automatic once-per-
+  position trigger (on by default, 30 ticks) that move every working
+  protective stop on the instrument — ATM, OCO, or manual — to
+  breakeven plus a configurable tick offset. Stops already at or beyond
+  breakeven are never loosened, and the move is clamped one tick inside
+  the market.
+
 ### Economic Calendar (NinjaTrader, new)
 - Port of a TradingView economic-calendar indicator: the week's Forex
   Factory releases as impact-colored vertical lines (future ones placed
