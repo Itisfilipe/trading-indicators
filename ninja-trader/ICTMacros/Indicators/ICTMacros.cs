@@ -116,6 +116,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro1Start { get; set; }
         [Display(Name = "Macro 1 End", GroupName = "3. Macros", Order = 12)]
         public string Macro1End { get; set; }
+        [Display(Name = "Macro 1 Label", GroupName = "3. Macros", Order = 13,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro1Label { get; set; }
 
         [Display(Name = "Macro 2", GroupName = "3. Macros", Order = 20)]
         public bool Macro2Enabled { get; set; }
@@ -123,6 +126,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro2Start { get; set; }
         [Display(Name = "Macro 2 End", GroupName = "3. Macros", Order = 22)]
         public string Macro2End { get; set; }
+        [Display(Name = "Macro 2 Label", GroupName = "3. Macros", Order = 23,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro2Label { get; set; }
 
         [Display(Name = "Macro 3", GroupName = "3. Macros", Order = 30)]
         public bool Macro3Enabled { get; set; }
@@ -130,6 +136,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro3Start { get; set; }
         [Display(Name = "Macro 3 End", GroupName = "3. Macros", Order = 32)]
         public string Macro3End { get; set; }
+        [Display(Name = "Macro 3 Label", GroupName = "3. Macros", Order = 33,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro3Label { get; set; }
 
         [Display(Name = "Macro 4", GroupName = "3. Macros", Order = 40)]
         public bool Macro4Enabled { get; set; }
@@ -137,6 +146,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro4Start { get; set; }
         [Display(Name = "Macro 4 End", GroupName = "3. Macros", Order = 42)]
         public string Macro4End { get; set; }
+        [Display(Name = "Macro 4 Label", GroupName = "3. Macros", Order = 43,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro4Label { get; set; }
 
         [Display(Name = "Macro 5", GroupName = "3. Macros", Order = 50)]
         public bool Macro5Enabled { get; set; }
@@ -144,6 +156,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro5Start { get; set; }
         [Display(Name = "Macro 5 End", GroupName = "3. Macros", Order = 52)]
         public string Macro5End { get; set; }
+        [Display(Name = "Macro 5 Label", GroupName = "3. Macros", Order = 53,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro5Label { get; set; }
 
         [Display(Name = "Macro 6", GroupName = "3. Macros", Order = 60)]
         public bool Macro6Enabled { get; set; }
@@ -151,6 +166,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro6Start { get; set; }
         [Display(Name = "Macro 6 End", GroupName = "3. Macros", Order = 62)]
         public string Macro6End { get; set; }
+        [Display(Name = "Macro 6 Label", GroupName = "3. Macros", Order = 63,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro6Label { get; set; }
 
         [Display(Name = "Macro 7", GroupName = "3. Macros", Order = 70)]
         public bool Macro7Enabled { get; set; }
@@ -158,6 +176,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro7Start { get; set; }
         [Display(Name = "Macro 7 End", GroupName = "3. Macros", Order = 72)]
         public string Macro7End { get; set; }
+        [Display(Name = "Macro 7 Label", GroupName = "3. Macros", Order = 73,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro7Label { get; set; }
 
         [Display(Name = "Macro 8", GroupName = "3. Macros", Order = 80)]
         public bool Macro8Enabled { get; set; }
@@ -165,6 +186,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro8Start { get; set; }
         [Display(Name = "Macro 8 End", GroupName = "3. Macros", Order = 82)]
         public string Macro8End { get; set; }
+        [Display(Name = "Macro 8 Label", GroupName = "3. Macros", Order = 83,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro8Label { get; set; }
 
         [Display(Name = "Macro 9", GroupName = "3. Macros", Order = 90)]
         public bool Macro9Enabled { get; set; }
@@ -172,6 +196,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro9Start { get; set; }
         [Display(Name = "Macro 9 End", GroupName = "3. Macros", Order = 92)]
         public string Macro9End { get; set; }
+        [Display(Name = "Macro 9 Label", GroupName = "3. Macros", Order = 93,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro9Label { get; set; }
 
         [Display(Name = "Macro 10", GroupName = "3. Macros", Order = 100)]
         public bool Macro10Enabled { get; set; }
@@ -179,6 +206,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro10Start { get; set; }
         [Display(Name = "Macro 10 End", GroupName = "3. Macros", Order = 102)]
         public string Macro10End { get; set; }
+        [Display(Name = "Macro 10 Label", GroupName = "3. Macros", Order = 103,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro10Label { get; set; }
 
         [Display(Name = "Macro 11", GroupName = "3. Macros", Order = 110)]
         public bool Macro11Enabled { get; set; }
@@ -186,6 +216,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro11Start { get; set; }
         [Display(Name = "Macro 11 End", GroupName = "3. Macros", Order = 112)]
         public string Macro11End { get; set; }
+        [Display(Name = "Macro 11 Label", GroupName = "3. Macros", Order = 113,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro11Label { get; set; }
 
         [Display(Name = "Macro 12", GroupName = "3. Macros", Order = 120)]
         public bool Macro12Enabled { get; set; }
@@ -193,6 +226,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public string Macro12Start { get; set; }
         [Display(Name = "Macro 12 End", GroupName = "3. Macros", Order = 122)]
         public string Macro12End { get; set; }
+        [Display(Name = "Macro 12 Label", GroupName = "3. Macros", Order = 123,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro12Label { get; set; }
 
         #endregion
 
@@ -225,35 +261,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // windows instead. The playbook trades the six RTH windows plus
                 // those two, so exactly that set is on; the pre-market pair and
                 // the London pair are carried for convenience but start off.
-                Macro1Enabled = false; Macro1Start = "07:50"; Macro1End = "08:10";
-                Macro2Enabled = false; Macro2Start = "08:50"; Macro2End = "09:10";
-                Macro3Enabled = true; Macro3Start = "09:50"; Macro3End = "10:10";
-                Macro4Enabled = true; Macro4Start = "10:50"; Macro4End = "11:10";
-                Macro5Enabled = true; Macro5Start = "11:50"; Macro5End = "12:10";
-                Macro6Enabled = true; Macro6Start = "12:50"; Macro6End = "13:10";
-                Macro7Enabled = true; Macro7Start = "13:50"; Macro7End = "14:10";
-                Macro8Enabled = true; Macro8Start = "14:50"; Macro8End = "15:10";
-                Macro9Enabled = true; Macro9Start = "15:15"; Macro9End = "15:45";
-                Macro10Enabled = true; Macro10Start = "15:45"; Macro10End = "16:00";
-                Macro11Enabled = false; Macro11Start = "02:33"; Macro11End = "03:00";
-                Macro12Enabled = false; Macro12Start = "04:03"; Macro12End = "04:30";
+                Macro1Enabled = false; Macro1Start = "07:50"; Macro1End = "08:10"; Macro1Label = "";
+                Macro2Enabled = false; Macro2Start = "08:50"; Macro2End = "09:10"; Macro2Label = "";
+                Macro3Enabled = true; Macro3Start = "09:50"; Macro3End = "10:10"; Macro3Label = "";
+                Macro4Enabled = true; Macro4Start = "10:50"; Macro4End = "11:10"; Macro4Label = "";
+                Macro5Enabled = true; Macro5Start = "11:50"; Macro5End = "12:10"; Macro5Label = "";
+                Macro6Enabled = true; Macro6Start = "12:50"; Macro6End = "13:10"; Macro6Label = "";
+                Macro7Enabled = true; Macro7Start = "13:50"; Macro7End = "14:10"; Macro7Label = "";
+                Macro8Enabled = true; Macro8Start = "14:50"; Macro8End = "15:10"; Macro8Label = "";
+                Macro9Enabled = true; Macro9Start = "15:15"; Macro9End = "15:45"; Macro9Label = "Final Hour";
+                Macro10Enabled = true; Macro10Start = "15:45"; Macro10End = "16:00"; Macro10Label = "MOC";
+                Macro11Enabled = false; Macro11Start = "02:33"; Macro11End = "03:00"; Macro11Label = "London Macro 1";
+                Macro12Enabled = false; Macro12Start = "04:03"; Macro12End = "04:30"; Macro12Label = "London Macro 2";
             }
             else if (State == State.DataLoaded)
             {
                 displayZone = ResolveDisplayZone();
                 spans.Clear();
-                AddMacro(Macro1Enabled, Macro1Start, Macro1End);
-                AddMacro(Macro2Enabled, Macro2Start, Macro2End);
-                AddMacro(Macro3Enabled, Macro3Start, Macro3End);
-                AddMacro(Macro4Enabled, Macro4Start, Macro4End);
-                AddMacro(Macro5Enabled, Macro5Start, Macro5End);
-                AddMacro(Macro6Enabled, Macro6Start, Macro6End);
-                AddMacro(Macro7Enabled, Macro7Start, Macro7End);
-                AddMacro(Macro8Enabled, Macro8Start, Macro8End);
-                AddMacro(Macro9Enabled, Macro9Start, Macro9End);
-                AddMacro(Macro10Enabled, Macro10Start, Macro10End);
-                AddMacro(Macro11Enabled, Macro11Start, Macro11End);
-                AddMacro(Macro12Enabled, Macro12Start, Macro12End);
+                AddMacro(Macro1Enabled, Macro1Start, Macro1End, Macro1Label);
+                AddMacro(Macro2Enabled, Macro2Start, Macro2End, Macro2Label);
+                AddMacro(Macro3Enabled, Macro3Start, Macro3End, Macro3Label);
+                AddMacro(Macro4Enabled, Macro4Start, Macro4End, Macro4Label);
+                AddMacro(Macro5Enabled, Macro5Start, Macro5End, Macro5Label);
+                AddMacro(Macro6Enabled, Macro6Start, Macro6End, Macro6Label);
+                AddMacro(Macro7Enabled, Macro7Start, Macro7End, Macro7Label);
+                AddMacro(Macro8Enabled, Macro8Start, Macro8End, Macro8Label);
+                AddMacro(Macro9Enabled, Macro9Start, Macro9End, Macro9Label);
+                AddMacro(Macro10Enabled, Macro10Start, Macro10End, Macro10Label);
+                AddMacro(Macro11Enabled, Macro11Start, Macro11End, Macro11Label);
+                AddMacro(Macro12Enabled, Macro12Start, Macro12End, Macro12Label);
             }
             else if (State == State.Realtime)
             {
@@ -332,7 +368,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return hour * 60 + minute;
         }
 
-        private void AddMacro(bool enabled, string startText, string endText)
+        private void AddMacro(bool enabled, string startText, string endText, string label)
         {
             if (!enabled)
                 return;
@@ -348,11 +384,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Log("ICT Macros: skipping macro \"" + startText + "\" to \"" + endText + "\", a window has to end after it starts on the same day.", LogLevel.Warning);
                 return;
             }
+            // A named window keeps its name; the unnamed ones caption with
+            // their times, which is how the :50-:10 rule windows read best.
+            string trimmedLabel = (label ?? string.Empty).Trim();
             spans.Add(new MacroSpan
             {
                 StartMinutes = startMinutes,
                 EndMinutes = endMinutes,
-                Caption = "Macro " + ClockText(startMinutes) + "-" + ClockText(endMinutes)
+                Caption = trimmedLabel.Length > 0
+                    ? trimmedLabel
+                    : "Macro " + ClockText(startMinutes) + "-" + ClockText(endMinutes)
             });
         }
 
