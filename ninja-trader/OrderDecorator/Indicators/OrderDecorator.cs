@@ -44,25 +44,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Properties
 
         [NinjaScriptProperty]
-        [Display(Name = "Show Points", Order = 0, GroupName = "Content")]
+        [Display(Name = "Show Points", Order = 0, GroupName = "1. Content")]
         public bool ShowPoints { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Show Money Value", Order = 1, GroupName = "Content")]
+        [Display(Name = "Show Money Value", Order = 1, GroupName = "1. Content")]
         public bool ShowCurrency { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Show R Multiple", Order = 2, GroupName = "Content",
+        [Display(Name = "Show R Multiple", Order = 2, GroupName = "1. Content",
                  Description = "On profit-side orders, append reward relative to the nearest stop (e.g. 1.5R).")]
         public bool ShowRMultiple { get; set; }
 
         [Range(0, 2000), NinjaScriptProperty]
-        [Display(Name = "Right Margin (pixels)", Order = 3, GroupName = "Content",
+        [Display(Name = "Right Margin (pixels)", Order = 3, GroupName = "1. Content",
                  Description = "Distance kept between the labels and the right edge, clearing the platform's own order markers.")]
         public int RightMarginPixels { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Profit Side Color", Order = 4, GroupName = "Colors")]
+        [Display(Name = "Profit Side Color", Order = 4, GroupName = "2. Colors")]
         public System.Windows.Media.Brush ProfitColor { get; set; }
 
         [Browsable(false)]
@@ -73,7 +73,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Loss Side Color", Order = 5, GroupName = "Colors")]
+        [Display(Name = "Loss Side Color", Order = 5, GroupName = "2. Colors")]
         public System.Windows.Media.Brush LossColor { get; set; }
 
         [Browsable(false)]
@@ -84,7 +84,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Flat/Neutral Color", Order = 6, GroupName = "Colors")]
+        [Display(Name = "Flat/Neutral Color", Order = 6, GroupName = "2. Colors")]
         public System.Windows.Media.Brush NeutralColor { get; set; }
 
         [Browsable(false)]

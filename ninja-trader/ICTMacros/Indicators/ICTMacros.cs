@@ -68,130 +68,130 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Time Zone", GroupName = "General", Order = 1,
+        [Display(Name = "Time Zone", GroupName = "1. General", Order = 1,
                  Description = "Zone every window time below is read in. Exchange means the instrument's own trading-hours zone.")]
         public MacroTimeZone TimeZoneSelection { get; set; }
 
         [Range(0, 5)]
-        [Display(Name = "Days of History to Show", GroupName = "General", Order = 2,
+        [Display(Name = "Days of History to Show", GroupName = "1. General", Order = 2,
                  Description = "How far back to keep drawing windows, counted from the last day the chart has bars for. 0 = that day and today.")]
         public int HistoryDays { get; set; }
 
-        [Display(Name = "Include Tomorrow", GroupName = "General", Order = 3,
+        [Display(Name = "Include Tomorrow", GroupName = "1. General", Order = 3,
                  Description = "Also draw tomorrow's windows. Useful late in the session, when everything for today has already happened.")]
         public bool IncludeTomorrow { get; set; }
 
-        [Display(Name = "Show Captions", GroupName = "General", Order = 4)]
+        [Display(Name = "Show Captions", GroupName = "1. General", Order = 4)]
         public bool ShowLabels { get; set; }
 
-        [Display(Name = "Countdown In Captions", GroupName = "General", Order = 5,
+        [Display(Name = "Countdown In Captions", GroupName = "1. General", Order = 5,
                  Description = "Count down to a window still ahead, and count out what is left of one already running.")]
         public bool ShowCountdown { get; set; }
 
-        [Display(Name = "Style", GroupName = "Band", Order = 1,
+        [Display(Name = "Style", GroupName = "2. Band", Order = 1,
                  Description = "Color, width and dash shared by every window's two lines and its band border.")]
         public Stroke MacroStroke { get; set; }
 
-        [Display(Name = "Strip Position", GroupName = "Band", Order = 2,
+        [Display(Name = "Strip Position", GroupName = "2. Band", Order = 2,
                  Description = "Which edge of the viewport the bands ride. Bottom by default, leaving the top free for the Time-Based Vertical Lines captions.")]
         public MacroStripPosition StripPosition { get; set; }
 
         [Range(0.0, 40.0)]
-        [Display(Name = "Edge Gap (%)", GroupName = "Band", Order = 3,
+        [Display(Name = "Edge Gap (%)", GroupName = "2. Band", Order = 3,
                  Description = "Clear space between the panel edge and the bands, as a share of the panel height.")]
         public double EdgeGapPercent { get; set; }
 
         [Range(0.0, 40.0)]
-        [Display(Name = "Band Height (%)", GroupName = "Band", Order = 4,
+        [Display(Name = "Band Height (%)", GroupName = "2. Band", Order = 4,
                  Description = "Thickness of the band joining a window's two lines, as a share of the panel height. 0 draws no band.")]
         public double BandHeightPercent { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Band Opacity (%)", GroupName = "Band", Order = 5)]
+        [Display(Name = "Band Opacity (%)", GroupName = "2. Band", Order = 5)]
         public int BandOpacity { get; set; }
 
-        [Display(Name = "Macro 1", GroupName = "Macros", Order = 10)]
+        [Display(Name = "Macro 1", GroupName = "3. Macros", Order = 10)]
         public bool Macro1Enabled { get; set; }
-        [Display(Name = "Macro 1 Start", GroupName = "Macros", Order = 11)]
+        [Display(Name = "Macro 1 Start", GroupName = "3. Macros", Order = 11)]
         public string Macro1Start { get; set; }
-        [Display(Name = "Macro 1 End", GroupName = "Macros", Order = 12)]
+        [Display(Name = "Macro 1 End", GroupName = "3. Macros", Order = 12)]
         public string Macro1End { get; set; }
 
-        [Display(Name = "Macro 2", GroupName = "Macros", Order = 20)]
+        [Display(Name = "Macro 2", GroupName = "3. Macros", Order = 20)]
         public bool Macro2Enabled { get; set; }
-        [Display(Name = "Macro 2 Start", GroupName = "Macros", Order = 21)]
+        [Display(Name = "Macro 2 Start", GroupName = "3. Macros", Order = 21)]
         public string Macro2Start { get; set; }
-        [Display(Name = "Macro 2 End", GroupName = "Macros", Order = 22)]
+        [Display(Name = "Macro 2 End", GroupName = "3. Macros", Order = 22)]
         public string Macro2End { get; set; }
 
-        [Display(Name = "Macro 3", GroupName = "Macros", Order = 30)]
+        [Display(Name = "Macro 3", GroupName = "3. Macros", Order = 30)]
         public bool Macro3Enabled { get; set; }
-        [Display(Name = "Macro 3 Start", GroupName = "Macros", Order = 31)]
+        [Display(Name = "Macro 3 Start", GroupName = "3. Macros", Order = 31)]
         public string Macro3Start { get; set; }
-        [Display(Name = "Macro 3 End", GroupName = "Macros", Order = 32)]
+        [Display(Name = "Macro 3 End", GroupName = "3. Macros", Order = 32)]
         public string Macro3End { get; set; }
 
-        [Display(Name = "Macro 4", GroupName = "Macros", Order = 40)]
+        [Display(Name = "Macro 4", GroupName = "3. Macros", Order = 40)]
         public bool Macro4Enabled { get; set; }
-        [Display(Name = "Macro 4 Start", GroupName = "Macros", Order = 41)]
+        [Display(Name = "Macro 4 Start", GroupName = "3. Macros", Order = 41)]
         public string Macro4Start { get; set; }
-        [Display(Name = "Macro 4 End", GroupName = "Macros", Order = 42)]
+        [Display(Name = "Macro 4 End", GroupName = "3. Macros", Order = 42)]
         public string Macro4End { get; set; }
 
-        [Display(Name = "Macro 5", GroupName = "Macros", Order = 50)]
+        [Display(Name = "Macro 5", GroupName = "3. Macros", Order = 50)]
         public bool Macro5Enabled { get; set; }
-        [Display(Name = "Macro 5 Start", GroupName = "Macros", Order = 51)]
+        [Display(Name = "Macro 5 Start", GroupName = "3. Macros", Order = 51)]
         public string Macro5Start { get; set; }
-        [Display(Name = "Macro 5 End", GroupName = "Macros", Order = 52)]
+        [Display(Name = "Macro 5 End", GroupName = "3. Macros", Order = 52)]
         public string Macro5End { get; set; }
 
-        [Display(Name = "Macro 6", GroupName = "Macros", Order = 60)]
+        [Display(Name = "Macro 6", GroupName = "3. Macros", Order = 60)]
         public bool Macro6Enabled { get; set; }
-        [Display(Name = "Macro 6 Start", GroupName = "Macros", Order = 61)]
+        [Display(Name = "Macro 6 Start", GroupName = "3. Macros", Order = 61)]
         public string Macro6Start { get; set; }
-        [Display(Name = "Macro 6 End", GroupName = "Macros", Order = 62)]
+        [Display(Name = "Macro 6 End", GroupName = "3. Macros", Order = 62)]
         public string Macro6End { get; set; }
 
-        [Display(Name = "Macro 7", GroupName = "Macros", Order = 70)]
+        [Display(Name = "Macro 7", GroupName = "3. Macros", Order = 70)]
         public bool Macro7Enabled { get; set; }
-        [Display(Name = "Macro 7 Start", GroupName = "Macros", Order = 71)]
+        [Display(Name = "Macro 7 Start", GroupName = "3. Macros", Order = 71)]
         public string Macro7Start { get; set; }
-        [Display(Name = "Macro 7 End", GroupName = "Macros", Order = 72)]
+        [Display(Name = "Macro 7 End", GroupName = "3. Macros", Order = 72)]
         public string Macro7End { get; set; }
 
-        [Display(Name = "Macro 8", GroupName = "Macros", Order = 80)]
+        [Display(Name = "Macro 8", GroupName = "3. Macros", Order = 80)]
         public bool Macro8Enabled { get; set; }
-        [Display(Name = "Macro 8 Start", GroupName = "Macros", Order = 81)]
+        [Display(Name = "Macro 8 Start", GroupName = "3. Macros", Order = 81)]
         public string Macro8Start { get; set; }
-        [Display(Name = "Macro 8 End", GroupName = "Macros", Order = 82)]
+        [Display(Name = "Macro 8 End", GroupName = "3. Macros", Order = 82)]
         public string Macro8End { get; set; }
 
-        [Display(Name = "Macro 9", GroupName = "Macros", Order = 90)]
+        [Display(Name = "Macro 9", GroupName = "3. Macros", Order = 90)]
         public bool Macro9Enabled { get; set; }
-        [Display(Name = "Macro 9 Start", GroupName = "Macros", Order = 91)]
+        [Display(Name = "Macro 9 Start", GroupName = "3. Macros", Order = 91)]
         public string Macro9Start { get; set; }
-        [Display(Name = "Macro 9 End", GroupName = "Macros", Order = 92)]
+        [Display(Name = "Macro 9 End", GroupName = "3. Macros", Order = 92)]
         public string Macro9End { get; set; }
 
-        [Display(Name = "Macro 10", GroupName = "Macros", Order = 100)]
+        [Display(Name = "Macro 10", GroupName = "3. Macros", Order = 100)]
         public bool Macro10Enabled { get; set; }
-        [Display(Name = "Macro 10 Start", GroupName = "Macros", Order = 101)]
+        [Display(Name = "Macro 10 Start", GroupName = "3. Macros", Order = 101)]
         public string Macro10Start { get; set; }
-        [Display(Name = "Macro 10 End", GroupName = "Macros", Order = 102)]
+        [Display(Name = "Macro 10 End", GroupName = "3. Macros", Order = 102)]
         public string Macro10End { get; set; }
 
-        [Display(Name = "Macro 11", GroupName = "Macros", Order = 110)]
+        [Display(Name = "Macro 11", GroupName = "3. Macros", Order = 110)]
         public bool Macro11Enabled { get; set; }
-        [Display(Name = "Macro 11 Start", GroupName = "Macros", Order = 111)]
+        [Display(Name = "Macro 11 Start", GroupName = "3. Macros", Order = 111)]
         public string Macro11Start { get; set; }
-        [Display(Name = "Macro 11 End", GroupName = "Macros", Order = 112)]
+        [Display(Name = "Macro 11 End", GroupName = "3. Macros", Order = 112)]
         public string Macro11End { get; set; }
 
-        [Display(Name = "Macro 12", GroupName = "Macros", Order = 120)]
+        [Display(Name = "Macro 12", GroupName = "3. Macros", Order = 120)]
         public bool Macro12Enabled { get; set; }
-        [Display(Name = "Macro 12 Start", GroupName = "Macros", Order = 121)]
+        [Display(Name = "Macro 12 Start", GroupName = "3. Macros", Order = 121)]
         public string Macro12Start { get; set; }
-        [Display(Name = "Macro 12 End", GroupName = "Macros", Order = 122)]
+        [Display(Name = "Macro 12 End", GroupName = "3. Macros", Order = 122)]
         public string Macro12End { get; set; }
 
         #endregion

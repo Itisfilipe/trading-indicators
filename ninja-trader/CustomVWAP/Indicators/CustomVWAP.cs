@@ -56,42 +56,42 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Anchor", Order = 0, GroupName = "Calculation",
+        [Display(Name = "Anchor", Order = 0, GroupName = "1. Calculation",
                  Description = "Daily session resets the average every session; Weekly accumulates the whole trading week.")]
         public VwapAnchor Anchor { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Limit to RTH window", Order = 1, GroupName = "Calculation",
+        [Display(Name = "Limit to RTH window", Order = 1, GroupName = "1. Calculation",
                  Description = "Accumulate only trades inside the RTH window below. Off: the whole session, with the daily anchor resetting at the session roll.")]
         public bool UseRthWindow { get; set; }
 
         [Range(0, 2359), NinjaScriptProperty]
-        [Display(Name = "RTH start (HHMM)", Order = 2, GroupName = "Calculation",
+        [Display(Name = "RTH start (HHMM)", Order = 2, GroupName = "1. Calculation",
                  Description = "Regular session open in the trading-hours template's time zone. CME futures templates use Chicago time: US index RTH opens 830. Used only with the RTH window on.")]
         public int RthStartHHMM { get; set; }
 
         [Range(0, 2359), NinjaScriptProperty]
-        [Display(Name = "RTH end (HHMM)", Order = 3, GroupName = "Calculation",
+        [Display(Name = "RTH end (HHMM)", Order = 3, GroupName = "1. Calculation",
                  Description = "Regular session close in the trading-hours template's time zone. CME index RTH closes 1500 Chicago time. The end minute is excluded.")]
         public int RthEndHHMM { get; set; }
 
         [Range(1, 500), NinjaScriptProperty]
-        [Display(Name = "Trades per sample", Order = 4, GroupName = "Calculation",
+        [Display(Name = "Trades per sample", Order = 4, GroupName = "1. Calculation",
                  Description = "How many trades are bundled into one VWAP sample. 1 = every trade, exact and heaviest to load; 10 (default) is visually identical on liquid instruments at a tenth of the data.")]
         public int GranularityTicks { get; set; }
 
         [Range(0, 10), NinjaScriptProperty]
-        [Display(Name = "Band 1 deviations", Order = 5, GroupName = "Bands",
+        [Display(Name = "Band 1 deviations", Order = 5, GroupName = "2. Bands",
                  Description = "Standard-deviation multiplier for the first band pair. 0 hides it.")]
         public double Band1Deviations { get; set; }
 
         [Range(0, 10), NinjaScriptProperty]
-        [Display(Name = "Band 2 deviations", Order = 6, GroupName = "Bands",
+        [Display(Name = "Band 2 deviations", Order = 6, GroupName = "2. Bands",
                  Description = "Standard-deviation multiplier for the second band pair. 0 hides it.")]
         public double Band2Deviations { get; set; }
 
         [Range(0, 10), NinjaScriptProperty]
-        [Display(Name = "Band 3 deviations", Order = 7, GroupName = "Bands",
+        [Display(Name = "Band 3 deviations", Order = 7, GroupName = "2. Bands",
                  Description = "Standard-deviation multiplier for the third band pair. 0 hides it.")]
         public double Band3Deviations { get; set; }
 

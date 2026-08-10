@@ -32,19 +32,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double constant6;
         #region MACD Parameter Properties
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Fast", Order = 0, GroupName = "NinjaScriptParameters")]
+        [Display(Name = "Fast", Order = 0, GroupName = "1. Parameters")]
         public int Fast { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Slow", Order = 1, GroupName = "NinjaScriptParameters")]
+        [Display(Name = "Slow", Order = 1, GroupName = "1. Parameters")]
         public int Slow { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Smooth", Order = 2, GroupName = "NinjaScriptParameters")]
+        [Display(Name = "Smooth", Order = 2, GroupName = "1. Parameters")]
         public int Smooth { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Positive rising", Order = 3, GroupName = "Colors",
+        [Display(Name = "Positive rising", Order = 3, GroupName = "2. Colors",
                  Description = "Histogram above zero and growing.")]
         public Brush PositiveRisingColor { get; set; }
 
@@ -56,7 +56,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Positive falling", Order = 4, GroupName = "Colors",
+        [Display(Name = "Positive falling", Order = 4, GroupName = "2. Colors",
                  Description = "Histogram above zero and shrinking back toward it.")]
         public Brush PositiveFallingColor { get; set; }
 
@@ -68,7 +68,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Negative falling", Order = 5, GroupName = "Colors",
+        [Display(Name = "Negative falling", Order = 5, GroupName = "2. Colors",
                  Description = "Histogram below zero and growing more negative.")]
         public Brush NegativeFallingColor { get; set; }
 
@@ -80,7 +80,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Negative rising", Order = 6, GroupName = "Colors",
+        [Display(Name = "Negative rising", Order = 6, GroupName = "2. Colors",
                  Description = "Histogram below zero and shrinking back toward it.")]
         public Brush NegativeRisingColor { get; set; }
 
@@ -92,7 +92,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Neutral", Order = 7, GroupName = "Colors",
+        [Display(Name = "Neutral", Order = 7, GroupName = "2. Colors",
                  Description = "Histogram exactly at zero.")]
         public Brush NeutralColor { get; set; }
 

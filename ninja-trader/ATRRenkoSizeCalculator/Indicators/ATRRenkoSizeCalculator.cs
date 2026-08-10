@@ -285,23 +285,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR Length", GroupName = "Parameters", Order = 1)]
+        [Display(Name = "ATR Length", GroupName = "1. ATR", Order = 1)]
         public int Period { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Ignore Gaps", GroupName = "Parameters", Order = 2)]
+        [Display(Name = "Ignore Gaps", GroupName = "1. ATR", Order = 2)]
         public bool IgnoreGaps { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Show Half ATR", GroupName = "Parameters", Order = 3)]
+        [Display(Name = "Show Half ATR", GroupName = "2. Display", Order = 1)]
         public bool ShowHalfATR { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Show Values Table", GroupName = "Parameters", Order = 4)]
+        [Display(Name = "Show Values Table", GroupName = "2. Display", Order = 2)]
         public bool ShowTable { get; set; }
 
         [Range(0, 8), NinjaScriptProperty]
-        [Display(Name = "Decimal Places", GroupName = "Parameters", Order = 5)]
+        [Display(Name = "Decimal Places", GroupName = "2. Display", Order = 3)]
         public int DecimalPlaces { get; set; }
 
         [Browsable(false)]

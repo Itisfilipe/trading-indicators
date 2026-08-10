@@ -70,23 +70,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // lives in the parent Indicators namespace and cannot see this enum (CS0246).
         // ChartTrading's enums follow the same rule.
         [RefreshProperties(RefreshProperties.All)]
-        [Display(Name = "Source Type", Order = 0, GroupName = "Source Series", Description = "Bar type the EMA is computed on.")]
+        [Display(Name = "Source Type", Order = 0, GroupName = "1. Source Series", Description = "Bar type the EMA is computed on.")]
         public EmaSourceBarsType SourceType { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Period", Order = 1, GroupName = "Source Series", Description = "Bar interval for the selected source type (minutes, ticks, range ticks, or days).")]
+        [Display(Name = "Period", Order = 1, GroupName = "1. Source Series", Description = "Bar interval for the selected source type (minutes, ticks, range ticks, or days).")]
         public int PeriodValue { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Brick Size (Ticks)", Order = 2, GroupName = "Source Series")]
+        [Display(Name = "Brick Size (Ticks)", Order = 2, GroupName = "1. Source Series")]
         public int BrickSizeTicks { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "EMA Period", Order = 3, GroupName = "EMA")]
+        [Display(Name = "EMA Period", Order = 3, GroupName = "2. EMA")]
         public int EmaPeriod { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "EMA Color", Order = 4, GroupName = "EMA")]
+        [Display(Name = "EMA Color", Order = 4, GroupName = "2. EMA")]
         public Brush EMAColor { get; set; }
 
         [Browsable(false)]

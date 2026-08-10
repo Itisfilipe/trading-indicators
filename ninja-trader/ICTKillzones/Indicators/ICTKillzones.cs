@@ -66,30 +66,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Time Zone", GroupName = "General", Order = 1,
+        [Display(Name = "Time Zone", GroupName = "1. General", Order = 1,
                  Description = "Zone every window time below is read in. Exchange means the instrument's own trading-hours zone.")]
         public KillzoneTimeZone TimeZoneSelection { get; set; }
 
         [Range(0, 20)]
-        [Display(Name = "Days of History to Show", GroupName = "General", Order = 2,
+        [Display(Name = "Days of History to Show", GroupName = "1. General", Order = 2,
                  Description = "How many previous days keep their boxes. 0 = current day only.")]
         public int DaysToShow { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Fill Opacity (%)", GroupName = "General", Order = 3)]
+        [Display(Name = "Fill Opacity (%)", GroupName = "1. General", Order = 3)]
         public int FillOpacity { get; set; }
 
-        [Display(Name = "Zone 1", GroupName = "Zones", Order = 10)]
+        [Display(Name = "Zone 1", GroupName = "2. Zones", Order = 10)]
         public bool Zone1Enabled { get; set; }
-        [Display(Name = "Zone 1 Name", GroupName = "Zones", Order = 11,
+        [Display(Name = "Zone 1 Name", GroupName = "2. Zones", Order = 11,
                  Description = "Reminder of what this slot marks; not drawn on the chart.")]
         public string Zone1Name { get; set; }
-        [Display(Name = "Zone 1 Start", GroupName = "Zones", Order = 12)]
+        [Display(Name = "Zone 1 Start", GroupName = "2. Zones", Order = 12)]
         public string Zone1Start { get; set; }
-        [Display(Name = "Zone 1 End", GroupName = "Zones", Order = 13)]
+        [Display(Name = "Zone 1 End", GroupName = "2. Zones", Order = 13)]
         public string Zone1End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 1 Color", GroupName = "Zones", Order = 14)]
+        [Display(Name = "Zone 1 Color", GroupName = "2. Zones", Order = 14)]
         public Brush Zone1Color { get; set; }
         [Browsable(false)]
         public string Zone1ColorSerializable
@@ -98,16 +98,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone1Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 2", GroupName = "Zones", Order = 20)]
+        [Display(Name = "Zone 2", GroupName = "2. Zones", Order = 20)]
         public bool Zone2Enabled { get; set; }
-        [Display(Name = "Zone 2 Name", GroupName = "Zones", Order = 21)]
+        [Display(Name = "Zone 2 Name", GroupName = "2. Zones", Order = 21)]
         public string Zone2Name { get; set; }
-        [Display(Name = "Zone 2 Start", GroupName = "Zones", Order = 22)]
+        [Display(Name = "Zone 2 Start", GroupName = "2. Zones", Order = 22)]
         public string Zone2Start { get; set; }
-        [Display(Name = "Zone 2 End", GroupName = "Zones", Order = 23)]
+        [Display(Name = "Zone 2 End", GroupName = "2. Zones", Order = 23)]
         public string Zone2End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 2 Color", GroupName = "Zones", Order = 24)]
+        [Display(Name = "Zone 2 Color", GroupName = "2. Zones", Order = 24)]
         public Brush Zone2Color { get; set; }
         [Browsable(false)]
         public string Zone2ColorSerializable
@@ -116,16 +116,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone2Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 3", GroupName = "Zones", Order = 30)]
+        [Display(Name = "Zone 3", GroupName = "2. Zones", Order = 30)]
         public bool Zone3Enabled { get; set; }
-        [Display(Name = "Zone 3 Name", GroupName = "Zones", Order = 31)]
+        [Display(Name = "Zone 3 Name", GroupName = "2. Zones", Order = 31)]
         public string Zone3Name { get; set; }
-        [Display(Name = "Zone 3 Start", GroupName = "Zones", Order = 32)]
+        [Display(Name = "Zone 3 Start", GroupName = "2. Zones", Order = 32)]
         public string Zone3Start { get; set; }
-        [Display(Name = "Zone 3 End", GroupName = "Zones", Order = 33)]
+        [Display(Name = "Zone 3 End", GroupName = "2. Zones", Order = 33)]
         public string Zone3End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 3 Color", GroupName = "Zones", Order = 34)]
+        [Display(Name = "Zone 3 Color", GroupName = "2. Zones", Order = 34)]
         public Brush Zone3Color { get; set; }
         [Browsable(false)]
         public string Zone3ColorSerializable
@@ -134,16 +134,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone3Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 4", GroupName = "Zones", Order = 40)]
+        [Display(Name = "Zone 4", GroupName = "2. Zones", Order = 40)]
         public bool Zone4Enabled { get; set; }
-        [Display(Name = "Zone 4 Name", GroupName = "Zones", Order = 41)]
+        [Display(Name = "Zone 4 Name", GroupName = "2. Zones", Order = 41)]
         public string Zone4Name { get; set; }
-        [Display(Name = "Zone 4 Start", GroupName = "Zones", Order = 42)]
+        [Display(Name = "Zone 4 Start", GroupName = "2. Zones", Order = 42)]
         public string Zone4Start { get; set; }
-        [Display(Name = "Zone 4 End", GroupName = "Zones", Order = 43)]
+        [Display(Name = "Zone 4 End", GroupName = "2. Zones", Order = 43)]
         public string Zone4End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 4 Color", GroupName = "Zones", Order = 44)]
+        [Display(Name = "Zone 4 Color", GroupName = "2. Zones", Order = 44)]
         public Brush Zone4Color { get; set; }
         [Browsable(false)]
         public string Zone4ColorSerializable
@@ -152,16 +152,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone4Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 5", GroupName = "Zones", Order = 50)]
+        [Display(Name = "Zone 5", GroupName = "2. Zones", Order = 50)]
         public bool Zone5Enabled { get; set; }
-        [Display(Name = "Zone 5 Name", GroupName = "Zones", Order = 51)]
+        [Display(Name = "Zone 5 Name", GroupName = "2. Zones", Order = 51)]
         public string Zone5Name { get; set; }
-        [Display(Name = "Zone 5 Start", GroupName = "Zones", Order = 52)]
+        [Display(Name = "Zone 5 Start", GroupName = "2. Zones", Order = 52)]
         public string Zone5Start { get; set; }
-        [Display(Name = "Zone 5 End", GroupName = "Zones", Order = 53)]
+        [Display(Name = "Zone 5 End", GroupName = "2. Zones", Order = 53)]
         public string Zone5End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 5 Color", GroupName = "Zones", Order = 54)]
+        [Display(Name = "Zone 5 Color", GroupName = "2. Zones", Order = 54)]
         public Brush Zone5Color { get; set; }
         [Browsable(false)]
         public string Zone5ColorSerializable
@@ -170,16 +170,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone5Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 6", GroupName = "Zones", Order = 60)]
+        [Display(Name = "Zone 6", GroupName = "2. Zones", Order = 60)]
         public bool Zone6Enabled { get; set; }
-        [Display(Name = "Zone 6 Name", GroupName = "Zones", Order = 61)]
+        [Display(Name = "Zone 6 Name", GroupName = "2. Zones", Order = 61)]
         public string Zone6Name { get; set; }
-        [Display(Name = "Zone 6 Start", GroupName = "Zones", Order = 62)]
+        [Display(Name = "Zone 6 Start", GroupName = "2. Zones", Order = 62)]
         public string Zone6Start { get; set; }
-        [Display(Name = "Zone 6 End", GroupName = "Zones", Order = 63)]
+        [Display(Name = "Zone 6 End", GroupName = "2. Zones", Order = 63)]
         public string Zone6End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 6 Color", GroupName = "Zones", Order = 64)]
+        [Display(Name = "Zone 6 Color", GroupName = "2. Zones", Order = 64)]
         public Brush Zone6Color { get; set; }
         [Browsable(false)]
         public string Zone6ColorSerializable
@@ -188,16 +188,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone6Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 7", GroupName = "Zones", Order = 70)]
+        [Display(Name = "Zone 7", GroupName = "2. Zones", Order = 70)]
         public bool Zone7Enabled { get; set; }
-        [Display(Name = "Zone 7 Name", GroupName = "Zones", Order = 71)]
+        [Display(Name = "Zone 7 Name", GroupName = "2. Zones", Order = 71)]
         public string Zone7Name { get; set; }
-        [Display(Name = "Zone 7 Start", GroupName = "Zones", Order = 72)]
+        [Display(Name = "Zone 7 Start", GroupName = "2. Zones", Order = 72)]
         public string Zone7Start { get; set; }
-        [Display(Name = "Zone 7 End", GroupName = "Zones", Order = 73)]
+        [Display(Name = "Zone 7 End", GroupName = "2. Zones", Order = 73)]
         public string Zone7End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 7 Color", GroupName = "Zones", Order = 74)]
+        [Display(Name = "Zone 7 Color", GroupName = "2. Zones", Order = 74)]
         public Brush Zone7Color { get; set; }
         [Browsable(false)]
         public string Zone7ColorSerializable
@@ -206,16 +206,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { Zone7Color = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Zone 8", GroupName = "Zones", Order = 80)]
+        [Display(Name = "Zone 8", GroupName = "2. Zones", Order = 80)]
         public bool Zone8Enabled { get; set; }
-        [Display(Name = "Zone 8 Name", GroupName = "Zones", Order = 81)]
+        [Display(Name = "Zone 8 Name", GroupName = "2. Zones", Order = 81)]
         public string Zone8Name { get; set; }
-        [Display(Name = "Zone 8 Start", GroupName = "Zones", Order = 82)]
+        [Display(Name = "Zone 8 Start", GroupName = "2. Zones", Order = 82)]
         public string Zone8Start { get; set; }
-        [Display(Name = "Zone 8 End", GroupName = "Zones", Order = 83)]
+        [Display(Name = "Zone 8 End", GroupName = "2. Zones", Order = 83)]
         public string Zone8End { get; set; }
         [XmlIgnore]
-        [Display(Name = "Zone 8 Color", GroupName = "Zones", Order = 84)]
+        [Display(Name = "Zone 8 Color", GroupName = "2. Zones", Order = 84)]
         public Brush Zone8Color { get; set; }
         [Browsable(false)]
         public string Zone8ColorSerializable

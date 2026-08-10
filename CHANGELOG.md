@@ -5,6 +5,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-08-10
 
+### NinjaTrader settings panels (all indicators)
+- Every indicator's settings groups are numbered so the panel lists them
+  in working order — main controls first, colors and cosmetics last —
+  instead of alphabetically. ATR Renko Size Calculator's flat parameter
+  list splits into ATR and Display groups.
+
 ### Candle Countdown & Position Sizer (NinjaTrader, new)
 - Port of the TradingView tool: an on-chart table with the current time in
   a chosen timezone, live countdowns to the next candle on up to three

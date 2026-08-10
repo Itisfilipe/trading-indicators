@@ -68,47 +68,47 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // days; the day count converts to bars from how many bars that timeframe's
         // sessions actually hold.
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 1 (minutes)", Order = 0, GroupName = "Timeframes")]
+        [Display(Name = "Timeframe 1 (minutes)", Order = 0, GroupName = "1. Timeframes")]
         public int Timeframe1Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR 1 (days)", Order = 1, GroupName = "Timeframes")]
+        [Display(Name = "ATR 1 (days)", Order = 1, GroupName = "1. Timeframes")]
         public int Atr1Days { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 2 (minutes)", Order = 2, GroupName = "Timeframes")]
+        [Display(Name = "Timeframe 2 (minutes)", Order = 2, GroupName = "1. Timeframes")]
         public int Timeframe2Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR 2 (days)", Order = 3, GroupName = "Timeframes")]
+        [Display(Name = "ATR 2 (days)", Order = 3, GroupName = "1. Timeframes")]
         public int Atr2Days { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 3 (minutes)", Order = 4, GroupName = "Timeframes")]
+        [Display(Name = "Timeframe 3 (minutes)", Order = 4, GroupName = "1. Timeframes")]
         public int Timeframe3Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR 3 (days)", Order = 5, GroupName = "Timeframes")]
+        [Display(Name = "ATR 3 (days)", Order = 5, GroupName = "1. Timeframes")]
         public int Atr3Days { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Timeframe 4 (minutes)", Order = 6, GroupName = "Timeframes")]
+        [Display(Name = "Timeframe 4 (minutes)", Order = 6, GroupName = "1. Timeframes")]
         public int Timeframe4Minutes { get; set; }
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "ATR 4 (days)", Order = 7, GroupName = "Timeframes")]
+        [Display(Name = "ATR 4 (days)", Order = 7, GroupName = "1. Timeframes")]
         public int Atr4Days { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Ignore Gaps", Order = 5, GroupName = "Parameters")]
+        [Display(Name = "Ignore Gaps", Order = 5, GroupName = "2. Parameters")]
         public bool IgnoreGaps { get; set; }
 
         [Range(0, 8), NinjaScriptProperty]
-        [Display(Name = "Decimal Places", Order = 6, GroupName = "Parameters")]
+        [Display(Name = "Decimal Places", Order = 6, GroupName = "2. Parameters")]
         public int DecimalPlaces { get; set; }
 
         [Range(0, 2000), NinjaScriptProperty]
-        [Display(Name = "Top Margin (pixels)", Order = 7, GroupName = "Parameters",
+        [Display(Name = "Top Margin (pixels)", Order = 7, GroupName = "2. Parameters",
                  Description = "Distance between the panel's top edge and the table, so the table " +
                                "clears the chart toolbar icons in the top-right corner.")]
         public int TopMarginPixels { get; set; }

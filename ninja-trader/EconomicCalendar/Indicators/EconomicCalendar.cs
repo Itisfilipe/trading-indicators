@@ -101,82 +101,82 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Show Lines", GroupName = "On Chart", Order = 1)]
+        [Display(Name = "Show Lines", GroupName = "1. On Chart", Order = 1)]
         public bool ShowLines { get; set; }
 
-        [Display(Name = "Lines For", GroupName = "On Chart", Order = 2,
+        [Display(Name = "Lines For", GroupName = "1. On Chart", Order = 2,
                  Description = "Future draws only the releases still ahead; Past+Future also keeps the ones already out.")]
         public NewsLineTime LineTime { get; set; }
 
-        [Display(Name = "Line Style", GroupName = "On Chart", Order = 3)]
+        [Display(Name = "Line Style", GroupName = "1. On Chart", Order = 3)]
         public DashStyleHelper LineDashStyle { get; set; }
 
         [Range(1, 5)]
-        [Display(Name = "Line Width", GroupName = "On Chart", Order = 4)]
+        [Display(Name = "Line Width", GroupName = "1. On Chart", Order = 4)]
         public int LineWidth { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Line Opacity (%)", GroupName = "On Chart", Order = 5)]
+        [Display(Name = "Line Opacity (%)", GroupName = "1. On Chart", Order = 5)]
         public int LineOpacity { get; set; }
 
-        [Display(Name = "Show Labels", GroupName = "On Chart", Order = 6,
+        [Display(Name = "Show Labels", GroupName = "1. On Chart", Order = 6,
                  Description = "Name each release at the top of its line: impact letter, currency, title.")]
         public bool ShowLabels { get; set; }
 
-        [Display(Name = "Chart History", GroupName = "On Chart", Order = 7,
+        [Display(Name = "Chart History", GroupName = "1. On Chart", Order = 7,
                  Description = "How far back past releases stay on the chart. Today, this week, or a manual number of days.")]
         public NewsHistory ChartHistory { get; set; }
 
         [Range(1, 30)]
-        [Display(Name = "Manual Days", GroupName = "On Chart", Order = 8)]
+        [Display(Name = "Manual Days", GroupName = "1. On Chart", Order = 8)]
         public int ManualDays { get; set; }
 
-        [Display(Name = "High", GroupName = "Expected Impact", Order = 1)]
+        [Display(Name = "High", GroupName = "2. Expected Impact", Order = 1)]
         public bool ShowHighImpact { get; set; }
 
-        [Display(Name = "Medium", GroupName = "Expected Impact", Order = 2)]
+        [Display(Name = "Medium", GroupName = "2. Expected Impact", Order = 2)]
         public bool ShowMediumImpact { get; set; }
 
-        [Display(Name = "Low", GroupName = "Expected Impact", Order = 3)]
+        [Display(Name = "Low", GroupName = "2. Expected Impact", Order = 3)]
         public bool ShowLowImpact { get; set; }
 
-        [Display(Name = "Holidays", GroupName = "Expected Impact", Order = 4)]
+        [Display(Name = "Holidays", GroupName = "2. Expected Impact", Order = 4)]
         public bool ShowHolidays { get; set; }
 
-        [Display(Name = "Automatic", GroupName = "Currencies", Order = 1,
+        [Display(Name = "Automatic", GroupName = "3. Currencies", Order = 1,
                  Description = "Follow the chart's instrument: its denomination currency, or both sides of a forex pair. The manual toggles below are ignored while this is on.")]
         public bool AutoCurrency { get; set; }
 
-        [Display(Name = "AUD", GroupName = "Currencies", Order = 2)]
+        [Display(Name = "AUD", GroupName = "3. Currencies", Order = 2)]
         public bool ShowAud { get; set; }
-        [Display(Name = "CAD", GroupName = "Currencies", Order = 3)]
+        [Display(Name = "CAD", GroupName = "3. Currencies", Order = 3)]
         public bool ShowCad { get; set; }
-        [Display(Name = "CHF", GroupName = "Currencies", Order = 4)]
+        [Display(Name = "CHF", GroupName = "3. Currencies", Order = 4)]
         public bool ShowChf { get; set; }
-        [Display(Name = "CNY", GroupName = "Currencies", Order = 5)]
+        [Display(Name = "CNY", GroupName = "3. Currencies", Order = 5)]
         public bool ShowCny { get; set; }
-        [Display(Name = "EUR", GroupName = "Currencies", Order = 6)]
+        [Display(Name = "EUR", GroupName = "3. Currencies", Order = 6)]
         public bool ShowEur { get; set; }
-        [Display(Name = "GBP", GroupName = "Currencies", Order = 7)]
+        [Display(Name = "GBP", GroupName = "3. Currencies", Order = 7)]
         public bool ShowGbp { get; set; }
-        [Display(Name = "JPY", GroupName = "Currencies", Order = 8)]
+        [Display(Name = "JPY", GroupName = "3. Currencies", Order = 8)]
         public bool ShowJpy { get; set; }
-        [Display(Name = "NZD", GroupName = "Currencies", Order = 9)]
+        [Display(Name = "NZD", GroupName = "3. Currencies", Order = 9)]
         public bool ShowNzd { get; set; }
-        [Display(Name = "USD", GroupName = "Currencies", Order = 10)]
+        [Display(Name = "USD", GroupName = "3. Currencies", Order = 10)]
         public bool ShowUsd { get; set; }
 
-        [Display(Name = "Show Table", GroupName = "Table", Order = 1)]
+        [Display(Name = "Show Table", GroupName = "4. Table", Order = 1)]
         public bool ShowTable { get; set; }
 
-        [Display(Name = "Table Scope", GroupName = "Table", Order = 2)]
+        [Display(Name = "Table Scope", GroupName = "4. Table", Order = 2)]
         public NewsTableMode TableMode { get; set; }
 
-        [Display(Name = "Position", GroupName = "Table", Order = 3)]
+        [Display(Name = "Position", GroupName = "4. Table", Order = 3)]
         public NewsTableCorner TablePosition { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Header Text Color", GroupName = "Table", Order = 4)]
+        [Display(Name = "Header Text Color", GroupName = "4. Table", Order = 4)]
         public Brush HeaderTextColor { get; set; }
         [Browsable(false)]
         public string HeaderTextColorSerializable
@@ -186,7 +186,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Header Background Color", GroupName = "Table", Order = 5)]
+        [Display(Name = "Header Background Color", GroupName = "4. Table", Order = 5)]
         public Brush HeaderBackColor { get; set; }
         [Browsable(false)]
         public string HeaderBackColorSerializable
@@ -196,7 +196,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Row Text Color", GroupName = "Table", Order = 6)]
+        [Display(Name = "Row Text Color", GroupName = "4. Table", Order = 6)]
         public Brush RowTextColor { get; set; }
         [Browsable(false)]
         public string RowTextColorSerializable
@@ -206,7 +206,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Past Row Text Color", GroupName = "Table", Order = 7)]
+        [Display(Name = "Past Row Text Color", GroupName = "4. Table", Order = 7)]
         public Brush RowPastTextColor { get; set; }
         [Browsable(false)]
         public string RowPastTextColorSerializable
@@ -216,7 +216,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Row Background Color", GroupName = "Table", Order = 8)]
+        [Display(Name = "Row Background Color", GroupName = "4. Table", Order = 8)]
         public Brush RowBackColor { get; set; }
         [Browsable(false)]
         public string RowBackColorSerializable
@@ -225,7 +225,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { RowBackColor = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Border", GroupName = "Table", Order = 9)]
+        [Display(Name = "Border", GroupName = "4. Table", Order = 9)]
         public bool ShowTableBorder { get; set; }
 
         #endregion

@@ -23,11 +23,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Properties
 
         [Range(1, int.MaxValue), NinjaScriptProperty]
-        [Display(Name = "Period", Order = 0, GroupName = "Parameters")]
+        [Display(Name = "Period", Order = 0, GroupName = "1. Parameters")]
         public int Period { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Volume Above Color", Order = 1, GroupName = "Colors")]
+        [Display(Name = "Volume Above Color", Order = 1, GroupName = "2. Colors")]
         public Brush VolumeAboveColor { get; set; }
 
         [Browsable(false)]
@@ -38,7 +38,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Volume Below Color", Order = 2, GroupName = "Colors")]
+        [Display(Name = "Volume Below Color", Order = 2, GroupName = "2. Colors")]
         public Brush VolumeBelowColor { get; set; }
 
         [Browsable(false)]
@@ -49,7 +49,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "EMA Color", Order = 3, GroupName = "Colors")]
+        [Display(Name = "EMA Color", Order = 3, GroupName = "2. Colors")]
         public Brush EMAColor { get; set; }
 
         [Browsable(false)]

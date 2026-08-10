@@ -95,106 +95,106 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Time Zone", GroupName = "General", Order = 1,
+        [Display(Name = "Time Zone", GroupName = "1. General", Order = 1,
                  Description = "Zone every slot time below is read in. Exchange means the instrument's own trading-hours zone.")]
         public PriceLevelTimeZone TimeZoneSelection { get; set; }
 
         [Range(0, 30)]
-        [Display(Name = "Days of History to Show", GroupName = "General", Order = 2,
+        [Display(Name = "Days of History to Show", GroupName = "1. General", Order = 2,
                  Description = "How many previous days keep their intraday lines. 0 = current day only.")]
         public int DaysToShow { get; set; }
 
-        [Display(Name = "Show Labels", GroupName = "General", Order = 3)]
+        [Display(Name = "Show Labels", GroupName = "1. General", Order = 3)]
         public bool ShowLabels { get; set; }
 
-        [Display(Name = "Level 1", GroupName = "Levels", Order = 10)]
+        [Display(Name = "Level 1", GroupName = "2. Levels", Order = 10)]
         public bool Level1Enabled { get; set; }
-        [Display(Name = "Time/Period 1", GroupName = "Levels", Order = 11, Description = "HH:MM, or D, W, M, 3M, 6M, 12M.")]
+        [Display(Name = "Time/Period 1", GroupName = "2. Levels", Order = 11, Description = "HH:MM, or D, W, M, 3M, 6M, 12M.")]
         public string Level1Time { get; set; }
-        [Display(Name = "Price 1", GroupName = "Levels", Order = 12)]
+        [Display(Name = "Price 1", GroupName = "2. Levels", Order = 12)]
         public PriceLevelPriceType Level1Price { get; set; }
-        [Display(Name = "Style 1", GroupName = "Levels", Order = 13)]
+        [Display(Name = "Style 1", GroupName = "2. Levels", Order = 13)]
         public Stroke Level1Stroke { get; set; }
 
-        [Display(Name = "Level 2", GroupName = "Levels", Order = 20)]
+        [Display(Name = "Level 2", GroupName = "2. Levels", Order = 20)]
         public bool Level2Enabled { get; set; }
-        [Display(Name = "Time/Period 2", GroupName = "Levels", Order = 21)]
+        [Display(Name = "Time/Period 2", GroupName = "2. Levels", Order = 21)]
         public string Level2Time { get; set; }
-        [Display(Name = "Price 2", GroupName = "Levels", Order = 22)]
+        [Display(Name = "Price 2", GroupName = "2. Levels", Order = 22)]
         public PriceLevelPriceType Level2Price { get; set; }
-        [Display(Name = "Style 2", GroupName = "Levels", Order = 23)]
+        [Display(Name = "Style 2", GroupName = "2. Levels", Order = 23)]
         public Stroke Level2Stroke { get; set; }
 
-        [Display(Name = "Level 3", GroupName = "Levels", Order = 30)]
+        [Display(Name = "Level 3", GroupName = "2. Levels", Order = 30)]
         public bool Level3Enabled { get; set; }
-        [Display(Name = "Time/Period 3", GroupName = "Levels", Order = 31)]
+        [Display(Name = "Time/Period 3", GroupName = "2. Levels", Order = 31)]
         public string Level3Time { get; set; }
-        [Display(Name = "Price 3", GroupName = "Levels", Order = 32)]
+        [Display(Name = "Price 3", GroupName = "2. Levels", Order = 32)]
         public PriceLevelPriceType Level3Price { get; set; }
-        [Display(Name = "Style 3", GroupName = "Levels", Order = 33)]
+        [Display(Name = "Style 3", GroupName = "2. Levels", Order = 33)]
         public Stroke Level3Stroke { get; set; }
 
-        [Display(Name = "Level 4", GroupName = "Levels", Order = 40)]
+        [Display(Name = "Level 4", GroupName = "2. Levels", Order = 40)]
         public bool Level4Enabled { get; set; }
-        [Display(Name = "Time/Period 4", GroupName = "Levels", Order = 41)]
+        [Display(Name = "Time/Period 4", GroupName = "2. Levels", Order = 41)]
         public string Level4Time { get; set; }
-        [Display(Name = "Price 4", GroupName = "Levels", Order = 42)]
+        [Display(Name = "Price 4", GroupName = "2. Levels", Order = 42)]
         public PriceLevelPriceType Level4Price { get; set; }
-        [Display(Name = "Style 4", GroupName = "Levels", Order = 43)]
+        [Display(Name = "Style 4", GroupName = "2. Levels", Order = 43)]
         public Stroke Level4Stroke { get; set; }
 
-        [Display(Name = "Level 5", GroupName = "Levels", Order = 50)]
+        [Display(Name = "Level 5", GroupName = "2. Levels", Order = 50)]
         public bool Level5Enabled { get; set; }
-        [Display(Name = "Time/Period 5", GroupName = "Levels", Order = 51)]
+        [Display(Name = "Time/Period 5", GroupName = "2. Levels", Order = 51)]
         public string Level5Time { get; set; }
-        [Display(Name = "Price 5", GroupName = "Levels", Order = 52)]
+        [Display(Name = "Price 5", GroupName = "2. Levels", Order = 52)]
         public PriceLevelPriceType Level5Price { get; set; }
-        [Display(Name = "Style 5", GroupName = "Levels", Order = 53)]
+        [Display(Name = "Style 5", GroupName = "2. Levels", Order = 53)]
         public Stroke Level5Stroke { get; set; }
 
-        [Display(Name = "Level 6", GroupName = "Levels", Order = 60)]
+        [Display(Name = "Level 6", GroupName = "2. Levels", Order = 60)]
         public bool Level6Enabled { get; set; }
-        [Display(Name = "Time/Period 6", GroupName = "Levels", Order = 61)]
+        [Display(Name = "Time/Period 6", GroupName = "2. Levels", Order = 61)]
         public string Level6Time { get; set; }
-        [Display(Name = "Price 6", GroupName = "Levels", Order = 62)]
+        [Display(Name = "Price 6", GroupName = "2. Levels", Order = 62)]
         public PriceLevelPriceType Level6Price { get; set; }
-        [Display(Name = "Style 6", GroupName = "Levels", Order = 63)]
+        [Display(Name = "Style 6", GroupName = "2. Levels", Order = 63)]
         public Stroke Level6Stroke { get; set; }
 
-        [Display(Name = "Level 7", GroupName = "Levels", Order = 70)]
+        [Display(Name = "Level 7", GroupName = "2. Levels", Order = 70)]
         public bool Level7Enabled { get; set; }
-        [Display(Name = "Time/Period 7", GroupName = "Levels", Order = 71)]
+        [Display(Name = "Time/Period 7", GroupName = "2. Levels", Order = 71)]
         public string Level7Time { get; set; }
-        [Display(Name = "Price 7", GroupName = "Levels", Order = 72)]
+        [Display(Name = "Price 7", GroupName = "2. Levels", Order = 72)]
         public PriceLevelPriceType Level7Price { get; set; }
-        [Display(Name = "Style 7", GroupName = "Levels", Order = 73)]
+        [Display(Name = "Style 7", GroupName = "2. Levels", Order = 73)]
         public Stroke Level7Stroke { get; set; }
 
-        [Display(Name = "Level 8", GroupName = "Levels", Order = 80)]
+        [Display(Name = "Level 8", GroupName = "2. Levels", Order = 80)]
         public bool Level8Enabled { get; set; }
-        [Display(Name = "Time/Period 8", GroupName = "Levels", Order = 81)]
+        [Display(Name = "Time/Period 8", GroupName = "2. Levels", Order = 81)]
         public string Level8Time { get; set; }
-        [Display(Name = "Price 8", GroupName = "Levels", Order = 82)]
+        [Display(Name = "Price 8", GroupName = "2. Levels", Order = 82)]
         public PriceLevelPriceType Level8Price { get; set; }
-        [Display(Name = "Style 8", GroupName = "Levels", Order = 83)]
+        [Display(Name = "Style 8", GroupName = "2. Levels", Order = 83)]
         public Stroke Level8Stroke { get; set; }
 
-        [Display(Name = "Level 9", GroupName = "Levels", Order = 90)]
+        [Display(Name = "Level 9", GroupName = "2. Levels", Order = 90)]
         public bool Level9Enabled { get; set; }
-        [Display(Name = "Time/Period 9", GroupName = "Levels", Order = 91)]
+        [Display(Name = "Time/Period 9", GroupName = "2. Levels", Order = 91)]
         public string Level9Time { get; set; }
-        [Display(Name = "Price 9", GroupName = "Levels", Order = 92)]
+        [Display(Name = "Price 9", GroupName = "2. Levels", Order = 92)]
         public PriceLevelPriceType Level9Price { get; set; }
-        [Display(Name = "Style 9", GroupName = "Levels", Order = 93)]
+        [Display(Name = "Style 9", GroupName = "2. Levels", Order = 93)]
         public Stroke Level9Stroke { get; set; }
 
-        [Display(Name = "Level 10", GroupName = "Levels", Order = 100)]
+        [Display(Name = "Level 10", GroupName = "2. Levels", Order = 100)]
         public bool Level10Enabled { get; set; }
-        [Display(Name = "Time/Period 10", GroupName = "Levels", Order = 101)]
+        [Display(Name = "Time/Period 10", GroupName = "2. Levels", Order = 101)]
         public string Level10Time { get; set; }
-        [Display(Name = "Price 10", GroupName = "Levels", Order = 102)]
+        [Display(Name = "Price 10", GroupName = "2. Levels", Order = 102)]
         public PriceLevelPriceType Level10Price { get; set; }
-        [Display(Name = "Style 10", GroupName = "Levels", Order = 103)]
+        [Display(Name = "Style 10", GroupName = "2. Levels", Order = 103)]
         public Stroke Level10Stroke { get; set; }
 
         #endregion

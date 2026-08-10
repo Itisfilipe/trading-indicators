@@ -67,123 +67,123 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Time Zone", GroupName = "General", Order = 1,
+        [Display(Name = "Time Zone", GroupName = "1. General", Order = 1,
                  Description = "Zone every time below is read in. Exchange means the instrument's own trading-hours zone.")]
         public TimeMarkTimeZone TimeZoneSelection { get; set; }
 
         [Range(0, 5)]
-        [Display(Name = "Days of History to Show", GroupName = "General", Order = 2,
+        [Display(Name = "Days of History to Show", GroupName = "1. General", Order = 2,
                  Description = "How far back to keep drawing lines, counted from the last day the chart has bars for. 0 = that day and today.")]
         public int HistoryDays { get; set; }
 
-        [Display(Name = "Include Tomorrow", GroupName = "General", Order = 3,
+        [Display(Name = "Include Tomorrow", GroupName = "1. General", Order = 3,
                  Description = "Also draw tomorrow's lines. Useful late in the session, when everything for today has already happened.")]
         public bool IncludeTomorrow { get; set; }
 
-        [Display(Name = "Show Labels", GroupName = "Labels", Order = 1)]
+        [Display(Name = "Show Labels", GroupName = "2. Labels", Order = 1)]
         public bool ShowLabels { get; set; }
 
-        [Display(Name = "Label Position", GroupName = "Labels", Order = 2,
+        [Display(Name = "Label Position", GroupName = "2. Labels", Order = 2,
                  Description = "Where on the line the label sits: near the top or bottom edge of the viewport, or the middle of it.")]
         public TimeMarkLabelPosition LabelPosition { get; set; }
 
         [Range(0.0, 40.0)]
-        [Display(Name = "Edge Gap (%)", GroupName = "Labels", Order = 3,
+        [Display(Name = "Edge Gap (%)", GroupName = "2. Labels", Order = 3,
                  Description = "Clear space between the panel edge and the captions, as a share of the panel height.")]
         public double EdgeGapPercent { get; set; }
 
-        [Display(Name = "Countdown On Future Lines", GroupName = "Labels", Order = 4,
+        [Display(Name = "Countdown On Future Lines", GroupName = "2. Labels", Order = 4,
                  Description = "Add the time left to the label of a line whose time has not come yet.")]
         public bool ShowCountdown { get; set; }
 
-        [Display(Name = "Line 1", GroupName = "Lines", Order = 10)]
+        [Display(Name = "Line 1", GroupName = "3. Lines", Order = 10)]
         public bool Line1Enabled { get; set; }
-        [Display(Name = "Line 1 Time", GroupName = "Lines", Order = 11)]
+        [Display(Name = "Line 1 Time", GroupName = "3. Lines", Order = 11)]
         public string Line1Time { get; set; }
-        [Display(Name = "Line 1 Label", GroupName = "Lines", Order = 12)]
+        [Display(Name = "Line 1 Label", GroupName = "3. Lines", Order = 12)]
         public string Line1Text { get; set; }
-        [Display(Name = "Line 1 Style", GroupName = "Lines", Order = 13)]
+        [Display(Name = "Line 1 Style", GroupName = "3. Lines", Order = 13)]
         public Stroke Line1Stroke { get; set; }
 
-        [Display(Name = "Line 2", GroupName = "Lines", Order = 20)]
+        [Display(Name = "Line 2", GroupName = "3. Lines", Order = 20)]
         public bool Line2Enabled { get; set; }
-        [Display(Name = "Line 2 Time", GroupName = "Lines", Order = 21)]
+        [Display(Name = "Line 2 Time", GroupName = "3. Lines", Order = 21)]
         public string Line2Time { get; set; }
-        [Display(Name = "Line 2 Label", GroupName = "Lines", Order = 22)]
+        [Display(Name = "Line 2 Label", GroupName = "3. Lines", Order = 22)]
         public string Line2Text { get; set; }
-        [Display(Name = "Line 2 Style", GroupName = "Lines", Order = 23)]
+        [Display(Name = "Line 2 Style", GroupName = "3. Lines", Order = 23)]
         public Stroke Line2Stroke { get; set; }
 
-        [Display(Name = "Line 3", GroupName = "Lines", Order = 30)]
+        [Display(Name = "Line 3", GroupName = "3. Lines", Order = 30)]
         public bool Line3Enabled { get; set; }
-        [Display(Name = "Line 3 Time", GroupName = "Lines", Order = 31)]
+        [Display(Name = "Line 3 Time", GroupName = "3. Lines", Order = 31)]
         public string Line3Time { get; set; }
-        [Display(Name = "Line 3 Label", GroupName = "Lines", Order = 32)]
+        [Display(Name = "Line 3 Label", GroupName = "3. Lines", Order = 32)]
         public string Line3Text { get; set; }
-        [Display(Name = "Line 3 Style", GroupName = "Lines", Order = 33)]
+        [Display(Name = "Line 3 Style", GroupName = "3. Lines", Order = 33)]
         public Stroke Line3Stroke { get; set; }
 
-        [Display(Name = "Line 4", GroupName = "Lines", Order = 40)]
+        [Display(Name = "Line 4", GroupName = "3. Lines", Order = 40)]
         public bool Line4Enabled { get; set; }
-        [Display(Name = "Line 4 Time", GroupName = "Lines", Order = 41)]
+        [Display(Name = "Line 4 Time", GroupName = "3. Lines", Order = 41)]
         public string Line4Time { get; set; }
-        [Display(Name = "Line 4 Label", GroupName = "Lines", Order = 42)]
+        [Display(Name = "Line 4 Label", GroupName = "3. Lines", Order = 42)]
         public string Line4Text { get; set; }
-        [Display(Name = "Line 4 Style", GroupName = "Lines", Order = 43)]
+        [Display(Name = "Line 4 Style", GroupName = "3. Lines", Order = 43)]
         public Stroke Line4Stroke { get; set; }
 
-        [Display(Name = "Line 5", GroupName = "Lines", Order = 50)]
+        [Display(Name = "Line 5", GroupName = "3. Lines", Order = 50)]
         public bool Line5Enabled { get; set; }
-        [Display(Name = "Line 5 Time", GroupName = "Lines", Order = 51)]
+        [Display(Name = "Line 5 Time", GroupName = "3. Lines", Order = 51)]
         public string Line5Time { get; set; }
-        [Display(Name = "Line 5 Label", GroupName = "Lines", Order = 52)]
+        [Display(Name = "Line 5 Label", GroupName = "3. Lines", Order = 52)]
         public string Line5Text { get; set; }
-        [Display(Name = "Line 5 Style", GroupName = "Lines", Order = 53)]
+        [Display(Name = "Line 5 Style", GroupName = "3. Lines", Order = 53)]
         public Stroke Line5Stroke { get; set; }
 
-        [Display(Name = "Line 6", GroupName = "Lines", Order = 60)]
+        [Display(Name = "Line 6", GroupName = "3. Lines", Order = 60)]
         public bool Line6Enabled { get; set; }
-        [Display(Name = "Line 6 Time", GroupName = "Lines", Order = 61)]
+        [Display(Name = "Line 6 Time", GroupName = "3. Lines", Order = 61)]
         public string Line6Time { get; set; }
-        [Display(Name = "Line 6 Label", GroupName = "Lines", Order = 62)]
+        [Display(Name = "Line 6 Label", GroupName = "3. Lines", Order = 62)]
         public string Line6Text { get; set; }
-        [Display(Name = "Line 6 Style", GroupName = "Lines", Order = 63)]
+        [Display(Name = "Line 6 Style", GroupName = "3. Lines", Order = 63)]
         public Stroke Line6Stroke { get; set; }
 
-        [Display(Name = "Line 7", GroupName = "Lines", Order = 70)]
+        [Display(Name = "Line 7", GroupName = "3. Lines", Order = 70)]
         public bool Line7Enabled { get; set; }
-        [Display(Name = "Line 7 Time", GroupName = "Lines", Order = 71)]
+        [Display(Name = "Line 7 Time", GroupName = "3. Lines", Order = 71)]
         public string Line7Time { get; set; }
-        [Display(Name = "Line 7 Label", GroupName = "Lines", Order = 72)]
+        [Display(Name = "Line 7 Label", GroupName = "3. Lines", Order = 72)]
         public string Line7Text { get; set; }
-        [Display(Name = "Line 7 Style", GroupName = "Lines", Order = 73)]
+        [Display(Name = "Line 7 Style", GroupName = "3. Lines", Order = 73)]
         public Stroke Line7Stroke { get; set; }
 
-        [Display(Name = "Line 8", GroupName = "Lines", Order = 80)]
+        [Display(Name = "Line 8", GroupName = "3. Lines", Order = 80)]
         public bool Line8Enabled { get; set; }
-        [Display(Name = "Line 8 Time", GroupName = "Lines", Order = 81)]
+        [Display(Name = "Line 8 Time", GroupName = "3. Lines", Order = 81)]
         public string Line8Time { get; set; }
-        [Display(Name = "Line 8 Label", GroupName = "Lines", Order = 82)]
+        [Display(Name = "Line 8 Label", GroupName = "3. Lines", Order = 82)]
         public string Line8Text { get; set; }
-        [Display(Name = "Line 8 Style", GroupName = "Lines", Order = 83)]
+        [Display(Name = "Line 8 Style", GroupName = "3. Lines", Order = 83)]
         public Stroke Line8Stroke { get; set; }
 
-        [Display(Name = "Line 9", GroupName = "Lines", Order = 90)]
+        [Display(Name = "Line 9", GroupName = "3. Lines", Order = 90)]
         public bool Line9Enabled { get; set; }
-        [Display(Name = "Line 9 Time", GroupName = "Lines", Order = 91)]
+        [Display(Name = "Line 9 Time", GroupName = "3. Lines", Order = 91)]
         public string Line9Time { get; set; }
-        [Display(Name = "Line 9 Label", GroupName = "Lines", Order = 92)]
+        [Display(Name = "Line 9 Label", GroupName = "3. Lines", Order = 92)]
         public string Line9Text { get; set; }
-        [Display(Name = "Line 9 Style", GroupName = "Lines", Order = 93)]
+        [Display(Name = "Line 9 Style", GroupName = "3. Lines", Order = 93)]
         public Stroke Line9Stroke { get; set; }
 
-        [Display(Name = "Line 10", GroupName = "Lines", Order = 100)]
+        [Display(Name = "Line 10", GroupName = "3. Lines", Order = 100)]
         public bool Line10Enabled { get; set; }
-        [Display(Name = "Line 10 Time", GroupName = "Lines", Order = 101)]
+        [Display(Name = "Line 10 Time", GroupName = "3. Lines", Order = 101)]
         public string Line10Time { get; set; }
-        [Display(Name = "Line 10 Label", GroupName = "Lines", Order = 102)]
+        [Display(Name = "Line 10 Label", GroupName = "3. Lines", Order = 102)]
         public string Line10Text { get; set; }
-        [Display(Name = "Line 10 Style", GroupName = "Lines", Order = 103)]
+        [Display(Name = "Line 10 Style", GroupName = "3. Lines", Order = 103)]
         public Stroke Line10Stroke { get; set; }
 
         #endregion
