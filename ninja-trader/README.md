@@ -7,8 +7,8 @@ project; what every indicator does and how to use it is documented in the
 ## Installing
 
 Copy a project's `.cs` files into the matching folders under
-`Documents/NinjaTrader 8/bin/Custom/` (`Indicators/`, `BarsTypes/`, `ChartStyles/`)
-and compile in the NinjaScript Editor (F5). Alternatively, export from a machine
+`Documents/NinjaTrader 8/bin/Custom/` (`Indicators/`, `BarsTypes/`,
+`ChartStyles/`, `DrawingTools/`) and compile in the NinjaScript Editor (F5). Alternatively, export from a machine
 that has them installed and import the zip via Control Center > Tools > Import >
 NinjaScript Add-On.
 

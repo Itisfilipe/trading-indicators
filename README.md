@@ -252,7 +252,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   only ever writes a size of 1 or more, only while live, and a size you
   type by hand survives until the ATR actually moves the suggestion. It
   reaches an unofficial corner of the platform; if an update moves it,
-  the indicator logs one line and leaves the field alone.
+  the indicator logs once and keeps retrying quietly.
 - Use: add to the chart you trade; confirm the point value against your
   broker's contract specs before trusting the lot size.
 
@@ -284,7 +284,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   Macros indicator instead.
 - Ten line slots (on/off, HH:MM, label, stroke). NY midnight, the 08:30
   news and the 09:30 open start on; the close, futures open, London
-  hours, FOMC and a spare fill the other slots, off.
+  hours, FOMC, the session break and a spare fill the other slots, off.
 - Labels are pinned to the viewport near the top or bottom edge (or the
   middle), riding there through scroll and zoom at no cost in chart scale —
   unlike the TradingView version, which had to give up price range for the
@@ -299,10 +299,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 ### ICT Macros — the macro windows, bracketed and counted down
 
 - The ICT macro windows as first-class chart objects: each window bracketed
-  by a vertical line at its start and end, joined by a captioned band whose
-  caption counts down to the window ("in 4:32") and then counts out what is
-  left of it ("12:10 left"). Windows are drawn for the whole day, the ones
-  still ahead included.
+  by a vertical line at its start and end, joined by a captioned band. On
+  its own line under the window's name, the caption counts down to the
+  window ("in 4:32") and then counts out what is left of it ("12:10
+  left"). Windows are drawn for the whole day, the ones still ahead
+  included.
 - Twelve slots, each with its own label ("Final Hour", "MOC" and the
   London pair come pre-named; an empty label captions with the window's
   times). The on-by-default set is the tradeable one: the six :50-:10

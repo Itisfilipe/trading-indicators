@@ -52,7 +52,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   bottom (or top) of the viewport. On by default: the six :50-:10 windows
   inside regular hours plus the Final Hour and Market On Close windows —
   the playbook's tradeable set; the pre-market and London pairs are
-  carried but off.
+  carried but off. Each window takes its own label ("Final Hour", "MOC"
+  and the London pair come pre-named; empty captions with the window's
+  times).
 
 ### ICT Killzones (NinjaTrader, new)
 - A translucent box around each killzone's candles — first bar to last,
