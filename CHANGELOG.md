@@ -47,6 +47,15 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   New York time) start on, the session blocks start off. Windows may run
   past midnight; history is kept a configurable number of days.
 
+### Economic Calendar (NinjaTrader, new)
+- Port of a TradingView economic-calendar indicator: the week's Forex
+  Factory releases as impact-colored vertical lines (future ones placed
+  ahead of the last bar), captions naming each release, and a corner
+  table with past rows grayed out. Impact and currency filters, with an
+  Automatic mode that follows the chart's instrument. The feed is pulled
+  from Forex Factory's public weekly calendar over HTTPS and refreshes
+  hourly; times print in the platform's display timezone.
+
 ### Rectangle Midline (NinjaTrader, new)
 - Drawing tool: the chart's rectangle with a horizontal line across its
   middle, the way TradingView's rectangle draws one. It is drawn, dragged

@@ -322,6 +322,28 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart you trade; each slot's name field is a reminder of
   what it marks, nothing is drawn from it.
 
+### Economic Calendar — the week's releases, on the chart
+
+- The week's economic-calendar events pulled straight from Forex Factory's
+  public weekly feed: a vertical line at each release (future ones placed
+  ahead of the last bar), a caption naming it (impact letter, currency,
+  title), and a corner table of the day's or week's list with past
+  releases grayed out. The feed refreshes hourly.
+- Impact filter (high / medium / low / holidays) with impact-colored lines
+  and text; currency filter with an Automatic mode that follows the
+  chart's instrument — both sides of a forex pair, otherwise the
+  instrument's denomination currency.
+- Chart history: today, this week, or a manual number of days back;
+  lines drawable for future releases only or past ones too.
+- Times print in the platform's own display timezone — the same clock as
+  the time axis — so there is no timezone setting to keep in sync (the
+  TradingView original needs one because a Pine script cannot read the
+  chart's zone).
+- Table times are 24-hour; needs an internet connection, and a failed
+  fetch keeps the previous list and retries in a few minutes.
+- Use: add to the chart you trade; with Automatic currency on an NQ chart
+  you get the USD calendar.
+
 ## Profit Chart (`profit-chart/`)
 
 - Confluence coloring system: paints each candle by how many rules agree
