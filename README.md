@@ -365,10 +365,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   instrument's denomination currency.
 - Chart history: today, this week, or a manual number of days back;
   lines drawable for future releases only or past ones too.
-- Times print in the platform's own display timezone — the same clock as
-  the time axis — so there is no timezone setting to keep in sync (the
-  TradingView original needs one because a Pine script cannot read the
-  chart's zone).
+- Release times print in a selectable timezone (New York by default —
+  the clock the news calendar is usually read in), independent of the
+  chart axis; the lines still sit at the release moment on the axis's
+  own clock.
 - Table times are 24-hour; needs an internet connection, and a failed
   fetch keeps the previous list and retries in a few minutes.
 - Use: add to the chart you trade; with Automatic currency on an NQ chart

@@ -78,7 +78,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   table with past rows grayed out. Impact and currency filters, with an
   Automatic mode that follows the chart's instrument. The feed is pulled
   from Forex Factory's public weekly calendar over HTTPS and refreshes
-  hourly; times print in the platform's display timezone.
+  hourly; release times print in a selectable timezone, New York by
+  default.
 
 ### Rectangle Midline (NinjaTrader, new)
 - Drawing tool: the chart's rectangle with a horizontal line across its

@@ -54,6 +54,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         BottomRight
     }
 
+    public enum NewsTimeZone
+    {
+        Exchange,
+        Utc,
+        NewYork,
+        Chicago,
+        London,
+        Berlin,
+        Tokyo,
+        Sydney
+    }
+
     /// <summary>
     /// The week's economic-calendar events on the chart: a vertical line at each
     /// release (future ones placed ahead of the last bar), a caption naming it,
@@ -83,6 +95,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private List<NewsEvent> events = new List<NewsEvent>();
 
         private System.Windows.Threading.DispatcherTimer refreshTimer;
+        private TimeZoneInfo displayZone;
         private DateTime nextFetchUtc = DateTime.MinValue;
         private bool fetchRunning;
 
@@ -172,11 +185,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Table Scope", GroupName = "4. Table", Order = 2)]
         public NewsTableMode TableMode { get; set; }
 
-        [Display(Name = "Position", GroupName = "4. Table", Order = 3)]
+        [Display(Name = "Time Zone", GroupName = "4. Table", Order = 3,
+                 Description = "Zone the release times print in. Lines still sit at the release moment on the chart's own axis regardless.")]
+        public NewsTimeZone TimeZoneSelection { get; set; }
+
+        [Display(Name = "Position", GroupName = "4. Table", Order = 4)]
         public NewsTableCorner TablePosition { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Header Text Color", GroupName = "4. Table", Order = 4)]
+        [Display(Name = "Header Text Color", GroupName = "4. Table", Order = 5)]
         public Brush HeaderTextColor { get; set; }
         [Browsable(false)]
         public string HeaderTextColorSerializable
@@ -186,7 +203,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Header Background Color", GroupName = "4. Table", Order = 5)]
+        [Display(Name = "Header Background Color", GroupName = "4. Table", Order = 6)]
         public Brush HeaderBackColor { get; set; }
         [Browsable(false)]
         public string HeaderBackColorSerializable
@@ -196,7 +213,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Row Text Color", GroupName = "4. Table", Order = 6)]
+        [Display(Name = "Row Text Color", GroupName = "4. Table", Order = 7)]
         public Brush RowTextColor { get; set; }
         [Browsable(false)]
         public string RowTextColorSerializable
@@ -206,7 +223,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Past Row Text Color", GroupName = "4. Table", Order = 7)]
+        [Display(Name = "Past Row Text Color", GroupName = "4. Table", Order = 8)]
         public Brush RowPastTextColor { get; set; }
         [Browsable(false)]
         public string RowPastTextColorSerializable
@@ -216,7 +233,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Row Background Color", GroupName = "4. Table", Order = 8)]
+        [Display(Name = "Row Background Color", GroupName = "4. Table", Order = 9)]
         public Brush RowBackColor { get; set; }
         [Browsable(false)]
         public string RowBackColorSerializable
@@ -225,7 +242,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { RowBackColor = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Border", GroupName = "4. Table", Order = 9)]
+        [Display(Name = "Border", GroupName = "4. Table", Order = 10)]
         public bool ShowTableBorder { get; set; }
 
         #endregion
@@ -260,6 +277,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ShowTable = true;
                 TableMode = NewsTableMode.ThisWeek;
+                TimeZoneSelection = NewsTimeZone.NewYork;
                 TablePosition = NewsTableCorner.BottomRight;
                 HeaderTextColor = Rgb(0xDE, 0xE1, 0xE9);
                 HeaderBackColor = Rgb(0x28, 0x3C, 0x70);
@@ -270,6 +288,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
+                displayZone = ResolveDisplayZone();
                 nextFetchUtc = DateTime.MinValue; // fetch immediately, then hourly
             }
             else if (State == State.Realtime)
@@ -303,6 +322,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     refreshTimer = null;
                 }
                 DisposeDxBrushes();
+            }
+        }
+
+        private TimeZoneInfo ResolveDisplayZone()
+        {
+            try
+            {
+                switch (TimeZoneSelection)
+                {
+                    case NewsTimeZone.Utc: return TimeZoneInfo.Utc;
+                    case NewsTimeZone.NewYork: return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                    case NewsTimeZone.Chicago: return TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+                    case NewsTimeZone.London: return TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time");
+                    case NewsTimeZone.Berlin: return TimeZoneInfo.FindSystemTimeZoneById("W. Europe Standard Time");
+                    case NewsTimeZone.Tokyo: return TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
+                    case NewsTimeZone.Sydney: return TimeZoneInfo.FindSystemTimeZoneById("AUS Eastern Standard Time");
+                    default: return Bars.TradingHours.TimeZoneInfo;
+                }
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return Core.Globals.GeneralOptions.TimeZoneInfo;
             }
         }
 
@@ -714,11 +755,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 rows.RemoveRange(0, dropped);
             }
 
+            // Times print in the selected zone (NY by default); the chart's
+            // line placement stays in the axis's own zone.
+            TimeZoneInfo printZone = displayZone ?? Core.Globals.GeneralOptions.TimeZoneInfo;
             List<string[]> cells = new List<string[]>();
             foreach (NewsEvent newsEvent in rows)
                 cells.Add(new[]
                 {
-                    newsEvent.ChartZoneTime.ToString("ddd HH:mm", CultureInfo.InvariantCulture),
+                    TimeZoneInfo.ConvertTime(newsEvent.ChartZoneTime, Core.Globals.GeneralOptions.TimeZoneInfo, printZone)
+                        .ToString("ddd HH:mm", CultureInfo.InvariantCulture),
                     newsEvent.Currency,
                     ImpactLetter(newsEvent.Impact),
                     newsEvent.Title
