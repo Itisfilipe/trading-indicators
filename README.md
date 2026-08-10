@@ -243,8 +243,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   with the dollars actually at risk at the rounded lot count.
 - Clock timezone selectable (Exchange, UTC, New York, London, Tokyo,
   Sydney); Exchange means the instrument's own trading-hours zone. Table
-  corner, cell padding and colors configurable; the ATR and Stop ATR rows
-  can be hidden; text uses the chart's label font.
+  corner, margin from the viewport edges, and colors configurable; the
+  ATR and Stop ATR rows can be hidden; text uses the chart's label font.
 - "Auto-Set ChartTrader Quantity" (off by default) mirrors the suggested
   lot into ChartTrader's quantity field whenever the suggestion changes,
   so orders placed from ChartTrader trade that size with no retyping. It

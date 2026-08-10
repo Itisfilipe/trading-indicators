@@ -54,12 +54,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// </summary>
     public class CandleCountdownPositionSizer : Indicator
     {
-        private const float TableMargin = 10f;
-
-        // Horizontal cell padding is the setting itself; vertical padding rides
-        // it at half, floored so text never touches the row above.
-        private float CellPaddingX { get { return TablePadding; } }
-        private float CellPaddingY { get { return Math.Max(2f, TablePadding / 2f); } }
+        private const float CellPaddingX = 8f;
+        private const float CellPaddingY = 4f;
 
         // Last lot pushed into ChartTrader, so the field is written only when
         // the suggestion actually changes and a user's manual edit in between
@@ -167,10 +163,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Position", GroupName = "4. Table", Order = 1)]
         public CountdownTableCorner TablePosition { get; set; }
 
-        [Range(0, 30)]
-        [Display(Name = "Cell Padding", GroupName = "4. Table", Order = 2,
-                 Description = "Pixels of clear space inside each cell; row height follows it.")]
-        public int TablePadding { get; set; }
+        [Range(0, 200)]
+        [Display(Name = "Margin", GroupName = "4. Table", Order = 2,
+                 Description = "Pixels between the table and the viewport edges it is cornered against.")]
+        public int TableMarginPixels { get; set; }
 
         [Display(Name = "Show ATR Row", GroupName = "4. Table", Order = 3)]
         public bool ShowAtrRow { get; set; }
@@ -238,7 +234,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ClockTimeZone = CountdownTimeZone.Exchange;
                 TablePosition = CountdownTableCorner.TopRight;
-                TablePadding = 8;
+                TableMarginPixels = 10;
                 ShowAtrRow = true;
                 ShowStopAtrRow = true;
                 AutoSetChartTraderQuantity = false;
@@ -545,8 +541,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 float tableHeight = rows.Count * rowHeight;
                 bool onRight = TablePosition == CountdownTableCorner.TopRight || TablePosition == CountdownTableCorner.BottomRight;
                 bool onTop = TablePosition == CountdownTableCorner.TopLeft || TablePosition == CountdownTableCorner.TopRight;
-                float tableX = onRight ? ChartPanel.X + ChartPanel.W - tableWidth - TableMargin : ChartPanel.X + TableMargin;
-                float tableY = onTop ? ChartPanel.Y + TableMargin : ChartPanel.Y + ChartPanel.H - tableHeight - TableMargin;
+                float tableX = onRight ? ChartPanel.X + ChartPanel.W - tableWidth - TableMarginPixels : ChartPanel.X + TableMarginPixels;
+                float tableY = onTop ? ChartPanel.Y + TableMarginPixels : ChartPanel.Y + ChartPanel.H - tableHeight - TableMarginPixels;
 
                 RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY, tableWidth, tableHeight), backgroundBrushDx);
 
