@@ -39,6 +39,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   the playbook's tradeable set; the pre-market and London pairs are
   carried but off.
 
+### ICT Killzones (NinjaTrader, new)
+- A translucent box around each killzone's candles — first bar to last,
+  running high to running low, growing while the window is open. Eight
+  zone slots with per-zone colors; the playbook's four killzones (Asia
+  Range, London Open, NY Open, London Close, index-futures readings in
+  New York time) start on, the session blocks start off. Windows may run
+  past midnight; history is kept a configurable number of days.
+
 ### Rectangle Midline (NinjaTrader, new)
 - Drawing tool: the chart's rectangle with a horizontal line across its
   middle, the way TradingView's rectangle draws one. It is drawn, dragged

@@ -305,6 +305,23 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart you trade; on anything but NY-time instruments set
   the zone accordingly.
 
+### ICT Killzones — a box around each killzone's candles
+
+- A translucent box hugging each killzone's candles: from the window's
+  first bar to its last, from its running high to its running low, growing
+  with the session while the window is open — the killzone-shading style
+  familiar from TradingView.
+- Eight zone slots (on/off, name, start, end, color). On by default, in
+  New York time: Asia Range 20:00-00:00, London Open KZ 02:00-04:00,
+  NY Open KZ 07:00-09:00, London Close KZ 10:00-12:00 (the index-futures
+  readings). The session blocks — AM, Lunch, PM, CBDR — fill the other
+  four slots but start off.
+- A window may run past midnight (the Asia Range does); it stays keyed to
+  the day it starts on. Fill opacity is global; days of history
+  configurable (default 5).
+- Use: add to the chart you trade; each slot's name field is a reminder of
+  what it marks, nothing is drawn from it.
+
 ## Profit Chart (`profit-chart/`)
 
 - Confluence coloring system: paints each candle by how many rules agree
