@@ -475,34 +475,54 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         // Mirrors the suggested lot into ChartTrader's quantity field. The field
-        // lives behind ChartTrader's "quantitySelector" control -- an observed
-        // internal, not a supported contract -- so a platform update that moves
-        // it degrades to a single log line, never an error. Only a changed
-        // suggestion writes, so a size the user typed by hand survives until
-        // the ATR actually moves the suggestion.
+        // is found by walking ChartTrader's visual tree for its QuantityUpDown:
+        // FindName cannot reach it (the control sits in another WPF namescope),
+        // and the platform's own vendor components bind to it by type the same
+        // way. Still an observed internal, not a supported contract, so failure
+        // degrades to a log line and quiet retries, never an error. The pushed
+        // value is only latched after a successful write -- a lookup that fails
+        // while the chart is still assembling must not suppress the retry --
+        // and only a changed suggestion writes, so a size the user typed by
+        // hand survives until the ATR actually moves the suggestion.
         private void MaybePushQuantity(int roundedLot)
         {
             if (!AutoSetChartTraderQuantity || State != State.Realtime || roundedLot < 1 || roundedLot == lastPushedQuantity)
                 return;
-            lastPushedQuantity = roundedLot;
 
             ChartControl.Dispatcher.InvokeAsync(() =>
             {
                 if (State >= State.Terminated)
                     return;
-                var chartTrader = ChartControl.OwnerChart?.ChartTrader;
-                QuantityUpDown quantitySelector = chartTrader?.FindName("quantitySelector") as QuantityUpDown;
+                QuantityUpDown quantitySelector = FindQuantityUpDown(ChartControl.OwnerChart?.ChartTrader);
                 if (quantitySelector == null)
                 {
                     if (!quantityControlMissingLogged)
                     {
                         quantityControlMissingLogged = true;
-                        Log("Candle Countdown & Position Sizer: ChartTrader's quantity field was not found; auto-set is inactive on this chart.", LogLevel.Warning);
+                        Log("Candle Countdown & Position Sizer: ChartTrader's quantity field was not found yet; auto-set keeps retrying quietly.", LogLevel.Warning);
                     }
                     return;
                 }
                 quantitySelector.Value = roundedLot;
+                lastPushedQuantity = roundedLot;
             });
+        }
+
+        // Depth-first search for the first QuantityUpDown under ChartTrader --
+        // which is the order-quantity field at the top of the sidebar; ATM
+        // parameter fields sit further down the tree.
+        private static QuantityUpDown FindQuantityUpDown(System.Windows.DependencyObject root)
+        {
+            if (root == null)
+                return null;
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                System.Windows.DependencyObject child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+                QuantityUpDown found = child as QuantityUpDown ?? FindQuantityUpDown(child);
+                if (found != null)
+                    return found;
+            }
+            return null;
         }
 
         private void AddCountdownRow(List<TableRow> rows, bool enabled, int minutes)
