@@ -3,6 +3,15 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-08-10
+
+### Rectangle Midline (NinjaTrader, new)
+- Drawing tool: the chart's rectangle with a horizontal line across its
+  middle, the way TradingView's rectangle draws one. It is drawn, dragged
+  and resized like the built-in rectangle; the midline has its own on/off,
+  color, width and dash style, and stays at the geometric centre of the box
+  rather than snapping to the nearest tick.
+
 ## 2026-08-06
 
 ### Time-Based Vertical Lines (TradingView, new)

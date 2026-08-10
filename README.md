@@ -171,6 +171,18 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: Draw menu → "Risk Reward Targets", click entry, click stop, then drag
   any level; read each target's R off its label.
 
+### RectangleMidline — rectangle with a 50% line
+
+- Drawing tool (chart's Draw menu), not an indicator: the platform's own
+  rectangle with a horizontal line across its vertical centre, the level a
+  pullback into the zone is measured against.
+- Draws, drags, resizes by the corners and alerts exactly like the built-in
+  Rectangle; fill, opacity and outline are the same settings.
+- Midline has its own on/off, color, width and dash style ("Midline" group).
+- The line sits at the geometric centre of the box, not at the nearest tick,
+  so it stays centred when the box spans an odd number of ticks.
+- Use: Draw menu → "Rectangle Midline", drag out the zone.
+
 ### RenkoSizeTable — Renko box sizes across timeframes at once
 
 - Same sizing method as ATRRenkoSizeCalculator, but a table with one row
