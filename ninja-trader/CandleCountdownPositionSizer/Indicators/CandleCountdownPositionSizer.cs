@@ -54,9 +54,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// </summary>
     public class CandleCountdownPositionSizer : Indicator
     {
-        private const float CellPaddingX = 8f;
-        private const float CellPaddingY = 4f;
         private const float TableMargin = 10f;
+
+        // Horizontal cell padding is the setting itself; vertical padding rides
+        // it at half, floored so text never touches the row above.
+        private float CellPaddingX { get { return TablePadding; } }
+        private float CellPaddingY { get { return Math.Max(2f, TablePadding / 2f); } }
+
+        // Last lot pushed into ChartTrader, so the field is written only when
+        // the suggestion actually changes and a user's manual edit in between
+        // is not immediately overwritten.
+        private int lastPushedQuantity;
+        private bool quantityControlMissingLogged;
 
         // ATR as a series so the recursion stays correct under OnPriceChange:
         // the forming bar overwrites its own slot on every tick while [1] keeps
@@ -84,15 +93,93 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Timezone", GroupName = "Display", Order = 1,
+        [Display(Name = "Timezone", GroupName = "1. Clock", Order = 1,
                  Description = "Timezone of the clock row. Exchange means the instrument's own trading-hours zone.")]
         public CountdownTimeZone ClockTimeZone { get; set; }
 
-        [Display(Name = "Position", GroupName = "Display", Order = 2)]
+        [Display(Name = "Show Countdowns", GroupName = "2. Countdowns", Order = 1)]
+        public bool ShowCountdowns { get; set; }
+
+        [Display(Name = "Timeframe 1", GroupName = "2. Countdowns", Order = 2)]
+        public bool Countdown1Enabled { get; set; }
+
+        [Range(1, 1440)]
+        [Display(Name = "Timeframe 1 (minutes)", GroupName = "2. Countdowns", Order = 3)]
+        public int Countdown1Minutes { get; set; }
+
+        [Display(Name = "Timeframe 2", GroupName = "2. Countdowns", Order = 4)]
+        public bool Countdown2Enabled { get; set; }
+
+        [Range(1, 1440)]
+        [Display(Name = "Timeframe 2 (minutes)", GroupName = "2. Countdowns", Order = 5)]
+        public int Countdown2Minutes { get; set; }
+
+        [Display(Name = "Timeframe 3", GroupName = "2. Countdowns", Order = 6)]
+        public bool Countdown3Enabled { get; set; }
+
+        [Range(1, 1440)]
+        [Display(Name = "Timeframe 3 (minutes)", GroupName = "2. Countdowns", Order = 7)]
+        public int Countdown3Minutes { get; set; }
+
+        [Display(Name = "Highlight Before New Candle", GroupName = "2. Countdowns", Order = 8)]
+        public bool AlertEnabled { get; set; }
+
+        [Range(1, 600)]
+        [Display(Name = "Highlight Lead Time (seconds)", GroupName = "2. Countdowns", Order = 9,
+                 Description = "A countdown at or under this many seconds switches to the alert colors.")]
+        public int AlertLeadSeconds { get; set; }
+
+        [Display(Name = "Risk Mode", GroupName = "3. Position Sizing", Order = 1,
+                 Description = "Fixed $: risk a set dollar amount per trade. Percent of account: risk a share of the account size.")]
+        public CountdownRiskMode RiskMode { get; set; }
+
+        [Range(0.0, double.MaxValue)]
+        [Display(Name = "Risk Per Trade ($)", GroupName = "3. Position Sizing", Order = 2,
+                 Description = "Used in Fixed $ mode. Maximum loss if the stop is hit.")]
+        public double RiskDollars { get; set; }
+
+        [Range(0.0, double.MaxValue)]
+        [Display(Name = "Account Size ($)", GroupName = "3. Position Sizing", Order = 3)]
+        public double AccountSize { get; set; }
+
+        [Range(0.0, 100.0)]
+        [Display(Name = "Risk Per Trade (%)", GroupName = "3. Position Sizing", Order = 4,
+                 Description = "Used in Percent of Account mode.")]
+        public double RiskPercent { get; set; }
+
+        [Range(0.0, double.MaxValue)]
+        [Display(Name = "Stop Size (x ATR)", GroupName = "3. Position Sizing", Order = 5,
+                 Description = "Stop distance as a multiple of ATR. 1.5 puts the stop 1.5 ATRs from entry.")]
+        public double StopAtrMultiple { get; set; }
+
+        [Range(1, int.MaxValue)]
+        [Display(Name = "ATR Length", GroupName = "3. Position Sizing", Order = 6)]
+        public int AtrLength { get; set; }
+
+        [Display(Name = "ATR Smoothing", GroupName = "3. Position Sizing", Order = 7,
+                 Description = "Wilder is the classic ATR. Exponential reacts faster to recent volatility.")]
+        public CountdownAtrSmoothing AtrSmoothing { get; set; }
+
+        [Display(Name = "Auto-Set ChartTrader Quantity", GroupName = "3. Position Sizing", Order = 8,
+                 Description = "Mirror the suggested lot into ChartTrader's quantity field whenever it changes, so orders placed from ChartTrader trade that size without retyping it. Only pushes a size of 1 or more, and only while live. Reads an unofficial corner of the platform; if a NinjaTrader update moves it, the indicator logs once and leaves the field alone.")]
+        public bool AutoSetChartTraderQuantity { get; set; }
+
+        [Display(Name = "Position", GroupName = "4. Table", Order = 1)]
         public CountdownTableCorner TablePosition { get; set; }
 
+        [Range(0, 30)]
+        [Display(Name = "Cell Padding", GroupName = "4. Table", Order = 2,
+                 Description = "Pixels of clear space inside each cell; row height follows it.")]
+        public int TablePadding { get; set; }
+
+        [Display(Name = "Show ATR Row", GroupName = "4. Table", Order = 3)]
+        public bool ShowAtrRow { get; set; }
+
+        [Display(Name = "Show Stop ATR Row", GroupName = "4. Table", Order = 4)]
+        public bool ShowStopAtrRow { get; set; }
+
         [XmlIgnore]
-        [Display(Name = "Text Color", GroupName = "Display", Order = 3)]
+        [Display(Name = "Text Color", GroupName = "4. Table", Order = 5)]
         public Brush TextColor { get; set; }
 
         [Browsable(false)]
@@ -103,7 +190,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Background Color", GroupName = "Display", Order = 4)]
+        [Display(Name = "Background Color", GroupName = "4. Table", Order = 6)]
         public Brush BackgroundColor { get; set; }
 
         [Browsable(false)]
@@ -114,7 +201,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Alert Text Color", GroupName = "Display", Order = 5)]
+        [Display(Name = "Alert Text Color", GroupName = "4. Table", Order = 7)]
         public Brush AlertTextColor { get; set; }
 
         [Browsable(false)]
@@ -125,7 +212,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Alert Background Color", GroupName = "Display", Order = 6)]
+        [Display(Name = "Alert Background Color", GroupName = "4. Table", Order = 8)]
         public Brush AlertBackgroundColor { get; set; }
 
         [Browsable(false)]
@@ -134,69 +221,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             get { return Serialize.BrushToString(AlertBackgroundColor); }
             set { AlertBackgroundColor = Serialize.StringToBrush(value); }
         }
-
-        [Display(Name = "Show Countdowns", GroupName = "Countdown", Order = 1)]
-        public bool ShowCountdowns { get; set; }
-
-        [Display(Name = "Timeframe 1", GroupName = "Countdown", Order = 2)]
-        public bool Countdown1Enabled { get; set; }
-
-        [Range(1, 1440)]
-        [Display(Name = "Timeframe 1 (minutes)", GroupName = "Countdown", Order = 3)]
-        public int Countdown1Minutes { get; set; }
-
-        [Display(Name = "Timeframe 2", GroupName = "Countdown", Order = 4)]
-        public bool Countdown2Enabled { get; set; }
-
-        [Range(1, 1440)]
-        [Display(Name = "Timeframe 2 (minutes)", GroupName = "Countdown", Order = 5)]
-        public int Countdown2Minutes { get; set; }
-
-        [Display(Name = "Timeframe 3", GroupName = "Countdown", Order = 6)]
-        public bool Countdown3Enabled { get; set; }
-
-        [Range(1, 1440)]
-        [Display(Name = "Timeframe 3 (minutes)", GroupName = "Countdown", Order = 7)]
-        public int Countdown3Minutes { get; set; }
-
-        [Display(Name = "Highlight Countdown Before New Candle", GroupName = "Candle Alert", Order = 1)]
-        public bool AlertEnabled { get; set; }
-
-        [Range(1, 600)]
-        [Display(Name = "Alert Lead Time (seconds)", GroupName = "Candle Alert", Order = 2,
-                 Description = "A countdown at or under this many seconds switches to the alert colors.")]
-        public int AlertLeadSeconds { get; set; }
-
-        [Display(Name = "Risk Mode", GroupName = "Position Sizing", Order = 1,
-                 Description = "Fixed $: risk a set dollar amount per trade. Percent of account: risk a share of the account size.")]
-        public CountdownRiskMode RiskMode { get; set; }
-
-        [Range(0.0, double.MaxValue)]
-        [Display(Name = "Risk Per Trade ($)", GroupName = "Position Sizing", Order = 2,
-                 Description = "Used in Fixed $ mode. Maximum loss if the stop is hit.")]
-        public double RiskDollars { get; set; }
-
-        [Range(0.0, double.MaxValue)]
-        [Display(Name = "Account Size ($)", GroupName = "Position Sizing", Order = 3)]
-        public double AccountSize { get; set; }
-
-        [Range(0.0, 100.0)]
-        [Display(Name = "Risk Per Trade (%)", GroupName = "Position Sizing", Order = 4,
-                 Description = "Used in Percent of Account mode.")]
-        public double RiskPercent { get; set; }
-
-        [Range(0.0, double.MaxValue)]
-        [Display(Name = "Stop Size (x ATR)", GroupName = "Position Sizing", Order = 5,
-                 Description = "Stop distance as a multiple of ATR. 1.5 puts the stop 1.5 ATRs from entry.")]
-        public double StopAtrMultiple { get; set; }
-
-        [Range(1, int.MaxValue)]
-        [Display(Name = "ATR Length", GroupName = "Position Sizing", Order = 6)]
-        public int AtrLength { get; set; }
-
-        [Display(Name = "ATR Smoothing", GroupName = "Position Sizing", Order = 7,
-                 Description = "Wilder is the classic ATR. Exponential reacts faster to recent volatility.")]
-        public CountdownAtrSmoothing AtrSmoothing { get; set; }
 
         #endregion
 
@@ -214,6 +238,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ClockTimeZone = CountdownTimeZone.Exchange;
                 TablePosition = CountdownTableCorner.TopRight;
+                TablePadding = 8;
+                ShowAtrRow = true;
+                ShowStopAtrRow = true;
+                AutoSetChartTraderQuantity = false;
                 TextColor = Brushes.White;
                 // Frozen because the render thread reads the brush's color; an
                 // unfrozen WPF brush is bound to its creating thread.
@@ -423,11 +451,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // Away-from-zero to match Pine's math.round; .NET's default banker's
             // rounding would show 0 contracts where the original shows 1.
-            rows.Add(new TableRow { Label = "Lot", Value = double.IsNaN(lotSize) ? "-" : Math.Round(lotSize, MidpointRounding.AwayFromZero).ToString("0") });
-            rows.Add(new TableRow { Label = "ATR", Value = master.FormatPrice(atr) });
+            int roundedLot = double.IsNaN(lotSize) ? 0 : (int)Math.Round(lotSize, MidpointRounding.AwayFromZero);
+            rows.Add(new TableRow { Label = "Lot", Value = double.IsNaN(lotSize) ? "-" : roundedLot.ToString() });
+            if (ShowAtrRow)
+                rows.Add(new TableRow { Label = "ATR", Value = master.FormatPrice(atr) });
             // Invariant culture so the multiple reads "1.5" everywhere; on a
             // comma-decimal Windows the default would print "Stop ATR (1,5)".
-            rows.Add(new TableRow { Label = "Stop ATR (" + StopAtrMultiple.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")", Value = master.FormatPrice(stopDistance) });
+            if (ShowStopAtrRow)
+                rows.Add(new TableRow { Label = "Stop ATR (" + StopAtrMultiple.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")", Value = master.FormatPrice(stopDistance) });
 
             // Cash at risk at the rounded lot count is only informative in percent
             // mode; in Fixed $ mode it would echo the number the user typed in.
@@ -435,10 +466,42 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 rows.Add(new TableRow
                 {
                     Label = "Stop Cash (" + RiskPercent.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%)",
-                    Value = "$" + (Math.Round(lotSize, MidpointRounding.AwayFromZero) * riskPerLot).ToString("0.##")
+                    Value = "$" + (roundedLot * riskPerLot).ToString("0.##")
                 });
 
             DrawTable(chartControl, rows);
+            MaybePushQuantity(roundedLot);
+        }
+
+        // Mirrors the suggested lot into ChartTrader's quantity field. The field
+        // lives behind ChartTrader's "quantitySelector" control -- an observed
+        // internal, not a supported contract -- so a platform update that moves
+        // it degrades to a single log line, never an error. Only a changed
+        // suggestion writes, so a size the user typed by hand survives until
+        // the ATR actually moves the suggestion.
+        private void MaybePushQuantity(int roundedLot)
+        {
+            if (!AutoSetChartTraderQuantity || State != State.Realtime || roundedLot < 1 || roundedLot == lastPushedQuantity)
+                return;
+            lastPushedQuantity = roundedLot;
+
+            ChartControl.Dispatcher.InvokeAsync(() =>
+            {
+                if (State >= State.Terminated)
+                    return;
+                var chartTrader = ChartControl.OwnerChart?.ChartTrader;
+                QuantityUpDown quantitySelector = chartTrader?.FindName("quantitySelector") as QuantityUpDown;
+                if (quantitySelector == null)
+                {
+                    if (!quantityControlMissingLogged)
+                    {
+                        quantityControlMissingLogged = true;
+                        Log("Candle Countdown & Position Sizer: ChartTrader's quantity field was not found; auto-set is inactive on this chart.", LogLevel.Warning);
+                    }
+                    return;
+                }
+                quantitySelector.Value = roundedLot;
+            });
         }
 
         private void AddCountdownRow(List<TableRow> rows, bool enabled, int minutes)

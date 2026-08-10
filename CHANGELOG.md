@@ -12,7 +12,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   away), the ATR, the stop distance at a configured ATR multiple, and the
   lot size that keeps the loss at the risk budget if that stop is hit.
   Countdown timeframes are entered in minutes, and the table text follows
-  the chart's label font.
+  the chart's label font. Cell padding is adjustable and the ATR and
+  Stop ATR rows can be hidden.
+- "Auto-Set ChartTrader Quantity" (off by default) mirrors the suggested
+  lot into ChartTrader's quantity field whenever the suggestion changes,
+  so orders placed from ChartTrader trade that size without retyping it.
 
 ### Time-Based Price Levels (NinjaTrader, new)
 - Port of the TradingView tool: horizontal lines at up to ten price

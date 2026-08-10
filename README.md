@@ -243,7 +243,15 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   with the dollars actually at risk at the rounded lot count.
 - Clock timezone selectable (Exchange, UTC, New York, London, Tokyo,
   Sydney); Exchange means the instrument's own trading-hours zone. Table
-  corner and colors configurable; text uses the chart's label font.
+  corner, cell padding and colors configurable; the ATR and Stop ATR rows
+  can be hidden; text uses the chart's label font.
+- "Auto-Set ChartTrader Quantity" (off by default) mirrors the suggested
+  lot into ChartTrader's quantity field whenever the suggestion changes,
+  so orders placed from ChartTrader trade that size with no retyping. It
+  only ever writes a size of 1 or more, only while live, and a size you
+  type by hand survives until the ATR actually moves the suggestion. It
+  reaches an unofficial corner of the platform; if an update moves it,
+  the indicator logs one line and leaves the field alone.
 - Use: add to the chart you trade; confirm the point value against your
   broker's contract specs before trusting the lot size.
 
@@ -272,8 +280,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   so the ones still ahead are already on the chart with a countdown to them.
   The macro windows that the TradingView version carries live in the ICT
   Macros indicator instead.
-- Ten line slots (on/off, HH:MM, label, stroke), defaults covering NY
-  midnight, 08:30 news, the open, the close, futures open.
+- Ten line slots (on/off, HH:MM, label, stroke). NY midnight, the 08:30
+  news and the 09:30 open start on; the close, futures open, London
+  hours, FOMC and a spare fill the other slots, off.
 - Labels are pinned to the viewport near the top or bottom edge (or the
   middle), riding there through scroll and zoom at no cost in chart scale —
   unlike the TradingView version, which had to give up price range for the

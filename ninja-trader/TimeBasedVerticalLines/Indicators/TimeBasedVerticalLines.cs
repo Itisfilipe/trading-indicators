@@ -205,14 +205,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 IncludeTomorrow = false;
                 ShowLabels = true;
                 LabelPosition = TimeMarkLabelPosition.Top;
-                EdgeGapPercent = 2.0;
+                EdgeGapPercent = 4.0;
                 ShowCountdown = true;
 
                 Line1Enabled = true; Line1Time = "00:00"; Line1Text = "NY Midnight";
                 Line2Enabled = true; Line2Time = "08:30"; Line2Text = "8:30 News";
                 Line3Enabled = true; Line3Time = "09:30"; Line3Text = "NY Open";
-                Line4Enabled = true; Line4Time = "16:00"; Line4Text = "NY Close";
-                Line5Enabled = true; Line5Time = "18:00"; Line5Text = "Futures Open";
+                Line4Enabled = false; Line4Time = "16:00"; Line4Text = "NY Close";
+                Line5Enabled = false; Line5Time = "18:00"; Line5Text = "Futures Open";
                 Line6Enabled = false; Line6Time = "03:00"; Line6Text = "London Open";
                 Line7Enabled = false; Line7Time = "11:30"; Line7Text = "London Close";
                 Line8Enabled = false; Line8Time = "14:00"; Line8Text = "FOMC";
