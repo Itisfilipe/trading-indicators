@@ -34,7 +34,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   days-of-history control. Intraday levels now catch their bar on any
   chart timeframe (the Pine version needed a bar stamped exactly at the
   minute), and higher-timeframe High/Low/Close track the developing
-  period live.
+  period live. Label font and how far a running line and its label
+  extend past the last bar are configurable.
 
 ### Time-Based Vertical Lines (NinjaTrader, new)
 - Port of the TradingView tool: vertical lines at chosen clock times drawn

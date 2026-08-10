@@ -266,7 +266,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   history control. An HTF slot tracks the developing period's O/H/L/C
   live from the chart's own bars — no secondary series.
 - Labels are generated from the slot (D.O, W.O, ... / the time for
-  intraday, with a price suffix when it is not the Open).
+  intraday, with a price suffix when it is not the Open). Label font and
+  how far the line and its label run past the last bar are configurable.
 - Per-slot on/off, time, price type, and stroke (color, width, dash);
   timezone selectable (New York default) for the intraday times. Period
   slots roll with the instrument's trading day, so a daily level on an

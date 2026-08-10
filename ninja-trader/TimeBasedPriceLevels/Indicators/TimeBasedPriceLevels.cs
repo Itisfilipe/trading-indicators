@@ -107,6 +107,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Show Labels", GroupName = "1. General", Order = 3)]
         public bool ShowLabels { get; set; }
 
+        [Display(Name = "Label Font", GroupName = "1. General", Order = 4)]
+        public SimpleFont LabelFont { get; set; }
+
+        [Range(0, 500)]
+        [Display(Name = "Extension Past Last Bar (pixels)", GroupName = "1. General", Order = 5,
+                 Description = "How far a still-running line pokes past the last bar; its label sits just beyond that. Finished days still end at their own midnight.")]
+        public int ExtensionPixels { get; set; }
+
         [Display(Name = "Level 1", GroupName = "2. Levels", Order = 10)]
         public bool Level1Enabled { get; set; }
         [Display(Name = "Time/Period 1", GroupName = "2. Levels", Order = 11, Description = "HH:MM, or D, W, M, 3M, 6M, 12M.")]
@@ -214,6 +222,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 TimeZoneSelection = PriceLevelTimeZone.NewYork;
                 DaysToShow = 0;
                 ShowLabels = true;
+                LabelFont = new SimpleFont { Size = 12 };
+                ExtensionPixels = 8;
 
                 Level1Enabled = true;
                 Level1Time = "00:00";
@@ -501,7 +511,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DateTime lastBarTime = Bars.GetTime(Bars.Count - 1);
             int lastBarX = chartControl.GetXByTime(lastBarTime);
 
-            SimpleFont wpfFont = chartControl.Properties.LabelFont ?? new SimpleFont();
+            SimpleFont wpfFont = LabelFont ?? chartControl.Properties.LabelFont ?? new SimpleFont();
             SharpDX.DirectWrite.TextFormat textFormat = wpfFont.ToDirectWriteTextFormat();
             try
             {
@@ -540,9 +550,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             float startX = Math.Max(chartControl.GetXByTime(startTime), ChartPanel.X);
-            // A still-running line pokes a little past the last bar so its label
-            // clears the price action; a finished day ends at its own midnight.
-            float endX = extendPastLastBar ? lastBarX + 8 : chartControl.GetXByTime(endTime);
+            // A still-running line pokes past the last bar so its label clears
+            // the price action; a finished day ends at its own midnight.
+            float endX = extendPastLastBar ? lastBarX + ExtensionPixels : chartControl.GetXByTime(endTime);
             endX = Math.Min(endX, ChartPanel.X + ChartPanel.W);
             if (endX <= startX)
                 return;
