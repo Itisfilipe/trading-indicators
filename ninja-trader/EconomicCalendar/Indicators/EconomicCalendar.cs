@@ -95,6 +95,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private SharpDX.Direct2D1.Brush rowBackBrushDx;
         private SharpDX.Direct2D1.Brush borderBrushDx;
 
+        // The event lines share one dash pattern; the impact brushes carry the
+        // color. This Stroke exists only to lend its StrokeStyle to DrawLine.
+        private Stroke lineDashCarrier;
+
         #region Properties
 
         [Display(Name = "Show Lines", GroupName = "On Chart", Order = 1)]
@@ -505,6 +509,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     brush?.Dispose();
             impactLineBrushes = null;
             impactTextBrushes = null;
+            lineDashCarrier = null;
             headerTextBrushDx?.Dispose(); headerTextBrushDx = null;
             headerBackBrushDx?.Dispose(); headerBackBrushDx = null;
             rowTextBrushDx?.Dispose(); rowTextBrushDx = null;
@@ -543,6 +548,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             impactTextBrushes[(int)NewsImpact.Medium] = SolidDx(0xF5, 0x7C, 0x00, 255);
             impactTextBrushes[(int)NewsImpact.High] = SolidDx(0xEF, 0x53, 0x50, 255);
             impactTextBrushes[(int)NewsImpact.Holiday] = SolidDx(0x9E, 0x9E, 0x9E, 255);
+            lineDashCarrier = new Stroke(Brushes.Black, LineDashStyle, LineWidth) { RenderTarget = RenderTarget };
             headerTextBrushDx = WpfToDx(HeaderTextColor, 255);
             headerBackBrushDx = WpfToDx(HeaderBackColor, 255);
             rowTextBrushDx = WpfToDx(RowTextColor, 255);
@@ -640,11 +646,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double previousX = double.MinValue;
             float captionY = panelTop + 4;
 
-            // The brush varies by impact but the dash pattern is shared, so one
-            // throwaway Stroke per pass carries the StrokeStyle for every line.
-            Stroke dashCarrier = new Stroke(Brushes.Black, LineDashStyle, LineWidth);
-            dashCarrier.RenderTarget = RenderTarget;
-
             foreach (NewsEvent newsEvent in visible)
             {
                 if (newsEvent.ChartZoneTime <= now && LineTime == NewsLineTime.Future)
@@ -657,7 +658,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RenderTarget.DrawLine(
                         new SharpDX.Vector2((float)x, panelTop),
                         new SharpDX.Vector2((float)x, panelBottom),
-                        impactLineBrushes[(int)newsEvent.Impact], LineWidth, dashCarrier.StrokeStyle);
+                        impactLineBrushes[(int)newsEvent.Impact], LineWidth, lineDashCarrier.StrokeStyle);
 
                 if (!ShowLabels)
                     continue;
@@ -706,7 +707,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 rows.RemoveRange(0, dropped);
             }
 
-            // Column texts: time, currency, impact, title.
             List<string[]> cells = new List<string[]>();
             foreach (NewsEvent newsEvent in rows)
                 cells.Add(new[]

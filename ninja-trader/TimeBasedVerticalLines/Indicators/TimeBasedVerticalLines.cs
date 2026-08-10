@@ -459,6 +459,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 textFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
 
+                foreach (TimeMarker marker in markers)
+                    marker.Stroke.RenderTarget = RenderTarget;
+
                 foreach (DateTime dayStart in daysToDraw)
                 {
                     foreach (TimeMarker marker in markers)
@@ -468,7 +471,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (x < panelLeft || x > panelRight)
                             continue;
 
-                        marker.Stroke.RenderTarget = RenderTarget;
                         RenderTarget.DrawLine(
                             new SharpDX.Vector2((float)x, panelTop),
                             new SharpDX.Vector2((float)x, panelBottom),

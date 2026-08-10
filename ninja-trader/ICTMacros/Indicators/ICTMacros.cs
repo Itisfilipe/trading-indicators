@@ -517,9 +517,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                         if (bandHeight > 0)
                         {
+                            double bandLeft = Math.Max(startX, panelLeft);
+                            double bandRight = Math.Min(endX, panelRight);
                             SharpDX.RectangleF band = new SharpDX.RectangleF(
-                                (float)Math.Max(startX, panelLeft), bandTop,
-                                (float)(Math.Min(endX, panelRight) - Math.Max(startX, panelLeft)), bandHeight);
+                                (float)bandLeft, bandTop, (float)(bandRight - bandLeft), bandHeight);
                             RenderTarget.FillRectangle(band, bandFillBrush);
                             RenderTarget.DrawRectangle(band, MacroStroke.BrushDX, MacroStroke.Width, MacroStroke.StrokeStyle);
                         }
@@ -537,7 +538,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             else if (now < spanEnd)
                                 caption += "   " + CountdownText(spanEnd - now) + " left";
                         }
-                        DrawCaption(caption, (float)(startX + endX) / 2, bandTop + bandHeight / 2, textFormat);
+                        DrawCaption(caption, (float)((startX + endX) / 2), bandTop + bandHeight / 2, textFormat);
                     }
             }
             finally

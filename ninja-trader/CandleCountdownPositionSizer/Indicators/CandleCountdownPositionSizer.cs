@@ -1,5 +1,6 @@
 #region Using declarations
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
@@ -48,7 +49,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// <summary>
     /// On-chart info table: a clock, countdowns to the next candle on up to three
     /// timeframes, and an ATR-based position size -- the lot count that keeps the
-    /// loss at the configured risk if a stop stopAtrMult ATRs away is hit.
+    /// loss at the configured risk if a stop the chosen multiple of ATR away is hit.
     /// Port of the TradingView "Candle Countdown &amp; Position Sizer".
     /// </summary>
     public class CandleCountdownPositionSizer : Indicator
@@ -303,9 +304,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
+            double barRange = High[0] - Low[0];
             double trueRange = CurrentBar == 0
-                ? High[0] - Low[0]
-                : Math.Max(High[0] - Low[0], Math.Max(Math.Abs(High[0] - Close[1]), Math.Abs(Low[0] - Close[1])));
+                ? barRange
+                : Math.Max(barRange, Math.Max(Math.Abs(High[0] - Close[1]), Math.Abs(Low[0] - Close[1])));
 
             // Both smoothings are one recursion apart: k * tr + (1 - k) * prev,
             // with k = 2/(n+1) (EMA) or 1/n (Wilder). The first AtrLength bars
@@ -409,7 +411,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             DateTime now = TimeZoneInfo.ConvertTime(PlatformNow(), Core.Globals.GeneralOptions.TimeZoneInfo, displayZone);
 
-            var rows = new System.Collections.Generic.List<TableRow>();
+            var rows = new List<TableRow>();
             rows.Add(new TableRow { Label = "Time", Value = now.ToString("HH:mm:ss") });
 
             if (ShowCountdowns)
@@ -439,7 +441,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DrawTable(chartControl, rows);
         }
 
-        private void AddCountdownRow(System.Collections.Generic.List<TableRow> rows, bool enabled, int minutes)
+        private void AddCountdownRow(List<TableRow> rows, bool enabled, int minutes)
         {
             if (!enabled)
                 return;
@@ -452,11 +454,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             });
         }
 
-        private void DrawTable(ChartControl chartControl, System.Collections.Generic.List<TableRow> rows)
+        private void DrawTable(ChartControl chartControl, List<TableRow> rows)
         {
             SimpleFont wpfFont = chartControl.Properties.LabelFont ?? new SimpleFont();
             SharpDX.DirectWrite.TextFormat textFormat = wpfFont.ToDirectWriteTextFormat();
-            var layouts = new System.Collections.Generic.List<SharpDX.DirectWrite.TextLayout>();
+            var layouts = new List<SharpDX.DirectWrite.TextLayout>();
             try
             {
                 textFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;

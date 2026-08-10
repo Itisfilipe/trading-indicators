@@ -46,8 +46,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public DateTime LastBarChartTime;
         }
 
-        // One parsed zone. EndMinutes may wrap past midnight (Asia 20:00-00:00);
-        // a window is keyed to the day it STARTS on.
+        // One parsed zone, keyed to the day the window STARTS on. EndMinutes
+        // counts from that day's midnight and runs past 1440 when the window
+        // wraps into the next day (Asia 20:00-00:00).
         private class ZoneSlot
         {
             public int StartMinutes;
@@ -339,11 +340,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             // An end at or before the start means the window runs into the next
             // day (Asia 20:00-00:00). It stays keyed to the day it starts on.
+            bool wraps = endMinutes <= startMinutes;
             slots.Add(new ZoneSlot
             {
                 StartMinutes = startMinutes,
-                EndMinutes = endMinutes,
-                Wraps = endMinutes <= startMinutes,
+                EndMinutes = wraps ? endMinutes + 1440 : endMinutes,
+                Wraps = wraps,
                 Color = color
             });
         }
@@ -385,7 +387,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private bool TryUpdateZoneDay(ZoneSlot slot, DateTime day, DateTime tzTime, DateTime chartZoneTime, DateTime leftEdgeChartTime)
         {
             DateTime windowStart = day.AddMinutes(slot.StartMinutes);
-            DateTime windowEnd = day.AddMinutes(slot.Wraps ? slot.EndMinutes + 1440 : slot.EndMinutes);
+            DateTime windowEnd = day.AddMinutes(slot.EndMinutes);
             if (tzTime <= windowStart || tzTime > windowEnd)
                 return false;
 

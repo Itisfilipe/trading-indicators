@@ -334,11 +334,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         // A clock time that does not exist on a daylight-saving switch day is
         // nudged forward an hour instead of throwing inside ConvertTime.
-        private static DateTime SafeConvert(DateTime unspecified, TimeZoneInfo from, TimeZoneInfo to)
+        private DateTime ToChartZone(DateTime tzUnspecified)
         {
-            if (from.IsInvalidTime(unspecified))
-                unspecified = unspecified.AddHours(1);
-            return TimeZoneInfo.ConvertTime(unspecified, from, to);
+            if (displayZone.IsInvalidTime(tzUnspecified))
+                tzUnspecified = tzUnspecified.AddHours(1);
+            return TimeZoneInfo.ConvertTime(tzUnspecified, displayZone, Core.Globals.GeneralOptions.TimeZoneInfo);
         }
 
         // Keys are derived from the instrument's TRADING day, not the calendar
@@ -459,7 +459,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 TzDate = day,
                 Price = PriceForType(slot.PriceType),
                 StartChartTime = chartZoneTime,
-                EndChartTime = SafeConvert(day.AddDays(1), displayZone, Core.Globals.GeneralOptions.TimeZoneInfo),
+                EndChartTime = ToChartZone(day.AddDays(1)),
                 CaptureBar = CurrentBar
             });
         }
@@ -516,13 +516,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         }
                         else
                             foreach (LevelRecord record in slot.Records)
-                            {
-                                bool reachesLastBar = record.EndChartTime >= lastBarTime;
                                 DrawLevel(chartControl, chartScale, textFormat, slot,
-                                    record.Price, record.StartChartTime,
-                                    reachesLastBar ? lastBarTime : record.EndChartTime,
-                                    lastBarX, reachesLastBar);
-                            }
+                                    record.Price, record.StartChartTime, record.EndChartTime,
+                                    lastBarX, record.EndChartTime >= lastBarTime);
                     }
                 }
             }
