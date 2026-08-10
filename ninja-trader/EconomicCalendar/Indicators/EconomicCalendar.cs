@@ -381,9 +381,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 string title = FieldText(fields, "title");
                 string currency = FieldText(fields, "country").ToUpperInvariant();
                 string dateText = FieldText(fields, "date");
-                DateTimeOffset when;
+                // Not named "when": legal C#, but the NinjaScript editor's
+                // parser trips over the contextual keyword and cascades into
+                // dozens of phantom errors.
+                DateTimeOffset releaseTime;
                 if (title.Length == 0 || currency.Length == 0
-                    || !DateTimeOffset.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.None, out when))
+                    || !DateTimeOffset.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.None, out releaseTime))
                     continue;
 
                 NewsImpact impact;
@@ -399,7 +402,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     // Chart-zone times compare directly against bar stamps and
                     // print in the same clock the time axis shows.
-                    ChartZoneTime = TimeZoneInfo.ConvertTimeFromUtc(when.UtcDateTime, Core.Globals.GeneralOptions.TimeZoneInfo),
+                    ChartZoneTime = TimeZoneInfo.ConvertTimeFromUtc(releaseTime.UtcDateTime, Core.Globals.GeneralOptions.TimeZoneInfo),
                     Title = title,
                     Currency = currency,
                     Impact = impact
