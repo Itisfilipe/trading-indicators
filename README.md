@@ -333,23 +333,20 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart you trade; each slot's name field is a reminder of
   what it marks, nothing is drawn from it.
 
-### Breakeven Stops — every stop to breakeven, button or trigger
+### Breakeven Stops — every stop to breakeven, one button
 
-- Moves every working protective stop on the chart's instrument to
-  breakeven — whatever placed the stop: an ATM, an OCO bracket, a manual
-  order, another tool. Only stop-type orders on the position's exit side
-  move; a stop already at or beyond breakeven is never loosened, and the
-  new price is clamped one tick inside the market.
-- "Stops to BE" button in the ChartTrader sidebar (floating on the chart
-  when ChartTrader is hidden) makes the move on demand, on whatever
-  account ChartTrader has selected.
-- Auto mode (on by default): once price runs the trigger distance
-  (default 30 ticks) in the position's favor, the same move fires once
-  per position and re-arms when the position closes or flips.
-- Breakeven offset in ticks (profit direction; 2 locks two ticks, 0 is
-  exact breakeven); applies to the button and the trigger alike.
-- Standalone extraction of ChartTrading's breakeven feature — same
-  behavior, no click-to-trade attached.
+- A "Stops to BE" button in the ChartTrader sidebar (floating on the
+  chart when ChartTrader is hidden) that moves every working protective
+  stop on the chart's instrument to breakeven — whatever placed the
+  stop: an ATM, an OCO bracket, a manual order, another tool. Meant for
+  hand-managed market-order trades; ChartTrading carries the
+  automatic-trigger variant of the same move.
+- Only stop-type orders on the position's exit side move; a stop already
+  at or beyond breakeven is never loosened, and the new price is clamped
+  one tick inside the market. Acts on whatever account ChartTrader has
+  selected at the click.
+- One setting: breakeven offset in ticks (profit direction; 2 locks two
+  ticks, 0 is exact breakeven).
 - Use: add to the chart you trade with ChartTrader visible; watch the NT
   log, every outcome (moved, skipped, nothing to move) is logged.
 

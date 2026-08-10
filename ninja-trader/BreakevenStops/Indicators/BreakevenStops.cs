@@ -16,31 +16,15 @@ using NinjaTrader.NinjaScript;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// Moves every working protective stop on the chart's instrument to
-    /// breakeven -- whatever placed the stop: an ATM, an OCO bracket, a manual
-    /// order, or another tool. A "Stops to BE" button in the ChartTrader
-    /// sidebar makes the move on demand, and an automatic trigger makes it
-    /// once per position after price has run a configured distance in the
-    /// position's favor. Standalone extraction of ChartTrading's breakeven
-    /// feature for traders who do not use its click-to-trade side.
+    /// A "Stops to BE" button in the ChartTrader sidebar that moves every
+    /// working protective stop on the chart's instrument to breakeven --
+    /// whatever placed the stop: an ATM, an OCO bracket, a manual order, or
+    /// another tool. Button only, by design: it exists for hand-managed
+    /// market-order trades, where the trader decides the moment. ChartTrading
+    /// carries the automatic-trigger variant of the same move.
     /// </summary>
     public class BreakevenStops : Indicator
     {
-        // Account and position state. Account events arrive off the UI thread,
-        // so everything they touch is guarded.
-        private readonly object orderLock = new object();
-        private Account subscribedAccount;
-        private double currentAvgPrice;
-        private MarketPosition currentMarketPosition = MarketPosition.Flat;
-        private AutoBreakevenState autoBreakevenState = AutoBreakevenState.Armed;
-        private int positionCacheGeneration;
-        private bool positionSeedPending;
-
-        // Armed: waiting for the trigger. Pending: a move is in flight.
-        // WaitingForStops: fired before any stop was live; re-arms when one is
-        // accepted. Fired: done for this position.
-        private enum AutoBreakevenState { Armed, Pending, WaitingForStops, Fired }
-
         // Button, mounted in the ChartTrader sidebar when present, floating on
         // the chart otherwise.
         private System.Windows.Controls.Button breakevenButton;
@@ -52,23 +36,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Auto Breakeven", GroupName = "1. Breakeven", Order = 1,
-                 Description = "Move the stops automatically once price has run the trigger distance in the position's favor, once per position. The button works either way.")]
-        public bool AutoBreakevenEnabled { get; set; }
-
-        [Range(1, 10000)]
-        [Display(Name = "Auto Trigger (ticks)", GroupName = "1. Breakeven", Order = 2,
-                 Description = "How many ticks in profit before the automatic move fires.")]
-        public int AutoBreakevenTriggerTicks { get; set; }
-
         [Range(-100, 1000)]
-        [Display(Name = "Breakeven Offset (ticks)", GroupName = "1. Breakeven", Order = 3,
-                 Description = "Where breakeven lands relative to the position's average price, in the profit direction: 2 locks two ticks of profit, 0 is exact breakeven. Applies to the button and to the automatic move.")]
+        [Display(Name = "Breakeven Offset (ticks)", GroupName = "1. Breakeven", Order = 1,
+                 Description = "Where breakeven lands relative to the position's average price, in the profit direction: 2 locks two ticks of profit, 0 is exact breakeven.")]
         public int BreakevenOffsetTicks { get; set; }
-
-        [Display(Name = "Show Button", GroupName = "1. Breakeven", Order = 4,
-                 Description = "The Stops to BE button in the ChartTrader sidebar (or floating on the chart when ChartTrader is hidden).")]
-        public bool ShowButton { get; set; }
 
         #endregion
 
@@ -76,7 +47,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Moves every working protective stop on the instrument to breakeven: a ChartTrader button on demand, and an optional automatic trigger once per position.";
+                Description = "A ChartTrader button that moves every working protective stop on the instrument to breakeven.";
                 Name = "Breakeven Stops";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
@@ -84,10 +55,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DisplayInDataBox = false;
                 PaintPriceMarkers = false;
 
-                AutoBreakevenEnabled = true;
-                AutoBreakevenTriggerTicks = 30;
                 BreakevenOffsetTicks = 0;
-                ShowButton = true;
             }
             else if (State == State.Historical)
             {
@@ -105,16 +73,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Terminated)
             {
-                // Working orders are deliberately left working; removing the
-                // indicator must not touch a live bracket. Only the event
-                // subscription is dropped.
-                if (subscribedAccount != null)
-                {
-                    subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
-                    subscribedAccount.PositionUpdate -= OnAccountPositionUpdate;
-                    subscribedAccount = null;
-                }
-
                 ChartControl owner = ChartControl;
                 if (owner != null)
                     owner.Dispatcher.InvokeAsync(DetachHandlers);
@@ -133,62 +91,47 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             try
             {
-                if (ShowButton)
+                breakevenButton = new System.Windows.Controls.Button
                 {
-                    breakevenButton = new System.Windows.Controls.Button
-                    {
-                        Content = "Stops to BE",
-                        Padding = new Thickness(8, 3, 8, 3),
-                        Cursor = Cursors.Hand,
-                        Foreground = Brushes.White,
-                        Background = Brushes.SteelBlue,
-                        BorderThickness = new Thickness(0),
-                    };
-                    breakevenButton.Click += OnBreakevenClicked;
+                    Content = "Stops to BE",
+                    Padding = new Thickness(8, 3, 8, 3),
+                    Cursor = Cursors.Hand,
+                    Foreground = Brushes.White,
+                    Background = Brushes.SteelBlue,
+                    BorderThickness = new Thickness(0),
+                };
+                breakevenButton.Click += OnBreakevenClicked;
 
-                    buttonPanel = new System.Windows.Controls.Grid();
-                    buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-                    System.Windows.Controls.Grid.SetRow(breakevenButton, 0);
-                    buttonPanel.Children.Add(breakevenButton);
+                buttonPanel = new System.Windows.Controls.Grid();
+                buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
+                System.Windows.Controls.Grid.SetRow(breakevenButton, 0);
+                buttonPanel.Children.Add(breakevenButton);
 
-                    // Mounted the way ChartTrading mounts its buttons: one
-                    // auto-height row appended to the ChartTrader grid, falling
-                    // back to floating on the chart when ChartTrader is hidden.
-                    Window chartWindow = Window.GetWindow(ChartControl);
-                    var chartTrader = (chartWindow as Chart)?.FindFirst("ChartWindowChartTraderControl") as ChartTrader;
-                    chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
-                    if (chartTraderGrid != null)
-                    {
-                        buttonPanel.Margin = new Thickness(2, 6, 2, 2);
-                        buttonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
-                        chartTraderGrid.RowDefinitions.Add(buttonRow);
-                        System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
-                        System.Windows.Controls.Grid.SetColumnSpan(buttonPanel,
-                            Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
-                        chartTraderGrid.Children.Add(buttonPanel);
-                        buttonInChartTrader = true;
-                    }
-                    else
-                    {
-                        buttonPanel.Margin = new Thickness(6);
-                        buttonPanel.HorizontalAlignment = HorizontalAlignment.Left;
-                        buttonPanel.VerticalAlignment = VerticalAlignment.Top;
-                        buttonPanel.Opacity = 0.85;
-                        UserControlCollection.Add(buttonPanel);
-                        buttonInChartTrader = false;
-                    }
+                // Mounted the way ChartTrading mounts its buttons: one
+                // auto-height row appended to the ChartTrader grid, falling
+                // back to floating on the chart when ChartTrader is hidden.
+                Window chartWindow = Window.GetWindow(ChartControl);
+                var chartTrader = (chartWindow as Chart)?.FindFirst("ChartWindowChartTraderControl") as ChartTrader;
+                chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
+                if (chartTraderGrid != null)
+                {
+                    buttonPanel.Margin = new Thickness(2, 6, 2, 2);
+                    buttonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
+                    chartTraderGrid.RowDefinitions.Add(buttonRow);
+                    System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
+                    System.Windows.Controls.Grid.SetColumnSpan(buttonPanel,
+                        Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
+                    chartTraderGrid.Children.Add(buttonPanel);
+                    buttonInChartTrader = true;
                 }
-
-                // Subscribe to the ChartTrader account up front, so the auto
-                // trigger and position cache work for positions that predate
-                // this instance; a button click re-subscribes if the selected
-                // account changed since.
-                Account attachAccount = ChartControl.OwnerChart?.ChartTrader?.Account;
-                if (attachAccount != null)
+                else
                 {
-                    lock (orderLock)
-                        EnsureAccountSubscription(attachAccount);
-                    SeedPositionCache(attachAccount);
+                    buttonPanel.Margin = new Thickness(6);
+                    buttonPanel.HorizontalAlignment = HorizontalAlignment.Left;
+                    buttonPanel.VerticalAlignment = VerticalAlignment.Top;
+                    buttonPanel.Opacity = 0.85;
+                    UserControlCollection.Add(buttonPanel);
+                    buttonInChartTrader = false;
                 }
 
                 handlersAttached = true;
@@ -233,133 +176,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
         #endregion
 
-        #region Account subscription and position cache
-        private void EnsureAccountSubscription(Account account)
-        {
-            if (ReferenceEquals(subscribedAccount, account))
-                return;
-
-            if (subscribedAccount != null)
-            {
-                subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
-                subscribedAccount.PositionUpdate -= OnAccountPositionUpdate;
-            }
-            subscribedAccount = account;
-            account.OrderUpdate += OnAccountOrderUpdate;
-            account.PositionUpdate += OnAccountPositionUpdate;
-
-            currentAvgPrice = 0;
-            currentMarketPosition = MarketPosition.Flat;
-            autoBreakevenState = AutoBreakevenState.Armed;
-            positionCacheGeneration++;
-            positionSeedPending = true;
-        }
-
-        /// <summary>
-        /// Seeds the position cache from the account so a reload mid-position
-        /// still arms the auto trigger. Runs after (never inside) orderLock:
-        /// the positions collection needs its own lock, and nesting the two
-        /// would invite lock-order inversion. A PositionUpdate that lands in
-        /// between wins over this snapshot via the positionSeedPending
-        /// handshake.
-        /// </summary>
-        private void SeedPositionCache(Account account)
-        {
-            double avgPrice = 0;
-            MarketPosition marketPosition = MarketPosition.Flat;
-            lock (account.Positions)
-            {
-                foreach (Position position in account.Positions)
-                {
-                    if (position.Instrument != null && position.Instrument.FullName == Instrument.FullName)
-                    {
-                        avgPrice = position.AveragePrice;
-                        marketPosition = position.MarketPosition;
-                        break;
-                    }
-                }
-            }
-
-            lock (orderLock)
-            {
-                if (!ReferenceEquals(subscribedAccount, account) || !positionSeedPending)
-                    return;
-                positionSeedPending = false;
-                currentAvgPrice = avgPrice;
-                currentMarketPosition = marketPosition;
-                positionCacheGeneration++;
-            }
-        }
-
-        // Arrives off the UI thread; keeps the auto trigger armed with the live
-        // position, and re-arms it whenever the position closes or flips.
-        // Account events run outside NinjaScript's exception wrapping, so
-        // failures are contained and named here.
-        private void OnAccountPositionUpdate(object sender, PositionEventArgs e)
-        {
-            try
-            {
-                // A queued event can outlive this instance's teardown.
-                if (Instrument == null || e.Position?.Instrument == null
-                    || e.Position.Instrument.FullName != Instrument.FullName)
-                    return;
-
-                // A closed position arrives as Operation.Remove with the last
-                // direction still on it; MarketPosition alone would read as
-                // still open.
-                bool nowFlat = e.Operation == Operation.Remove || e.MarketPosition == MarketPosition.Flat;
-
-                lock (orderLock)
-                {
-                    if (!ReferenceEquals(sender, subscribedAccount))
-                        return;
-                    positionSeedPending = false;
-
-                    if (nowFlat || e.MarketPosition != currentMarketPosition)
-                        autoBreakevenState = AutoBreakevenState.Armed;
-                    currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
-                    currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
-                    positionCacheGeneration++;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log("Breakeven Stops: position update handling failed - " + ex, NinjaTrader.Cbi.LogLevel.Error);
-            }
-        }
-
-        // An auto move that fired before any stop was live re-arms as soon as a
-        // protective stop is accepted, instead of polling every tick.
-        private void OnAccountOrderUpdate(object sender, OrderEventArgs e)
-        {
-            try
-            {
-                if (e.Order == null || Instrument == null)
-                    return;
-                if ((e.Order.OrderType == OrderType.StopMarket || e.Order.OrderType == OrderType.StopLimit)
-                    && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted))
-                {
-                    lock (orderLock)
-                    {
-                        if (autoBreakevenState == AutoBreakevenState.WaitingForStops
-                            && ReferenceEquals(sender, subscribedAccount))
-                            autoBreakevenState = AutoBreakevenState.Armed;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log("Breakeven Stops: order update handling failed - " + ex, NinjaTrader.Cbi.LogLevel.Error);
-            }
-        }
-        #endregion
-
         #region Breakeven
         /// <summary>
-        /// The button: make the move on whatever account ChartTrader has
-        /// selected right now. Deliberately reload-proof -- the stops are found
-        /// on the account by side and type, never through in-memory registries
-        /// a recompile would wipe. Every outcome lands in the log.
+        /// Make the move on whatever account ChartTrader has selected right
+        /// now. Deliberately reload-proof -- the stops are found on the account
+        /// by side and type, never through in-memory registries a recompile
+        /// would wipe. Every outcome lands in the log, so a click is never
+        /// silent.
         /// </summary>
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
         {
@@ -371,105 +194,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             }
 
-            // The click is the natural moment to follow an account switch made
-            // in the ChartTrader dropdown since attach.
-            lock (orderLock)
-                EnsureAccountSubscription(account);
-            SeedPositionCache(account);
-
-            MoveStopsToBreakeven(account, last, "button");
+            MoveStopsToBreakeven(account, last);
         }
 
-        /// <summary>
-        /// Watches live ticks for the auto trigger: once price has run the
-        /// configured distance in the position's favor, make the same move the
-        /// button makes, once per position.
-        /// </summary>
-        protected override void OnMarketData(MarketDataEventArgs marketDataUpdate)
-        {
-            if (!AutoBreakevenEnabled || marketDataUpdate.MarketDataType != MarketDataType.Last)
-                return;
-
-            double avgPrice;
-            MarketPosition position;
-            Account account;
-            int generation;
-            lock (orderLock)
-            {
-                if (autoBreakevenState != AutoBreakevenState.Armed)
-                    return;
-                avgPrice = currentAvgPrice;
-                position = currentMarketPosition;
-                account = subscribedAccount;
-                generation = positionCacheGeneration;
-            }
-            if (account == null || position == MarketPosition.Flat)
-                return;
-
-            MasterInstrument master = Instrument?.MasterInstrument;
-            if (master == null)
-                return;
-
-            // The offset has to land inside the market when the move fires, or
-            // the clamp would park the stop at the last price; require at least
-            // one tick of room beyond it before triggering.
-            int triggerTicks = Math.Max(AutoBreakevenTriggerTicks, BreakevenOffsetTicks + 1);
-            double trigger = triggerTicks * master.TickSize;
-            double price = marketDataUpdate.Price;
-            bool reached = position == MarketPosition.Long
-                ? price >= avgPrice + trigger
-                : price <= avgPrice - trigger;
-            if (!reached)
-                return;
-
-            lock (orderLock)
-            {
-                // The cache may have moved on (position closed, flipped, or
-                // scaled) between the snapshot and here; a stale tick must not
-                // fire on a replacement position that never reached its own
-                // trigger.
-                if (autoBreakevenState != AutoBreakevenState.Armed || generation != positionCacheGeneration)
-                    return;
-                autoBreakevenState = AutoBreakevenState.Pending;
-            }
-
-            MoveStopsToBreakeven(account, price, "auto", generation);
-        }
-
-        private void ReArmAutoBreakeven(int expectedGeneration)
-        {
-            if (expectedGeneration < 0)
-                return;
-            lock (orderLock)
-                autoBreakevenState = AutoBreakevenState.Armed;
-        }
-
-        private void MoveStopsToBreakeven(Account account, double last, string reason, int expectedGeneration = -1)
+        private void MoveStopsToBreakeven(Account account, double last)
         {
             TriggerCustomEvent(o =>
             {
-                // The auto path validates its snapshot is still current before
-                // touching orders; the button (no generation) always acts on
-                // what is live now.
-                if (expectedGeneration >= 0)
-                {
-                    lock (orderLock)
-                    {
-                        if (positionCacheGeneration != expectedGeneration
-                            || !ReferenceEquals(subscribedAccount, account))
-                        {
-                            autoBreakevenState = AutoBreakevenState.Armed;
-                            return;
-                        }
-                    }
-                }
-
                 MasterInstrument master = Instrument?.MasterInstrument;
                 if (master == null)
-                {
-                    ReArmAutoBreakeven(expectedGeneration);
                     return;
-                }
 
                 Position position = null;
                 lock (account.Positions)
@@ -486,7 +220,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
                 if (position == null || position.MarketPosition == MarketPosition.Flat)
                 {
-                    ReArmAutoBreakeven(expectedGeneration);
                     Log("Breakeven Stops: no open position on " + Instrument.FullName + "; stops not moved.",
                         NinjaTrader.Cbi.LogLevel.Information);
                     return;
@@ -559,27 +292,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (changes.Count == 0)
                 {
-                    // Stops already at or beyond BE count as done; no stops at
-                    // all means the exits are not live yet -- wait for one to
-                    // be accepted instead of burning the latch.
-                    if (expectedGeneration >= 0)
-                        lock (orderLock)
-                            autoBreakevenState = alreadySafer > 0
-                                ? AutoBreakevenState.Fired
-                                : AutoBreakevenState.WaitingForStops;
                     Log(alreadySafer > 0
-                            ? $"Breakeven Stops: all {alreadySafer} stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved ({reason})."
-                            : $"Breakeven Stops: no working protective stops on {Instrument.FullName} to move ({reason}).",
+                            ? $"Breakeven Stops: all {alreadySafer} stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved."
+                            : $"Breakeven Stops: no working protective stops on {Instrument.FullName} to move.",
                         NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
                 account.Change(changes);
-                if (expectedGeneration >= 0)
-                    lock (orderLock)
-                        autoBreakevenState = AutoBreakevenState.Fired;
                 string skippedNote = alreadySafer > 0 ? $", {alreadySafer} already safer left alone" : string.Empty;
-                Log($"Breakeven Stops: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}{skippedNote} ({reason}).",
+                Log($"Breakeven Stops: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}{skippedNote}.",
                     NinjaTrader.Cbi.LogLevel.Information);
             }, null);
         }
