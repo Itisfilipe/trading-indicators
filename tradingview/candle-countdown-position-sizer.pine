@@ -3,8 +3,8 @@
 // Candle Countdown & Position Sizer
 // ===================================
 // Author: Filipe Teixeira Amaral
-// Version: 2.1
-// Last Updated: July 2026
+// Version: 2.2
+// Last Updated: August 2026
 //
 // Description:
 // An on-chart info table that shows the current time, live countdowns to the next
@@ -18,7 +18,8 @@
 // • Optional countdowns to the next candle on up to three timeframes you select,
 //   with an optional highlight alert
 // • ATR-based stop distance (configurable × ATR) in points; in % of Account
-//   mode it also shows the cash risked at the suggested lot size
+//   mode it also shows the cash risked at the suggested lot size. The ATR and
+//   stop-distance rows can each be switched off for a tighter table
 // • Risk sized as a fixed dollar amount or a percentage of account size
 // • Wilder (RMA) or exponential (EMA) ATR smoothing
 // • Suggested lot size from your risk budget, the stop distance and the symbol's
@@ -71,6 +72,12 @@ riskPercent = input.float(1.0, 'Risk Per Trade (%)', minval=0.0, step=0.1, group
 stopAtrMult = input.float(1.5, 'Stop Size (× ATR)', minval=0.0, step=0.1, group='Position Sizing', tooltip='Stop distance as a multiple of ATR. 1.5 means the stop sits 1.5×ATR away from entry.')
 atrLength   = input.int(5, 'ATR Length', minval=1, group='Position Sizing')
 atrType     = input.string('EMA (Exponential)', 'ATR Smoothing', options=['RMA (Wilder)', 'EMA (Exponential)'], group='Position Sizing', tooltip='RMA is the classic Wilder ATR. EMA reacts faster to recent volatility.')
+
+// Declared after every older input on purpose: TradingView binds a saved
+// layout's values to inputs by position, so an insertion higher up would hand
+// old values to the wrong inputs. The group still files them under Display.
+showAtrRow     = input.bool(true, 'Show ATR Row',      group='Display', tooltip='The raw ATR row. Switch off for a tighter table.')
+showStopAtrRow = input.bool(true, 'Show Stop ATR Row', group='Display', tooltip='The stop-distance row. Switch off for a tighter table.')
 
 // --- String -> value lookups ----------------------------------------------
 
@@ -206,13 +213,15 @@ if barstate.islast
     row := row + 1
 
     // Raw ATR (price units)
-    addRow(row, 'ATR', str.tostring(atrValue, format.mintick), textColor, bgColor)
-    row := row + 1
+    if showAtrRow
+        addRow(row, 'ATR', str.tostring(atrValue, format.mintick), textColor, bgColor)
+        row := row + 1
 
     // Stop distance in price/points, labeled with its ATR multiple.
-    stopLabel = 'Stop ATR (' + str.tostring(stopAtrMult) + ')'
-    addRow(row, stopLabel, str.tostring(stopDistance, format.mintick), textColor, bgColor)
-    row := row + 1
+    if showStopAtrRow
+        stopLabel = 'Stop ATR (' + str.tostring(stopAtrMult) + ')'
+        addRow(row, stopLabel, str.tostring(stopDistance, format.mintick), textColor, bgColor)
+        row := row + 1
 
     // Cash actually at risk if the stop is hit, at the suggested (rounded) lots.
     // Only meaningful in % of Account mode — in Fixed $ mode it just echoes the

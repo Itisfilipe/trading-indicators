@@ -3,6 +3,23 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-08-12
+
+### Time-Based Vertical Lines (TradingView)
+- Each macro window takes its own label, shown on the band in place of the
+  window's times; the Final Hour, Market On Close and London windows come
+  pre-labeled, and an empty label keeps the time caption.
+- The macro countdown moves to its own line under the window's name, so
+  the name stays put while the ticking part changes underneath it.
+- Defaults now match the NinjaTrader pair of tools: the six regular-hours
+  macros plus Final Hour and MOC start enabled with the pre-market pair
+  carried but off, and only the three morning lines — NY midnight, the
+  08:30 news, the 09:30 open — start on.
+
+### Candle Countdown & Position Sizer (TradingView)
+- The ATR and Stop ATR rows get on/off switches for a tighter table,
+  matching the NinjaTrader port.
+
 ## 2026-08-10
 
 ### NinjaTrader settings panels (all indicators)

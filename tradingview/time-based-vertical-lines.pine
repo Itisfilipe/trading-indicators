@@ -2,7 +2,7 @@
 // -----------------------------------------------------------------------------
 // Time-Based Vertical Lines
 // Author: Filipe Teixeira Amaral
-// Version: 1.0
+// Version: 1.1
 //
 // Description:
 // Vertical lines at the clock times that matter during a session -- New York
@@ -23,19 +23,24 @@
 //   11:50 - 12:10   12:50 - 13:10                   lunch,       11:30 - 13:30
 //   13:50 - 14:10   14:50 - 15:10
 //   15:15 - 15:45   15:45 - 16:00                   PM session,  13:30 - 16:00
-// The last two slots hold London Macro 1 (02:33 - 03:00) and London Macro 2
-// (04:03 - 04:30), switched off. They belong to the London session rather than
-// to a New York block, which is why they do not share the :50 - :10 shape of
-// the rest. They are also the only two whose times are corroborated across ICT
-// teaching material rather than against a primary source -- hence off by
-// default.
+// The macro rule is :50 to :10 around every top of the hour, with the last
+// regular-hours hour split into the Final Hour and Market On Close windows
+// instead. The playbook trades the six regular-hours windows plus those two,
+// so exactly that set is on; the pre-market pair is carried for convenience
+// but starts off. The last two slots hold London Macro 1 (02:33 - 03:00) and
+// London Macro 2 (04:03 - 04:30), also off. They belong to the London session
+// rather than to a New York block, which is why they do not share the
+// :50 - :10 shape of the rest. They are also the only two whose times are
+// corroborated across ICT teaching material rather than against a primary
+// source.
 //
 // Features:
 // - 10 line slots, one compact row each: on/off, HH:MM, label, color, style
 // - Every line drawn for the whole day, future ones included
 // - Countdown on a line that has not happened yet
 // - 12 macro slots, each bracketed by a line at its start and one at its end,
-//   with a captioned rectangle joining the pair
+//   with a captioned rectangle joining the pair; each takes its own label, and
+//   leaving that label empty captions the band with the window's times
 // - Captions and rectangles share one strip, set clear of the bars
 // - Time zone support and historical-days control
 //
@@ -104,13 +109,13 @@ macro_band_transp = input.int(85, 'Band Transparency', 0, 100, group = GRP_MACRO
 // time; they are inputs rather than constants because the window a desk
 // actually trades drifts from the published one, and because the same rows
 // serve any other recurring span just as well.
-MACRO_TOOLTIP = 'On/off, then the window\'s start and end as HH:MM in the selected zone.'
+MACRO_TOOLTIP = 'On/off, the window\'s start and end as HH:MM in the selected zone, then its label. An empty label captions the band with the window\'s times.'
 
-macro1_on = input.bool(true, '1', inline = 'm1', tooltip = MACRO_TOOLTIP, group = GRP_MACROS)
+macro1_on = input.bool(false, '1', inline = 'm1', tooltip = MACRO_TOOLTIP, group = GRP_MACROS)
 macro1_start = input.string('07:50', '', inline = 'm1', group = GRP_MACROS)
 macro1_end = input.string('08:10', '-', inline = 'm1', group = GRP_MACROS)
 
-macro2_on = input.bool(true, '2', inline = 'm2', group = GRP_MACROS)
+macro2_on = input.bool(false, '2', inline = 'm2', group = GRP_MACROS)
 macro2_start = input.string('08:50', '', inline = 'm2', group = GRP_MACROS)
 macro2_end = input.string('09:10', '-', inline = 'm2', group = GRP_MACROS)
 
@@ -176,13 +181,13 @@ line3_text = input.string('NY Open', '', inline = 'l3', group = GRP_LINES)
 line3_color = input.color(#2962FF, '', inline = 'l3', group = GRP_LINES)
 line3_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l3', group = GRP_LINES)
 
-line4_on = input.bool(true, '4', inline = 'l4', group = GRP_LINES)
+line4_on = input.bool(false, '4', inline = 'l4', group = GRP_LINES)
 line4_time = input.string('16:00', '', inline = 'l4', group = GRP_LINES)
 line4_text = input.string('NY Close', '', inline = 'l4', group = GRP_LINES)
 line4_color = input.color(#2962FF, '', inline = 'l4', group = GRP_LINES)
 line4_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l4', group = GRP_LINES)
 
-line5_on = input.bool(true, '5', inline = 'l5', group = GRP_LINES)
+line5_on = input.bool(false, '5', inline = 'l5', group = GRP_LINES)
 line5_time = input.string('18:00', '', inline = 'l5', group = GRP_LINES)
 line5_text = input.string('Futures Open', '', inline = 'l5', group = GRP_LINES)
 line5_color = input.color(#787B86, '', inline = 'l5', group = GRP_LINES)
@@ -217,6 +222,26 @@ line10_time = input.string('12:00', '', inline = 'l10', group = GRP_LINES)
 line10_text = input.string('', '', inline = 'l10', group = GRP_LINES)
 line10_color = input.color(#787B86, '', inline = 'l10', group = GRP_LINES)
 line10_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l10', group = GRP_LINES)
+
+// Caption on each macro's band; empty uses the window's times. The windows
+// that follow the :50-:10 rule read best captioned with their times, but the
+// specials have names traders actually use, so those come pre-labeled.
+// Declared after every older input on purpose: TradingView binds a saved
+// layout's values to inputs by position, so a slot-side insertion would hand
+// old values to the wrong inputs. The inline ids still join each label to its
+// macro's row in the settings panel.
+macro1_label = input.string('', '', inline = 'm1', group = GRP_MACROS)
+macro2_label = input.string('', '', inline = 'm2', group = GRP_MACROS)
+macro3_label = input.string('', '', inline = 'm3', group = GRP_MACROS)
+macro4_label = input.string('', '', inline = 'm4', group = GRP_MACROS)
+macro5_label = input.string('', '', inline = 'm5', group = GRP_MACROS)
+macro6_label = input.string('', '', inline = 'm6', group = GRP_MACROS)
+macro7_label = input.string('', '', inline = 'm7', group = GRP_MACROS)
+macro8_label = input.string('', '', inline = 'm8', group = GRP_MACROS)
+macro9_label = input.string('Final Hour', '', inline = 'm9', group = GRP_MACROS)
+macro10_label = input.string('MOC', '', inline = 'm10', group = GRP_MACROS)
+macro11_label = input.string('London Macro 1', '', inline = 'm11', group = GRP_MACROS)
+macro12_label = input.string('London Macro 2', '', inline = 'm12', group = GRP_MACROS)
 
 //==============================================================================
 // TYPES
@@ -310,7 +335,7 @@ add_line(bool enabled, string time_text, string caption, color tint, string styl
         else
             array.push(markers, TimeLine.new(int(minutes_since_midnight / 60), minutes_since_midnight % 60, caption, tint, style_name))
 
-add_macro(bool enabled, string start_text, string end_text) =>
+add_macro(bool enabled, string start_text, string end_text, string label_text) =>
     if show_macros and enabled
         start_minutes = parse_clock_minutes(start_text)
         end_minutes = parse_clock_minutes(end_text)
@@ -323,13 +348,16 @@ add_macro(bool enabled, string start_text, string end_text) =>
             start_minute = start_minutes % 60
             end_hour = int(end_minutes / 60)
             end_minute = end_minutes % 60
+            trimmed_label = str.trim(label_text)
+            default_caption = 'Macro ' + clock_text(start_hour, start_minute) + '-' + clock_text(end_hour, end_minute)
+            caption = trimmed_label != '' ? trimmed_label : default_caption
             // Both edges, always: a macro is a span, and one line can only say
             // when it opens. Neither line is captioned -- the rectangle between
             // them carries the name, which is what makes the pair read as one
             // window instead of two loose lines.
             array.push(markers, TimeLine.new(start_hour, start_minute, '', macro_color, macro_style))
             array.push(markers, TimeLine.new(end_hour, end_minute, '', macro_color, macro_style))
-            array.push(macro_spans, MacroSpan.new(start_hour, start_minute, end_hour, end_minute, 'Macro ' + clock_text(start_hour, start_minute) + '-' + clock_text(end_hour, end_minute)))
+            array.push(macro_spans, MacroSpan.new(start_hour, start_minute, end_hour, end_minute, caption))
 
 if barstate.isfirst
     add_line(line1_on, line1_time, line1_text, line1_color, line1_style)
@@ -342,18 +370,18 @@ if barstate.isfirst
     add_line(line8_on, line8_time, line8_text, line8_color, line8_style)
     add_line(line9_on, line9_time, line9_text, line9_color, line9_style)
     add_line(line10_on, line10_time, line10_text, line10_color, line10_style)
-    add_macro(macro1_on, macro1_start, macro1_end)
-    add_macro(macro2_on, macro2_start, macro2_end)
-    add_macro(macro3_on, macro3_start, macro3_end)
-    add_macro(macro4_on, macro4_start, macro4_end)
-    add_macro(macro5_on, macro5_start, macro5_end)
-    add_macro(macro6_on, macro6_start, macro6_end)
-    add_macro(macro7_on, macro7_start, macro7_end)
-    add_macro(macro8_on, macro8_start, macro8_end)
-    add_macro(macro9_on, macro9_start, macro9_end)
-    add_macro(macro10_on, macro10_start, macro10_end)
-    add_macro(macro11_on, macro11_start, macro11_end)
-    add_macro(macro12_on, macro12_start, macro12_end)
+    add_macro(macro1_on, macro1_start, macro1_end, macro1_label)
+    add_macro(macro2_on, macro2_start, macro2_end, macro2_label)
+    add_macro(macro3_on, macro3_start, macro3_end, macro3_label)
+    add_macro(macro4_on, macro4_start, macro4_end, macro4_label)
+    add_macro(macro5_on, macro5_start, macro5_end, macro5_label)
+    add_macro(macro6_on, macro6_start, macro6_end, macro6_label)
+    add_macro(macro7_on, macro7_start, macro7_end, macro7_label)
+    add_macro(macro8_on, macro8_start, macro8_end, macro8_label)
+    add_macro(macro9_on, macro9_start, macro9_end, macro9_label)
+    add_macro(macro10_on, macro10_start, macro10_end, macro10_label)
+    add_macro(macro11_on, macro11_start, macro11_end, macro11_label)
+    add_macro(macro12_on, macro12_start, macro12_end, macro12_label)
 
 //==============================================================================
 // THE DAYS TO DRAW THEM ON
@@ -491,13 +519,16 @@ if barstate.islast
 
             // One caption for the whole window, and it changes tense with it:
             // counting down to the open while the window is ahead, counting out
-            // what is left of it once inside.
+            // what is left of it once inside. The countdown gets its own line
+            // so the window's name stays put and only the ticking part changes
+            // underneath it; inline, it stretched the caption wide and made
+            // the band read as one long token.
             caption = span.caption
             if show_countdown
                 if timenow < span_start
-                    caption := caption + '   in ' + countdown_text(span_start - timenow)
+                    caption := caption + '\nin ' + countdown_text(span_start - timenow)
                 else if timenow < span_end
-                    caption := caption + '   ' + countdown_text(span_end - timenow) + ' left'
+                    caption := caption + '\n' + countdown_text(span_end - timenow) + ' left'
 
             if macro_band_percent > 0
                 array.push(drawn_boxes, box.new(span_start, band_top, span_end, band_bottom, xloc = xloc.bar_time, border_color = macro_color, border_width = line_width, border_style = line_style_constant(macro_style), bgcolor = color.new(macro_color, macro_band_transp), text = show_labels ? caption : '', text_color = macro_color, text_halign = text.align_center, text_valign = text.align_center, text_size = label_size_constant()))

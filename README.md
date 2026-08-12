@@ -392,6 +392,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   to the next higher-timeframe close.
 - Position sizer: turns account risk and stop distance into a contract/share
   quantity.
+- The ATR and stop-distance rows can each be switched off for a tighter
+  table.
 
 ### Time-Based Price Levels
 
@@ -421,25 +423,27 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   midnight, the 09:30 open, a news release. The companion to Time-Based
   Price Levels: that one answers "at what price", this one "at what time".
 - 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
+  Three start on — NY midnight, the 08:30 news, the 09:30 open; the rest
+  are carried but off.
 - Every line is drawn for the whole day, **including the ones still ahead**,
   each carrying a countdown to it.
-- 12 more slots for macro windows, defaulting to the ICT ones grouped by
-  session: 07:50–08:10 and 08:50–09:10 ahead of the bell, 09:50–10:10 and
-  10:50–11:10 in the AM session, 11:50–12:10 and 12:50–13:10 over lunch,
-  then 13:50–14:10, 14:50–15:10, 15:15–15:45 and 15:45–16:00 through the PM
-  session. Two spare rows hold the London macros (02:33–03:00,
-  04:03–04:30), switched off.
-- Each macro has its own on/off and its own start and end time, is
-  bracketed by a line at both ends, and has those two lines joined by a
-  rectangle carrying its name: `Macro 09:50-10:10`. The caption changes
-  tense with the window — counting down to the open while it is ahead,
-  counting out what is left once inside it.
+- 12 more slots for macro windows, defaulting to the ICT ones in New York
+  time: the six regular-hours windows (09:50–10:10 through 14:50–15:10),
+  the Final Hour (15:15–15:45) and Market On Close (15:45–16:00) start
+  enabled; the pre-market pair (07:50–08:10, 08:50–09:10) and the London
+  macros (02:33–03:00, 04:03–04:30) are carried but off.
+- Each macro has its own on/off, its own start and end time and its own
+  label, is bracketed by a line at both ends, and has those two lines
+  joined by a rectangle carrying the label — the Final Hour, MOC and London
+  windows come pre-labeled, and an empty label captions the band with the
+  window's times: `Macro 09:50-10:10`. The caption changes tense with the
+  window — counting down to the open while it is ahead, counting out what
+  is left once inside it, on its own line under the name.
 - Captions and macro rectangles share one strip below (or above) the bars,
   set clear of them by an adjustable gap, welded there through any scroll
   or zoom. Nothing is drawn over the candles. Captions read across rather
-  than
-  down the line: a script cannot use the chart's own vertical-line drawing,
-  and a Pine label has no rotation, so short captions work best.
+  than down the line: a script cannot use the chart's own vertical-line
+  drawing, and a Pine label has no rotation, so short captions work best.
 - History days are only drawn if the chart has bars for them, so a past
   weekend never collects a set of lines nothing traded under. Today is
   always drawn whether or not it has bars yet, and tomorrow too if you
