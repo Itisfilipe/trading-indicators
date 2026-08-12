@@ -394,6 +394,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   quantity.
 - The ATR and stop-distance rows can each be switched off for a tighter
   table.
+- Optional stop-level lines mark last price ± the ATR stop distance, to
+  pair with TradingView's own Long/Short Position drawing tool: set the
+  tool's account size and risk to the same values as the sizer, drag its
+  stop line onto a stop level, and the tool's quantity matches the table's
+  Lot row. The lines track the last price — a limit entry away from the
+  market wants the same distance from its own price, not the line itself.
 
 ### Time-Based Price Levels
 

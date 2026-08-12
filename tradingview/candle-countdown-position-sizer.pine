@@ -3,7 +3,7 @@
 // Candle Countdown & Position Sizer
 // ===================================
 // Author: Filipe Teixeira Amaral
-// Version: 2.2
+// Version: 2.3
 // Last Updated: August 2026
 //
 // Description:
@@ -24,6 +24,9 @@
 // • Wilder (RMA) or exponential (EMA) ATR smoothing
 // • Suggested lot size from your risk budget, the stop distance and the symbol's
 //   point value
+// • Optional stop-level lines at last price ± the stop distance, to drop the
+//   Long/Short Position tool's stop onto — with the tool set to the same
+//   account size and risk, its quantity then agrees with the Lot row
 //
 // Notes:
 // • Updates depend on incoming price ticks. During low-volume periods the table may
@@ -75,9 +78,13 @@ atrType     = input.string('EMA (Exponential)', 'ATR Smoothing', options=['RMA (
 
 // Declared after every older input on purpose: TradingView binds a saved
 // layout's values to inputs by position, so an insertion higher up would hand
-// old values to the wrong inputs. The group still files them under Display.
+// old values to the wrong inputs. The group tag, not the position here, decides
+// which section each one appears under.
 showAtrRow     = input.bool(true, 'Show ATR Row',      group='Display', tooltip='The raw ATR row. Switch off for a tighter table.')
 showStopAtrRow = input.bool(true, 'Show Stop ATR Row', group='Display', tooltip='The stop-distance row. Switch off for a tighter table.')
+
+showStopLevels = input.bool(true, 'Show Stop Level Lines', group='Position Sizing', tooltip='Draw the two prices an ATR stop sits at — last price ± the stop distance — so the Long/Short Position tool\'s stop line can be dropped straight onto one. With the tool set to the same account size and risk, its quantity then agrees with the Lot row.')
+stopLevelColor = input.color(#EF5350, 'Stop Level Color', group='Position Sizing')
 
 // --- String -> value lookups ----------------------------------------------
 
@@ -153,6 +160,15 @@ trueRange = ta.tr(true)
 atrValue  = atrType == 'EMA (Exponential)' ? ta.ema(trueRange, atrLength) : ta.rma(trueRange, atrLength)
 
 stopDistance = stopAtrMult * atrValue              // stop width in price units
+
+// The stop a trade actually places sits on the tick grid, so the distance is
+// tick-rounded once (never below one tick) and everything downstream — the
+// sizing, the table, the stop-level lines — shares it. Sizing from the raw
+// ATR distance let the drawn level disagree with the Lot row by a fraction
+// of a tick, which near a lot-rounding boundary flips the position tool's
+// quantity away from the table's.
+stopDistance := not na(stopDistance) and stopDistance > 0 ? math.max(syminfo.mintick, math.round_to_mintick(stopDistance)) : stopDistance
+
 riskPerLot   = stopDistance * syminfo.pointvalue   // dollar loss per 1 contract if stopped
 lotSize      = riskPerLot > 0 ? riskAmount / riskPerLot : na
 
@@ -232,3 +248,33 @@ if barstate.islast
         cashStr = na(cash) ? '—' : '$' + str.tostring(cash, '0.##')
         addRow(row, 'Stop Cash (' + str.tostring(riskPercent) + '%)', cashStr, textColor, bgColor)
         row := row + 1
+
+// --- Stop level lines -------------------------------------------------------
+
+// The Long/Short Position drawing tool sizes a trade from the stop price it is
+// dragged to; these lines put the ATR stop's two candidate prices on the chart
+// so the tool's stop snaps straight onto one, making its risk-based quantity
+// agree with the Lot row. Anchored to the last price, which is the entry a
+// market order would get — a limit entry elsewhere wants the same *distance*
+// from its own price, not this line.
+var line  longStopLine   = na
+var line  shortStopLine  = na
+var label longStopLabel  = na
+var label shortStopLabel = na
+
+if barstate.islast and showStopLevels and not na(stopDistance) and stopDistance > 0
+    line.delete(longStopLine)
+    line.delete(shortStopLine)
+    label.delete(longStopLabel)
+    label.delete(shortStopLabel)
+
+    // The distance is already tick-rounded (see the sizing block), so with a
+    // tick-aligned last price these levels sit on the grid the position tool
+    // snaps its stop to.
+    longStop  = close - stopDistance
+    shortStop = close + stopDistance
+    lineStart = math.max(0, bar_index - 10)
+    longStopLine   := line.new(lineStart, longStop, bar_index, longStop, extend=extend.right, color=stopLevelColor, style=line.style_dashed)
+    shortStopLine  := line.new(lineStart, shortStop, bar_index, shortStop, extend=extend.right, color=stopLevelColor, style=line.style_dashed)
+    longStopLabel  := label.new(bar_index + 3, longStop, 'Long Stop ' + str.tostring(longStop, format.mintick), color=color.new(color.white, 100), textcolor=stopLevelColor, style=label.style_label_left, size=size.small)
+    shortStopLabel := label.new(bar_index + 3, shortStop, 'Short Stop ' + str.tostring(shortStop, format.mintick), color=color.new(color.white, 100), textcolor=stopLevelColor, style=label.style_label_left, size=size.small)

@@ -19,6 +19,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ### Candle Countdown & Position Sizer (TradingView)
 - The ATR and Stop ATR rows get on/off switches for a tighter table,
   matching the NinjaTrader port.
+- Stop-level lines, on by default: the two prices an ATR stop sits at
+  (last price ± the stop distance), labeled with their prices, so the
+  Long/Short Position tool's stop can be dropped straight onto one and
+  its risk-based quantity agrees with the table's Lot suggestion.
 
 ## 2026-08-10
 
