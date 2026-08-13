@@ -422,28 +422,18 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Vertical lines at the clock times that matter during a session — New York
   midnight, the 09:30 open, a news release. The companion to Time-Based
   Price Levels: that one answers "at what price", this one "at what time".
+  The macro windows live in the ICT Macros indicator instead.
 - 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
   Three start on — NY midnight, the 08:30 news, the 09:30 open; the rest
   are carried but off.
 - Every line is drawn for the whole day, **including the ones still ahead**,
   each carrying a countdown to it.
-- 12 more slots for macro windows, defaulting to the ICT ones in New York
-  time: the six regular-hours windows (09:50–10:10 through 14:50–15:10),
-  the Final Hour (15:15–15:45) and Market On Close (15:45–16:00) start
-  enabled; the pre-market pair (07:50–08:10, 08:50–09:10) and the London
-  macros (02:33–03:00, 04:03–04:30) are carried but off.
-- Each macro has its own on/off, its own start and end time and its own
-  label, is bracketed by a line at both ends, and has those two lines
-  joined by a rectangle carrying the label — the Final Hour, MOC and London
-  windows come pre-labeled, and an empty label captions the band with the
-  window's times: `Macro 09:50-10:10`. The caption changes tense with the
-  window — counting down to the open while it is ahead, counting out what
-  is left once inside it, on its own line under the name.
-- Captions and macro rectangles share one strip below (or above) the bars,
-  set clear of them by an adjustable gap, welded there through any scroll
-  or zoom. Nothing is drawn over the candles. Captions read across rather
-  than down the line: a script cannot use the chart's own vertical-line
-  drawing, and a Pine label has no rotation, so short captions work best.
+- Captions ride one strip below or above the bars (top by default, clear of
+  ICT Macros' bottom strip), set off them by an adjustable gap, welded
+  there through any scroll or zoom. Nothing is drawn over the candles.
+  Captions read across rather than down the line: a script cannot use the
+  chart's own vertical-line drawing, and a Pine label has no rotation, so
+  short captions work best.
 - History days are only drawn if the chart has bars for them, so a past
   weekend never collects a set of lines nothing traded under. Today is
   always drawn whether or not it has bars yet, and tomorrow too if you
@@ -453,6 +443,35 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   (Chart settings → Appearance → Right margin, or drag the chart left) — a
   line an hour out sits an hour's worth of bars past the last one, and
   TradingView will not scroll there on its own.
+
+### ICT Macros
+
+- The ICT macro windows as first-class chart objects: each window bracketed
+  by a vertical line at its start and end, joined by a captioned rectangle
+  riding a strip at the chart's edge — bottom by default, so it shares a
+  chart with Time-Based Vertical Lines' top captions without collision. The
+  bracket lines can be switched off to leave only the rectangles.
+- 24 slots — the full standard macro map, one row per window, grouped by
+  session in the settings: Asia (18:50 through 00:50), London (01:50
+  through 04:50), NY pre-market (05:50 through 08:50), then the NY AM,
+  lunch and PM windows and the final-hour specials. Each row: on/off,
+  start and end as HH:MM, label. The caption carries the label — or the
+  window's times when the label is empty: `Macro 09:50-10:10` — and
+  changes tense with the window, counting down to the open while it is
+  ahead and counting out what is left once inside, on its own line under
+  the name.
+- The rule behind the map is `:50→:10` around every top of the hour,
+  except the final trading hour, which gets the Final Hour (15:15–15:45)
+  and Market On Close (15:45–16:00) specials plus the settlement portion
+  (15:50–16:00) as its own optional slot. The New York set the playbook
+  trades — the six regular-hours windows plus Final Hour and MOC — starts
+  enabled; every other window is there to switch on. A window may cross
+  midnight (23:50–00:10 does) and stays keyed to the day it starts on.
+- Windows still ahead today are already on the chart; same history-days,
+  include-tomorrow and right-margin behavior as Time-Based Vertical Lines.
+- The strip hangs off the visible bars, not the panel edge — Pine cannot
+  read the viewport's own bounds, so the chart gives up a little scale to
+  make room instead; the Edge Gap setting is that padding.
 
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.

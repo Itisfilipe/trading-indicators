@@ -3,6 +3,32 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-08-13
+
+### ICT Macros (TradingView, new)
+- The macro windows split out of Time-Based Vertical Lines into their own
+  indicator, mirroring the NinjaTrader pair: bracket lines joined by a
+  captioned band on a strip that defaults to the bottom edge, per-window
+  labels, and the countdown under the window's name.
+- The slots grow from twelve to the full standard macro map — one row per
+  :50→:10 window from the 18:50 Asia macro around the clock, plus the
+  Final Hour, Market On Close and Settlement specials — grouped by
+  session in the settings. The New York set the playbook trades starts
+  enabled, everything else is there to switch on, and the circulated
+  02:33–03:00 and 04:03–04:30 "London macro" times are gone in favor of
+  the rule's own windows. The 23:50–00:10 window crosses midnight and
+  stays keyed to the day it starts on.
+
+### Time-Based Vertical Lines (TradingView)
+- Slims down to the ten line slots; the macro rows are gone from its
+  settings. Captions keep the top edge by default, so the two tools share
+  a chart without double-booking a strip.
+- With no band to straddle, the captions sit at the strip's edge — half a
+  band height closer to the bars than they rode in the combined tool.
+- Updating by pasting the new source over the old script scrambles saved
+  settings (TradingView keeps input values by position, and the macro rows
+  are gone). Add the slimmed script fresh instead.
+
 ## 2026-08-12
 
 ### Time-Based Vertical Lines (TradingView)

@@ -1,0 +1,495 @@
+//@version=6
+// -----------------------------------------------------------------------------
+// ICT Macros
+// Author: Filipe Teixeira Amaral
+// Version: 1.0
+//
+// Description:
+// The ICT macro windows as first-class chart objects: each window bracketed by
+// a vertical line at its start and one at its end, the pair joined by a
+// captioned rectangle on a strip at the chart's edge. The caption carries the
+// window's name with a countdown under it -- to the open while the window is
+// ahead, of what is left once inside. Split out of Time-Based Vertical Lines
+// the way the NinjaTrader pair is: that tool keeps the plain time lines, this
+// one owns the windows, and the two share a chart without double-booking an
+// edge -- the band strip defaults to the bottom and the line captions to the
+// top.
+//
+// The slots are the full standard macro map, in New York time. The rule is
+// :50 to :10 around every top of the hour -- twenty minutes straddling it --
+// except the final trading hour, which replaces its window with the Final
+// Hour (15:15 - 15:45) and Market On Close (15:45 - 16:00) specials; the
+// settlement portion (15:50 - 16:00) rides inside MOC as its own optional
+// slot. That gives one row per window from the 18:50 Asia macro around the
+// clock to the close, grouped by the session each falls in. The playbook
+// trades the six regular-hours windows plus the Final Hour and MOC, so
+// exactly that set starts enabled; every other session's windows are carried
+// but off. The 08:30 news release and the opening ranges are separate
+// events, not macros -- the 08:30 line lives in Time-Based Vertical Lines.
+//
+// Features:
+// - 24 macro slots, one row each: on/off, start and end as HH:MM, label
+// - Empty label captions the band with the window's times; the Final Hour,
+//   MOC and Settlement windows come pre-labeled
+// - Countdown on its own line under the window's name
+// - A window may cross midnight (23:50 - 00:10 does); it stays keyed to the
+//   day it starts on
+// - Bands and captions ride a strip at the bottom (or top) edge, set clear
+//   of the bars by an adjustable gap
+// - Bracket lines can switch off, leaving only the bands on the strip
+// - Every window drawn for the whole day, future ones included
+// - Time zone support and historical-days control
+//
+// Notes:
+// - Times are read as HH:MM in the selected zone. An entry that is not a
+//   valid time is skipped, with a note in the Pine Logs pane; an end before
+//   the start means the window runs into the next day.
+// - The strip hangs off the visible bars, not the panel edge: a script only
+//   knows prices, never pixels, so it makes room by having the chart's
+//   auto-scale give up range under (or over) the candles. Pine has no way to
+//   read the viewport's own bounds, so the strip cannot be pinned to the
+//   panel edge the way a platform-native tool could pin it.
+// - A window later today sits past the last bar. TradingView draws at most
+//   500 bars past the last one, and the chart only reveals as much of that
+//   as the right margin allows (Chart settings > Appearance).
+// -----------------------------------------------------------------------------
+
+indicator('ICT Macros', overlay = true, max_lines_count = 500, max_boxes_count = 500)
+
+MS_PER_DAY = 86400000
+HALF_DAY_MS = 43200000
+FALLBACK_LOOKBACK = 100
+
+// Distinct days kept in the log: comfortably more than the five the history
+// cutoff can ask for, so the oldest day still wanted is always still in there.
+MAX_TRACKED_DAYS = 20
+
+//==============================================================================
+// INPUTS
+//==============================================================================
+GRP_GENERAL = 'General Settings'
+GRP_BAND = 'Band'
+GRP_ASIA = 'Asia Macros'
+GRP_LONDON = 'London Macros'
+GRP_PREMARKET = 'NY Pre-Market Macros'
+GRP_AM = 'NY AM Macros'
+GRP_LUNCH = 'NY Lunch Macros'
+GRP_PM = 'NY PM Macros'
+GRP_FINAL = 'Final Hour Macros'
+
+tz = input.string('America/New_York', 'Time Zone', options = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Kolkata', 'Australia/Sydney', 'Pacific/Auckland', 'GMT-12', 'GMT-11', 'GMT-10', 'GMT-9', 'GMT-8', 'GMT-7', 'GMT-6', 'GMT-5', 'GMT-4', 'GMT-3', 'GMT-2', 'GMT-1', 'GMT', 'GMT+1', 'GMT+2', 'GMT+3', 'GMT+4', 'GMT+5', 'GMT+6', 'GMT+7', 'GMT+8', 'GMT+9', 'GMT+10', 'GMT+11', 'GMT+12'], tooltip = 'Zone every window time below is read in.', group = GRP_GENERAL)
+
+history_days = input.int(1, 'Days of History to Show', 0, 5, tooltip = 'How far back to keep drawing windows, counted from the last day the chart has bars for -- that day always keeps its own. 0 = that day and today.', group = GRP_GENERAL)
+
+include_tomorrow = input.bool(false, 'Include Tomorrow', tooltip = 'Also draw tomorrow\'s windows. Useful late in the session, when everything for today has already happened. Only worth it from about the 5-minute timeframe up: TradingView draws at most 500 bars past the last one.', group = GRP_GENERAL)
+
+show_bracket_lines = input.bool(true, 'Show Bracket Lines', tooltip = 'The vertical lines at each window\'s start and end. Off leaves only the rectangles on the strip.', group = GRP_GENERAL)
+
+line_width = input.int(1, 'Line Width', 1, 5, tooltip = 'Width of the bracket lines and the band outline.', group = GRP_GENERAL)
+
+macro_color = input.color(#F57C00, 'Color', inline = 'stroke', group = GRP_GENERAL)
+macro_style = input.string('Dotted', 'Style', options = ['Solid', 'Dashed', 'Dotted'], inline = 'stroke', group = GRP_GENERAL)
+
+show_captions = input.bool(true, 'Show Captions', tooltip = 'Print each window\'s caption on its band.', group = GRP_BAND)
+
+caption_size = input.string('small', 'Caption Size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_BAND)
+
+show_countdown = input.bool(true, 'Countdown', tooltip = 'Add a line under the window\'s name: the time to its open while it is ahead, what is left of it once inside.', group = GRP_BAND)
+
+strip_position = input.string('Bottom', 'Strip Position', options = ['Bottom', 'Top'], tooltip = 'Which edge of the chart the strip of bands rides. Bottom leaves the top free for Time-Based Vertical Lines\' captions, so the two tools share a chart without double-booking an edge.', group = GRP_BAND)
+
+edge_gap_percent = input.float(3.0, 'Edge Gap (%)', 0, 40, step = 0.5, tooltip = 'Clear space between the bars and the strip, as a share of the visible price range. The chart gives up that much scale to make the room, so a larger gap means slightly flatter candles. The strip hangs off the visible bars -- Pine cannot read the panel\'s own bounds to pin it there.', group = GRP_BAND)
+
+band_height_percent = input.float(4.0, 'Band Height (%)', 0, 40, step = 0.5, tooltip = 'Thickness of the rectangle joining a window\'s two lines, as a share of the visible price range. The caption rides its centre and spills past a narrow rectangle rather than being cut off, so this is about how the band looks, not whether the text fits. 0 draws only the bracket lines.', group = GRP_BAND)
+
+band_transp = input.int(85, 'Band Transparency', 0, 100, group = GRP_BAND)
+
+// One row per window of the standard macro map, grouped by session. They are
+// inputs rather than constants because the window a desk actually trades
+// drifts from the published one, and because the rows serve any other
+// recurring span just as well.
+MACRO_TOOLTIP = 'On/off, the window\'s start and end as HH:MM in the selected zone, then its label. An empty label captions the band with the window\'s times; an end before the start rolls into the next day.'
+
+macro1_on = input.bool(false, '1', inline = 'm1', tooltip = MACRO_TOOLTIP, group = GRP_ASIA)
+macro1_start = input.string('18:50', '', inline = 'm1', group = GRP_ASIA)
+macro1_end = input.string('19:10', '-', inline = 'm1', group = GRP_ASIA)
+macro1_label = input.string('', '', inline = 'm1', group = GRP_ASIA)
+
+macro2_on = input.bool(false, '2', inline = 'm2', group = GRP_ASIA)
+macro2_start = input.string('19:50', '', inline = 'm2', group = GRP_ASIA)
+macro2_end = input.string('20:10', '-', inline = 'm2', group = GRP_ASIA)
+macro2_label = input.string('', '', inline = 'm2', group = GRP_ASIA)
+
+macro3_on = input.bool(false, '3', inline = 'm3', group = GRP_ASIA)
+macro3_start = input.string('20:50', '', inline = 'm3', group = GRP_ASIA)
+macro3_end = input.string('21:10', '-', inline = 'm3', group = GRP_ASIA)
+macro3_label = input.string('', '', inline = 'm3', group = GRP_ASIA)
+
+macro4_on = input.bool(false, '4', inline = 'm4', group = GRP_ASIA)
+macro4_start = input.string('21:50', '', inline = 'm4', group = GRP_ASIA)
+macro4_end = input.string('22:10', '-', inline = 'm4', group = GRP_ASIA)
+macro4_label = input.string('', '', inline = 'm4', group = GRP_ASIA)
+
+macro5_on = input.bool(false, '5', inline = 'm5', group = GRP_ASIA)
+macro5_start = input.string('22:50', '', inline = 'm5', group = GRP_ASIA)
+macro5_end = input.string('23:10', '-', inline = 'm5', group = GRP_ASIA)
+macro5_label = input.string('', '', inline = 'm5', group = GRP_ASIA)
+
+macro6_on = input.bool(false, '6', inline = 'm6', group = GRP_ASIA)
+macro6_start = input.string('23:50', '', inline = 'm6', group = GRP_ASIA)
+macro6_end = input.string('00:10', '-', inline = 'm6', group = GRP_ASIA)
+macro6_label = input.string('', '', inline = 'm6', group = GRP_ASIA)
+
+macro7_on = input.bool(false, '7', inline = 'm7', group = GRP_ASIA)
+macro7_start = input.string('00:50', '', inline = 'm7', group = GRP_ASIA)
+macro7_end = input.string('01:10', '-', inline = 'm7', group = GRP_ASIA)
+macro7_label = input.string('', '', inline = 'm7', group = GRP_ASIA)
+
+macro8_on = input.bool(false, '8', inline = 'm8', group = GRP_LONDON)
+macro8_start = input.string('01:50', '', inline = 'm8', group = GRP_LONDON)
+macro8_end = input.string('02:10', '-', inline = 'm8', group = GRP_LONDON)
+macro8_label = input.string('', '', inline = 'm8', group = GRP_LONDON)
+
+macro9_on = input.bool(false, '9', inline = 'm9', group = GRP_LONDON)
+macro9_start = input.string('02:50', '', inline = 'm9', group = GRP_LONDON)
+macro9_end = input.string('03:10', '-', inline = 'm9', group = GRP_LONDON)
+macro9_label = input.string('', '', inline = 'm9', group = GRP_LONDON)
+
+macro10_on = input.bool(false, '10', inline = 'm10', group = GRP_LONDON)
+macro10_start = input.string('03:50', '', inline = 'm10', group = GRP_LONDON)
+macro10_end = input.string('04:10', '-', inline = 'm10', group = GRP_LONDON)
+macro10_label = input.string('', '', inline = 'm10', group = GRP_LONDON)
+
+macro11_on = input.bool(false, '11', inline = 'm11', group = GRP_LONDON)
+macro11_start = input.string('04:50', '', inline = 'm11', group = GRP_LONDON)
+macro11_end = input.string('05:10', '-', inline = 'm11', group = GRP_LONDON)
+macro11_label = input.string('', '', inline = 'm11', group = GRP_LONDON)
+
+macro12_on = input.bool(false, '12', inline = 'm12', group = GRP_PREMARKET)
+macro12_start = input.string('05:50', '', inline = 'm12', group = GRP_PREMARKET)
+macro12_end = input.string('06:10', '-', inline = 'm12', group = GRP_PREMARKET)
+macro12_label = input.string('', '', inline = 'm12', group = GRP_PREMARKET)
+
+macro13_on = input.bool(false, '13', inline = 'm13', group = GRP_PREMARKET)
+macro13_start = input.string('06:50', '', inline = 'm13', group = GRP_PREMARKET)
+macro13_end = input.string('07:10', '-', inline = 'm13', group = GRP_PREMARKET)
+macro13_label = input.string('', '', inline = 'm13', group = GRP_PREMARKET)
+
+macro14_on = input.bool(false, '14', inline = 'm14', group = GRP_PREMARKET)
+macro14_start = input.string('07:50', '', inline = 'm14', group = GRP_PREMARKET)
+macro14_end = input.string('08:10', '-', inline = 'm14', group = GRP_PREMARKET)
+macro14_label = input.string('', '', inline = 'm14', group = GRP_PREMARKET)
+
+macro15_on = input.bool(false, '15', inline = 'm15', group = GRP_PREMARKET)
+macro15_start = input.string('08:50', '', inline = 'm15', group = GRP_PREMARKET)
+macro15_end = input.string('09:10', '-', inline = 'm15', group = GRP_PREMARKET)
+macro15_label = input.string('', '', inline = 'm15', group = GRP_PREMARKET)
+
+macro16_on = input.bool(true, '16', inline = 'm16', group = GRP_AM)
+macro16_start = input.string('09:50', '', inline = 'm16', group = GRP_AM)
+macro16_end = input.string('10:10', '-', inline = 'm16', group = GRP_AM)
+macro16_label = input.string('', '', inline = 'm16', group = GRP_AM)
+
+macro17_on = input.bool(true, '17', inline = 'm17', group = GRP_AM)
+macro17_start = input.string('10:50', '', inline = 'm17', group = GRP_AM)
+macro17_end = input.string('11:10', '-', inline = 'm17', group = GRP_AM)
+macro17_label = input.string('', '', inline = 'm17', group = GRP_AM)
+
+macro18_on = input.bool(true, '18', inline = 'm18', group = GRP_AM)
+macro18_start = input.string('11:50', '', inline = 'm18', group = GRP_AM)
+macro18_end = input.string('12:10', '-', inline = 'm18', group = GRP_AM)
+macro18_label = input.string('', '', inline = 'm18', group = GRP_AM)
+
+macro19_on = input.bool(true, '19', inline = 'm19', group = GRP_LUNCH)
+macro19_start = input.string('12:50', '', inline = 'm19', group = GRP_LUNCH)
+macro19_end = input.string('13:10', '-', inline = 'm19', group = GRP_LUNCH)
+macro19_label = input.string('', '', inline = 'm19', group = GRP_LUNCH)
+
+macro20_on = input.bool(true, '20', inline = 'm20', group = GRP_PM)
+macro20_start = input.string('13:50', '', inline = 'm20', group = GRP_PM)
+macro20_end = input.string('14:10', '-', inline = 'm20', group = GRP_PM)
+macro20_label = input.string('', '', inline = 'm20', group = GRP_PM)
+
+macro21_on = input.bool(true, '21', inline = 'm21', group = GRP_PM)
+macro21_start = input.string('14:50', '', inline = 'm21', group = GRP_PM)
+macro21_end = input.string('15:10', '-', inline = 'm21', group = GRP_PM)
+macro21_label = input.string('', '', inline = 'm21', group = GRP_PM)
+
+macro22_on = input.bool(true, '22', inline = 'm22', group = GRP_FINAL)
+macro22_start = input.string('15:15', '', inline = 'm22', group = GRP_FINAL)
+macro22_end = input.string('15:45', '-', inline = 'm22', group = GRP_FINAL)
+macro22_label = input.string('Final Hour', '', inline = 'm22', group = GRP_FINAL)
+
+macro23_on = input.bool(true, '23', inline = 'm23', group = GRP_FINAL)
+macro23_start = input.string('15:45', '', inline = 'm23', group = GRP_FINAL)
+macro23_end = input.string('16:00', '-', inline = 'm23', group = GRP_FINAL)
+macro23_label = input.string('MOC', '', inline = 'm23', group = GRP_FINAL)
+
+macro24_on = input.bool(false, '24', inline = 'm24', group = GRP_FINAL)
+macro24_start = input.string('15:50', '', inline = 'm24', group = GRP_FINAL)
+macro24_end = input.string('16:00', '-', inline = 'm24', group = GRP_FINAL)
+macro24_label = input.string('Settlement', '', inline = 'm24', group = GRP_FINAL)
+
+//==============================================================================
+// TYPES
+//==============================================================================
+// A macro is a span, so it is kept as one: the two clock times its lines are
+// drawn at, whether the end belongs to the next day (23:50 - 00:10 wraps),
+// and the caption the rectangle between them carries. Both ends stay as
+// clock fields rather than a duration so each day rebuilds them against its
+// own calendar -- a window crossing a daylight-saving switch still ends at
+// the time on its row, not that many elapsed minutes later.
+type MacroSpan
+    int start_hour
+    int start_minute
+    int end_hour
+    int end_minute
+    bool wraps
+    string caption
+
+//==============================================================================
+// HELPERS
+//==============================================================================
+pad_two(int value) =>
+    (value < 10 ? '0' : '') + str.tostring(value)
+
+clock_text(int minutes_of_day) =>
+    pad_two(int(minutes_of_day / 60)) + ':' + pad_two(minutes_of_day % 60)
+
+// mm:ss while under an hour, then Hh MMm -- the seconds stop being useful once
+// the window is that far out.
+countdown_text(int milliseconds) =>
+    total_seconds = int(math.max(0, milliseconds) / 1000)
+    hours = int(total_seconds / 3600)
+    minutes = int(total_seconds % 3600 / 60)
+    seconds = total_seconds % 60
+    hours > 0 ? str.tostring(hours) + 'h ' + pad_two(minutes) + 'm' : pad_two(minutes) + ':' + pad_two(seconds)
+
+midnight_of(int reference_time) =>
+    timestamp(tz, year(reference_time, tz), month(reference_time, tz), dayofmonth(reference_time, tz), 0, 0)
+
+// Steps a whole number of days from one midnight to another. Adding 24 hours to
+// a midnight lands at 23:00 or 01:00 across a daylight-saving switch -- once on
+// the wrong date entirely -- so the step goes via the target day's noon, which
+// no switch can push out of its own day, and midnight_of reduces it back.
+shift_days(int day_midnight, int day_count) =>
+    midnight_of(day_midnight + day_count * MS_PER_DAY + HALF_DAY_MS)
+
+// Reads HH:MM into minutes since midnight, or -1 when the entry is not a time.
+// Guarding here rather than indexing blindly keeps a typo in one slot from
+// taking the whole indicator down.
+parse_clock_minutes(string time_text) =>
+    int minutes_since_midnight = -1
+    parts = str.split(str.replace_all(time_text, ' ', ''), ':')
+    if array.size(parts) == 2
+        hour_value = str.tonumber(array.get(parts, 0))
+        minute_value = str.tonumber(array.get(parts, 1))
+        both_numeric = not na(hour_value) and not na(minute_value)
+        whole_numbers = hour_value == math.floor(hour_value) and minute_value == math.floor(minute_value)
+        in_clock_range = hour_value >= 0 and hour_value <= 23 and minute_value >= 0 and minute_value <= 59
+        if both_numeric and whole_numbers and in_clock_range
+            minutes_since_midnight := int(hour_value) * 60 + int(minute_value)
+    minutes_since_midnight
+
+line_style_constant(string name) =>
+    switch name
+        'Dashed' => line.style_dashed
+        'Dotted' => line.style_dotted
+        => line.style_solid
+
+caption_size_constant() =>
+    switch caption_size
+        'tiny' => size.tiny
+        'small' => size.small
+        'large' => size.large
+        => size.normal
+
+//==============================================================================
+// THE WINDOWS TO DRAW
+//==============================================================================
+var array<MacroSpan> macro_spans = array.new<MacroSpan>()
+
+add_macro(bool enabled, string start_text, string end_text, string label_text) =>
+    if enabled
+        start_minutes = parse_clock_minutes(start_text)
+        end_minutes = parse_clock_minutes(end_text)
+        if start_minutes < 0 or end_minutes < 0
+            log.warning('ICT Macros: skipping window "{0}" to "{1}", expected times as HH:MM', start_text, end_text)
+        else if end_minutes == start_minutes
+            log.warning('ICT Macros: skipping window "{0}" to "{1}", a window cannot end the minute it starts', start_text, end_text)
+        else
+            // An end at or before the start rolls into the next day, which is
+            // what lets the 23:50 window close at 00:10.
+            wraps = end_minutes < start_minutes
+            trimmed_label = str.trim(label_text)
+            default_caption = 'Macro ' + clock_text(start_minutes) + '-' + clock_text(end_minutes)
+            caption = trimmed_label != '' ? trimmed_label : default_caption
+            array.push(macro_spans, MacroSpan.new(int(start_minutes / 60), start_minutes % 60, int(end_minutes / 60), end_minutes % 60, wraps, caption))
+
+if barstate.isfirst
+    add_macro(macro1_on, macro1_start, macro1_end, macro1_label)
+    add_macro(macro2_on, macro2_start, macro2_end, macro2_label)
+    add_macro(macro3_on, macro3_start, macro3_end, macro3_label)
+    add_macro(macro4_on, macro4_start, macro4_end, macro4_label)
+    add_macro(macro5_on, macro5_start, macro5_end, macro5_label)
+    add_macro(macro6_on, macro6_start, macro6_end, macro6_label)
+    add_macro(macro7_on, macro7_start, macro7_end, macro7_label)
+    add_macro(macro8_on, macro8_start, macro8_end, macro8_label)
+    add_macro(macro9_on, macro9_start, macro9_end, macro9_label)
+    add_macro(macro10_on, macro10_start, macro10_end, macro10_label)
+    add_macro(macro11_on, macro11_start, macro11_end, macro11_label)
+    add_macro(macro12_on, macro12_start, macro12_end, macro12_label)
+    add_macro(macro13_on, macro13_start, macro13_end, macro13_label)
+    add_macro(macro14_on, macro14_start, macro14_end, macro14_label)
+    add_macro(macro15_on, macro15_start, macro15_end, macro15_label)
+    add_macro(macro16_on, macro16_start, macro16_end, macro16_label)
+    add_macro(macro17_on, macro17_start, macro17_end, macro17_label)
+    add_macro(macro18_on, macro18_start, macro18_end, macro18_label)
+    add_macro(macro19_on, macro19_start, macro19_end, macro19_label)
+    add_macro(macro20_on, macro20_start, macro20_end, macro20_label)
+    add_macro(macro21_on, macro21_start, macro21_end, macro21_label)
+    add_macro(macro22_on, macro22_start, macro22_end, macro22_label)
+    add_macro(macro23_on, macro23_start, macro23_end, macro23_label)
+    add_macro(macro24_on, macro24_start, macro24_end, macro24_label)
+
+//==============================================================================
+// THE DAYS TO DRAW THEM ON
+//==============================================================================
+// Days are logged as the bars pass through them rather than counted back from
+// today, so a weekend or a holiday never collects a set of windows nothing
+// traded under. Today is added at draw time whether or not it has bars yet.
+var array<int> trading_days = array.new<int>()
+
+bar_midnight = midnight_of(time)
+if array.size(trading_days) == 0 or array.last(trading_days) != bar_midnight
+    array.push(trading_days, bar_midnight)
+    if array.size(trading_days) > MAX_TRACKED_DAYS
+        array.shift(trading_days)
+
+//==============================================================================
+// VISIBLE PRICE RANGE
+//==============================================================================
+// A bracket line needs two prices to be born, and the strip rides the edge of
+// the screen, so both want the price range the screen is actually showing.
+// Reading chart.left_visible_bar_time and chart.right_visible_bar_time is also
+// what makes TradingView re-run the script on a scroll or a zoom, which is what
+// keeps the strip welded to that edge.
+var float visible_high = na
+var float visible_low = na
+
+bar_is_visible = not na(chart.left_visible_bar_time) and time >= chart.left_visible_bar_time and time <= chart.right_visible_bar_time
+if bar_is_visible
+    visible_high := na(visible_high) ? high : math.max(visible_high, high)
+    visible_low := na(visible_low) ? low : math.min(visible_low, low)
+
+// Stand-in for the visible range until the chart reports one: the last stretch
+// of bars is a fair likeness of what is on screen. Computed on every bar because
+// ta.* only sees the bars it runs on, so these cannot move inside the last-bar
+// block that uses them. The span is capped at the bars that exist, because
+// ta.highest over a longer window than the chart holds yields na.
+fallback_span = math.min(FALLBACK_LOOKBACK, bar_index + 1)
+fallback_high = ta.highest(high, fallback_span)
+fallback_low = ta.lowest(low, fallback_span)
+
+//==============================================================================
+// DRAWING
+//==============================================================================
+// Everything is redrawn on each last-bar pass: the strip has to follow the
+// visible range, and the countdowns have to stay current. Lines and bands are
+// anchored to real timestamps through xloc.bar_time, which is what lets one
+// sit past the last bar -- a bar index cannot address a bar that does not
+// exist yet, a timestamp can.
+var array<line> drawn_lines = array.new<line>()
+var array<box> drawn_boxes = array.new<box>()
+
+if barstate.islast
+    for existing_line in drawn_lines
+        line.delete(existing_line)
+    for existing_box in drawn_boxes
+        box.delete(existing_box)
+    array.clear(drawn_lines)
+    array.clear(drawn_boxes)
+
+    screen_high = na(visible_high) ? fallback_high : visible_high
+    screen_low = na(visible_low) ? fallback_low : visible_low
+
+    // The two kinds of drawing want opposite things from the price scale. A
+    // bracket line takes its endpoints from inside the visible range and
+    // reaches the rest of the way with extend.both, so it fills the height
+    // without asking the chart for room. The bands do the reverse: they sit
+    // past the highest or lowest bar on purpose, and the chart gives up that
+    // much scale to hold them. That is the price of keeping them off the
+    // candles rather than over them.
+    price_range = screen_high - screen_low
+    edge_gap = price_range * edge_gap_percent / 100
+    band_height = price_range * band_height_percent / 100
+    at_top = strip_position == 'Top'
+
+    // The strip is laid out from the bars outward: clear space first, then
+    // the band. Starting the band at the bar extreme instead put its edge
+    // exactly on the lowest low, so any bar that made the low sat on top of
+    // it.
+    band_inner = at_top ? screen_high + edge_gap : screen_low - edge_gap
+    band_outer = at_top ? band_inner + band_height : band_inner - band_height
+    band_top = at_top ? band_outer : band_inner
+    band_bottom = at_top ? band_inner : band_outer
+
+    today_midnight = midnight_of(timenow)
+
+    // History counts back from the newest day the chart has bars for, not from
+    // today. Counting from today would, over a weekend or a holiday, push the
+    // last day that actually traded out of the window and leave the bars on
+    // screen carrying no windows at all.
+    cutoff = shift_days(array.last(trading_days), -history_days)
+
+    // With zero history days, a midnight-crossing window still open in the
+    // first minutes of today is cut off with its day. Accepted: the wrap
+    // slots start off, and one history day -- the default -- keeps the
+    // window on screen through its end.
+    days_to_draw = array.new<int>()
+    for tracked_day in trading_days
+        if tracked_day >= cutoff and tracked_day < today_midnight
+            array.push(days_to_draw, tracked_day)
+
+    // Today and tomorrow go in whether or not they have bars yet. Their
+    // windows are the ones still ahead, which is the whole point of drawing
+    // them; the bars-only rule is what keeps a past weekend from collecting a
+    // set.
+    array.push(days_to_draw, today_midnight)
+    if include_tomorrow
+        array.push(days_to_draw, shift_days(today_midnight, 1))
+
+    macro_line_style = line_style_constant(macro_style)
+    caption_text_size = caption_size_constant()
+
+    for day_start in days_to_draw
+        day_year = year(day_start, tz)
+        day_month = month(day_start, tz)
+        day_of_month = dayofmonth(day_start, tz)
+        for span in macro_spans
+            span_start = timestamp(tz, day_year, day_month, day_of_month, span.start_hour, span.start_minute)
+            end_day = span.wraps ? shift_days(day_start, 1) : day_start
+            span_end = timestamp(tz, year(end_day, tz), month(end_day, tz), dayofmonth(end_day, tz), span.end_hour, span.end_minute)
+
+            // A window gets a line at each edge: it is a span, and one line
+            // can only say when it opens. Neither line is captioned -- the
+            // rectangle between them carries the name, which is what makes
+            // the pair read as one window instead of two loose lines.
+            if show_bracket_lines
+                array.push(drawn_lines, line.new(span_start, screen_low, span_start, screen_high, xloc = xloc.bar_time, extend = extend.both, color = macro_color, style = macro_line_style, width = line_width))
+                array.push(drawn_lines, line.new(span_end, screen_low, span_end, screen_high, xloc = xloc.bar_time, extend = extend.both, color = macro_color, style = macro_line_style, width = line_width))
+
+            // One caption for the whole window, and it changes tense with it:
+            // counting down to the open while the window is ahead, counting
+            // out what is left of it once inside. The countdown gets its own
+            // line so the window's name stays put and only the ticking part
+            // changes underneath it.
+            caption = span.caption
+            if show_countdown
+                if timenow < span_start
+                    caption := caption + '\nin ' + countdown_text(span_start - timenow)
+                else if timenow < span_end
+                    caption := caption + '\n' + countdown_text(span_end - timenow) + ' left'
+
+            if band_height_percent > 0
+                array.push(drawn_boxes, box.new(span_start, band_top, span_end, band_bottom, xloc = xloc.bar_time, border_color = macro_color, border_width = line_width, border_style = macro_line_style, bgcolor = color.new(macro_color, band_transp), text = show_captions ? caption : '', text_color = macro_color, text_halign = text.align_center, text_valign = text.align_center, text_size = caption_text_size))
