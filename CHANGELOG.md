@@ -3,6 +3,17 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-08-27
+
+### RectangleMidline (NinjaTrader)
+- New extend handle on the middle of the rectangle's right edge (visible when
+  selected): dragging it stretches the zone in time only, ignoring price snap,
+  so a box magnetized onto a candle's wick or body keeps its exact height
+  while being extended. Corner grips and placement clicks still snap normally.
+- The single midline became a "Levels" choice: 50% midline, quadrants
+  (25/50/75%) or octets (every 12.5%), or none. The non-50% lines get their
+  own stroke ("Other levels"), dotted by default.
+
 ## 2026-08-13
 
 ### ICT Macros (TradingView, new)

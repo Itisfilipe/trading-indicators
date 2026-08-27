@@ -171,17 +171,24 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: Draw menu → "Risk Reward Targets", click entry, click stop, then drag
   any level; read each target's R off its label.
 
-### RectangleMidline — rectangle with a 50% line
+### RectangleMidline — zone rectangle with levels and a snap-free extend handle
 
 - Drawing tool (chart's Draw menu), not an indicator: the platform's own
-  rectangle with a horizontal line across its vertical centre, the level a
-  pullback into the zone is measured against.
-- Draws, drags, resizes by the corners and alerts exactly like the built-in
-  Rectangle; fill, opacity and outline are the same settings.
-- Midline has its own on/off, color, width and dash style ("Midline" group).
-- The line sits at the geometric centre of the box, not at the nearest tick,
-  so it stays centred when the box spans an odd number of ticks.
-- Use: Draw menu → "Rectangle Midline", drag out the zone.
+  rectangle with horizontal levels inside it — the 50% midline, quadrants
+  (25/50/75%) or octets (every 12.5%), selectable in the "Levels" group.
+  Midline and the other levels each have their own color, width and dash.
+- Extend handle: when the rectangle is selected, a grip sits on the middle of
+  its right edge. Dragging it stretches the box in time only — price snap is
+  ignored, so a zone snapped onto a candle's wick or body keeps its exact
+  height while you extend it forward.
+- Placement clicks and corner grips keep the platform's normal snap behaviour,
+  so the two anchors magnetize onto highs/lows/opens/closes as usual.
+- Draws, drags, resizes and alerts exactly like the built-in Rectangle; fill,
+  opacity and outline are the same settings.
+- Levels sit at geometric fractions of the box, not at the nearest tick, so
+  they stay put when the box spans an odd number of ticks.
+- Use: Draw menu → "Rectangle Midline", click the two corners of the zone,
+  then drag the right-edge grip to extend.
 
 ### RenkoSizeTable — Renko box sizes across timeframes at once
 
