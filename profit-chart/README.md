@@ -224,30 +224,34 @@ Linha horizontal no preco de abertura do dia. Reseta automaticamente a cada novo
 
 **Arquivo:** `renko-size-calculator.ntsl`
 
-Tamanho sugerido de box Renko (metade do ATR, em ticks) para o tempo
-grafico em que ele esta aplicado.
+Tamanho sugerido de box Renko para o tempo grafico em que ele esta aplicado.
 
 **Como usar:**
 1. Aplique no grafico de tempo que voce quer medir (1min, 5min, 15min...)
    e escolha **nova janela** ao inserir; no grafico de preco a escala em
    ticks esmaga os candles
-2. Duas linhas, em ticks:
-   - **box** (continua) = metade do ATR atual, reage ao dia de hoje
-   - **estavel** (tracejada) = metade da mediana das medias diarias; um dia
-     fora da curva (CPI, payroll) quase nao mexe nela
-3. O rotulo no ultimo candle repete os dois valores
+2. Por padrao aparece uma linha: a **metade da mediana**, em ticks. A
+   mediana e das medias diarias do True Range dos ultimos dias; um dia fora
+   da curva (CPI, payroll) quase nao mexe nela. Esse e o box sugerido
+3. O rotulo no ultimo candle mostra o tempo grafico e o valor de cada linha
+   ligada, com o nome. Ex.: `5 min | meia mediana (5d): 101 ticks`
 4. Para comparar tempos graficos, abra um grafico de cada tempo
 
 **Parametros:**
 - `Periodo_Dias(5)` — dias usados no ATR e na mediana (maximo 60)
 - `Ignorar_Gaps(true)` — ignorar o gap de abertura
 - `Apenas_RTH(false)`, `Horario_Em_NY(true)`, `Offset_NY_Para_BR(60)`, `RTH_Inicio(930)`, `RTH_Fim(1600)` — usar so o pregao regular
-- `Exibir_Estavel(true)`, `Exibir_Rotulo(true)`, `Tamanho_Fonte(9)`, `Tema_Escuro(true)`
+- Linhas (cada uma entra no rotulo quando ligada):
+  - `Exibir_Meia_Mediana_Ticks(true)` — box sugerido
+  - `Exibir_Meia_Mediana_Pontos(false)`, `Exibir_Mediana_Pontos(false)`
+  - `Exibir_Meio_ATR_Ticks(false)`, `Exibir_Meio_ATR_Pontos(false)`, `Exibir_ATR_Pontos(false)` — ATR atual (media exponencial), reage ao dia de hoje
+  - `Exibir_Candles_Por_Dia(false)` — conferencia do periodo
+- `Exibir_Rotulo(true)`, `Casas_Decimais(1)`, `Tamanho_Fonte(9)`, `Tema_Escuro(true)`
 
 **Observacoes:**
-- O primeiro dia completo do grafico e usado para aprender quantos candles
-  cabem em um dia; a linha estavel aparece a partir do segundo dia completo
-- A mediana usa no maximo os dias carregados no grafico
+- Linhas em pontos e em ticks tem escalas diferentes; ligue uma unidade por vez
+- A mediana aparece a partir do segundo dia completo carregado no grafico;
+  ate la o rotulo mostra "aguardando"
 
 ---
 
