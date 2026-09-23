@@ -21,7 +21,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   in points, and ATR in points. Turning on several now shows several
   lines. A label on the last candle names the chart timeframe and lists
   each visible value. "Ignorar Gaps" is now on by default, and values no
-  longer drift upward during the live session.
+  longer drift upward during the live session. The regular-hours (RTH)
+  filter and its New York time settings are gone; every candle on the chart
+  counts.
 - Tape Reading: bars below their average are now near-gray, so the ones
   that cross the line stand out.
 

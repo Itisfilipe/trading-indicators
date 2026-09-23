@@ -11,9 +11,6 @@
 //     payroll) quase nao mexe nela.
 //   - Meio ATR (ticks), Meio ATR (pontos), ATR (pontos): ATR atual (media
 //     exponencial), reage ao dia de hoje. Desligados por padrao.
-//
-// Apenas_RTH=true usa so os candles dentro da janela RTH_Inicio..RTH_Fim,
-// util para ativos com sessao noturna (futuros US).
 // =========================================================================
 
 input
@@ -21,12 +18,6 @@ input
 
   // Ignorar o gap de abertura no primeiro candle do dia
   Ignorar_Gaps(true);
-
-  Apenas_RTH(false);
-  Horario_Em_NY(true);
-  Offset_NY_Para_BR(60);         // minutos (60 = NY DST abr-out, 120 = EST nov-mar)
-  RTH_Inicio(930);
-  RTH_Fim(1600);
 
   Exibir_Mediana_Ticks(true);
   Exibir_Meio_ATR_Ticks(false);
@@ -39,8 +30,8 @@ input
   Tema_Escuro(true);
 
 var
-  hasHistory, isNewDay, counted: Boolean;
-  rthStart, rthEnd, days, period, slot, i, j, count, first, minutesSincePrior: Integer;
+  hasHistory, isNewDay: Boolean;
+  days, period, slot, plotSlot, i, j, count, first, minutesSincePrior: Integer;
   trueRange, swap: Float;
 
   chartMinutes, candlesPerDay, observedDays, dayCount, medianDays: Integer;
@@ -62,15 +53,6 @@ begin
   days := Max(1, Min(Periodo_Dias, 60));
   hasHistory := CurrentBar > 1;
   isNewDay := hasHistory and (Date <> Date[1]);
-
-  if Horario_Em_NY then begin
-    rthStart := CalcTime(RTH_Inicio, Offset_NY_Para_BR);
-    rthEnd := CalcTime(RTH_Fim, Offset_NY_Para_BR);
-  end else begin
-    rthStart := RTH_Inicio;
-    rthEnd := RTH_Fim;
-  end;
-  counted := (not Apenas_RTH) or ((Time >= rthStart) and (Time < rthEnd));
 
   // Profit reexecuta o ultimo candle a cada negocio: todo estado parte do
   // valor do candle anterior, para que reexecutar nao conte duas vezes.
@@ -121,24 +103,22 @@ begin
     dayCount := 0;
   end;
 
-  if counted then begin
-    if (not hasHistory) or (Ignorar_Gaps and isNewDay) then
-      trueRange := High - Low
-    else
-      trueRange := Max(High, Close[1]) - Min(Low, Close[1]);
+  if (not hasHistory) or (Ignorar_Gaps and isNewDay) then
+    trueRange := High - Low
+  else
+    trueRange := Max(High, Close[1]) - Min(Low, Close[1]);
 
-    daySum := daySum + trueRange;
-    dayCount := dayCount + 1;
+  daySum := daySum + trueRange;
+  dayCount := dayCount + 1;
 
-    if candlesPerDay > 0 then
-      period := days * candlesPerDay
-    else
-      period := days;
-    if atr = 0 then
-      atr := trueRange
-    else
-      atr := atr + (2 / (period + 1)) * (trueRange - atr);
-  end;
+  if candlesPerDay > 0 then
+    period := days * candlesPerDay
+  else
+    period := days;
+  if atr = 0 then
+    atr := trueRange
+  else
+    atr := atr + (2 / (period + 1)) * (trueRange - atr);
 
   if Tema_Escuro then begin
     medianColor := RGB(255, 200, 60);
@@ -154,28 +134,37 @@ begin
     medianTicks := ToTicks(medianAtr / 2, MinPriceIncrement);
     halfAtrTicks := ToTicks(atr / 2, MinPriceIncrement);
 
-    // Os quatro plots sao desenhados em todo candle e escondidos com NoPlot:
-    // plot chamado so em alguns candles nao aparece no Profit.
-    Plot(medianTicks);
-    SetPlotColor(1, medianColor);
-    SetPlotWidth(1, 2);
-    Plot2(halfAtrTicks);
-    SetPlotColor(2, atrColor);
-    SetPlotWidth(2, 2);
-    Plot3(atr / 2);
-    SetPlotColor(3, atrColor);
-    SetPlotStyle(3, 2);
-    Plot4(atr);
-    SetPlotColor(4, atrColor);
-    SetPlotStyle(4, 1);
-    if (not Exibir_Mediana_Ticks) or (medianAtr = 0) then
-      NoPlot(1);
-    if not Exibir_Meio_ATR_Ticks then
-      NoPlot(2);
-    if not Exibir_Meio_ATR then
-      NoPlot(3);
-    if not Exibir_ATR then
-      NoPlot(4);
+    // Cada leitura ligada ocupa o proximo numero de plot, a partir do 1, e e
+    // desenhada em todo candle: o Profit so mostra plots em sequencia.
+    plotSlot := 0;
+    if Exibir_Mediana_Ticks then begin
+      plotSlot := plotSlot + 1;
+      PlotN(plotSlot, medianTicks);
+      SetPlotColor(plotSlot, medianColor);
+      SetPlotWidth(plotSlot, 2);
+      SetPlotStyle(plotSlot, 0);
+    end;
+    if Exibir_Meio_ATR_Ticks then begin
+      plotSlot := plotSlot + 1;
+      PlotN(plotSlot, halfAtrTicks);
+      SetPlotColor(plotSlot, atrColor);
+      SetPlotWidth(plotSlot, 2);
+      SetPlotStyle(plotSlot, 0);
+    end;
+    if Exibir_Meio_ATR then begin
+      plotSlot := plotSlot + 1;
+      PlotN(plotSlot, atr / 2);
+      SetPlotColor(plotSlot, atrColor);
+      SetPlotWidth(plotSlot, 1);
+      SetPlotStyle(plotSlot, 2);
+    end;
+    if Exibir_ATR then begin
+      plotSlot := plotSlot + 1;
+      PlotN(plotSlot, atr);
+      SetPlotColor(plotSlot, atrColor);
+      SetPlotWidth(plotSlot, 1);
+      SetPlotStyle(plotSlot, 1);
+    end;
 
     if Exibir_Rotulo and LastBarOnChart then begin
       labelY := 0;

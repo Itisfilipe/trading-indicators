@@ -241,7 +241,6 @@ Tamanho sugerido de box Renko para o tempo grafico em que ele esta aplicado.
 **Parametros:**
 - `Periodo_Dias(5)` — dias usados no ATR e na mediana (maximo 60)
 - `Ignorar_Gaps(true)` — ignorar o gap de abertura
-- `Apenas_RTH(false)`, `Horario_Em_NY(true)`, `Offset_NY_Para_BR(60)`, `RTH_Inicio(930)`, `RTH_Fim(1600)` — usar so o pregao regular
 - Linhas (cada uma entra no rotulo quando ligada):
   - `Exibir_Mediana_Ticks(true)` — box sugerido (metade da mediana, em ticks)
   - `Exibir_Meio_ATR_Ticks(false)` — metade do ATR atual, em ticks
@@ -254,8 +253,7 @@ Tamanho sugerido de box Renko para o tempo grafico em que ele esta aplicado.
   para ver as duas bem
 - A mediana aparece a partir do segundo dia completo carregado no grafico;
   ate la o rotulo mostra "aguardando"
-- O "dia" e a data do calendario: em ativos com sessao noturna, ligue
-  `Apenas_RTH` para medir so o pregao regular
+- O "dia" e a data do calendario, com todos os candles do grafico
 
 ---
 
