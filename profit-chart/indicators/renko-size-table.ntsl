@@ -34,7 +34,7 @@ input
 
 var
   hasHistory, isNewDay, chartIncompatible: Boolean;
-  minuteOfDay, chartSeconds, observedDays, slot, i, j, k, count, first: Integer;
+  minuteOfDay, minutesSincePrior, chartMinutes, observedDays, slot, i, j, k, count, first: Integer;
   bucketTrueRange, swap: Float;
 
   key1, key2, key3, key4: Integer;
@@ -99,6 +99,13 @@ begin
   hasHistory := CurrentBar > 1;
   isNewDay := hasHistory and (Date <> Date[1]);
   minuteOfDay := TimeToMinutes(Time);
+
+  chartMinutes := chartMinutes[1];
+  if hasHistory and not isNewDay then begin
+    minutesSincePrior := minuteOfDay - TimeToMinutes(Time[1]);
+    if (minutesSincePrior > 0) and ((chartMinutes = 0) or (minutesSincePrior < chartMinutes)) then
+      chartMinutes := minutesSincePrior;
+  end;
 
   observedDays := observedDays[1];
   if isNewDay then
@@ -321,11 +328,10 @@ begin
     PlotText("TF    BOX (metade do ATR)    |    BOX ESTAVEL (mediana dos dias)",
       headerColor, 3, Tamanho_Fonte, 5);
 
-    chartSeconds := Round(BarDurationF * 60);
     for i := 1 to 4 do begin
-      chartIncompatible := chartSeconds > rowTimeframe[i] * 60;
-      if chartSeconds > 0 then
-        if Mod(rowTimeframe[i] * 60, chartSeconds) <> 0 then
+      chartIncompatible := chartMinutes > rowTimeframe[i];
+      if chartMinutes > 0 then
+        if Mod(rowTimeframe[i], chartMinutes) <> 0 then
           chartIncompatible := True;
 
       rowText := FloatToString(rowTimeframe[i], 0) + "m    ";

@@ -19,7 +19,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   The indicator now draws a real table in its own pane: a header plus one
   text row per timeframe, showing box and stable box in ticks and points
   with the ATR behind each. Rows that are still warming up say so, and
-  incompatible chart timeframes are named in the row. Fixed a division by
+  incompatible chart timeframes are named in the row. A 1-minute chart no
+  longer flickers to "grafico incompativel" while the live candle forms. Fixed a division by
   zero Profit reported on bars with no measurable duration.
 - Tape Reading: bars below their average are now near-gray, so the ones
   that cross the line stand out.
