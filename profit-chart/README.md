@@ -242,6 +242,36 @@ Calcula o tamanho ideal de box Renko baseado na volatilidade (ATR).
 
 ---
 
+### Renko Size Table (Indicador)
+
+**Arquivo:** `renko-size-table.ntsl`
+
+Tamanho sugerido de box Renko (metade do ATR, em preco e em ticks) para
+quatro tempos graficos ao mesmo tempo, cada um com seu periodo em dias.
+
+**Como usar:**
+1. Aplique em um grafico de 1 minuto (ou menor que o menor TF da lista), em
+   uma sub-janela nova
+2. Cada TF vira uma linha de ticks: continua = ATR exponencial, tracejada =
+   mediana da media diaria do True Range (estavel em dias de noticia)
+3. O rotulo na ponta de cada linha mostra ATR, box e ticks
+
+**Parametros:**
+- `TF_1..TF_4` / `Dias_1..Dias_4` — tempo grafico (minutos) e periodo em dias de cada linha (padrao 1/5/15/60 com 3/5/10/20 dias; maximo 60 dias)
+- `Ignorar_Gaps(true)` — ignorar o gap de abertura
+- `Exibir_Mediana(true)`, `Exibir_Rotulos(true)`, `Tamanho_Fonte(8)`, `Casas_Decimais(1)`, `Tema_Escuro(false)`
+
+**Observacoes:**
+- Os TFs sao montados agrupando os candles do grafico; um TF menor que o do
+  grafico, ou que nao seja multiplo dele, e avisado e nao plota
+- A mediana usa no maximo os dias carregados no grafico: com os padroes, o
+  grafico de 1 minuto precisa de pelo menos 21 dias de historico para a
+  linha de 60 minutos usar os 20 dias completos
+- Os dois primeiros dias do grafico sao usados para aprender quantos candles
+  cabem em um dia; as linhas aparecem a partir dai
+
+---
+
 ## Setup recomendado
 
 Para day trading com Renko, recomendamos usar:
@@ -256,6 +286,7 @@ Para day trading com Renko, recomendamos usar:
 Opcional:
 - **Day Open** — referencia de abertura do dia
 - **Renko Size Calculator** — calcular tamanho do box (aplicar em grafico de tempo)
+- **Renko Size Table** — tamanho do box em 4 tempos graficos de uma vez (aplicar em grafico de 1 minuto)
 - **Bias Coloring** — usar em grafico separado para bias de longo prazo
 
 ---

@@ -3,6 +3,16 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-09-23
+
+### Renko Size Table (Profit Chart, new)
+- Profit Chart port of the Renko Size Table: suggested Renko box sizes (half
+  ATR, in price and ticks) for four timeframes at once, each with a live EMA
+  ATR line and a dashed median-of-days line, labeled at the right edge.
+  Apply it to a 1-minute chart in its own sub-window; the higher timeframes
+  are built from the chart's candles, and a timeframe below the chart's is
+  flagged instead of plotted.
+
 ## 2026-08-27
 
 ### RectangleMidline (NinjaTrader)

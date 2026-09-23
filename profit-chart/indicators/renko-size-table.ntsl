@@ -1,0 +1,349 @@
+// =========================================================================
+// RENKO SIZE TABLE - Tamanho de box Renko em 4 tempos graficos
+// =========================================================================
+// Mostra o tamanho sugerido de box Renko (metade do ATR, em ticks) para
+// quatro tempos graficos ao mesmo tempo, cada um com seu periodo em dias.
+//
+// Duas leituras por tempo grafico:
+//   - Linha continua: ATR com media exponencial. Reage a sessao atual.
+//   - Linha tracejada: mediana da media diaria do True Range. Um dia fora
+//     da curva (CPI, payroll) quase nao mexe nela.
+//
+// Como usar:
+//   - Aplique em um grafico de tempo IGUAL OU MENOR que o menor TF da lista
+//     (grafico de 1 minuto para os padroes 1/5/15/60). Cada TF e montado
+//     agrupando os candles do grafico.
+//   - O rotulo na ponta de cada linha mostra ATR, box (metade do ATR) e ticks.
+//   - Um TF menor que o do grafico, ou que nao seja multiplo dele, e avisado
+//     e nao plota.
+//   - Os dois primeiros dias do grafico servem para aprender quantos candles
+//     cabem em um dia; o ATR parte da media do primeiro dia completo.
+// =========================================================================
+
+input
+  TF_1(1);
+  Dias_1(3);
+  TF_2(5);
+  Dias_2(5);
+  TF_3(15);
+  Dias_3(10);
+  TF_4(60);
+  Dias_4(20);
+
+  Ignorar_Gaps(true);
+
+  Casas_Decimais(1);
+  Exibir_Mediana(true);
+  Exibir_Rotulos(true);
+  Tamanho_Fonte(8);
+  Tema_Escuro(false);
+
+var
+  hasHistory, isNewDay, chartTooCoarse: Boolean;
+  minuteOfDay, chartSeconds, observedDays, slot, i, j, k, count, first: Integer;
+  bucketTrueRange, swap: Float;
+
+  key1, key2, key3, key4: Integer;
+  bucketHigh1, bucketHigh2, bucketHigh3, bucketHigh4: Float;
+  bucketLow1, bucketLow2, bucketLow3, bucketLow4: Float;
+  lastClose1, lastClose2, lastClose3, lastClose4: Float;
+  firstOfDay1, firstOfDay2, firstOfDay3, firstOfDay4: Boolean;
+  daySum1, daySum2, daySum3, daySum4: Float;
+  dayBuckets1, dayBuckets2, dayBuckets3, dayBuckets4: Integer;
+  bucketsPerDay1, bucketsPerDay2, bucketsPerDay3, bucketsPerDay4: Integer;
+  emaAtr1, emaAtr2, emaAtr3, emaAtr4: Float;
+  medAtr1, medAtr2, medAtr3, medAtr4: Float;
+
+  rowTimeframe: Array[1..4] of Integer;
+  rowDays: Array[1..4] of Integer;
+  rowDayMean: Array[1..4] of Float;
+  rowEma: Array[1..4] of Float;
+  rowMedian: Array[1..4] of Float;
+  rowColor: Array[1..4] of Integer;
+  dailyMeans: Array[1..512] of Float;
+  sorted: Array[1..64] of Float;
+
+  warningColor, ticks, medianTicks: Integer;
+  labelText, warningText: String;
+
+Function TrueRangeOf(BucketHigh: Float; BucketLow: Float; PriorClose: Float; SkipGap: Boolean): Float;
+begin
+  if SkipGap or (PriorClose = 0) then
+    TrueRangeOf := BucketHigh - BucketLow
+  else
+    TrueRangeOf := Max(BucketHigh, PriorClose) - Min(BucketLow, PriorClose);
+end;
+
+Function EmaFold(Previous: Float; Value: Float; Period: Integer): Float;
+begin
+  if Previous = 0 then
+    EmaFold := Value
+  else
+    EmaFold := Previous + (2 / (Period + 1)) * (Value - Previous);
+end;
+
+Function DaysCapped(Days: Integer): Integer;
+begin
+  DaysCapped := Max(1, Min(Days, 60));
+end;
+
+begin
+  rowTimeframe[1] := Max(1, TF_1);
+  rowTimeframe[2] := Max(1, TF_2);
+  rowTimeframe[3] := Max(1, TF_3);
+  rowTimeframe[4] := Max(1, TF_4);
+  rowDays[1] := DaysCapped(Dias_1);
+  rowDays[2] := DaysCapped(Dias_2);
+  rowDays[3] := DaysCapped(Dias_3);
+  rowDays[4] := DaysCapped(Dias_4);
+
+  hasHistory := CurrentBar > 1;
+  isNewDay := hasHistory and (Date <> Date[1]);
+  minuteOfDay := TimeToMinutes(Time);
+
+  observedDays := observedDays[1];
+  if isNewDay then
+    observedDays := observedDays + 1;
+
+  key1 := minuteOfDay - Mod(minuteOfDay, rowTimeframe[1]);
+  key2 := minuteOfDay - Mod(minuteOfDay, rowTimeframe[2]);
+  key3 := minuteOfDay - Mod(minuteOfDay, rowTimeframe[3]);
+  key4 := minuteOfDay - Mod(minuteOfDay, rowTimeframe[4]);
+
+  bucketHigh1 := bucketHigh1[1];
+  bucketHigh2 := bucketHigh2[1];
+  bucketHigh3 := bucketHigh3[1];
+  bucketHigh4 := bucketHigh4[1];
+  bucketLow1 := bucketLow1[1];
+  bucketLow2 := bucketLow2[1];
+  bucketLow3 := bucketLow3[1];
+  bucketLow4 := bucketLow4[1];
+  lastClose1 := lastClose1[1];
+  lastClose2 := lastClose2[1];
+  lastClose3 := lastClose3[1];
+  lastClose4 := lastClose4[1];
+  firstOfDay1 := firstOfDay1[1];
+  firstOfDay2 := firstOfDay2[1];
+  firstOfDay3 := firstOfDay3[1];
+  firstOfDay4 := firstOfDay4[1];
+  daySum1 := daySum1[1];
+  daySum2 := daySum2[1];
+  daySum3 := daySum3[1];
+  daySum4 := daySum4[1];
+  dayBuckets1 := dayBuckets1[1];
+  dayBuckets2 := dayBuckets2[1];
+  dayBuckets3 := dayBuckets3[1];
+  dayBuckets4 := dayBuckets4[1];
+  bucketsPerDay1 := bucketsPerDay1[1];
+  bucketsPerDay2 := bucketsPerDay2[1];
+  bucketsPerDay3 := bucketsPerDay3[1];
+  bucketsPerDay4 := bucketsPerDay4[1];
+  emaAtr1 := emaAtr1[1];
+  emaAtr2 := emaAtr2[1];
+  emaAtr3 := emaAtr3[1];
+  emaAtr4 := emaAtr4[1];
+  medAtr1 := medAtr1[1];
+  medAtr2 := medAtr2[1];
+  medAtr3 := medAtr3[1];
+  medAtr4 := medAtr4[1];
+
+  // Fecha o bucket anterior de cada TF. Roda antes da virada do dia porque
+  // o ultimo bucket de ontem so fecha no primeiro candle de hoje.
+  if hasHistory and (isNewDay or (key1 <> key1[1])) then begin
+    bucketTrueRange := TrueRangeOf(bucketHigh1, bucketLow1, lastClose1, Ignorar_Gaps and firstOfDay1);
+    lastClose1 := Close[1];
+    if observedDays[1] > 0 then begin
+      daySum1 := daySum1 + bucketTrueRange;
+      dayBuckets1 := dayBuckets1 + 1;
+    end;
+    if bucketsPerDay1 > 0 then
+      emaAtr1 := EmaFold(emaAtr1, bucketTrueRange, rowDays[1] * bucketsPerDay1);
+  end;
+  if hasHistory and (isNewDay or (key2 <> key2[1])) then begin
+    bucketTrueRange := TrueRangeOf(bucketHigh2, bucketLow2, lastClose2, Ignorar_Gaps and firstOfDay2);
+    lastClose2 := Close[1];
+    if observedDays[1] > 0 then begin
+      daySum2 := daySum2 + bucketTrueRange;
+      dayBuckets2 := dayBuckets2 + 1;
+    end;
+    if bucketsPerDay2 > 0 then
+      emaAtr2 := EmaFold(emaAtr2, bucketTrueRange, rowDays[2] * bucketsPerDay2);
+  end;
+  if hasHistory and (isNewDay or (key3 <> key3[1])) then begin
+    bucketTrueRange := TrueRangeOf(bucketHigh3, bucketLow3, lastClose3, Ignorar_Gaps and firstOfDay3);
+    lastClose3 := Close[1];
+    if observedDays[1] > 0 then begin
+      daySum3 := daySum3 + bucketTrueRange;
+      dayBuckets3 := dayBuckets3 + 1;
+    end;
+    if bucketsPerDay3 > 0 then
+      emaAtr3 := EmaFold(emaAtr3, bucketTrueRange, rowDays[3] * bucketsPerDay3);
+  end;
+  if hasHistory and (isNewDay or (key4 <> key4[1])) then begin
+    bucketTrueRange := TrueRangeOf(bucketHigh4, bucketLow4, lastClose4, Ignorar_Gaps and firstOfDay4);
+    lastClose4 := Close[1];
+    if observedDays[1] > 0 then begin
+      daySum4 := daySum4 + bucketTrueRange;
+      dayBuckets4 := dayBuckets4 + 1;
+    end;
+    if bucketsPerDay4 > 0 then
+      emaAtr4 := EmaFold(emaAtr4, bucketTrueRange, rowDays[4] * bucketsPerDay4);
+  end;
+
+  // Virada do dia: fecha o dia anterior (so dias vistos por inteiro) e
+  // recalcula a mediana. Cada dia grava sempre no mesmo slot, entao
+  // reprocessar o candle regrava os mesmos valores.
+  if isNewDay then begin
+    if observedDays[1] > 0 then begin
+      if dayBuckets1 > 0 then begin
+        bucketsPerDay1 := dayBuckets1;
+        rowDayMean[1] := daySum1 / dayBuckets1;
+        if emaAtr1 = 0 then
+          emaAtr1 := rowDayMean[1];
+      end;
+      if dayBuckets2 > 0 then begin
+        bucketsPerDay2 := dayBuckets2;
+        rowDayMean[2] := daySum2 / dayBuckets2;
+        if emaAtr2 = 0 then
+          emaAtr2 := rowDayMean[2];
+      end;
+      if dayBuckets3 > 0 then begin
+        bucketsPerDay3 := dayBuckets3;
+        rowDayMean[3] := daySum3 / dayBuckets3;
+        if emaAtr3 = 0 then
+          emaAtr3 := rowDayMean[3];
+      end;
+      if dayBuckets4 > 0 then begin
+        bucketsPerDay4 := dayBuckets4;
+        rowDayMean[4] := daySum4 / dayBuckets4;
+        if emaAtr4 = 0 then
+          emaAtr4 := rowDayMean[4];
+      end;
+
+      slot := Mod(observedDays[1], 128);
+      for i := 1 to 4 do begin
+        dailyMeans[(i - 1) * 128 + slot + 1] := rowDayMean[i];
+
+        count := Min(rowDays[i], observedDays[1]);
+        first := observedDays[1] - count + 1;
+        for j := 1 to count do
+          sorted[j] := dailyMeans[(i - 1) * 128 + Mod(first + j - 1, 128) + 1];
+        for j := 1 to count - 1 do
+          for k := j + 1 to count do
+            if sorted[k] < sorted[j] then begin
+              swap := sorted[j];
+              sorted[j] := sorted[k];
+              sorted[k] := swap;
+            end;
+
+        if Mod(count, 2) = 1 then
+          rowMedian[i] := sorted[Round((count + 1) / 2)]
+        else
+          rowMedian[i] := (sorted[Round(count / 2)] + sorted[Round(count / 2) + 1]) / 2;
+      end;
+
+      medAtr1 := rowMedian[1];
+      medAtr2 := rowMedian[2];
+      medAtr3 := rowMedian[3];
+      medAtr4 := rowMedian[4];
+    end;
+    daySum1 := 0;
+    daySum2 := 0;
+    daySum3 := 0;
+    daySum4 := 0;
+    dayBuckets1 := 0;
+    dayBuckets2 := 0;
+    dayBuckets3 := 0;
+    dayBuckets4 := 0;
+  end;
+
+  if isNewDay or (key1 <> key1[1]) or not hasHistory then begin
+    bucketHigh1 := High;
+    bucketLow1 := Low;
+    firstOfDay1 := isNewDay;
+  end else begin
+    bucketHigh1 := Max(bucketHigh1, High);
+    bucketLow1 := Min(bucketLow1, Low);
+  end;
+  if isNewDay or (key2 <> key2[1]) or not hasHistory then begin
+    bucketHigh2 := High;
+    bucketLow2 := Low;
+    firstOfDay2 := isNewDay;
+  end else begin
+    bucketHigh2 := Max(bucketHigh2, High);
+    bucketLow2 := Min(bucketLow2, Low);
+  end;
+  if isNewDay or (key3 <> key3[1]) or not hasHistory then begin
+    bucketHigh3 := High;
+    bucketLow3 := Low;
+    firstOfDay3 := isNewDay;
+  end else begin
+    bucketHigh3 := Max(bucketHigh3, High);
+    bucketLow3 := Min(bucketLow3, Low);
+  end;
+  if isNewDay or (key4 <> key4[1]) or not hasHistory then begin
+    bucketHigh4 := High;
+    bucketLow4 := Low;
+    firstOfDay4 := isNewDay;
+  end else begin
+    bucketHigh4 := Max(bucketHigh4, High);
+    bucketLow4 := Min(bucketLow4, Low);
+  end;
+
+  if Tema_Escuro then begin
+    rowColor[1] := RGB(100, 180, 255);
+    rowColor[2] := RGB(0, 230, 120);
+    rowColor[3] := RGB(255, 180, 80);
+    rowColor[4] := RGB(230, 120, 255);
+    warningColor := RGB(255, 170, 0);
+  end else begin
+    rowColor[1] := RGB(0, 90, 200);
+    rowColor[2] := RGB(0, 150, 60);
+    rowColor[3] := RGB(210, 110, 0);
+    rowColor[4] := RGB(150, 40, 180);
+    warningColor := RGB(200, 100, 0);
+  end;
+
+  rowEma[1] := emaAtr1;
+  rowEma[2] := emaAtr2;
+  rowEma[3] := emaAtr3;
+  rowEma[4] := emaAtr4;
+  rowMedian[1] := medAtr1;
+  rowMedian[2] := medAtr2;
+  rowMedian[3] := medAtr3;
+  rowMedian[4] := medAtr4;
+
+  warningText := "";
+  chartSeconds := Round(BarDurationF * 60);
+  for i := 1 to 4 do begin
+    chartTooCoarse := (chartSeconds > rowTimeframe[i] * 60)
+      or ((chartSeconds > 0) and (Mod(rowTimeframe[i] * 60, chartSeconds) <> 0));
+    if chartTooCoarse then
+      warningText := warningText + FloatToString(rowTimeframe[i], 0) + "m "
+    else if (MinPriceIncrement > 0) and (rowEma[i] > 0) then begin
+      ticks := Round((rowEma[i] / 2) / MinPriceIncrement);
+      PlotN(i, ticks);
+      SetPlotColor(i, rowColor[i]);
+      SetPlotWidth(i, 2);
+
+      medianTicks := Round((rowMedian[i] / 2) / MinPriceIncrement);
+      if Exibir_Mediana and (rowMedian[i] > 0) then begin
+        PlotN(i + 4, medianTicks);
+        SetPlotColor(i + 4, rowColor[i]);
+        SetPlotWidth(i + 4, 1);
+        SetPlotStyle(i + 4, 2);
+      end;
+
+      if Exibir_Rotulos and LastBarOnChart then begin
+        labelText := FloatToString(rowTimeframe[i], 0) + "m  ATR " + FloatToString(rowEma[i], Casas_Decimais)
+          + "  box " + FloatToString(rowEma[i] / 2, Casas_Decimais) + " = " + FloatToString(ticks, 0) + "t";
+        if rowMedian[i] > 0 then
+          labelText := labelText + "  |  Med " + FloatToString(rowMedian[i], Casas_Decimais)
+            + "  box " + FloatToString(rowMedian[i] / 2, Casas_Decimais) + " = " + FloatToString(medianTicks, 0) + "t";
+        PlotText(labelText, rowColor[i], 3, Tamanho_Fonte, ticks);
+      end;
+    end;
+  end;
+  if Exibir_Rotulos and LastBarOnChart and (warningText <> "") then
+    PlotText(warningText + "- grafico incompativel com o TF", warningColor, 1, Tamanho_Fonte);
+end;

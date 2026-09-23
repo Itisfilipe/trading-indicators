@@ -387,7 +387,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Confluence coloring system: paints each candle by how many rules agree
   (major/minor MACD trend, tape reading, EMA pullback, rejection).
 - Companion tools: signal labels, signal board, tape-reading and MACD
-  histograms, MA cloud, day-open marker, Renko size calculator.
+  histograms, MA cloud, day-open marker, Renko size calculator, Renko size table
+  (brick sizes for four timeframes at once, built from a 1-minute chart).
 - Full per-indicator documentation, in Portuguese:
   [`profit-chart/README.md`](profit-chart/README.md).
 
