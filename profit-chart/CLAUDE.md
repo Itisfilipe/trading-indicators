@@ -41,6 +41,7 @@ Every NTSL file follows three sections: `input` (parameters), `var` (declaration
 ### Known Platform Limitations
 
 - `HorizontalLineCustom` and `PlotN` cannot coexist in the same indicator
+- `and`/`or` do not short-circuit: `(x > 0) and (Mod(y, x) <> 0)` still divides by zero. Guard with a nested `if`
 - `fBoxSize` can be zero on the first bar — always guard with `if fBoxSize = 0 then fBoxSize := 1`
 
 ## Architecture: Confluence System
