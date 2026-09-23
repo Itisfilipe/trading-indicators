@@ -15,6 +15,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   default). Off, the gray "price disagrees with the trend" color is dropped
   and the cloud or candle keeps the trend's green or red.
 - MACD Histogram defaults to 21/89 EMAs with a 42 signal.
+- Renko Size Table (Profit Chart): the eight colored lines are gone.
+  The indicator now draws a real table in its own pane: a header plus one
+  text row per timeframe, showing box and stable box in ticks and points
+  with the ATR behind each. Rows that are still warming up say so, and
+  incompatible chart timeframes are named in the row. Fixed a division by
+  zero Profit reported on bars with no measurable duration.
 - Tape Reading: bars below their average are now near-gray, so the ones
   that cross the line stand out.
 

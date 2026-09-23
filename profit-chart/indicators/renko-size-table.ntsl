@@ -1,23 +1,19 @@
 // =========================================================================
 // RENKO SIZE TABLE - Tamanho de box Renko em 4 tempos graficos
 // =========================================================================
-// Mostra o tamanho sugerido de box Renko (metade do ATR, em ticks) para
-// quatro tempos graficos ao mesmo tempo, cada um com seu periodo em dias.
-//
-// Duas leituras por tempo grafico:
-//   - Linha continua: ATR com media exponencial. Reage a sessao atual.
-//   - Linha tracejada: mediana da media diaria do True Range. Um dia fora
-//     da curva (CPI, payroll) quase nao mexe nela.
+// Tabela com o tamanho sugerido de box Renko para quatro tempos graficos
+// ao mesmo tempo, cada um com seu periodo em dias.
 //
 // Como usar:
-//   - Aplique em um grafico de tempo IGUAL OU MENOR que o menor TF da lista
-//     (grafico de 1 minuto para os padroes 1/5/15/60). Cada TF e montado
-//     agrupando os candles do grafico.
-//   - O rotulo na ponta de cada linha mostra ATR, box (metade do ATR) e ticks.
-//   - Um TF menor que o do grafico, ou que nao seja multiplo dele, e avisado
-//     e nao plota.
+//   - Aplique em um grafico de 1 MINUTO, em uma JANELA SEPARADA (nao no
+//     grafico de preco). Os outros TFs sao montados a partir dele.
+//   - A tabela aparece na ponta direita da janela. Uma linha por TF:
+//       BOX         = metade do ATR atual (reage ao dia de hoje)
+//       BOX ESTAVEL = metade da mediana dos ultimos dias (um dia fora da
+//                     curva, como CPI ou payroll, quase nao mexe nela)
+//     Cada um mostra ticks, pontos e o ATR usado.
 //   - Os dois primeiros dias do grafico servem para aprender quantos candles
-//     cabem em um dia; o ATR parte da media do primeiro dia completo.
+//     cabem em um dia; ate la a linha mostra "aguardando".
 // =========================================================================
 
 input
@@ -33,13 +29,11 @@ input
   Ignorar_Gaps(true);
 
   Casas_Decimais(1);
-  Exibir_Mediana(true);
-  Exibir_Rotulos(true);
-  Tamanho_Fonte(8);
+  Tamanho_Fonte(9);
   Tema_Escuro(true);
 
 var
-  hasHistory, isNewDay, chartTooCoarse: Boolean;
+  hasHistory, isNewDay, chartIncompatible: Boolean;
   minuteOfDay, chartSeconds, observedDays, slot, i, j, k, count, first: Integer;
   bucketTrueRange, swap: Float;
 
@@ -59,12 +53,11 @@ var
   rowDayMean: Array[1..4] of Float;
   rowEma: Array[1..4] of Float;
   rowMedian: Array[1..4] of Float;
-  rowColor: Array[1..4] of Integer;
   dailyMeans: Array[1..512] of Float;
   sorted: Array[1..64] of Float;
 
-  warningColor, ticks, medianTicks: Integer;
-  labelText, warningText: String;
+  backgroundColor, textColor, headerColor, warningColor: Integer;
+  rowText: String;
 
 Function TrueRangeOf(BucketHigh: Float; BucketLow: Float; PriorClose: Float; SkipGap: Boolean): Float;
 begin
@@ -80,6 +73,12 @@ begin
     EmaFold := Value
   else
     EmaFold := Previous + (2 / (Period + 1)) * (Value - Previous);
+end;
+
+Function BoxText(Atr: Float; TickSize: Float; Decimals: Integer): String;
+begin
+  BoxText := FloatToString(Round((Atr / 2) / TickSize), 0) + " ticks  (" + FloatToString(Atr / 2, Decimals)
+    + " pts, ATR " + FloatToString(Atr, Decimals) + ")";
 end;
 
 Function DaysCapped(Days: Integer): Integer;
@@ -291,59 +290,57 @@ begin
   end;
 
   if Tema_Escuro then begin
-    rowColor[1] := RGB(100, 180, 255);
-    rowColor[2] := RGB(0, 230, 120);
-    rowColor[3] := RGB(255, 180, 80);
-    rowColor[4] := RGB(230, 120, 255);
+    backgroundColor := RGB(0, 0, 0);
+    textColor := RGB(235, 235, 235);
+    headerColor := RGB(140, 140, 140);
     warningColor := RGB(255, 170, 0);
   end else begin
-    rowColor[1] := RGB(0, 90, 200);
-    rowColor[2] := RGB(0, 150, 60);
-    rowColor[3] := RGB(210, 110, 0);
-    rowColor[4] := RGB(150, 40, 180);
+    backgroundColor := RGB(255, 255, 255);
+    textColor := RGB(30, 30, 30);
+    headerColor := RGB(110, 110, 110);
     warningColor := RGB(200, 100, 0);
   end;
 
-  rowEma[1] := emaAtr1;
-  rowEma[2] := emaAtr2;
-  rowEma[3] := emaAtr3;
-  rowEma[4] := emaAtr4;
-  rowMedian[1] := medAtr1;
-  rowMedian[2] := medAtr2;
-  rowMedian[3] := medAtr3;
-  rowMedian[4] := medAtr4;
+  // Linhas invisiveis que fixam a escala da janela: cada TF ocupa uma
+  // "linha da tabela" (TF 1 no alto, TF 4 embaixo).
+  PlotN(1, 0);
+  SetPlotColor(1, backgroundColor);
+  PlotN(2, 6);
+  SetPlotColor(2, backgroundColor);
 
-  warningText := "";
-  chartSeconds := Round(BarDurationF * 60);
-  for i := 1 to 4 do begin
-    chartTooCoarse := (chartSeconds > rowTimeframe[i] * 60)
-      or ((chartSeconds > 0) and (Mod(rowTimeframe[i] * 60, chartSeconds) <> 0));
-    if chartTooCoarse then
-      warningText := warningText + FloatToString(rowTimeframe[i], 0) + "m "
-    else if (MinPriceIncrement > 0) and (rowEma[i] > 0) then begin
-      ticks := Round((rowEma[i] / 2) / MinPriceIncrement);
-      PlotN(i, ticks);
-      SetPlotColor(i, rowColor[i]);
-      SetPlotWidth(i, 2);
+  if LastBarOnChart then begin
+    rowEma[1] := emaAtr1;
+    rowEma[2] := emaAtr2;
+    rowEma[3] := emaAtr3;
+    rowEma[4] := emaAtr4;
+    rowMedian[1] := medAtr1;
+    rowMedian[2] := medAtr2;
+    rowMedian[3] := medAtr3;
+    rowMedian[4] := medAtr4;
 
-      medianTicks := Round((rowMedian[i] / 2) / MinPriceIncrement);
-      if Exibir_Mediana and (rowMedian[i] > 0) then begin
-        PlotN(i + 4, medianTicks);
-        SetPlotColor(i + 4, rowColor[i]);
-        SetPlotWidth(i + 4, 1);
-        SetPlotStyle(i + 4, 2);
-      end;
+    PlotText("TF    BOX (metade do ATR)    |    BOX ESTAVEL (mediana dos dias)",
+      headerColor, 3, Tamanho_Fonte, 5);
 
-      if Exibir_Rotulos and LastBarOnChart then begin
-        labelText := FloatToString(rowTimeframe[i], 0) + "m  ATR " + FloatToString(rowEma[i], Casas_Decimais)
-          + "  box " + FloatToString(rowEma[i] / 2, Casas_Decimais) + " = " + FloatToString(ticks, 0) + "t";
+    chartSeconds := Round(BarDurationF * 60);
+    for i := 1 to 4 do begin
+      chartIncompatible := chartSeconds > rowTimeframe[i] * 60;
+      if chartSeconds > 0 then
+        if Mod(rowTimeframe[i] * 60, chartSeconds) <> 0 then
+          chartIncompatible := True;
+
+      rowText := FloatToString(rowTimeframe[i], 0) + "m    ";
+      if chartIncompatible then
+        PlotText(rowText + "grafico incompativel: use um grafico de 1 minuto",
+          warningColor, 3, Tamanho_Fonte, 5 - i)
+      else if (rowEma[i] = 0) or (MinPriceIncrement <= 0) then
+        PlotText(rowText + "aguardando 2 dias de historico",
+          headerColor, 3, Tamanho_Fonte, 5 - i)
+      else begin
+        rowText := rowText + BoxText(rowEma[i], MinPriceIncrement, Casas_Decimais);
         if rowMedian[i] > 0 then
-          labelText := labelText + "  |  Med " + FloatToString(rowMedian[i], Casas_Decimais)
-            + "  box " + FloatToString(rowMedian[i] / 2, Casas_Decimais) + " = " + FloatToString(medianTicks, 0) + "t";
-        PlotText(labelText, rowColor[i], 3, Tamanho_Fonte, ticks);
+          rowText := rowText + "    |    " + BoxText(rowMedian[i], MinPriceIncrement, Casas_Decimais);
+        PlotText(rowText, textColor, 3, Tamanho_Fonte, 5 - i);
       end;
     end;
   end;
-  if Exibir_Rotulos and LastBarOnChart and (warningText <> "") then
-    PlotText(warningText + "- grafico incompativel com o TF", warningColor, 1, Tamanho_Fonte);
 end;

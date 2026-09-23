@@ -248,29 +248,32 @@ Calcula o tamanho ideal de box Renko baseado na volatilidade (ATR).
 
 **Arquivo:** `renko-size-table.ntsl`
 
-Tamanho sugerido de box Renko (metade do ATR, em preco e em ticks) para
-quatro tempos graficos ao mesmo tempo, cada um com seu periodo em dias.
+Tabela com o tamanho sugerido de box Renko para quatro tempos graficos de
+uma vez, cada um com seu periodo em dias.
 
 **Como usar:**
-1. Aplique em um grafico de 1 minuto (ou menor que o menor TF da lista), em
-   uma sub-janela nova
-2. Cada TF vira uma linha de ticks: continua = ATR exponencial, tracejada =
-   mediana da media diaria do True Range (estavel em dias de noticia)
-3. O rotulo na ponta de cada linha mostra ATR, box e ticks
+1. Aplique em um grafico de **1 minuto**, em uma **janela separada** (nao no
+   grafico de preco)
+2. A tabela aparece na ponta direita da janela, uma linha por TF:
+   - **BOX** = metade do ATR atual, reage ao dia de hoje
+   - **BOX ESTAVEL** = metade da mediana dos ultimos dias; um dia fora da
+     curva (CPI, payroll) quase nao mexe nela
+   - Cada um mostra ticks, pontos e o ATR usado
 
 **Parametros:**
 - `TF_1..TF_4` / `Dias_1..Dias_4` — tempo grafico (minutos) e periodo em dias de cada linha (padrao 1/5/15/60 com 3/5/10/20 dias; maximo 60 dias)
 - `Ignorar_Gaps(true)` — ignorar o gap de abertura
-- `Exibir_Mediana(true)`, `Exibir_Rotulos(true)`, `Tamanho_Fonte(8)`, `Casas_Decimais(1)`, `Tema_Escuro(true)`
+- `Casas_Decimais(1)`, `Tamanho_Fonte(9)`, `Tema_Escuro(true)`
 
 **Observacoes:**
 - Os TFs sao montados agrupando os candles do grafico; um TF menor que o do
-  grafico, ou que nao seja multiplo dele, e avisado e nao plota
+  grafico, ou que nao seja multiplo dele, aparece como "grafico incompativel"
+- Os dois primeiros dias do grafico sao usados para aprender quantos candles
+  cabem em um dia; ate la a linha mostra "aguardando"
 - A mediana usa no maximo os dias carregados no grafico: com os padroes, o
   grafico de 1 minuto precisa de pelo menos 21 dias de historico para a
   linha de 60 minutos usar os 20 dias completos
-- Os dois primeiros dias do grafico sao usados para aprender quantos candles
-  cabem em um dia; as linhas aparecem a partir dai
+- Se a tabela ficar cortada na direita, aumente o espaco a direita do grafico
 
 ---
 
