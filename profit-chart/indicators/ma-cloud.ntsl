@@ -22,6 +22,10 @@ input
   // Periodo da EMA lenta (suaviza o movimento). Padrao: 34
   Periodo_EMA_Lenta(34);
 
+  // Pintar de cinza quando o preco contradiz a tendencia? Desligado, fica
+  // sempre na cor da tendencia (EMA rapida acima = verde, abaixo = vermelho)
+  Exibir_Neutro(true);
+
   // Tema escuro (true) ou claro (false)
   Tema_Escuro(true);
 
@@ -63,6 +67,13 @@ begin
   end else begin
     fEmaMax := fEmaSlow;
     fEmaMin := fEmaFast;
+  end;
+
+  if not Exibir_Neutro then begin
+    if fEmaFast > fEmaSlow then
+      nNeutralColor := nBullColor
+    else
+      nNeutralColor := nBearColor;
   end;
 
   // -----------------------------------------------------------------------

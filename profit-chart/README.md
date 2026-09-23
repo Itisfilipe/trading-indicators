@@ -177,6 +177,7 @@ Duas EMAs que formam uma "nuvem" entre elas. Mostra visualmente a direcao e forc
 **Parametros:**
 - `Periodo_EMA_Rapida(17)` — EMA rapida
 - `Periodo_EMA_Lenta(34)` — EMA lenta
+- `Exibir_Neutro(true)` — cinza quando o preco contradiz a tendencia; desligado, fica sempre na cor da tendencia
 
 ---
 

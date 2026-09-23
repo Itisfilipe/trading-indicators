@@ -11,6 +11,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   its coloring rule, MACD Histogram, Bias Coloring, Confluence Coloring's
   trend colors, Tape Reading).
 - MA Cloud and MA Cloud Coloring default to 17/34 EMAs.
+- MA Cloud and MA Cloud Coloring: new "Exibir_Neutro" switch (on by
+  default). Off, the gray "price disagrees with the trend" color is dropped
+  and the cloud or candle keeps the trend's green or red.
 - MACD Histogram defaults to 21/89 EMAs with a 42 signal.
 - Tape Reading: bars below their average are now near-gray, so the ones
   that cross the line stand out.
