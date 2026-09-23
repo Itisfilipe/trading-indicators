@@ -15,13 +15,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   default). Off, the gray "price disagrees with the trend" color is dropped
   and the cloud or candle keeps the trend's green or red.
 - MACD Histogram defaults to 21/89 EMAs with a 42 signal.
-- Renko Size Calculator: by default it now shows a single line, half the
-  median of recent days' mean true range in ticks, which barely moves on an
-  outlier day. Every other reading (half median in points, median, half ATR
-  in ticks or points, ATR, candles per day) has its own switch, off by
-  default. A label on the last candle names the chart timeframe and lists
-  each visible value with its description. "Ignorar Gaps" is now on by
-  default, and values no longer drift upward during the live session.
+- Renko Size Calculator: four readings, each with its own switch and line:
+  the median in ticks (half the median of recent days' mean true range, the
+  suggested box, the only one on by default), half ATR in ticks, half ATR
+  in points, and ATR in points. Turning on several now shows several
+  lines. A label on the last candle names the chart timeframe and lists
+  each visible value. "Ignorar Gaps" is now on by default, and values no
+  longer drift upward during the live session.
 - Tape Reading: bars below their average are now near-gray, so the ones
   that cross the line stand out.
 

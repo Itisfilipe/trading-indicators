@@ -230,11 +230,12 @@ Tamanho sugerido de box Renko para o tempo grafico em que ele esta aplicado.
 1. Aplique no grafico de tempo que voce quer medir (1min, 5min, 15min...)
    e escolha **nova janela** ao inserir; no grafico de preco a escala em
    ticks esmaga os candles
-2. Por padrao aparece uma linha: a **metade da mediana**, em ticks. A
-   mediana e das medias diarias do True Range dos ultimos dias; um dia fora
-   da curva (CPI, payroll) quase nao mexe nela. Esse e o box sugerido
+2. Por padrao aparece uma linha: a **mediana em ticks**, que ja e a metade
+   da mediana das medias diarias do True Range dos ultimos dias. Esse e o
+   box sugerido. Ela so muda na virada do dia e pode repetir o mesmo valor
+   por alguns dias; e o que a torna estavel
 3. O rotulo no ultimo candle mostra o tempo grafico e o valor de cada linha
-   ligada, com o nome. Ex.: `5 min | meia mediana (5d): 101 ticks`
+   ligada, com o nome. Ex.: `5 min | mediana (5d): 101 ticks`
 4. Para comparar tempos graficos, abra um grafico de cada tempo
 
 **Parametros:**
@@ -242,16 +243,19 @@ Tamanho sugerido de box Renko para o tempo grafico em que ele esta aplicado.
 - `Ignorar_Gaps(true)` — ignorar o gap de abertura
 - `Apenas_RTH(false)`, `Horario_Em_NY(true)`, `Offset_NY_Para_BR(60)`, `RTH_Inicio(930)`, `RTH_Fim(1600)` — usar so o pregao regular
 - Linhas (cada uma entra no rotulo quando ligada):
-  - `Exibir_Meia_Mediana_Ticks(true)` — box sugerido
-  - `Exibir_Meia_Mediana_Pontos(false)`, `Exibir_Mediana_Pontos(false)`
-  - `Exibir_Meio_ATR_Ticks(false)`, `Exibir_Meio_ATR_Pontos(false)`, `Exibir_ATR_Pontos(false)` — ATR atual (media exponencial), reage ao dia de hoje
-  - `Exibir_Candles_Por_Dia(false)` — conferencia do periodo
+  - `Exibir_Mediana_Ticks(true)` — box sugerido (metade da mediana, em ticks)
+  - `Exibir_Meio_ATR_Ticks(false)` — metade do ATR atual, em ticks
+  - `Exibir_Meio_ATR(false)` — metade do ATR atual, em pontos
+  - `Exibir_ATR(false)` — ATR atual (media exponencial), em pontos
 - `Exibir_Rotulo(true)`, `Casas_Decimais(1)`, `Tamanho_Fonte(9)`, `Tema_Escuro(true)`
 
 **Observacoes:**
-- Linhas em pontos e em ticks tem escalas diferentes; ligue uma unidade por vez
+- Linhas em pontos e em ticks dividem a mesma escala; ligue uma unidade por vez
+  para ver as duas bem
 - A mediana aparece a partir do segundo dia completo carregado no grafico;
   ate la o rotulo mostra "aguardando"
+- O "dia" e a data do calendario: em ativos com sessao noturna, ligue
+  `Apenas_RTH` para medir so o pregao regular
 
 ---
 

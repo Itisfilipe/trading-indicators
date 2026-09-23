@@ -4,14 +4,13 @@
 // Aplique no grafico de tempo que voce quer medir (1min, 5min, 15min...),
 // escolhendo NOVA JANELA ao inserir.
 //
-// Padrao: uma linha com a METADE DA MEDIANA, em ticks. A mediana e das
-// medias diarias do True Range dos ultimos N dias; um dia fora da curva
-// (CPI, payroll) quase nao mexe nela. Esse e o box sugerido.
-//
-// O rotulo no ultimo candle mostra o tempo grafico e o valor de cada linha
-// ligada, com o nome. As outras leituras (ATR atual, metade do ATR, valores
-// em pontos, candles por dia) ficam desligadas; ligue nos parametros
-// Exibir_* para conferir.
+// Leituras (cada uma liga uma linha e entra no rotulo do ultimo candle):
+//   - Mediana (ticks), ligada: metade da mediana das medias diarias do True
+//     Range dos ultimos N dias, em ticks. E o box sugerido. So muda na virada
+//     do dia, e pode repetir por alguns dias: um dia fora da curva (CPI,
+//     payroll) quase nao mexe nela.
+//   - Meio ATR (ticks), Meio ATR (pontos), ATR (pontos): ATR atual (media
+//     exponencial), reage ao dia de hoje. Desligados por padrao.
 //
 // Apenas_RTH=true usa so os candles dentro da janela RTH_Inicio..RTH_Fim,
 // util para ativos com sessao noturna (futuros US).
@@ -29,13 +28,10 @@ input
   RTH_Inicio(930);
   RTH_Fim(1600);
 
-  Exibir_Meia_Mediana_Ticks(true);
-  Exibir_Meia_Mediana_Pontos(false);
-  Exibir_Mediana_Pontos(false);
+  Exibir_Mediana_Ticks(true);
   Exibir_Meio_ATR_Ticks(false);
-  Exibir_Meio_ATR_Pontos(false);
-  Exibir_ATR_Pontos(false);
-  Exibir_Candles_Por_Dia(false);
+  Exibir_Meio_ATR(false);
+  Exibir_ATR(false);
 
   Exibir_Rotulo(true);
   Casas_Decimais(1);
@@ -53,7 +49,7 @@ var
   dailyMeans: Array[1..128] of Float;
   sorted: Array[1..64] of Float;
 
-  medianColor, atrColor, debugColor, textColor: Integer;
+  medianTicks, halfAtrTicks, medianColor, atrColor, textColor: Integer;
   labelY: Float;
   labelText: String;
 
@@ -147,84 +143,73 @@ begin
   if Tema_Escuro then begin
     medianColor := RGB(255, 200, 60);
     atrColor := RGB(0, 200, 255);
-    debugColor := RGB(150, 150, 150);
     textColor := RGB(235, 235, 235);
   end else begin
     medianColor := RGB(200, 120, 0);
     atrColor := RGB(0, 110, 200);
-    debugColor := RGB(110, 110, 110);
     textColor := RGB(30, 30, 30);
   end;
 
   if MinPriceIncrement > 0 then begin
-    labelY := 0;
-    if chartMinutes > 0 then
-      labelText := FloatToString(chartMinutes, 0) + " min"
-    else
-      labelText := "grafico sem tempo fixo";
+    medianTicks := ToTicks(medianAtr / 2, MinPriceIncrement);
+    halfAtrTicks := ToTicks(atr / 2, MinPriceIncrement);
 
-    if medianAtr = 0 then
-      labelText := labelText + "  |  mediana: aguardando 2 dias completos"
-    else begin
-      if Exibir_Meia_Mediana_Ticks then begin
-        Plot(ToTicks(medianAtr / 2, MinPriceIncrement));
-        SetPlotColor(1, medianColor);
-        SetPlotWidth(1, 2);
-        labelY := ToTicks(medianAtr / 2, MinPriceIncrement);
-        labelText := labelText + "  |  meia mediana (" + FloatToString(medianDays, 0) + "d): "
-          + FloatToString(ToTicks(medianAtr / 2, MinPriceIncrement), 0) + " ticks";
+    // Os quatro plots sao desenhados em todo candle e escondidos com NoPlot:
+    // plot chamado so em alguns candles nao aparece no Profit.
+    Plot(medianTicks);
+    SetPlotColor(1, medianColor);
+    SetPlotWidth(1, 2);
+    Plot2(halfAtrTicks);
+    SetPlotColor(2, atrColor);
+    SetPlotWidth(2, 2);
+    Plot3(atr / 2);
+    SetPlotColor(3, atrColor);
+    SetPlotStyle(3, 2);
+    Plot4(atr);
+    SetPlotColor(4, atrColor);
+    SetPlotStyle(4, 1);
+    if (not Exibir_Mediana_Ticks) or (medianAtr = 0) then
+      NoPlot(1);
+    if not Exibir_Meio_ATR_Ticks then
+      NoPlot(2);
+    if not Exibir_Meio_ATR then
+      NoPlot(3);
+    if not Exibir_ATR then
+      NoPlot(4);
+
+    if Exibir_Rotulo and LastBarOnChart then begin
+      labelY := 0;
+      if chartMinutes > 0 then
+        labelText := FloatToString(chartMinutes, 0) + " min"
+      else
+        labelText := "grafico sem tempo fixo";
+
+      if Exibir_Mediana_Ticks then begin
+        if medianAtr = 0 then
+          labelText := labelText + "  |  mediana: aguardando 2 dias completos"
+        else begin
+          labelY := medianTicks;
+          labelText := labelText + "  |  mediana (" + FloatToString(medianDays, 0) + "d): "
+            + FloatToString(medianTicks, 0) + " ticks";
+        end;
       end;
-      if Exibir_Meia_Mediana_Pontos then begin
-        Plot2(medianAtr / 2);
-        SetPlotColor(2, medianColor);
-        SetPlotStyle(2, 2);
+      if Exibir_Meio_ATR_Ticks then begin
         if labelY = 0 then
-          labelY := medianAtr / 2;
-        labelText := labelText + "  |  meia mediana: " + FloatToString(medianAtr / 2, Casas_Decimais) + " pts";
+          labelY := halfAtrTicks;
+        labelText := labelText + "  |  meio ATR: " + FloatToString(halfAtrTicks, 0) + " ticks";
       end;
-      if Exibir_Mediana_Pontos then begin
-        Plot3(medianAtr);
-        SetPlotColor(3, medianColor);
-        SetPlotStyle(3, 1);
+      if Exibir_Meio_ATR then begin
         if labelY = 0 then
-          labelY := medianAtr;
-        labelText := labelText + "  |  mediana: " + FloatToString(medianAtr, Casas_Decimais) + " pts";
+          labelY := atr / 2;
+        labelText := labelText + "  |  meio ATR: " + FloatToString(atr / 2, Casas_Decimais) + " pts";
       end;
-    end;
+      if Exibir_ATR then begin
+        if labelY = 0 then
+          labelY := atr;
+        labelText := labelText + "  |  ATR: " + FloatToString(atr, Casas_Decimais) + " pts";
+      end;
 
-    if Exibir_Meio_ATR_Ticks then begin
-      Plot4(ToTicks(atr / 2, MinPriceIncrement));
-      SetPlotColor(4, atrColor);
-      SetPlotWidth(4, 2);
-      if labelY = 0 then
-        labelY := ToTicks(atr / 2, MinPriceIncrement);
-      labelText := labelText + "  |  meio ATR: " + FloatToString(ToTicks(atr / 2, MinPriceIncrement), 0) + " ticks";
-    end;
-    if Exibir_Meio_ATR_Pontos then begin
-      Plot5(atr / 2);
-      SetPlotColor(5, atrColor);
-      SetPlotStyle(5, 2);
-      if labelY = 0 then
-        labelY := atr / 2;
-      labelText := labelText + "  |  meio ATR: " + FloatToString(atr / 2, Casas_Decimais) + " pts";
-    end;
-    if Exibir_ATR_Pontos then begin
-      Plot6(atr);
-      SetPlotColor(6, atrColor);
-      SetPlotStyle(6, 1);
-      if labelY = 0 then
-        labelY := atr;
-      labelText := labelText + "  |  ATR: " + FloatToString(atr, Casas_Decimais) + " pts";
-    end;
-    if Exibir_Candles_Por_Dia then begin
-      Plot7(candlesPerDay);
-      SetPlotColor(7, debugColor);
-      if labelY = 0 then
-        labelY := candlesPerDay;
-      labelText := labelText + "  |  candles/dia: " + FloatToString(candlesPerDay, 0);
-    end;
-
-    if Exibir_Rotulo and LastBarOnChart then
       PlotText(labelText, textColor, 3, Tamanho_Fonte, labelY);
+    end;
   end;
 end;
