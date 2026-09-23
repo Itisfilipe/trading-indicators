@@ -9,10 +9,11 @@
 //     - Verde = compradores dominando
 //     - Vermelho = vendedores dominando
 //     - Barra acima da linha branca = agressao ACIMA da media (forte)
+//     - Barra cinza = agressao abaixo da media
 //
 //   ABAIXO do zero = volume de contratos
 //     - Azul claro = volume acima da media (mercado ativo)
-//     - Azul escuro = volume abaixo da media (mercado parado)
+//     - Cinza = volume abaixo da media (mercado parado)
 //
 //   Linhas brancas = referencia da media (valor 1.0)
 //   Valores normalizados: 1.0 = na media, 2.0 = 2x a media
@@ -26,7 +27,7 @@ input
   Tape_MA_Vol(300);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   saldo: Float;         // saldo de agressao (compra - venda)
@@ -51,20 +52,20 @@ begin
   // Define cores com base no tema
   // -----------------------------------------------------------------------
   if Tema_Escuro then begin
-    nBuyStrong := RGB(0, 255, 0);         // verde vivo
-    nBuyWeak := RGB(0, 120, 0);           // verde escuro
-    nSellStrong := RGB(255, 0, 0);        // vermelho vivo
-    nSellWeak := RGB(120, 0, 0);          // vermelho escuro
+    nBuyStrong := RGB(61, 226, 149);     // verde do candle
+    nBuyWeak := RGB(66, 78, 72);          // cinza esverdeado
+    nSellStrong := RGB(226, 43, 61);    // vermelho do candle
+    nSellWeak := RGB(80, 66, 68);         // cinza avermelhado
     nVolHigh := RGB(0, 200, 255);         // azul claro
-    nVolLow := RGB(0, 100, 180);          // azul escuro
+    nVolLow := RGB(64, 72, 82);           // cinza azulado
     nLineColor := RGB(200, 200, 200);     // cinza claro
   end else begin
     nBuyStrong := RGB(0, 255, 0);         // verde vivo
-    nBuyWeak := RGB(0, 160, 0);           // verde medio
+    nBuyWeak := RGB(196, 210, 202);       // cinza esverdeado
     nSellStrong := RGB(255, 0, 0);        // vermelho vivo
-    nSellWeak := RGB(180, 0, 0);          // vermelho escuro
+    nSellWeak := RGB(214, 196, 198);      // cinza avermelhado
     nVolHigh := RGB(0, 220, 255);         // azul claro
-    nVolLow := RGB(0, 130, 200);          // azul medio
+    nVolLow := RGB(196, 204, 214);        // cinza azulado
     nLineColor := RGB(255, 255, 255);     // branco
   end;
 
@@ -98,7 +99,7 @@ begin
   // -----------------------------------------------------------------------
   // Histograma de agressao (acima do zero)
   // Verde = compradores, Vermelho = vendedores
-  // Cor viva = acima da media, Cor escura = abaixo da media
+  // Cor viva = acima da media, cinza = abaixo da media
   // -----------------------------------------------------------------------
   SetPlotType(1, 1);
   if saldo >= 0 then begin
@@ -116,7 +117,7 @@ begin
 
   // -----------------------------------------------------------------------
   // Histograma de volume (abaixo do zero)
-  // Azul claro = volume alto, Azul escuro = volume baixo
+  // Azul claro = volume alto, cinza = volume baixo
   // -----------------------------------------------------------------------
   SetPlotType(2, 1);
   if fNormVol >= 1 then

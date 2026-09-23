@@ -18,7 +18,7 @@ input
   EMA_Period(55);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   fEMA: Float;          // valor da EMA
@@ -31,8 +31,8 @@ begin
   // Define cores com base no tema
   // -----------------------------------------------------------------------
   if Tema_Escuro then begin
-    nBullColor := RGB(0, 180, 0);         // verde vivo
-    nBearColor := RGB(200, 0, 0);         // vermelho vivo
+    nBullColor := RGB(61, 226, 149);     // verde do candle
+    nBearColor := RGB(226, 43, 61);      // vermelho do candle
   end else begin
     nBullColor := RGB(0, 120, 0);         // verde
     nBearColor := RGB(30, 30, 30);        // preto

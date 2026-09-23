@@ -17,20 +17,20 @@
 // =========================================================================
 
 input
-  // Periodo da EMA rapida (reage mais rapido ao preco). Padrao: 72
-  Periodo_EMA_Rapida(72);
+  // Periodo da EMA rapida (reage mais rapido ao preco). Padrao: 21
+  Periodo_EMA_Rapida(21);
 
-  // Periodo da EMA lenta (suaviza o movimento). Padrao: 200
-  Periodo_EMA_Lenta(200);
+  // Periodo da EMA lenta (suaviza o movimento). Padrao: 89
+  Periodo_EMA_Lenta(89);
 
-  // Periodo da linha de sinal (suaviza o MACD). Padrao: 34
-  Periodo_Sinal(34);
+  // Periodo da linha de sinal (suaviza o MACD). Padrao: 42
+  Periodo_Sinal(42);
 
   // Mostrar linha branca conectando os topos do histograma?
   Exibir_Linha_Contorno(true);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   // Calculo do MACD
@@ -49,8 +49,8 @@ begin
   // Define cores com base no tema escolhido
   // -----------------------------------------------------------------------
   if Tema_Escuro then begin
-    nPositiveColor := RGB(0, 200, 0);     // verde vivo
-    nNegativeColor := RGB(200, 0, 0);     // vermelho vivo
+    nPositiveColor := RGB(61, 226, 149); // verde do candle
+    nNegativeColor := RGB(226, 43, 61);  // vermelho do candle
     nLineColor := RGB(200, 200, 200);     // cinza claro
     nZeroColor := RGB(80, 80, 80);        // cinza escuro
   end else begin

@@ -52,7 +52,7 @@ input
   Exibir_Num_Candles(false);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   bStarted: Boolean;

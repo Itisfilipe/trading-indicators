@@ -21,8 +21,8 @@ Conjunto de indicadores e regras de coloracao para day trading no Profit Chart (
 ### Tema escuro ou claro
 
 Todos os indicadores possuem o parametro `Tema_Escuro`. Ao aplicar cada indicador, configure:
-- `Tema_Escuro = false` para fundos claros (padrao)
-- `Tema_Escuro = true` para fundos escuros
+- `Tema_Escuro = true` para fundos escuros (padrao; cores casam com candles verde #3DE295 e vermelho #E22B3D em fundo preto)
+- `Tema_Escuro = false` para fundos claros
 
 ---
 
@@ -123,9 +123,10 @@ Mostra a forca dos compradores vs vendedores e o volume de contratos em histogra
   - Verde = compradores dominando
   - Vermelho = vendedores dominando
   - Barra acima da linha branca = agressao acima da media (sinal forte)
+  - Barra cinza = agressao abaixo da media
 - **Abaixo do zero** = volume de contratos
   - Azul claro = volume acima da media (mercado ativo)
-  - Azul escuro = volume abaixo da media (mercado parado)
+  - Cinza = volume abaixo da media (mercado parado)
 - **Linhas brancas** = referencia da media (valor 1.0)
 - Valores normalizados: 1.0 = na media, 2.0 = o dobro da media
 
@@ -150,9 +151,9 @@ Histograma do MACD com linha de contorno conectando os topos. Os periodos sao os
 - Linha branca conecta os topos para facilitar ver divergencias
 
 **Parametros:**
-- `Periodo_EMA_Rapida(72)` — EMA rapida
-- `Periodo_EMA_Lenta(200)` — EMA lenta
-- `Periodo_Sinal(34)` — linha de sinal
+- `Periodo_EMA_Rapida(21)` — EMA rapida
+- `Periodo_EMA_Lenta(89)` — EMA lenta
+- `Periodo_Sinal(42)` — linha de sinal
 - `Exibir_Linha_Contorno(true)` — mostrar linha branca
 
 ---
@@ -174,8 +175,8 @@ Duas EMAs que formam uma "nuvem" entre elas. Mostra visualmente a direcao e forc
 3. Marque "Preencher entre linhas" com Plot 1 e Plot 2
 
 **Parametros:**
-- `Periodo_EMA_Rapida(21)` — EMA rapida
-- `Periodo_EMA_Lenta(42)` — EMA lenta
+- `Periodo_EMA_Rapida(17)` — EMA rapida
+- `Periodo_EMA_Lenta(34)` — EMA lenta
 
 ---
 
@@ -259,7 +260,7 @@ quatro tempos graficos ao mesmo tempo, cada um com seu periodo em dias.
 **Parametros:**
 - `TF_1..TF_4` / `Dias_1..Dias_4` — tempo grafico (minutos) e periodo em dias de cada linha (padrao 1/5/15/60 com 3/5/10/20 dias; maximo 60 dias)
 - `Ignorar_Gaps(true)` — ignorar o gap de abertura
-- `Exibir_Mediana(true)`, `Exibir_Rotulos(true)`, `Tamanho_Fonte(8)`, `Casas_Decimais(1)`, `Tema_Escuro(false)`
+- `Exibir_Mediana(true)`, `Exibir_Rotulos(true)`, `Tamanho_Fonte(8)`, `Casas_Decimais(1)`, `Tema_Escuro(true)`
 
 **Observacoes:**
 - Os TFs sao montados agrupando os candles do grafico; um TF menor que o do

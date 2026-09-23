@@ -5,6 +5,16 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-09-23
 
+### Profit Chart indicators (changed)
+- Dark theme is now the default in every indicator. Its green and red match
+  candles colored #3DE295 and #E22B3D on a black background (MA Cloud and
+  its coloring rule, MACD Histogram, Bias Coloring, Confluence Coloring's
+  trend colors, Tape Reading).
+- MA Cloud and MA Cloud Coloring default to 17/34 EMAs.
+- MACD Histogram defaults to 21/89 EMAs with a 42 signal.
+- Tape Reading: bars below their average are now near-gray, so the ones
+  that cross the line stand out.
+
 ### Renko Size Table (Profit Chart, new)
 - Profit Chart port of the Renko Size Table: suggested Renko box sizes (half
   ATR, in price and ticks) for four timeframes at once, each with a live EMA

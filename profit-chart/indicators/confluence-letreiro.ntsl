@@ -73,7 +73,7 @@ input
   Enable_Scalp(true);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
   // ----- Configuracoes do Letreiro -----
 

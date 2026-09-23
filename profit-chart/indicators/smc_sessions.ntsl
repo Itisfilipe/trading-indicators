@@ -15,7 +15,7 @@
 // =========================================================================
 
 input
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
   Horario_Em_NY(true);
   Offset_NY_Para_BR(60);

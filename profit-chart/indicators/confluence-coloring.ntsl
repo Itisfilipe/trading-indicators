@@ -94,7 +94,7 @@ input
   Trend_Follow_Major(true);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   // Componentes do MACD maior
@@ -170,10 +170,10 @@ begin
     nTriggerBear := RGB(255, 0, 255);     // fucsia
     nScalpBullColor := RGB(0, 80, 180);   // azul escuro
     nScalpBearColor := RGB(180, 0, 180);  // fucsia escuro
-    nTrendStrong := RGB(0, 180, 0);       // verde vivo
-    nTrendStrongBear := RGB(200, 0, 0);   // vermelho vivo
-    nTrendSoft := RGB(0, 100, 0);         // verde escuro
-    nTrendSoftBear := RGB(100, 0, 0);     // vermelho escuro
+    nTrendStrong := RGB(61, 226, 149);   // verde do candle
+    nTrendStrongBear := RGB(226, 43, 61); // vermelho do candle
+    nTrendSoft := RGB(25, 110, 72);       // verde escuro
+    nTrendSoftBear := RGB(110, 22, 32);   // vermelho escuro
   end else begin
     nTriggerBull := RGB(0, 120, 255);     // azul
     nTriggerBear := RGB(255, 0, 0);       // vermelho

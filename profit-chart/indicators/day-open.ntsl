@@ -17,7 +17,7 @@
 // =========================================================================
 
 input
-  Tema_Escuro(false);
+  Tema_Escuro(true);
   Max_Dias_Passados(5);          // Slots historicos (max 5 implementado)
   Estilo_Linha(2);               // 0=solido, 1=traco longo, 2=traco curto
   Espessura_Linha(2);

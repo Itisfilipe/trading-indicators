@@ -36,7 +36,7 @@ input
   Exibir_Mediana(true);
   Exibir_Rotulos(true);
   Tamanho_Fonte(8);
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   hasHistory, isNewDay, chartTooCoarse: Boolean;

@@ -16,14 +16,14 @@
 // =========================================================================
 
 input
-  // Periodo da EMA rapida (reage mais rapido ao preco). Padrao: 21
-  Periodo_EMA_Rapida(21);
+  // Periodo da EMA rapida (reage mais rapido ao preco). Padrao: 17
+  Periodo_EMA_Rapida(17);
 
-  // Periodo da EMA lenta (suaviza o movimento). Padrao: 42
-  Periodo_EMA_Lenta(42);
+  // Periodo da EMA lenta (suaviza o movimento). Padrao: 34
+  Periodo_EMA_Lenta(34);
 
   // Tema escuro (true) ou claro (false)
-  Tema_Escuro(false);
+  Tema_Escuro(true);
 
 var
   fEmaFast: Float;      // EMA rapida
@@ -42,8 +42,8 @@ begin
   // Define cores com base no tema
   // -----------------------------------------------------------------------
   if Tema_Escuro then begin
-    nBullColor := RGB(0, 200, 0);         // verde vivo
-    nBearColor := RGB(200, 0, 0);         // vermelho vivo
+    nBullColor := RGB(61, 226, 149);     // verde do candle
+    nBearColor := RGB(226, 43, 61);      // vermelho do candle
     nNeutralColor := RGB(80, 80, 80);     // cinza escuro
   end else begin
     nBullColor := RGB(0, 180, 80);        // verde
