@@ -42,6 +42,7 @@ Every NTSL file follows three sections: `input` (parameters), `var` (declaration
 
 - `HorizontalLineCustom` and `PlotN` cannot coexist in the same indicator
 - `PlotText` keeps ONE text per bar per indicator: several calls on the same bar collapse to the last one (confirmed in Profit). No multi-row tables; the drawing studies (`HorizontalLineCustom`, `LineSegment`) are additive and never cleared, so they cannot show changing text either
+- Optional lines: draw only the enabled ones, with `PlotN` in consecutive slots (1, 2, 3...) on every bar. Hiding with `NoPlot` after plotting did not remove the line in Profit (observed on the Renko Size Calculator), so a hidden line in other units still set the pane scale
 - Indicators cannot choose their pane; the user picks "nova janela" on insert. Plots in ticks or oscillator units squash the candles if dropped on the price pane
 - `and`/`or` do not short-circuit: `(x > 0) and (Mod(y, x) <> 0)` still divides by zero. Guard with a nested `if`
 - `fBoxSize` can be zero on the first bar — always guard with `if fBoxSize = 0 then fBoxSize := 1`
