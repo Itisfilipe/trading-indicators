@@ -224,56 +224,30 @@ Linha horizontal no preco de abertura do dia. Reseta automaticamente a cada novo
 
 **Arquivo:** `renko-size-calculator.ntsl`
 
-Calcula o tamanho ideal de box Renko baseado na volatilidade (ATR).
+Tamanho sugerido de box Renko (metade do ATR, em ticks) para o tempo
+grafico em que ele esta aplicado.
 
 **Como usar:**
-1. Aplique em um grafico de tempo (30s, 1min, 5min)
-2. A linha verde mostra o tamanho sugerido em ticks
-3. Use esse valor para configurar seu grafico Renko
-
-**Como funciona:**
-- Calcula o ATR (volatilidade media) dos ultimos N dias
-- Divide pela metade e converte em ticks
-- O resultado e o tamanho sugerido para o box Renko
-
-**Parametros:**
-- `Periodo_Dias(5)` — numero de dias para o calculo
-- `Ignorar_Gaps(false)` — ignorar gaps de abertura (overnight)
-- `Exibir_ATR(true)` — mostrar linha do ATR
-- `Exibir_Num_Candles(false)` — mostrar contagem de candles (debug)
-
----
-
-### Renko Size Table (Indicador)
-
-**Arquivo:** `renko-size-table.ntsl`
-
-Tabela com o tamanho sugerido de box Renko para quatro tempos graficos de
-uma vez, cada um com seu periodo em dias.
-
-**Como usar:**
-1. Aplique em um grafico de **1 minuto**, em uma **janela separada** (nao no
-   grafico de preco)
-2. A tabela aparece na ponta direita da janela, uma linha por TF:
-   - **BOX** = metade do ATR atual, reage ao dia de hoje
-   - **BOX ESTAVEL** = metade da mediana dos ultimos dias; um dia fora da
-     curva (CPI, payroll) quase nao mexe nela
-   - Cada um mostra ticks, pontos e o ATR usado
+1. Aplique no grafico de tempo que voce quer medir (1min, 5min, 15min...)
+   e escolha **nova janela** ao inserir; no grafico de preco a escala em
+   ticks esmaga os candles
+2. Duas linhas, em ticks:
+   - **box** (continua) = metade do ATR atual, reage ao dia de hoje
+   - **estavel** (tracejada) = metade da mediana das medias diarias; um dia
+     fora da curva (CPI, payroll) quase nao mexe nela
+3. O rotulo no ultimo candle repete os dois valores
+4. Para comparar tempos graficos, abra um grafico de cada tempo
 
 **Parametros:**
-- `TF_1..TF_4` / `Dias_1..Dias_4` — tempo grafico (minutos) e periodo em dias de cada linha (padrao 1/5/15/60 com 3/5/10/20 dias; maximo 60 dias)
+- `Periodo_Dias(5)` — dias usados no ATR e na mediana (maximo 60)
 - `Ignorar_Gaps(true)` — ignorar o gap de abertura
-- `Casas_Decimais(1)`, `Tamanho_Fonte(9)`, `Tema_Escuro(true)`
+- `Apenas_RTH(false)`, `Horario_Em_NY(true)`, `Offset_NY_Para_BR(60)`, `RTH_Inicio(930)`, `RTH_Fim(1600)` — usar so o pregao regular
+- `Exibir_Estavel(true)`, `Exibir_Rotulo(true)`, `Tamanho_Fonte(9)`, `Tema_Escuro(true)`
 
 **Observacoes:**
-- Os TFs sao montados agrupando os candles do grafico; um TF menor que o do
-  grafico, ou que nao seja multiplo dele, aparece como "grafico incompativel"
-- Os dois primeiros dias do grafico sao usados para aprender quantos candles
-  cabem em um dia; ate la a linha mostra "aguardando"
-- A mediana usa no maximo os dias carregados no grafico: com os padroes, o
-  grafico de 1 minuto precisa de pelo menos 21 dias de historico para a
-  linha de 60 minutos usar os 20 dias completos
-- Se a tabela ficar cortada na direita, aumente o espaco a direita do grafico
+- O primeiro dia completo do grafico e usado para aprender quantos candles
+  cabem em um dia; a linha estavel aparece a partir do segundo dia completo
+- A mediana usa no maximo os dias carregados no grafico
 
 ---
 
@@ -291,7 +265,6 @@ Para day trading com Renko, recomendamos usar:
 Opcional:
 - **Day Open** — referencia de abertura do dia
 - **Renko Size Calculator** — calcular tamanho do box (aplicar em grafico de tempo)
-- **Renko Size Table** — tamanho do box em 4 tempos graficos de uma vez (aplicar em grafico de 1 minuto)
 - **Bias Coloring** — usar em grafico separado para bias de longo prazo
 
 ---

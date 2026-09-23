@@ -1,214 +1,155 @@
 // =========================================================================
-// RENKO SIZE CALCULATOR - Metade do ATR em Ticks
+// RENKO SIZE CALCULATOR - Tamanho de box Renko (metade do ATR em ticks)
 // =========================================================================
-// Calcula o tamanho ideal de box Renko baseado na metade do ATR.
+// Aplique no grafico de tempo que voce quer medir (1min, 5min, 15min...),
+// em uma janela separada. Mostra duas linhas, em ticks:
+//   - BOX (linha continua): metade do ATR atual. Reage ao dia de hoje.
+//   - ESTAVEL (linha tracejada): metade da mediana das medias diarias do
+//     True Range. Um dia fora da curva (CPI, payroll) quase nao mexe nela.
+// O rotulo no ultimo candle repete os dois valores.
 //
-// O que faz:
-//   - Calcula o ATR (volatilidade media) dos ultimos N dias
-//   - Divide pela metade e converte em ticks
-//   - O resultado e o tamanho sugerido para o box Renko
+// O periodo e definido em DIAS; o indicador conta quantos candles cabem
+// em um dia do grafico atual. O primeiro dia completo do grafico e usado
+// para aprender essa contagem.
 //
-// Como usar:
-//   - Aplique em um grafico de tempo (ex: 30s, 1min, 5min)
-//   - A linha verde mostra o tamanho sugerido em ticks
-//   - Use esse valor para configurar seu grafico Renko
-//
-// O periodo e definido em DIAS e o indicador calcula automaticamente
-// quantos candles isso representa no timeframe atual.
-//
-// RTH (Regular Trading Hours):
-//   - Apenas_RTH=true filtra candles fora da janela RTH_Inicio..RTH_Fim
-//   - Util pra ativos com sessao prolongada (mini Dow noturno, futuros US)
-//     onde o overnight tem volatilidade diferente do pregao regular
-//   - Usa EMA manual ao inves de MediaExp para conseguir pular candles
-//     fora da janela sem distorcer o calculo
+// Apenas_RTH=true usa so os candles dentro da janela RTH_Inicio..RTH_Fim,
+// util para ativos com sessao noturna (futuros US).
 // =========================================================================
 
 input
-  // Numero de dias para calcular o ATR. Padrao: 5
   Periodo_Dias(5);
 
-  // Ignorar gaps de abertura (overnight)? Padrao: false
-  // Quando ativo, usa apenas High-Low no primeiro candle do dia
-  Ignorar_Gaps(false);
+  // Ignorar o gap de abertura no primeiro candle do dia
+  Ignorar_Gaps(true);
 
-  // Calcular ATR apenas com candles do RTH (Regular Trading Hours)?
-  // Padrao: false (usa o pregao todo)
-  // Defaults configurados para RTH do Nasdaq (cash session 09:30-16:00 NY)
   Apenas_RTH(false);
-
-  // RTH em horario NY? true (default) = soma offset para BR
   Horario_Em_NY(true);
   Offset_NY_Para_BR(60);         // minutos (60 = NY DST abr-out, 120 = EST nov-mar)
-
-  // Janela do RTH (formato HHMM). Default: 09:30 - 16:00 NY (Nasdaq cash)
   RTH_Inicio(930);
   RTH_Fim(1600);
 
-  // Mostrar linha do ATR no grafico?
-  Exibir_ATR(true);
-
-  // Mostrar numero de candles calculado? (util para debug)
-  Exibir_Num_Candles(false);
-
-  // Tema escuro (true) ou claro (false)
+  Exibir_Estavel(true);
+  Exibir_Rotulo(true);
+  Tamanho_Fonte(9);
   Tema_Escuro(true);
 
 var
-  bStarted: Boolean;
-  fTickSize: Float;
+  hasHistory, isNewDay, counted: Boolean;
+  rthStart, rthEnd, days, period, slot, i, j, count, first: Integer;
+  trueRange, swap: Float;
 
-  // Calculo do True Range
-  fTrueRange: Float;
-  fHighLow: Float;
-  fHighClose: Float;
-  fLowClose: Float;
+  candlesPerDay, observedDays, dayCount: Integer;
+  daySum, atr, stableAtr: Float;
 
-  // Deteccao de sessao
-  bIsNewSession: Boolean;
-  bInRTH: Boolean;
-  bConsiderar: Boolean;          // Considerar candle no calculo? (true se in-RTH ou Apenas_RTH=false)
-  nRTHStartEff, nRTHEndEff: Integer;
+  dailyMeans: Array[1..128] of Float;
+  sorted: Array[1..64] of Float;
 
-  // Contagem de candles por dia
-  nCandlesInCurrentDay: Integer;
-  nCandlesPerDay: Integer;
-  nDaysCount: Integer;
-  nActualPeriod: Integer;
-
-  // Resultados
-  fATR: Float;
-  fK: Float;                     // Constante de suavizacao do EMA manual
-  bEmaSeeded: Boolean;
-  nRenkoTicks: Integer;
-
-  // Cores
-  nATRColor: Integer;
-  nTicksColor: Integer;
-  nCandlesColor: Integer;
+  boxTicks, stableTicks, boxColor, stableColor, textColor: Integer;
+  labelText: String;
 
 begin
-  // -----------------------------------------------------------------------
-  // Define cores com base no tema
-  // -----------------------------------------------------------------------
-  if not bStarted then begin
-    bStarted := True;
-    nCandlesPerDay := 0;
-    nCandlesInCurrentDay := 0;
-    nDaysCount := 0;
+  days := Max(1, Min(Periodo_Dias, 60));
+  hasHistory := CurrentBar > 1;
+  isNewDay := hasHistory and (Date <> Date[1]);
+
+  if Horario_Em_NY then begin
+    rthStart := CalcTime(RTH_Inicio, Offset_NY_Para_BR);
+    rthEnd := CalcTime(RTH_Fim, Offset_NY_Para_BR);
+  end else begin
+    rthStart := RTH_Inicio;
+    rthEnd := RTH_Fim;
+  end;
+  counted := (not Apenas_RTH) or ((Time >= rthStart) and (Time < rthEnd));
+
+  // Profit reexecuta o ultimo candle a cada negocio: todo estado parte do
+  // valor do candle anterior, para que reexecutar nao conte duas vezes.
+  candlesPerDay := candlesPerDay[1];
+  observedDays := observedDays[1];
+  dayCount := dayCount[1];
+  daySum := daySum[1];
+  atr := atr[1];
+  stableAtr := stableAtr[1];
+
+  // Virada do dia: o dia que terminou define os candles por dia e, se foi
+  // visto por inteiro, entra na mediana. Cada dia grava sempre no mesmo slot.
+  if isNewDay then begin
+    if dayCount > 0 then begin
+      candlesPerDay := dayCount;
+      if observedDays > 0 then begin
+        slot := Mod(observedDays, 128) + 1;
+        dailyMeans[slot] := daySum / dayCount;
+
+        count := Min(days, observedDays);
+        first := observedDays - count + 1;
+        for i := 1 to count do
+          sorted[i] := dailyMeans[Mod(first + i - 1, 128) + 1];
+        for i := 1 to count - 1 do
+          for j := i + 1 to count do
+            if sorted[j] < sorted[i] then begin
+              swap := sorted[i];
+              sorted[i] := sorted[j];
+              sorted[j] := swap;
+            end;
+        if Mod(count, 2) = 1 then
+          stableAtr := sorted[Round((count + 1) / 2)]
+        else
+          stableAtr := (sorted[Round(count / 2)] + sorted[Round(count / 2) + 1]) / 2;
+      end;
+    end;
+    observedDays := observedDays + 1;
+    daySum := 0;
+    dayCount := 0;
+  end;
+
+  if counted then begin
+    if (not hasHistory) or (Ignorar_Gaps and isNewDay) then
+      trueRange := High - Low
+    else
+      trueRange := Max(High, Close[1]) - Min(Low, Close[1]);
+
+    daySum := daySum + trueRange;
+    dayCount := dayCount + 1;
+
+    if candlesPerDay > 0 then
+      period := days * candlesPerDay
+    else
+      period := days;
+    if atr = 0 then
+      atr := trueRange
+    else
+      atr := atr + (2 / (period + 1)) * (trueRange - atr);
   end;
 
   if Tema_Escuro then begin
-    nATRColor := RGB(255, 180, 80);       // laranja claro
-    nTicksColor := RGB(0, 255, 100);      // verde vivo
-    nCandlesColor := RGB(100, 150, 255);  // azul claro
+    boxColor := RGB(0, 200, 255);
+    stableColor := RGB(255, 200, 60);
+    textColor := RGB(235, 235, 235);
   end else begin
-    nATRColor := RGB(255, 150, 50);       // laranja
-    nTicksColor := RGB(100, 255, 100);    // verde
-    nCandlesColor := RGB(150, 150, 255);  // azul
+    boxColor := RGB(0, 110, 200);
+    stableColor := RGB(200, 120, 0);
+    textColor := RGB(30, 30, 30);
   end;
 
-  // -----------------------------------------------------------------------
-  // Tamanho do tick do ativo
-  // -----------------------------------------------------------------------
-  fTickSize := MinPriceIncrement;
+  if MinPriceIncrement > 0 then begin
+    boxTicks := Round((atr / 2) / MinPriceIncrement);
+    stableTicks := Round((stableAtr / 2) / MinPriceIncrement);
 
-  // -----------------------------------------------------------------------
-  // Detecta novo dia e RTH (convertendo NY -> BR se necessario)
-  // -----------------------------------------------------------------------
-  if Horario_Em_NY then begin
-    nRTHStartEff := CalcTime(RTH_Inicio, Offset_NY_Para_BR);
-    nRTHEndEff   := CalcTime(RTH_Fim,    Offset_NY_Para_BR);
-  end else begin
-    nRTHStartEff := RTH_Inicio;
-    nRTHEndEff   := RTH_Fim;
-  end;
-
-  bIsNewSession := (Date <> Date[1]);
-  bInRTH := (Time >= nRTHStartEff) and (Time < nRTHEndEff);
-  bConsiderar := (not Apenas_RTH) or bInRTH;
-
-  // -----------------------------------------------------------------------
-  // Conta candles por dia (apenas os que sao considerados)
-  // -----------------------------------------------------------------------
-  if bIsNewSession then begin
-    if nCandlesInCurrentDay > 0 then begin
-      nCandlesPerDay := nCandlesInCurrentDay;
-      nDaysCount := nDaysCount + 1;
-    end;
-    if bConsiderar then
-      nCandlesInCurrentDay := 1
-    else
-      nCandlesInCurrentDay := 0;
-  end else if bConsiderar then
-    nCandlesInCurrentDay := nCandlesInCurrentDay + 1;
-
-  // -----------------------------------------------------------------------
-  // Periodo real = dias x candles por dia
-  // -----------------------------------------------------------------------
-  if nCandlesPerDay > 0 then
-    nActualPeriod := Periodo_Dias * nCandlesPerDay
-  else
-    nActualPeriod := Periodo_Dias;
-
-  if nActualPeriod < 1 then
-    nActualPeriod := 1;
-
-  // -----------------------------------------------------------------------
-  // Carry-forward do ATR (series zera entre barras quando indexado)
-  // -----------------------------------------------------------------------
-  fATR := fATR[1];
-
-  // -----------------------------------------------------------------------
-  // Calcula True Range e atualiza EMA manual SOMENTE em candles considerados
-  // (todos quando Apenas_RTH=false, RTH apenas quando true).
-  // EMA manual usado para permitir pular candles fora do RTH sem distorcer.
-  // -----------------------------------------------------------------------
-  if bConsiderar then begin
-    fHighLow := High - Low;
-
-    if Ignorar_Gaps and bIsNewSession then
-      fTrueRange := fHighLow
-    else begin
-      fHighClose := ABS(High - Close[1]);
-      fLowClose := ABS(Low - Close[1]);
-      fTrueRange := fHighLow;
-      if fHighClose > fTrueRange then
-        fTrueRange := fHighClose;
-      if fLowClose > fTrueRange then
-        fTrueRange := fLowClose;
-    end;
-
-    fK := 2 / (nActualPeriod + 1);
-    if not bEmaSeeded then begin
-      fATR := fTrueRange;
-      bEmaSeeded := True;
-    end else
-      fATR := fATR + fK * (fTrueRange - fATR);
-  end;
-
-  if fTickSize > 0 then
-    nRenkoTicks := Round((fATR / 2) / fTickSize)
-  else
-    nRenkoTicks := 0;
-
-  // -----------------------------------------------------------------------
-  // Desenha os plots
-  // -----------------------------------------------------------------------
-  if Exibir_ATR then begin
-    PlotN(1, fATR);
-    SetPlotColor(1, nATRColor);
+    Plot(boxTicks);
+    SetPlotColor(1, boxColor);
     SetPlotWidth(1, 2);
+
+    if Exibir_Estavel and (stableTicks > 0) then begin
+      Plot2(stableTicks);
+      SetPlotColor(2, stableColor);
+      SetPlotWidth(2, 2);
+      SetPlotStyle(2, 2);
+    end;
+
+    if Exibir_Rotulo and LastBarOnChart then begin
+      labelText := "box " + FloatToString(boxTicks, 0) + "t";
+      if Exibir_Estavel and (stableTicks > 0) then
+        labelText := labelText + "   estavel " + FloatToString(stableTicks, 0) + "t";
+      PlotText(labelText, textColor, 1, Tamanho_Fonte);
+    end;
   end;
-
-  PlotN(2, nRenkoTicks);
-  SetPlotColor(2, nTicksColor);
-  SetPlotWidth(2, 2);
-
-  if Exibir_Num_Candles then begin
-    PlotN(3, nActualPeriod);
-    SetPlotColor(3, nCandlesColor);
-    SetPlotWidth(3, 1);
-  end;
-
 end;

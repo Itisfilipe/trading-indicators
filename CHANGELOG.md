@@ -15,23 +15,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   default). Off, the gray "price disagrees with the trend" color is dropped
   and the cloud or candle keeps the trend's green or red.
 - MACD Histogram defaults to 21/89 EMAs with a 42 signal.
-- Renko Size Table (Profit Chart): the eight colored lines are gone.
-  The indicator now draws a real table in its own pane: a header plus one
-  text row per timeframe, showing box and stable box in ticks and points
-  with the ATR behind each. Rows that are still warming up say so, and
-  incompatible chart timeframes are named in the row. A 1-minute chart no
-  longer flickers to "grafico incompativel" while the live candle forms. Fixed a division by
-  zero Profit reported on bars with no measurable duration.
+- Renko Size Calculator: a second, dashed "estavel" line shows half the
+  median of recent days' mean true range, which barely moves on an outlier
+  day. Both lines are in ticks, and a label on the last candle repeats
+  them. The ATR-in-points and candle-count lines are gone, and "Ignorar
+  Gaps" is now on by default. Values no longer drift upward during the live
+  session.
 - Tape Reading: bars below their average are now near-gray, so the ones
   that cross the line stand out.
-
-### Renko Size Table (Profit Chart, new)
-- Profit Chart port of the Renko Size Table: suggested Renko box sizes (half
-  ATR, in price and ticks) for four timeframes at once, each with a live EMA
-  ATR line and a dashed median-of-days line, labeled at the right edge.
-  Apply it to a 1-minute chart in its own sub-window; the higher timeframes
-  are built from the chart's candles, and a timeframe below the chart's is
-  flagged instead of plotted.
 
 ## 2026-08-27
 
