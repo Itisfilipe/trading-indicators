@@ -366,8 +366,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   dash configurable): each starts at the candle that made it and runs right
   until a later candle touches or trades through it, then stops at that candle. Only
   candles after the window closes can mitigate it.
-- Use: add to the chart you trade; each slot's name field is a reminder of
-  what it marks, nothing is drawn from it.
+- High/low labels (on by default): the zone's name plus "High" or "Low",
+  in the zone's color, above the high line and below the low line. Place
+  them at the line's start or end (default), add or drop the price, and
+  pick the font.
+- Use: add to the chart you trade; each slot's name is what its labels show.
 
 ### Breakeven Stops — every stop to breakeven, one button
 

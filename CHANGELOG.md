@@ -11,6 +11,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   candle touches or trades through them; a mitigated line stops at that candle.
   Only candles after the window closes count. "Show Session High/Low" (on
   by default), "High/Low Line Width" and "High/Low Line Style" control them.
+- The high and low lines carry labels with the zone's name and price, in
+  the zone's color. "Show High/Low Labels" (on by default) turns them off;
+  "High/Low Label Position" puts them at the line's start or end;
+  "High/Low Label Price" drops the price; "High/Low Label Font" sets the font.
 
 ### Profit Chart indicators (fixed)
 - MACD Histogram: with the outline line off, the zero line still shows.

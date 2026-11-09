@@ -28,6 +28,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Sydney
     }
 
+    public enum KillzoneLabelPosition
+    {
+        Start,
+        End
+    }
+
     /// <summary>
     /// A translucent box hugging each killzone's candles: from the window's
     /// first bar to its last, from its running high to its running low, growing
@@ -56,6 +62,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // wraps into the next day (Asia 20:00-00:00).
         private class ZoneSlot
         {
+            public string Name;
             public int StartMinutes;
             public int EndMinutes;
             public bool Wraps;
@@ -97,10 +104,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "High/Low Line Style", GroupName = "1. General", Order = 6)]
         public DashStyleHelper LevelDashStyle { get; set; }
 
+        [Display(Name = "Show High/Low Labels", GroupName = "1. General", Order = 7,
+                 Description = "Labels each high and low line with the zone's name, in the zone's color: above the high line, below the low line.")]
+        public bool ShowLevelLabels { get; set; }
+
+        [Display(Name = "High/Low Label Position", GroupName = "1. General", Order = 8,
+                 Description = "Start: next to the candle that made the level. End: where the line stops, at the candle that mitigated it or the chart's right edge.")]
+        public KillzoneLabelPosition LevelLabelPosition { get; set; }
+
+        [Display(Name = "High/Low Label Price", GroupName = "1. General", Order = 9,
+                 Description = "Adds the level's price to its label.")]
+        public bool LevelLabelShowPrice { get; set; }
+
+        [Display(Name = "High/Low Label Font", GroupName = "1. General", Order = 10)]
+        public SimpleFont LevelLabelFont { get; set; }
+
         [Display(Name = "Zone 1", GroupName = "2. Zones", Order = 10)]
         public bool Zone1Enabled { get; set; }
         [Display(Name = "Zone 1 Name", GroupName = "2. Zones", Order = 11,
-                 Description = "Reminder of what this slot marks; not drawn on the chart.")]
+                 Description = "Shown in the high/low labels.")]
         public string Zone1Name { get; set; }
         [Display(Name = "Zone 1 Start", GroupName = "2. Zones", Order = 12)]
         public string Zone1Start { get; set; }
@@ -262,6 +284,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowSessionLevels = true;
                 LevelLineWidth = 1;
                 LevelDashStyle = DashStyleHelper.Solid;
+                ShowLevelLabels = true;
+                LevelLabelPosition = KillzoneLabelPosition.End;
+                LevelLabelShowPrice = true;
+                LevelLabelFont = new SimpleFont("Arial", 11);
 
                 // The playbook's killzones for index futures, New York time; the
                 // session blocks fill the remaining slots but start off.
@@ -287,14 +313,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 displayZone = ResolveDisplayZone();
                 slots.Clear();
-                AddZone(Zone1Enabled, Zone1Start, Zone1End, Zone1Color);
-                AddZone(Zone2Enabled, Zone2Start, Zone2End, Zone2Color);
-                AddZone(Zone3Enabled, Zone3Start, Zone3End, Zone3Color);
-                AddZone(Zone4Enabled, Zone4Start, Zone4End, Zone4Color);
-                AddZone(Zone5Enabled, Zone5Start, Zone5End, Zone5Color);
-                AddZone(Zone6Enabled, Zone6Start, Zone6End, Zone6Color);
-                AddZone(Zone7Enabled, Zone7Start, Zone7End, Zone7Color);
-                AddZone(Zone8Enabled, Zone8Start, Zone8End, Zone8Color);
+                AddZone(Zone1Enabled, Zone1Name, Zone1Start, Zone1End, Zone1Color);
+                AddZone(Zone2Enabled, Zone2Name, Zone2Start, Zone2End, Zone2Color);
+                AddZone(Zone3Enabled, Zone3Name, Zone3Start, Zone3End, Zone3Color);
+                AddZone(Zone4Enabled, Zone4Name, Zone4Start, Zone4End, Zone4Color);
+                AddZone(Zone5Enabled, Zone5Name, Zone5Start, Zone5End, Zone5Color);
+                AddZone(Zone6Enabled, Zone6Name, Zone6Start, Zone6End, Zone6Color);
+                AddZone(Zone7Enabled, Zone7Name, Zone7Start, Zone7End, Zone7Color);
+                AddZone(Zone8Enabled, Zone8Name, Zone8Start, Zone8End, Zone8Color);
             }
             else if (State == State.Terminated)
             {
@@ -347,7 +373,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return hour * 60 + minute;
         }
 
-        private void AddZone(bool enabled, string startText, string endText, System.Windows.Media.Brush color)
+        private void AddZone(bool enabled, string name, string startText, string endText, System.Windows.Media.Brush color)
         {
             if (!enabled)
                 return;
@@ -363,6 +389,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             bool wraps = endMinutes <= startMinutes;
             slots.Add(new ZoneSlot
             {
+                Name = (name ?? string.Empty).Trim(),
                 StartMinutes = startMinutes,
                 EndMinutes = wraps ? endMinutes + 1440 : endMinutes,
                 Wraps = wraps,
@@ -497,46 +524,72 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (levelDashCarrier == null)
                 levelDashCarrier = new Stroke(Brushes.Black, LevelDashStyle, LevelLineWidth) { RenderTarget = RenderTarget };
 
-            lock (sync)
-                foreach (ZoneSlot slot in slots)
-                {
-                    // Brushes are built lazily: the render target can change
-                    // before the slots exist, and the slots before the target.
-                    if (slot.BrushDx == null)
-                    {
-                        System.Windows.Media.SolidColorBrush solid = slot.Color as System.Windows.Media.SolidColorBrush;
-                        System.Windows.Media.Color c = solid != null ? solid.Color : Colors.Gray;
-                        slot.BrushDx = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget,
-                            new SharpDX.Color(c.R, c.G, c.B, (byte)(255 * FillOpacity / 100)));
-                        slot.LineBrushDx = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget,
-                            new SharpDX.Color(c.R, c.G, c.B, (byte)255));
-                    }
+            SharpDX.DirectWrite.TextFormat labelFormat = null;
+            if (ShowSessionLevels && ShowLevelLabels && LevelLabelFont != null)
+            {
+                labelFormat = LevelLabelFont.ToDirectWriteTextFormat();
+                labelFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
+            }
 
-                    foreach (ZoneRecord record in slot.Records)
+            try
+            {
+                lock (sync)
+                    foreach (ZoneSlot slot in slots)
                     {
-                        float x1 = Math.Max(chartControl.GetXByTime(record.StartChartTime), panelLeft);
-                        float x2 = Math.Min(chartControl.GetXByTime(record.LastBarChartTime), panelRight);
-                        // The box hugs its candles: highest high to lowest low of
-                        // the bars inside the window, clamped to the panel so a
-                        // zoomed-in chart does not paint over its neighbors.
-                        float y1 = Math.Max(chartScale.GetYByValue(record.High), panelTop);
-                        float y2 = Math.Min(chartScale.GetYByValue(record.Low), panelBottom);
-                        if (x2 > x1 && y2 > y1)
-                            RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, y1, x2 - x1, y2 - y1), slot.BrushDx);
-
-                        if (ShowSessionLevels)
+                        // Brushes are built lazily: the render target can change
+                        // before the slots exist, and the slots before the target.
+                        if (slot.BrushDx == null)
                         {
-                            DrawLevelLine(chartControl, chartScale, record.High, record.HighChartTime, record.HighMitigatedChartTime, slot.LineBrushDx);
-                            DrawLevelLine(chartControl, chartScale, record.Low, record.LowChartTime, record.LowMitigatedChartTime, slot.LineBrushDx);
+                            System.Windows.Media.SolidColorBrush solid = slot.Color as System.Windows.Media.SolidColorBrush;
+                            System.Windows.Media.Color c = solid != null ? solid.Color : Colors.Gray;
+                            slot.BrushDx = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget,
+                                new SharpDX.Color(c.R, c.G, c.B, (byte)(255 * FillOpacity / 100)));
+                            slot.LineBrushDx = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget,
+                                new SharpDX.Color(c.R, c.G, c.B, (byte)255));
+                        }
+
+                        foreach (ZoneRecord record in slot.Records)
+                        {
+                            float x1 = Math.Max(chartControl.GetXByTime(record.StartChartTime), panelLeft);
+                            float x2 = Math.Min(chartControl.GetXByTime(record.LastBarChartTime), panelRight);
+                            // The box hugs its candles: highest high to lowest low of
+                            // the bars inside the window, clamped to the panel so a
+                            // zoomed-in chart does not paint over its neighbors.
+                            float y1 = Math.Max(chartScale.GetYByValue(record.High), panelTop);
+                            float y2 = Math.Min(chartScale.GetYByValue(record.Low), panelBottom);
+                            if (x2 > x1 && y2 > y1)
+                                RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, y1, x2 - x1, y2 - y1), slot.BrushDx);
+
+                            if (ShowSessionLevels)
+                            {
+                                DrawLevelLine(chartControl, chartScale, record.High, record.HighChartTime, record.HighMitigatedChartTime, slot.LineBrushDx,
+                                    labelFormat, LevelLabelText(slot.Name, "High", record.High), true);
+                                DrawLevelLine(chartControl, chartScale, record.Low, record.LowChartTime, record.LowMitigatedChartTime, slot.LineBrushDx,
+                                    labelFormat, LevelLabelText(slot.Name, "Low", record.Low), false);
+                            }
                         }
                     }
-                }
+            }
+            finally
+            {
+                if (labelFormat != null)
+                    labelFormat.Dispose();
+            }
+        }
+
+        private string LevelLabelText(string zoneName, string side, double price)
+        {
+            string text = zoneName.Length > 0 ? zoneName + " " + side : side;
+            if (LevelLabelShowPrice)
+                text += " " + Instrument.MasterInstrument.FormatPrice(price);
+            return text;
         }
 
         // Runs from the bar that set the level to the bar that traded through
         // it, or to the panel's right edge while it is still unmitigated.
         private void DrawLevelLine(ChartControl chartControl, ChartScale chartScale, double price,
-            DateTime fromChartTime, DateTime mitigatedChartTime, SharpDX.Direct2D1.Brush brush)
+            DateTime fromChartTime, DateTime mitigatedChartTime, SharpDX.Direct2D1.Brush brush,
+            SharpDX.DirectWrite.TextFormat labelFormat, string labelText, bool labelAbove)
         {
             float panelLeft = ChartPanel.X;
             float panelRight = ChartPanel.X + ChartPanel.W;
@@ -551,6 +604,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
                 brush, LevelLineWidth, levelDashCarrier.StrokeStyle);
+
+            if (labelFormat == null)
+                return;
+            SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
+                Core.Globals.DirectWriteFactory, labelText, labelFormat, ChartPanel.W, labelFormat.FontSize * 2);
+            try
+            {
+                float labelX = LevelLabelPosition == KillzoneLabelPosition.Start
+                    ? x1 + 4
+                    : x2 - layout.Metrics.Width - 4;
+                float labelY = labelAbove
+                    ? y - layout.Metrics.Height - 1
+                    : y + 1;
+                RenderTarget.DrawTextLayout(new SharpDX.Vector2(labelX, labelY), layout, brush,
+                    SharpDX.Direct2D1.DrawTextOptions.NoSnap);
+            }
+            finally
+            {
+                layout.Dispose();
+            }
         }
     }
 }
