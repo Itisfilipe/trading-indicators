@@ -36,6 +36,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   they stack, keeping price order, and stay inside the chart.
 
 ### ICT Killzones (changed)
+- London Open KZ defaults to soft purple (#CE93D8) instead of soft green,
+  which blended with the mint up candles inside it.
 - Click-and-drag inside a killzone box pans the chart again; the box no
   longer grabs the click. The high/low lines can still be clicked to select
   the indicator.

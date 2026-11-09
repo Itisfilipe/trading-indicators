@@ -434,7 +434,7 @@
           <Zone2Name>London Open KZ</Zone2Name>
           <Zone2Start>02:00</Zone2Start>
           <Zone2End>05:00</Zone2End>
-          <Zone2ColorSerializable>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FFA5D6A7&lt;/SolidColorBrush&gt;</Zone2ColorSerializable>
+          <Zone2ColorSerializable>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FFCE93D8&lt;/SolidColorBrush&gt;</Zone2ColorSerializable>
           <Zone3Enabled>true</Zone3Enabled>
           <Zone3Name>NY Open KZ</Zone3Name>
           <Zone3Start>07:00</Zone3Start>
