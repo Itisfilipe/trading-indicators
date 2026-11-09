@@ -29,6 +29,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The table draws inside the indicator's own panel instead of at the top of
   the chart.
 
+### Psych Levels (new, NinjaTrader, TradingView and Profit Chart)
+- Horizontal lines at round price levels in three tiers, each with its own
+  color, width and dash: every 50 (regular), every 100 (highlighted) and
+  every 1000 (major) by default.
+
 ### OrderDecorator (fixed)
 - The R multiple on target labels now measures risk to the nearest stop on
   the losing side; a stop already trailed into profit no longer counts as

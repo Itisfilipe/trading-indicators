@@ -257,6 +257,20 @@ Caixas em volta das killzones, cada uma com sua cor: Asia (20:00–00:00 NY), Lo
 
 ---
 
+### Psych Levels (Indicador)
+
+**Arquivo:** `psych-levels.ntsl`
+
+Linhas horizontais nos niveis redondos de preco, em tres estilos: regular a cada `Passo` (ex.: 29350), destaque a cada `Destaque_A_Cada` (ex.: 29300) e maior a cada `Maior_A_Cada` (ex.: 29000). Cobre `Niveis_Acima_Abaixo` niveis em volta do preco e acrescenta novos quando o preco anda.
+
+**Parametros:**
+- `Tema_Escuro(true)` — cores do tema
+- `Passo(50)` / `Destaque_A_Cada(100)` / `Maior_A_Cada(1000)` — intervalos em pontos
+- `Niveis_Acima_Abaixo(40)` — niveis desenhados acima e abaixo do preco
+- `Estilo_*` (0 = solido, 1 = traco longo, 2 = traco curto) e `Espessura_*` — estilo de cada nivel
+
+---
+
 ### Renko Size Calculator (Indicador)
 
 **Arquivo:** `renko-size-calculator.ntsl`

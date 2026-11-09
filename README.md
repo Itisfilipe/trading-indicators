@@ -383,6 +383,17 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart you trade; with Automatic currency on an NQ chart
   you get the USD calendar.
 
+### Psych Levels — round-number lines in three tiers
+
+- A horizontal line at every multiple of the step size (default 50), with
+  its own style for each tier: regular (29350), highlighted every 100
+  (29300) and major every 1000 (29000). Each tier has its own color,
+  width and dash.
+- Lines cover the visible price range and follow scrolling and zooming;
+  "Maximum lines" caps how many draw at once.
+- Use: add to the chart; set the step and the two tier intervals in price
+  units for the instrument you trade.
+
 ## Profit Chart (`profit-chart/`)
 
 - Confluence coloring system: paints each candle by the highest-priority
@@ -390,7 +401,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pullback, rejection).
 - Companion tools: signal labels, signal board, tape-reading and MACD
   histograms, MA cloud, bias coloring, day-open marker, SMC openings and
-  session boxes, Renko size calculator (live and stable box size in ticks).
+  session boxes, psych levels (round-number lines in three tiers), Renko
+  size calculator (live and stable box size in ticks).
 - Full per-indicator documentation, in Portuguese:
   [`profit-chart/README.md`](profit-chart/README.md).
 
@@ -486,6 +498,14 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.
 
+
+### Psych Levels
+
+- Same three tiers as the NinjaTrader version: regular lines every step
+  (default 50), highlighted every 100, major every 1000, each with its own
+  style, width and color.
+- Lines cover the visible bars' price range plus an offset of extra levels
+  above and below, recomputed when you scroll or zoom.
 ## Vendor documentation is not included
 
 NinjaTrader's developer docs and Nelogica's NTSL manual belong to their

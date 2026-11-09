@@ -1,0 +1,89 @@
+// =========================================================================
+// PSYCH LEVELS - Linhas horizontais em niveis redondos de preco
+// =========================================================================
+// Desenha uma linha em cada multiplo do Passo, em tres estilos:
+//   - Regular:   multiplos do Passo (ex.: 29350)
+//   - Destaque:  multiplos de Destaque_A_Cada (ex.: 29300)
+//   - Maior:     multiplos de Maior_A_Cada (ex.: 29000)
+//
+// As linhas cobrem Niveis_Acima_Abaixo niveis em volta do preco e se
+// estendem quando o preco anda. Cada nivel e desenhado uma unica vez:
+// HorizontalLineCustom e aditivo e o Profit nao apaga o que ja desenhou.
+// O intervalo desenhado e lido do valor atual e do [1], o que funciona
+// tanto se o Profit mantiver a variavel entre ticks quanto se zerar.
+// =========================================================================
+
+input
+  Tema_Escuro(true);
+  Passo(50);
+  Destaque_A_Cada(100);
+  Maior_A_Cada(1000);
+  Niveis_Acima_Abaixo(40);
+
+  Estilo_Regular(2);             // 0=solido, 1=traco longo, 2=traco curto
+  Espessura_Regular(1);
+  Estilo_Destaque(0);
+  Espessura_Destaque(1);
+  Estilo_Maior(0);
+  Espessura_Maior(2);
+
+var
+  nRegularColor, nHighlightColor, nMajorColor : Integer;
+  nCenter, nWantLow, nWantHigh, i : Integer;
+  nDrawnLow, nDrawnHigh : Integer;
+  fLevel, fTolerance : Float;
+  bAlreadyDrawn, bMajor, bHighlight : Boolean;
+
+begin
+  if Tema_Escuro then begin
+    nRegularColor := RGB(70, 70, 70);
+    nHighlightColor := RGB(120, 120, 120);
+    nMajorColor := RGB(190, 190, 190);
+  end else begin
+    nRegularColor := RGB(190, 190, 190);
+    nHighlightColor := RGB(140, 140, 140);
+    nMajorColor := RGB(70, 70, 70);
+  end;
+
+  if nDrawnHigh[1] > nDrawnHigh then
+    nDrawnHigh := nDrawnHigh[1];
+  if nDrawnLow[1] > 0 then begin
+    if (nDrawnLow = 0) or (nDrawnLow[1] < nDrawnLow) then
+      nDrawnLow := nDrawnLow[1];
+  end;
+
+  if LastBarOnChart and (Passo > 0) then begin
+    nCenter := Round(Close / Passo);
+    nWantLow := nCenter - Niveis_Acima_Abaixo;
+    nWantHigh := nCenter + Niveis_Acima_Abaixo;
+    if nWantLow < 1 then
+      nWantLow := 1;
+
+    for i := nWantLow to nWantHigh do begin
+      bAlreadyDrawn := (nDrawnHigh > 0) and (i >= nDrawnLow) and (i <= nDrawnHigh);
+      if not bAlreadyDrawn then begin
+        fLevel := i * Passo;
+        fTolerance := fLevel * 0.0000000001;
+
+        bMajor := false;
+        if Maior_A_Cada > 0 then
+          bMajor := Abs(fLevel - Round(fLevel / Maior_A_Cada) * Maior_A_Cada) <= fTolerance;
+        bHighlight := false;
+        if Destaque_A_Cada > 0 then
+          bHighlight := Abs(fLevel - Round(fLevel / Destaque_A_Cada) * Destaque_A_Cada) <= fTolerance;
+
+        if bMajor then
+          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, "")
+        else if bHighlight then
+          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, "")
+        else
+          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, "");
+      end;
+    end;
+
+    if (nDrawnLow = 0) or (nWantLow < nDrawnLow) then
+      nDrawnLow := nWantLow;
+    if nWantHigh > nDrawnHigh then
+      nDrawnHigh := nWantHigh;
+  end;
+end;
