@@ -438,10 +438,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Log("Economic Calendar: calendar fetch failed (" + error.Message + "); showing the saved weeks.", LogLevel.Warning);
                     }
 
-                    List<NewsEvent> merged = fresh;
+                    // A failed fetch keeps what is already shown, with the saved weeks
+                    // merged in, rather than falling back to the archive alone.
+                    List<NewsEvent> current = fresh;
+                    if (!succeeded)
+                        lock (sync)
+                            current = events;
+                    List<NewsEvent> merged = current;
                     try
                     {
-                        merged = MergeEvents(LoadArchive(), fresh);
+                        merged = MergeEvents(LoadArchive(), current);
                     }
                     catch (Exception error)
                     {
@@ -481,13 +487,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DateTime firstUtc = TimeZoneInfo.ConvertTimeToUtc(weekEvents[0].ChartZoneTime, Core.Globals.GeneralOptions.TimeZoneInfo);
                 DateTime weekSunday = firstUtc.Date.AddDays(-(int)firstUtc.DayOfWeek);
                 string target = Path.Combine(ArchiveDirectory, "ff_week_" + weekSunday.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".json");
-                // Several charts can save the same week at once; writing aside and
-                // copying over keeps a reader from ever seeing half a file.
+                // Several charts can save the same week at once; the week is written
+                // aside and swapped in with an atomic replace, so a reader never sees
+                // half a file.
                 Directory.CreateDirectory(ArchiveDirectory);
                 string temporary = Path.Combine(ArchiveDirectory, Guid.NewGuid().ToString("N") + ".tmp");
-                File.WriteAllText(temporary, json);
-                File.Copy(temporary, target, true);
-                File.Delete(temporary);
+                try
+                {
+                    File.WriteAllText(temporary, json);
+                    if (File.Exists(target))
+                        File.Replace(temporary, target, null);
+                    else
+                        File.Move(temporary, target);
+                }
+                finally
+                {
+                    if (File.Exists(temporary))
+                        File.Delete(temporary);
+                }
             }
             catch (Exception error)
             {

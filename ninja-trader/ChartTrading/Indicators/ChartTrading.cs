@@ -1143,8 +1143,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
-                        if (commit.CoveredQuantity == 0 && commit.OpeningAtrStopTicks > 0 && openingAtrStopTicks == 0)
-                            openingAtrStopTicks = commit.OpeningAtrStopTicks;
+                        RecordOpeningAtrStop(commit);
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         submitNow = true;
@@ -1165,6 +1164,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         activeCommits.Remove(commit);
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
+                        RecordOpeningAtrStop(commit);
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         coverNow = true;
@@ -2005,6 +2005,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 atrSeries[0] = k * trueRange + (1 - k) * atrSeries[1];
             }
             currentAtr = atrSeries[0];
+        }
+
+        // Called under orderLock on an entry's first covered fill, whichever order
+        // state reports it.
+        private void RecordOpeningAtrStop(BracketCommit commit)
+        {
+            if (commit.CoveredQuantity == 0 && commit.OpeningAtrStopTicks > 0 && openingAtrStopTicks == 0)
+                openingAtrStopTicks = commit.OpeningAtrStopTicks;
         }
 
         // With ATR distances the trigger is an R multiple of the stop distance:
