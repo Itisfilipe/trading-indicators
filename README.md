@@ -559,6 +559,13 @@ zone stay readable.
 | Pane separator | `#E5E7EB` | `229, 231, 235` |
 | Background | `#F8F9FB` | `248, 249, 251` |
 
+NinjaTrader chart templates with this palette (1, 5 and 15-minute
+candlesticks, RTH session) are in
+[`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/). Stock
+NinjaTrader candlesticks have one outline and wick color for both
+directions, so the templates use slate `#5F6773` for both; Renko with Wicks
+draws the up and down outlines separately.
+
 Colors that carry meaning keep their own: stop and target red/green, news
 impact, killzone zones, macro orange, the VWAP line. The Profit Chart tools
 are built for a black chart and keep their own palette.

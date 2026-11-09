@@ -12,6 +12,12 @@ Copy a project's `.cs` files into the matching folders under
 that has them installed and import the zip via Control Center > Tools > Import >
 NinjaScript Add-On.
 
+Chart templates with the [chart palette](../README.md#chart-palette) are in
+`templates/Chart/`: copy them to `Documents/NinjaTrader 8/templates/Chart/`,
+then right-click a chart > Templates > Load. A template also sets the bar
+type, interval and session, so pick the one that matches the chart: 1, 5 or
+15-minute candlesticks on the CME US Index Futures RTH session.
+
 Two platform quirks worth knowing:
 
 - **Chart styles and bars types register at startup.** After compiling a new

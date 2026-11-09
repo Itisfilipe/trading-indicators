@@ -49,6 +49,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The table draws inside the indicator's own panel instead of at the top of
   the chart.
 
+### NinjaTrader chart templates (new)
+- "Blue Slate 1m", "Blue Slate 5m" and "Blue Slate 15m": candlestick charts
+  on the CME US Index Futures RTH session in the chart palette, off-white
+  background, slate text, crosshair and axis, grid lines off.
+
 ### Chart palette (NinjaTrader and TradingView, changed)
 - Calmer for long sessions: up candles a muted blue (#6995D3, outline
   #3E68A3) and down candles slate (#8F959E, outline #5F6773) at the same
