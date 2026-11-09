@@ -301,9 +301,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Zone8Enabled = false; Zone8Name = "CBDR"; Zone8Start = "16:00"; Zone8End = "20:00";
 
                 Zone1Color = Rgb(0x90, 0xCA, 0xF9); // soft blue
-                Zone2Color = Rgb(0xCE, 0x93, 0xD8); // soft purple
+                Zone2Color = Rgb(0xEF, 0x9A, 0x9A); // soft red
                 Zone3Color = Rgb(0xFF, 0xCC, 0x80); // soft orange
-                Zone4Color = Rgb(0xEF, 0x9A, 0x9A); // soft red
+                Zone4Color = Rgb(0xCE, 0x93, 0xD8); // soft purple
                 Zone5Color = Rgb(0x80, 0xCB, 0xC4); // soft teal
                 Zone6Color = Rgb(0xB0, 0xBE, 0xC5); // soft gray
                 Zone7Color = Rgb(0xB3, 0x9D, 0xDB); // soft purple
