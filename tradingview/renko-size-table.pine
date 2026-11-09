@@ -56,7 +56,7 @@ decimals   = input.int(1, "Decimal Places", minval = 0, maxval = 8, group = "Par
 tablePos = input.string("top_right", "Position", options = ["top_left", "top_center", "top_right", "middle_left", "middle_center", "middle_right", "bottom_left", "bottom_center", "bottom_right"], group = "Display")
 textSize = input.string("normal", "Text Size", options = ["tiny", "small", "normal", "large", "huge", "auto"], group = "Display")
 
-bgColor      = input.color(color.new(#374151, 10), "Background",   group = "Colors")
+bgColor      = input.color(color.new(#374151, 10),     "Background",   group = "Colors")
 headerColor  = input.color(color.new(#5F6773, 10),     "Header",       group = "Colors")
 textColor    = input.color(color.white,                "Label Text",   group = "Colors")
 atrColor     = input.color(#0096ff,                    "ATR Text",     group = "Colors")

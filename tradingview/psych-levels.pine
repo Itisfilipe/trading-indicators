@@ -71,7 +71,6 @@ majorColor = input.color(#374151, "Line color", group = GROUP_MAJOR)
 // Display
 maxLines = input.int(250, "Maximum lines", minval = 1, maxval = 500, group = GROUP_DISPLAY)
 
-
 toLineStyle(string styleName) =>
     switch styleName
         "Dashed" => line.style_dashed
