@@ -892,8 +892,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 StopTicks = enabledStopTicks.ToArray(),
                 TargetTicks = enabledTargetTicks.ToArray(),
                 ProfitSign = profitSign,
-                OpeningAtrStopTicks = BracketDistance == ChartTradingBracketDistance.Atr
-                    && currentMarketPosition == MarketPosition.Flat ? stopTicks[0] : 0,
+                OpeningAtrStopTicks = (BracketDistance == ChartTradingBracketDistance.Atr
+                    && currentMarketPosition == MarketPosition.Flat) ? stopTicks[0] : 0,
             };
             OrderAction entryAction = isBuy ? OrderAction.Buy : OrderAction.SellShort;
 
