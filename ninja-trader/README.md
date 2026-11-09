@@ -16,7 +16,10 @@ Chart templates with the [chart palette](../README.md#chart-palette) are in
 `templates/Chart/`: copy them to `Documents/NinjaTrader 8/templates/Chart/`,
 then right-click a chart > Templates > Load. A template also sets the bar
 type, interval and session, so pick the one that matches the chart: 1, 5 or
-15-minute candlesticks on the CME US Index Futures RTH session.
+15-minute candlesticks on the CME US Index Futures RTH session. Loading a
+template also replaces the chart's indicators with the template's (none), so
+load it on a fresh chart, add your indicators, and save that as your own
+template.
 
 Two platform quirks worth knowing:
 
