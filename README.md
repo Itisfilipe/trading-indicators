@@ -557,19 +557,6 @@ zone stay readable.
 | Pane separator | `#E5E7EB` | `229, 231, 235` |
 | Background | `#F8F9FB` | `248, 249, 251` |
 
-```text
-role                            hex       rgb
-up body                         #6995D3   105, 149, 211
-up outline + wick               #3E68A3   62, 104, 163
-down body                       #8F959E   143, 149, 158
-down outline + wick, crosshair  #5F6773   95, 103, 115
-zones (rectangles), 12% fill    #B8862B   184, 134, 43
-text, strong lines              #374151   55, 65, 81
-scale line, faint lines         #D1D5DB   209, 213, 219
-pane separator                  #E5E7EB   229, 231, 235
-background                      #F8F9FB   248, 249, 251
-```
-
 Colors that carry meaning keep their own: stop and target red/green, news
 impact, killzone zones, macro orange, the VWAP line. The Profit Chart tools
 are built for a black chart and keep their own palette.
