@@ -173,7 +173,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Accumulate(Times[1][1], Closes[1][1], Volumes[1][1], nextCommitStartsSession);
                         nextCommitStartsSession = false;
                     }
-                    if (Bars.IsFirstBarOfSession)
+                    if (BarsArray[1].IsFirstBarOfSession)
                         nextCommitStartsSession = true;
                 }
                 return;

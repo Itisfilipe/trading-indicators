@@ -220,9 +220,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pairs (multipliers configurable, 0 hides a pair; defaults 1 and 2).
 - Anchor per instance: daily session or weekly (Sunday-keyed). Add the
   indicator twice for a daily and a weekly line side by side.
-- Optional RTH window (on by default, 930–1600 exchange time, end
-  excluded): only regular-hours trades accumulate, even on an ETH chart —
-  outside the window the lines hold flat. With the window off, the whole
+- Optional RTH window (on by default, 830–1500 in the trading-hours
+  template's time zone — Chicago for CME — end excluded): only
+  regular-hours trades accumulate, even on an ETH chart — outside the
+  window the lines hold flat. With the window off, the whole
   session accumulates and the daily anchor resets at the session roll,
   not at midnight.
 - The window is compared in the instrument's exchange time zone, so it

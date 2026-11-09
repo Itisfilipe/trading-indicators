@@ -6,7 +6,7 @@
 // O que faz:
 //   - Barras verdes quando o momentum esta positivo (compradores dominando)
 //   - Barras vermelhas quando o momentum esta negativo (vendedores dominando)
-//   - Linha branca conecta os topos para facilitar ver divergencias
+//   - Linha de contorno conecta os topos para facilitar ver divergencias
 //   - Linha cinza no zero como referencia
 //
 // Como usar:
@@ -26,7 +26,7 @@ input
   // Periodo da linha de sinal (suaviza o MACD). Padrao: 42
   Periodo_Sinal(42);
 
-  // Mostrar linha branca conectando os topos do histograma?
+  // Mostrar linha de contorno conectando os topos do histograma?
   Exibir_Linha_Contorno(true);
 
   // Tema escuro (true) ou claro (false)
@@ -56,7 +56,7 @@ begin
   end else begin
     nPositiveColor := RGB(0, 180, 80);    // verde
     nNegativeColor := RGB(220, 50, 50);   // vermelho
-    nLineColor := RGB(255, 255, 255);     // branco
+    nLineColor := RGB(60, 60, 60);        // cinza escuro
     nZeroColor := RGB(100, 100, 100);     // cinza
   end;
 

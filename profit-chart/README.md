@@ -140,7 +140,7 @@ Mostra a forca dos compradores vs vendedores e o volume de contratos em histogra
 
 **Arquivo:** `macd-histogram.ntsl`
 
-Histograma do MACD com linha de contorno conectando os topos. Os periodos sao os mesmos do MACD menor do sistema de confluencia.
+Histograma do MACD com linha de contorno conectando os topos.
 
 **Como ler:**
 - Barras verdes = momentum positivo (compradores dominando)
@@ -148,7 +148,7 @@ Histograma do MACD com linha de contorno conectando os topos. Os periodos sao os
 - Histograma crescendo = momentum acelerando
 - Histograma diminuindo = momentum desacelerando
 - Cruzou o zero = possivel mudanca de tendencia
-- Linha branca conecta os topos para facilitar ver divergencias
+- Linha de contorno conecta os topos para facilitar ver divergencias
 
 **Parametros:**
 - `Periodo_EMA_Rapida(21)` — EMA rapida

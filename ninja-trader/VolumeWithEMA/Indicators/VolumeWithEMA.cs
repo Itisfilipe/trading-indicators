@@ -19,6 +19,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public class VolumeWithEMA : Indicator
     {
         private EMA ema;
+        private Series<double> displayedVolume;
 
         #region Properties
 
@@ -90,7 +91,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             else if (State == State.DataLoaded)
             {
                 // Initialize the EMA for the volume.
-                ema = EMA(Volume, Period);
+                displayedVolume = new Series<double>(this);
+                ema = EMA(displayedVolume, Period);
             }
         }
 
@@ -100,6 +102,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double volVal = Instrument.MasterInstrument.InstrumentType == InstrumentType.CryptoCurrency 
                             ? Core.Globals.ToCryptocurrencyVolume((long)Volume[0]) 
                             : Volume[0];
+
+            displayedVolume[0] = volVal;
 
             // Plot the volume histogram.
             Value[0] = volVal;

@@ -197,7 +197,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     // grid diverges from the second session on and every brick
                     // lands a little off the levels the platform's own Renko
                     // would print.
-                    if (IsFirstTickOfBar && Bars.IsFirstBarOfSession)
+                    if (IsFirstTickOfBar && BarsArray[1].IsFirstBarOfSession)
                         renkoSeeded = false;
                     // Every call carries the newest price of the tick feed:
                     // historical bars arrive once each (their close), and live the

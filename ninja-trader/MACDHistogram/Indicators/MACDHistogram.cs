@@ -156,7 +156,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 slowEma[0] = input0;
                 macdAvgSeries[0] = 0;
                 Value[0] = 0;
-                PlotBrushes[0][0] = PositiveRisingColor;
+                PlotBrushes[0][0] = NeutralColor;
             }
             else
             {

@@ -3,6 +3,23 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-09
+
+### VolumeWithEMA (fixed)
+- On crypto instruments the EMA line now averages the same converted volume
+  the histogram shows, so above/below-average bar colors are correct.
+
+### MACDHistogram (fixed)
+- The first bar of the chart is painted in the neutral color, like any other
+  zero histogram value.
+
+### CustomVWAP and MultiSeriesEMA (fixed)
+- Session resets follow the tick feed's own session boundaries explicitly.
+
+### Profit Chart MACD Histogram (fixed)
+- Light theme: the outline line is dark gray instead of white, so it is
+  visible on a white background.
+
 ## 2026-09-23
 
 ### Profit Chart indicators (changed)
