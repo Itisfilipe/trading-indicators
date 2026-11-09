@@ -71,7 +71,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   you change them. Distances are taken at click time. Auto breakeven then
   triggers in R too ("Auto breakeven trigger (R)", default 1R: once price
   has run one stop distance in your favor), measured against the latest
-  click's ATR stop.
+  click's ATR stop. The settings dialog shows only the selected mode's
+  fields; reopen it after switching "Distances" if they don't refresh.
 - Entry always trades the ChartTrader quantity outright (never multiplied by
   pair count); each enabled pair gets its percentage share of that quantity,
   split into whole lots as evenly as the math allows (e.g. 4 lots at

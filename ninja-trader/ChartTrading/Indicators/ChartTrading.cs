@@ -110,6 +110,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Gtc,
     }
 
+    [System.ComponentModel.TypeConverter("NinjaTrader.NinjaScript.Indicators.FilipeAmaral.ChartTradingTypeConverter")]
     public class ChartTrading : Indicator
     {
         #region Preview state
@@ -242,127 +243,128 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // (see ApportionQuantity), so the full entry quantity always ends up with a
         // stop/target somewhere and a disabled pair's share never goes uncovered.
         // With every pair disabled, a click means a plain entry with no bracket.
-        [Display(Name = "Bracket 1", Order = 1, GroupName = "2. Bracket")]
+        [Display(Name = "Bracket 1", Order = 10, GroupName = "2. Brackets")]
         public bool Bracket1Enabled { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 1 (ticks)", Order = 2, GroupName = "2. Bracket")]
+        [Display(Name = "Stop 1 (ticks)", Order = 12, GroupName = "2. Brackets")]
         public int Stop1Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 1 (ticks)", Order = 3, GroupName = "2. Bracket")]
+        [Display(Name = "Target 1 (ticks)", Order = 13, GroupName = "2. Brackets")]
         public int Target1Ticks { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Percent 1", Order = 4, GroupName = "2. Bracket",
+        [Display(Name = "Percent 1", Order = 11, GroupName = "2. Brackets",
                  Description = "Share of the ChartTrader quantity this pair takes. The three " +
                                "percentages should total 100; they are renormalized across " +
                                "enabled pairs either way.")]
         public int Percent1 { get; set; }
 
-        [Display(Name = "Bracket 2", Order = 5, GroupName = "2. Bracket")]
+        [Display(Name = "Bracket 2", Order = 20, GroupName = "2. Brackets")]
         public bool Bracket2Enabled { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 2 (ticks)", Order = 6, GroupName = "2. Bracket")]
+        [Display(Name = "Stop 2 (ticks)", Order = 22, GroupName = "2. Brackets")]
         public int Stop2Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 2 (ticks)", Order = 7, GroupName = "2. Bracket")]
+        [Display(Name = "Target 2 (ticks)", Order = 23, GroupName = "2. Brackets")]
         public int Target2Ticks { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Percent 2", Order = 8, GroupName = "2. Bracket",
+        [Display(Name = "Percent 2", Order = 21, GroupName = "2. Brackets",
                  Description = "Share of the ChartTrader quantity this pair takes. The three " +
                                "percentages should total 100; they are renormalized across " +
                                "enabled pairs either way.")]
         public int Percent2 { get; set; }
 
-        [Display(Name = "Bracket 3", Order = 9, GroupName = "2. Bracket")]
+        [Display(Name = "Bracket 3", Order = 30, GroupName = "2. Brackets")]
         public bool Bracket3Enabled { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Stop 3 (ticks)", Order = 10, GroupName = "2. Bracket")]
+        [Display(Name = "Stop 3 (ticks)", Order = 32, GroupName = "2. Brackets")]
         public int Stop3Ticks { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "Target 3 (ticks)", Order = 11, GroupName = "2. Bracket")]
+        [Display(Name = "Target 3 (ticks)", Order = 33, GroupName = "2. Brackets")]
         public int Target3Ticks { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Percent 3", Order = 12, GroupName = "2. Bracket",
+        [Display(Name = "Percent 3", Order = 31, GroupName = "2. Brackets",
                  Description = "Share of the ChartTrader quantity this pair takes. The three " +
                                "percentages should total 100; they are renormalized across " +
                                "enabled pairs either way.")]
         public int Percent3 { get; set; }
 
-        [Display(Name = "Distances", Order = 13, GroupName = "2. Bracket",
+        [Display(Name = "Distances", Order = 1, GroupName = "2. Brackets",
                  Description = "Ticks uses each pair's stop and target in ticks. ATR puts every " +
                                "stop the ATR multiple away, and each target that many R " +
                                "(times the stop distance), matching the position sizer's stop.")]
+        [System.ComponentModel.RefreshProperties(System.ComponentModel.RefreshProperties.All)]
         public ChartTradingBracketDistance BracketDistance { get; set; }
 
         [Range(0.01, double.MaxValue)]
-        [Display(Name = "Stop size (x ATR)", Order = 14, GroupName = "2. Bracket")]
+        [Display(Name = "Stop size (x ATR)", Order = 1, GroupName = "3. ATR stop")]
         public double StopAtrMultiple { get; set; }
 
         [Range(1, int.MaxValue)]
-        [Display(Name = "ATR length", Order = 15, GroupName = "2. Bracket")]
+        [Display(Name = "ATR length", Order = 2, GroupName = "3. ATR stop")]
         public int AtrLength { get; set; }
 
-        [Display(Name = "ATR smoothing", Order = 16, GroupName = "2. Bracket")]
+        [Display(Name = "ATR smoothing", Order = 3, GroupName = "3. ATR stop")]
         public ChartTradingAtrSmoothing AtrSmoothing { get; set; }
 
         [Range(0.01, double.MaxValue)]
-        [Display(Name = "Target 1 (R)", Order = 17, GroupName = "2. Bracket")]
+        [Display(Name = "Target 1 (R)", Order = 14, GroupName = "2. Brackets")]
         public double Target1R { get; set; }
 
         [Range(0.01, double.MaxValue)]
-        [Display(Name = "Target 2 (R)", Order = 18, GroupName = "2. Bracket")]
+        [Display(Name = "Target 2 (R)", Order = 24, GroupName = "2. Brackets")]
         public double Target2R { get; set; }
 
         [Range(0.01, double.MaxValue)]
-        [Display(Name = "Target 3 (R)", Order = 19, GroupName = "2. Bracket")]
+        [Display(Name = "Target 3 (R)", Order = 34, GroupName = "2. Brackets")]
         public double Target3R { get; set; }
 
-        [Display(Name = "Tag position", Order = 1, GroupName = "4. Appearance",
+        [Display(Name = "Tag position", Order = 1, GroupName = "6. Appearance",
                  Description = "Where the order tags sit: left, center, or right of the chart.")]
         public ChartTradingTagPosition TagPosition { get; set; }
 
         [Range(0, 2000)]
-        [Display(Name = "Tag margin (pixels)", Order = 2, GroupName = "4. Appearance",
+        [Display(Name = "Tag margin (pixels)", Order = 2, GroupName = "6. Appearance",
                  Description = "Distance kept between the tag and the chart border.")]
         public int TagMargin { get; set; }
 
-        [Display(Name = "Level value", Order = 3, GroupName = "4. Appearance",
+        [Display(Name = "Level value", Order = 3, GroupName = "6. Appearance",
                  Description = "What the right-side tag shows on the stop and targets: the price, the " +
                                "tick distance from entry, or the money value for the current quantity. " +
                                "The entry always shows its price.")]
         public ChartTradingValueDisplay ValueDisplay { get; set; }
 
-        [Display(Name = "Limit-side entry", Order = 2, GroupName = "3. Trading",
+        [Display(Name = "Limit-side entry", Order = 1, GroupName = "4. Trading",
                  Description = "Order type when the click is on the favorable side of the market: " +
                                "plain limit, or market-if-touched.")]
         public ChartTradingLimitSideType LimitSideType { get; set; }
 
-        [Display(Name = "Stop-side entry", Order = 3, GroupName = "3. Trading",
+        [Display(Name = "Stop-side entry", Order = 2, GroupName = "4. Trading",
                  Description = "Order type when the click is beyond the market: stop-market, or " +
                                "stop-limit with the offset below.")]
         public ChartTradingStopSideType StopSideType { get; set; }
 
         [Range(0, 1000)]
-        [Display(Name = "Stop-limit offset (ticks)", Order = 4, GroupName = "3. Trading",
+        [Display(Name = "Stop-limit offset (ticks)", Order = 3, GroupName = "4. Trading",
                  Description = "How far beyond the stop trigger the stop-limit's limit price sits, " +
                                "in the direction of the entry.")]
         public int StopLimitOffsetTicks { get; set; }
 
-        [Display(Name = "Time in force", Order = 10, GroupName = "3. Trading",
+        [Display(Name = "Time in force", Order = 5, GroupName = "4. Trading",
                  Description = "Applies to the entry and to every stop and target it places. " +
                                "Day orders expire at session end; GTC orders rest until filled " +
                                "or cancelled.")]
         public ChartTradingTimeInForce OrderTimeInForce { get; set; }
 
-        [Display(Name = "Auto breakeven", Order = 6, GroupName = "3. Trading",
+        [Display(Name = "Auto breakeven", Order = 1, GroupName = "5. Breakeven",
                  Description = "Once price runs the trigger distance in the position's favor, move every " +
                                "working protective stop on the instrument to breakeven automatically -- the same move as " +
                                "the Stops-to-BE button, fired once per position. The button remains the " +
@@ -370,24 +372,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public bool AutoBreakevenEnabled { get; set; }
 
         [Range(1, 10000)]
-        [Display(Name = "Auto breakeven trigger (ticks)", Order = 7, GroupName = "3. Trading",
-                 Description = "How many ticks in profit before the automatic move fires. Used with tick distances.")]
+        [Display(Name = "Auto breakeven trigger (ticks)", Order = 2, GroupName = "5. Breakeven",
+                 Description = "How many ticks in profit before the automatic move fires.")]
         public int AutoBreakevenTriggerTicks { get; set; }
 
         [Range(0.01, double.MaxValue)]
-        [Display(Name = "Auto breakeven trigger (R)", Order = 8, GroupName = "3. Trading",
-                 Description = "With ATR distances, how many R in profit before the automatic move fires: " +
+        [Display(Name = "Auto breakeven trigger (R)", Order = 3, GroupName = "5. Breakeven",
+                 Description = "How many R in profit before the automatic move fires: " +
                                "1 means price has run one stop distance in the position's favor.")]
         public double AutoBreakevenTriggerR { get; set; }
 
         [Range(-100, 1000)]
-        [Display(Name = "Breakeven offset (ticks)", Order = 9, GroupName = "3. Trading",
+        [Display(Name = "Breakeven offset (ticks)", Order = 4, GroupName = "5. Breakeven",
                  Description = "Where breakeven lands relative to the position's average price, in the " +
                                "profit direction: 2 locks two ticks of profit, 0 is exact breakeven. " +
                                "Applies to the button and to auto breakeven.")]
         public int BreakevenOffsetTicks { get; set; }
 
-        [Display(Name = "Separate stacked stops", Order = 5, GroupName = "3. Trading",
+        [Display(Name = "Separate stacked stops", Order = 4, GroupName = "4. Trading",
                  Description = "When two pairs put their stops on the same price, nudge each extra stop " +
                                "one tick further from the entry, so the chart shows them individually " +
                                "and they can be moved one at a time. Off keeps the exact configured " +
@@ -397,13 +399,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // Strokes rather than plain brushes so each level carries its own color, width,
         // and dash style, and binds to the render target the way the platform's own
         // price-line indicator does. NinjaTrader persists Stroke properties natively.
-        [Display(Name = "Entry line", Order = 1, GroupName = "5. Colors")]
+        [Display(Name = "Entry line", Order = 1, GroupName = "7. Colors")]
         public Stroke EntryStroke { get; set; }
 
-        [Display(Name = "Stop line", Order = 2, GroupName = "5. Colors")]
+        [Display(Name = "Stop line", Order = 2, GroupName = "7. Colors")]
         public Stroke StopStroke { get; set; }
 
-        [Display(Name = "Target line", Order = 3, GroupName = "5. Colors")]
+        [Display(Name = "Target line", Order = 3, GroupName = "7. Colors")]
         public Stroke TargetStroke { get; set; }
         #endregion
 
@@ -2054,6 +2056,49 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 stopTicks[i] = atrStopTicks;
                 targetTicks[i] = Math.Max(1, (int)Math.Round(atrStopTicks * targetR[i], MidpointRounding.AwayFromZero));
             }
+            return true;
+        }
+    }
+
+    public class ChartTradingTypeConverter : IndicatorBaseConverter
+    {
+        private static readonly string[] TickDistanceProperties =
+        {
+            "Stop1Ticks", "Target1Ticks", "Stop2Ticks", "Target2Ticks", "Stop3Ticks", "Target3Ticks",
+            "AutoBreakevenTriggerTicks",
+        };
+
+        private static readonly string[] AtrDistanceProperties =
+        {
+            "StopAtrMultiple", "AtrLength", "AtrSmoothing", "Target1R", "Target2R", "Target3R",
+            "AutoBreakevenTriggerR",
+        };
+
+        public override System.ComponentModel.PropertyDescriptorCollection GetProperties(System.ComponentModel.ITypeDescriptorContext context, object component, Attribute[] attributes)
+        {
+            ChartTrading indicator = component as ChartTrading;
+
+            System.ComponentModel.PropertyDescriptorCollection properties = GetPropertiesSupported(context)
+                ? base.GetProperties(context, component, attributes)
+                : System.ComponentModel.TypeDescriptor.GetProperties(component, attributes);
+
+            if (indicator == null || properties == null)
+                return properties;
+
+            string[] hidden = indicator.BracketDistance == ChartTradingBracketDistance.Atr
+                ? TickDistanceProperties
+                : AtrDistanceProperties;
+            foreach (string name in hidden)
+            {
+                System.ComponentModel.PropertyDescriptor descriptor = properties[name];
+                if (descriptor != null)
+                    properties.Remove(descriptor);
+            }
+            return properties;
+        }
+
+        public override bool GetPropertiesSupported(System.ComponentModel.ITypeDescriptorContext context)
+        {
             return true;
         }
     }

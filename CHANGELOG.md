@@ -5,6 +5,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### ChartTrading (changed)
+- Settings regrouped: Brackets (distance mode, then each pair's on/off,
+  percent, stop and target), ATR stop, Trading, Breakeven, Appearance,
+  Colors. Only the selected distance mode's fields show: ticks mode hides
+  the ATR and R settings, ATR mode hides the tick stops, targets and tick
+  breakeven trigger. Existing settings carry over.
+
 ### ICT Killzones (changed)
 - Each killzone's high and low now draw as lines in the zone's color,
   starting at the candle that made them and running right until a later
