@@ -113,12 +113,17 @@ if barstate.islast
 
             for i = 0 to linesToDraw - 1
                 float priceLevel = (firstIndex + startOffset + i) * stepSize
-                bool isMajor = isMultipleOf(priceLevel, majorEvery)
-                bool isHighlighted = not isMajor and isMultipleOf(priceLevel, highlightEvery)
-
-                color currentColor = isMajor ? majorColor : isHighlighted ? highlightColor : lineColor
-                string currentStyle = isMajor ? majorStyle : isHighlighted ? highlightStyle : lineStyle
-                int currentWidth = isMajor ? majorWidth : isHighlighted ? highlightWidth : lineWidth
+                color currentColor = lineColor
+                string currentStyle = lineStyle
+                int currentWidth = lineWidth
+                if isMultipleOf(priceLevel, majorEvery)
+                    currentColor := majorColor
+                    currentStyle := majorStyle
+                    currentWidth := majorWidth
+                else if isMultipleOf(priceLevel, highlightEvery)
+                    currentColor := highlightColor
+                    currentStyle := highlightStyle
+                    currentWidth := highlightWidth
 
                 line newLine = line.new(
                      x1 = chart.left_visible_bar_time,
