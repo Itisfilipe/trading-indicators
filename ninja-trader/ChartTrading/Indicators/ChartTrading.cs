@@ -156,9 +156,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Account subscribedAccount;
         private Series<double> atrSeries;
         private double currentAtr;
-        // The ATR stop of the click that opened the current position, so an
-        // R-based breakeven trigger measures against that stop; 0 when unknown.
-        private int lastClickAtrStopTicks;
+        // The ATR stop of the filled entry that opened the current position, so
+        // an R-based breakeven trigger measures against that stop; 0 when unknown.
+        private int openingAtrStopTicks;
 
         // Position cache fed by Account.PositionUpdate, the way ABCompleteChartTrader
         // tracks it; read on the market-data thread by the auto-breakeven trigger.
@@ -182,6 +182,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double[] StopPrices;
             public double[] TargetPrices;
             public int[] PairQuantities;
+            // ATR stop distance of an entry clicked while flat; 0 otherwise.
+            public int OpeningAtrStopTicks;
 
             // The configured exit distances the prices are derived from, compacted to
             // the enabled pairs and index-aligned with PairQuantities. Prices are
@@ -844,8 +846,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
-            if (BracketDistance == ChartTradingBracketDistance.Atr && currentMarketPosition == MarketPosition.Flat)
-                lastClickAtrStopTicks = stopTicks[0];
             int[] percents = { Percent1, Percent2, Percent3 };
 
             bool[] effectiveEnabled;
@@ -892,6 +892,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 StopTicks = enabledStopTicks.ToArray(),
                 TargetTicks = enabledTargetTicks.ToArray(),
                 ProfitSign = profitSign,
+                OpeningAtrStopTicks = BracketDistance == ChartTradingBracketDistance.Atr
+                    && currentMarketPosition == MarketPosition.Flat ? stopTicks[0] : 0,
             };
             OrderAction entryAction = isBuy ? OrderAction.Buy : OrderAction.SellShort;
 
@@ -1033,7 +1035,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (nowFlat || e.MarketPosition != currentMarketPosition)
                     autoBreakevenState = AutoBreakevenState.Armed;
                 if (nowFlat)
-                    lastClickAtrStopTicks = 0;
+                    openingAtrStopTicks = 0;
                 currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
                 currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
                 positionCacheGeneration++;
@@ -1140,6 +1142,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
+                        if (commit.CoveredQuantity == 0 && commit.OpeningAtrStopTicks > 0)
+                            openingAtrStopTicks = commit.OpeningAtrStopTicks;
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         submitNow = true;
@@ -2010,7 +2014,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (BracketDistance != ChartTradingBracketDistance.Atr)
                 return AutoBreakevenTriggerTicks;
 
-            int stopTicks = lastClickAtrStopTicks;
+            int stopTicks = openingAtrStopTicks;
             if (stopTicks <= 0)
             {
                 int[] currentStopTicks;

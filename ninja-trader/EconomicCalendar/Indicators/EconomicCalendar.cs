@@ -747,9 +747,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double pixelsPerMs = paceMs > 0 ? (lastBarX - chartControl.GetXByTime(paceBackTime)) / paceMs : 0;
 
             // Releases sharing a minute (a data drop) would print their captions
-            // on top of one another; same-X captions stack away from the candle.
+            // on top of one another; same-X captions stack away from the candle,
+            // and continue on the other side of the stack when the panel edge is
+            // reached, so no two captions ever share a spot.
             double previousX = double.MinValue;
             float captionY = 0;
+            float stackTop = 0;
+            float stackBottom = 0;
 
             foreach (NewsEvent newsEvent in visible)
             {
@@ -792,12 +796,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     }
                     bool stacked = Math.Abs(x - previousX) < 2;
                     if (!stacked)
+                    {
                         captionY = anchorY;
-                    else if (hasBar == below)
-                        captionY += captionHeight + 2;
+                        stackTop = captionY;
+                        stackBottom = captionY + captionHeight;
+                    }
                     else
-                        captionY -= captionHeight + 2;
-                    captionY = Math.Max(panelTop + 4, Math.Min(captionY, panelBottom - captionHeight - 4));
+                    {
+                        float belowStack = stackBottom + 2;
+                        float aboveStack = stackTop - 2 - captionHeight;
+                        bool goDown = hasBar == below;
+                        if (goDown && belowStack + captionHeight > panelBottom - 4)
+                            goDown = false;
+                        else if (!goDown && aboveStack < panelTop + 4)
+                            goDown = true;
+                        captionY = goDown ? belowStack : aboveStack;
+                        stackTop = Math.Min(stackTop, captionY);
+                        stackBottom = Math.Max(stackBottom, captionY + captionHeight);
+                    }
 
                     SharpDX.Direct2D1.Brush captionBrush = impactTextBrushes[(int)newsEvent.Impact];
                     RenderTarget.DrawTextLayout(
