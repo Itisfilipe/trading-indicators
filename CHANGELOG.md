@@ -36,6 +36,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   they stack, keeping price order, and stay inside the chart.
 
 ### ICT Killzones (changed)
+- Click-and-drag inside a killzone box pans the chart again; the box no
+  longer grabs the click. The high/low lines can still be clicked to select
+  the indicator.
 - Each killzone's high and low now draw as lines in the zone's color,
   starting at the candle that made them and running right until a later
   candle touches or trades through them; a mitigated line stops at that candle.

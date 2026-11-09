@@ -557,7 +557,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             // zoomed-in chart does not paint over its neighbors.
                             float y1 = Math.Max(chartScale.GetYByValue(record.High), panelTop);
                             float y2 = Math.Min(chartScale.GetYByValue(record.Low), panelBottom);
-                            if (x2 > x1 && y2 > y1)
+                            // Pixels drawn in the hit-test pass take the click, so a
+                            // filled box would swallow the chart's click-and-drag pan.
+                            if (x2 > x1 && y2 > y1 && !IsInHitTest)
                                 RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, y1, x2 - x1, y2 - y1), slot.BrushDx);
 
                             if (ShowSessionLevels)
