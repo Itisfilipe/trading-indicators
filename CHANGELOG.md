@@ -25,6 +25,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   window; old copies no longer keep reacting to mouse releases.
 
 ### Economic Calendar (changed)
+- Works in Playback: every week downloaded is saved locally, and replayed
+  days show that week's releases, lines and table. Only weeks the
+  indicator was running during are available.
 - Captions now sit at the release candle: above its high, below its low,
   or Auto (default), opposite the candle's direction. Releases still
   ahead stay at the panel's edge. New "Label Outline" (on by default)

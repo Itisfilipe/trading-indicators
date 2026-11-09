@@ -397,8 +397,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   and text; currency filter with an Automatic mode that follows the
   chart's instrument — both sides of a forex pair, otherwise the
   instrument's denomination currency.
-- Chart history: today, this week, or a manual number of days back (the
-  feed holds the current week only, so never earlier than this Monday);
+- Every week downloaded is saved to `Documents/NinjaTrader 8/EconomicCalendar/`,
+  so Playback (Market Replay) shows the news of any week the indicator was
+  running during, and longer chart history reaches back into saved weeks.
+  The feed itself only serves the current week: weeks before you installed
+  the indicator have no data.
+- Chart history: today, this week, or a manual number of days back;
   lines drawable for future releases only or past ones too. "Today" and
   "this week" roll at midnight in the selected timezone, not the
   platform's.

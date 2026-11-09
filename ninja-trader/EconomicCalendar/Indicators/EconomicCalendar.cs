@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Net.Http;
 using System.Web.Script.Serialization;
 using System.Windows.Media;
@@ -90,6 +91,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public class EconomicCalendar : Indicator
     {
         private const string FeedUrl = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+        // The feed only ever serves the current week, so every week fetched is kept
+        // here; Playback and longer chart history read past weeks from this archive.
+        private static readonly string ArchiveDirectory = Path.Combine(NinjaTrader.Core.Globals.UserDataDir, "EconomicCalendar");
         private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(60);
         private static readonly TimeSpan RetryInterval = TimeSpan.FromMinutes(5);
 
@@ -161,7 +165,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Range(1, 30)]
         [Display(Name = "Manual Days", GroupName = "1. On Chart", Order = 10,
-                 Description = "The feed carries the current week only, so nothing older than this Monday can show.")]
+                 Description = "Past weeks show only if the indicator was running then: the feed serves the current week, and each week fetched is saved for later.")]
         public int ManualDays { get; set; }
 
         [Display(Name = "High", GroupName = "2. Expected Impact", Order = 1)]
@@ -416,25 +420,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 bool succeeded = false;
                 try
                 {
-                    string json;
-                    using (HttpClient client = new HttpClient())
+                    List<NewsEvent> fresh = new List<NewsEvent>();
+                    try
                     {
-                        client.Timeout = TimeSpan.FromSeconds(20);
-                        json = client.GetStringAsync(FeedUrl).Result;
+                        string json;
+                        using (HttpClient client = new HttpClient())
+                        {
+                            client.Timeout = TimeSpan.FromSeconds(20);
+                            json = client.GetStringAsync(FeedUrl).Result;
+                        }
+                        fresh = ParseFeed(json);
+                        SaveWeekToArchive(json, fresh);
+                        succeeded = true;
                     }
-                    List<NewsEvent> parsed = ParseFeed(json);
-                    lock (sync)
-                        events = parsed;
-                    succeeded = true;
-                    ChartControl?.Dispatcher.InvokeAsync(() =>
+                    catch (Exception error)
                     {
-                        if (State < State.Terminated)
-                            ForceRefresh();
-                    });
-                }
-                catch (Exception error)
-                {
-                    Log("Economic Calendar: calendar fetch failed (" + error.Message + "); keeping the previous list.", LogLevel.Warning);
+                        Log("Economic Calendar: calendar fetch failed (" + error.Message + "); showing the saved weeks.", LogLevel.Warning);
+                    }
+
+                    List<NewsEvent> merged = MergeEvents(LoadArchive(), fresh);
+                    if (merged.Count > 0)
+                    {
+                        lock (sync)
+                            events = merged;
+                        ChartControl?.Dispatcher.InvokeAsync(() =>
+                        {
+                            if (State < State.Terminated)
+                                ForceRefresh();
+                        });
+                    }
                 }
                 finally
                 {
@@ -445,6 +459,60 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     }
                 }
             });
+        }
+
+        private void SaveWeekToArchive(string json, List<NewsEvent> weekEvents)
+        {
+            if (weekEvents.Count == 0)
+                return;
+            try
+            {
+                Directory.CreateDirectory(ArchiveDirectory);
+                string weekName = weekEvents[0].ChartZoneTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                File.WriteAllText(Path.Combine(ArchiveDirectory, "ff_week_" + weekName + ".json"), json);
+            }
+            catch (Exception error)
+            {
+                Log("Economic Calendar: could not save this week for later (" + error.Message + ").", LogLevel.Warning);
+            }
+        }
+
+        private List<NewsEvent> LoadArchive()
+        {
+            List<NewsEvent> archived = new List<NewsEvent>();
+            if (!Directory.Exists(ArchiveDirectory))
+                return archived;
+            foreach (string file in Directory.GetFiles(ArchiveDirectory, "ff_week_*.json"))
+            {
+                try
+                {
+                    archived.AddRange(ParseFeed(File.ReadAllText(file)));
+                }
+                catch (Exception error)
+                {
+                    Log("Economic Calendar: skipping saved week " + Path.GetFileName(file) + " (" + error.Message + ").", LogLevel.Warning);
+                }
+            }
+            return archived;
+        }
+
+        // A week can be saved more than once as the feed is revised; the freshest
+        // copy of each release wins.
+        private static List<NewsEvent> MergeEvents(List<NewsEvent> archived, List<NewsEvent> fresh)
+        {
+            Dictionary<string, NewsEvent> byRelease = new Dictionary<string, NewsEvent>();
+            foreach (NewsEvent newsEvent in archived)
+                byRelease[ReleaseKey(newsEvent)] = newsEvent;
+            foreach (NewsEvent newsEvent in fresh)
+                byRelease[ReleaseKey(newsEvent)] = newsEvent;
+            List<NewsEvent> merged = new List<NewsEvent>(byRelease.Values);
+            merged.Sort((a, b) => a.ChartZoneTime.CompareTo(b.ChartZoneTime));
+            return merged;
+        }
+
+        private static string ReleaseKey(NewsEvent newsEvent)
+        {
+            return newsEvent.ChartZoneTime.Ticks + "|" + newsEvent.Currency + "|" + newsEvent.Title;
         }
 
         // Feed entries are flat objects: title, country (a currency code), date
@@ -839,10 +907,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             const float CellPadY = 3f;
             const float Margin = 10f;
 
+            DateTime weekStart = displayToday.AddDays(-(((int)displayToday.DayOfWeek + 6) % 7));
             List<NewsEvent> rows = new List<NewsEvent>();
             foreach (NewsEvent newsEvent in visible)
-                if (TableMode == NewsTableMode.ThisWeek || ToDisplayZone(newsEvent.ChartZoneTime).Date == displayToday)
+            {
+                DateTime releaseDay = ToDisplayZone(newsEvent.ChartZoneTime).Date;
+                bool inScope = TableMode == NewsTableMode.ThisWeek
+                    ? releaseDay >= weekStart && releaseDay < weekStart.AddDays(7)
+                    : releaseDay == displayToday;
+                if (inScope)
                     rows.Add(newsEvent);
+            }
             if (rows.Count == 0)
                 return;
 
