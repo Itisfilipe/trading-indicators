@@ -11,6 +11,8 @@ Personal collection of trading indicators and chart tools for three platforms:
 > Shared as-is, with no guarantees, and built mostly with AI assistance —
 > read the [Disclaimer](#disclaimer) before using anything here.
 
+Default colors for light charts follow one [chart palette](#chart-palette).
+
 ## NinjaTrader 8 (`ninja-trader/`)
 
 Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/README.md).
@@ -543,7 +545,7 @@ same brightness, both outlines one step darker than their body, and zones
 in amber, the hue farthest from both candle colors, so candles inside a
 zone stay readable.
 
-![Chart palette](docs/palette.svg)
+![Chart palette](docs/chart-palette.svg)
 
 | Role | Hex | RGB |
 |------|-----|-----|
