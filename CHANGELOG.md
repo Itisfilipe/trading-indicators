@@ -49,9 +49,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The table draws inside the indicator's own panel instead of at the top of
   the chart.
 
+### Psych Levels (changed, all platforms)
+- New "Show prices" option (on by default): each level's price is printed on
+  its line at the right edge, in the line's color.
+
 ### NinjaTrader chart templates (new)
 - "Blue Slate 1m", "Blue Slate 5m" and "Blue Slate 15m": candlestick charts
-  on the CME US Index Futures RTH session in the chart palette, off-white
+  on the CME US Index Futures ETH (full) session in the chart palette, off-white
   background, slate text, crosshair and axis, grid lines off.
 
 ### Chart palette (NinjaTrader and TradingView, changed)

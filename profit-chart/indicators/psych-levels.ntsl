@@ -19,6 +19,8 @@ input
   Destaque_A_Cada(100.0);
   Maior_A_Cada(1000.0);
   Niveis_Acima_Abaixo(40);
+  Mostrar_Precos(true);          // Escreve o preco em cada linha, a direita
+  Casas_Decimais(0);
 
   Estilo_Regular(2);             // 0=solido, 1=traco longo, 2=traco curto
   Espessura_Regular(1);
@@ -32,6 +34,7 @@ var
   nCenter, nWantLow, nWantHigh, nFrom, nTo, i : Integer;
   nDrawnLow, nDrawnHigh : Integer;
   fLevel, fTolerance : Float;
+  sLabel : String;
   bAlreadyDrawn, bMajor, bHighlight : Boolean;
 
 begin
@@ -82,12 +85,16 @@ begin
         if Destaque_A_Cada > 0 then
           bHighlight := Abs(fLevel - Round(fLevel / Destaque_A_Cada) * Destaque_A_Cada) <= fTolerance;
 
+        sLabel := "";
+        if Mostrar_Precos then
+          sLabel := FloatToString(fLevel, Casas_Decimais);
+
         if bMajor then
-          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, "")
+          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, sLabel, 8, tpTopRight)
         else if bHighlight then
-          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, "")
+          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, sLabel, 8, tpTopRight)
         else
-          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, "");
+          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, sLabel, 8, tpTopRight);
       end;
     end;
 

@@ -1,5 +1,5 @@
 //@version=6
-indicator("Psych Levels", overlay = true, max_lines_count = 500)
+indicator("Psych Levels", overlay = true, max_lines_count = 500, max_labels_count = 500)
 
 // Settings groups
 const string GROUP_LEVELS = "Level Calculation"
@@ -70,6 +70,7 @@ majorColor = input.color(#374151, "Line color", group = GROUP_MAJOR)
 
 // Display
 maxLines = input.int(250, "Maximum lines", minval = 1, maxval = 500, group = GROUP_DISPLAY)
+showPrices = input.bool(true, "Show prices", tooltip = "Print each level's price on its line at the right edge, in the line's color.", group = GROUP_DISPLAY)
 
 toLineStyle(string styleName) =>
     switch styleName
@@ -88,6 +89,7 @@ string majorStyle = toLineStyle(majorStyleInput)
 
 // Store drawn lines and the visible price range
 var array<line> levelLines = array.new<line>()
+var array<label> levelLabels = array.new<label>()
 var float visibleLow = na
 var float visibleHigh = na
 
@@ -101,6 +103,9 @@ if barstate.islast
     for levelLine in levelLines
         line.delete(levelLine)
     array.clear(levelLines)
+    for levelLabel in levelLabels
+        label.delete(levelLabel)
+    array.clear(levelLabels)
 
     if not na(visibleLow) and not na(visibleHigh)
         int firstIndex = int(math.ceil(visibleLow / stepSize)) - offsetLevels
@@ -138,3 +143,15 @@ if barstate.islast
                 )
 
                 array.push(levelLines, newLine)
+
+                if showPrices
+                    array.push(levelLabels, label.new(
+                         x = chart.right_visible_bar_time,
+                         y = priceLevel,
+                         text = str.tostring(priceLevel, format.mintick),
+                         xloc = xloc.bar_time,
+                         style = label.style_label_right,
+                         color = chart.bg_color,
+                         textcolor = currentColor,
+                         size = size.small
+                    ))

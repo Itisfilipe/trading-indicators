@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
 using NinjaTrader.Gui;
 using NinjaTrader.Gui.Chart;
+using NinjaTrader.Gui.Tools;
 using NinjaTrader.NinjaScript;
 #endregion
 
@@ -44,6 +45,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Upper bound on lines drawn at once, centered on the visible range.")]
         public int MaxLines { get; set; }
 
+        [Display(Name = "Show prices", GroupName = "1. Levels", Order = 5,
+                 Description = "Print each level's price on its line at the right edge, in the line's color.")]
+        public bool ShowPriceLabels { get; set; }
+
         [Display(Name = "Regular", GroupName = "2. Style", Order = 1)]
         public Stroke RegularStroke { get; set; }
 
@@ -76,6 +81,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HighlightEvery = 100;
                 MajorEvery = 1000;
                 MaxLines = 250;
+                ShowPriceLabels = true;
 
                 RegularStroke = new Stroke(Rgb(0x8F, 0x95, 0x9E), DashStyleHelper.Dash, 1f);
                 HighlightStroke = new Stroke(Rgb(0x5F, 0x67, 0x73), DashStyleHelper.Solid, 1f);
@@ -106,20 +112,47 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             float left = ChartPanel.X;
             float right = ChartPanel.X + ChartPanel.W;
 
-            for (long index = startIndex; index < startIndex + linesToDraw; index++)
+            SharpDX.DirectWrite.TextFormat labelFormat = ShowPriceLabels
+                ? chartControl.Properties.LabelFont.ToDirectWriteTextFormat()
+                : null;
+            try
             {
-                double price = index * StepSize;
-                Stroke stroke = RegularStroke;
-                if (IsMultipleOf(price, MajorEvery))
-                    stroke = MajorStroke;
-                else if (IsMultipleOf(price, HighlightEvery))
-                    stroke = HighlightStroke;
+                for (long index = startIndex; index < startIndex + linesToDraw; index++)
+                {
+                    double price = index * StepSize;
+                    Stroke stroke = RegularStroke;
+                    if (IsMultipleOf(price, MajorEvery))
+                        stroke = MajorStroke;
+                    else if (IsMultipleOf(price, HighlightEvery))
+                        stroke = HighlightStroke;
 
-                float y = chartScale.GetYByValue(price);
-                RenderTarget.DrawLine(
-                    new SharpDX.Vector2(left, y),
-                    new SharpDX.Vector2(right, y),
-                    stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
+                    float y = chartScale.GetYByValue(price);
+                    RenderTarget.DrawLine(
+                        new SharpDX.Vector2(left, y),
+                        new SharpDX.Vector2(right, y),
+                        stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
+
+                    if (labelFormat != null)
+                        DrawPriceLabel(price, right, y, labelFormat, stroke.BrushDX);
+                }
+            }
+            finally
+            {
+                if (labelFormat != null)
+                    labelFormat.Dispose();
+            }
+        }
+
+        private void DrawPriceLabel(double price, float right, float y,
+            SharpDX.DirectWrite.TextFormat labelFormat, SharpDX.Direct2D1.Brush brush)
+        {
+            string text = Instrument.MasterInstrument.FormatPrice(price);
+            using (SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
+                Core.Globals.DirectWriteFactory, text, labelFormat, 300, labelFormat.FontSize))
+            {
+                RenderTarget.DrawTextLayout(
+                    new SharpDX.Vector2(right - layout.Metrics.Width - 6, y - layout.Metrics.Height - 1),
+                    layout, brush, SharpDX.Direct2D1.DrawTextOptions.NoSnap);
             }
         }
 

@@ -421,6 +421,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   width and dash.
 - Lines cover the visible price range and follow scrolling and zooming;
   "Maximum lines" caps how many draw at once.
+- "Show prices" (on by default) prints each level's price on its line at
+  the right edge, in the line's color, since the price axis does not mark
+  these levels.
 - Use: add to the chart; set the step and the two tier intervals in price
   units for the instrument you trade.
 
@@ -536,6 +539,8 @@ chart.
   style, width and color.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
+- "Show prices" (on by default) tags each line with its price at the right
+  edge.
 ## Chart palette
 
 The default colors of the NinjaTrader and TradingView tools follow one
@@ -560,7 +565,7 @@ zone stay readable.
 | Background | `#F8F9FB` | `248, 249, 251` |
 
 NinjaTrader chart templates with this palette (1, 5 and 15-minute
-candlesticks, RTH session) are in
+candlesticks, full ETH session) are in
 [`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/). Stock
 NinjaTrader candlesticks have one outline and wick color for both
 directions, so the templates use slate `#5F6773` for both; Renko with Wicks

@@ -25,7 +25,7 @@
           <From>2026-11-01T00:00:00</From>
           <IsStableSession>true</IsStableSession>
           <To>2099-12-01T00:00:00</To>
-          <TradingHoursSerializable>CME US Index Futures RTH</TradingHoursSerializable>
+          <TradingHoursSerializable>CME US Index Futures ETH</TradingHoursSerializable>
           <AutoScale>true</AutoScale>
           <CenterPriceOnScale>false</CenterPriceOnScale>
           <DisplayInDataBox>true</DisplayInDataBox>
