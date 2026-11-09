@@ -11,6 +11,16 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   Colors. Only the selected distance mode's fields show: ticks mode hides
   the ATR and R settings, ATR mode hides the tick stops, targets and tick
   breakeven trigger. Existing settings carry over.
+- Stop and target preview tags can show price, ticks, points and money
+  together, each with its own setting ("Show price", "Show ticks", "Show
+  points", "Show money"); this replaces the single "Level value" choice,
+  which resets to the new defaults (price, ticks, money).
+
+### Order Decorator (changed)
+- "Show Ticks" setting: the tick distance can be hidden like the other
+  values.
+- Labels of orders a few ticks apart no longer print on top of each other:
+  they stack, keeping price order, and stay inside the chart.
 
 ### ICT Killzones (changed)
 - Each killzone's high and low now draw as lines in the zone's color,

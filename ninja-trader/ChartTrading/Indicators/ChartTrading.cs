@@ -91,16 +91,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     }
 
     /// <summary>
-    /// What the right-side tag shows for the stop and target levels.
-    /// </summary>
-    public enum ChartTradingValueDisplay
-    {
-        Price,
-        Ticks,
-        Currency,
-    }
-
-    /// <summary>
     /// How long submitted orders stay alive: Day expires at session end, GTC
     /// rests until filled or cancelled.
     /// </summary>
@@ -336,11 +326,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Distance kept between the tag and the chart border.")]
         public int TagMargin { get; set; }
 
-        [Display(Name = "Level value", Order = 3, GroupName = "6. Appearance",
-                 Description = "What the right-side tag shows on the stop and targets: the price, the " +
-                               "tick distance from entry, or the money value for the current quantity. " +
-                               "The entry always shows its price.")]
-        public ChartTradingValueDisplay ValueDisplay { get; set; }
+        [Display(Name = "Show price", Order = 3, GroupName = "6. Appearance",
+                 Description = "Stop and target tags show the level's price. The entry always shows its price.")]
+        public bool ShowLevelPrice { get; set; }
+
+        [Display(Name = "Show ticks", Order = 4, GroupName = "6. Appearance",
+                 Description = "Stop and target tags show their signed distance from the entry, in ticks.")]
+        public bool ShowLevelTicks { get; set; }
+
+        [Display(Name = "Show points", Order = 5, GroupName = "6. Appearance",
+                 Description = "Stop and target tags show their signed distance from the entry, in points.")]
+        public bool ShowLevelPoints { get; set; }
+
+        [Display(Name = "Show money", Order = 6, GroupName = "6. Appearance",
+                 Description = "Stop and target tags show the signed money value of the distance for the level's quantity.")]
+        public bool ShowLevelMoney { get; set; }
 
         [Display(Name = "Limit-side entry", Order = 1, GroupName = "4. Trading",
                  Description = "Order type when the click is on the favorable side of the market: " +
@@ -464,7 +464,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 BreakevenOffsetTicks = 0;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
-                ValueDisplay = ChartTradingValueDisplay.Price;
+                ShowLevelPrice = true;
+                ShowLevelTicks = true;
+                ShowLevelPoints = false;
+                ShowLevelMoney = true;
 
                 // Solid and thin, matching how the platform draws a working order.
                 EntryStroke = new Stroke(Rgb(0x3E, 0x68, 0xA3), DashStyleHelper.Solid, 1f);
@@ -1936,22 +1939,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// What the right-side tag reads on a stop or target: the level price, the
-        /// signed tick distance from entry, or the signed money value for the
-        /// current quantity (ticks * tick value * quantity).
+        /// What the right-side tag reads on a stop or target: each enabled value of
+        /// the level price, the signed distance from entry in ticks and points, and
+        /// the signed money value for the level's quantity. With every value off it
+        /// falls back to the price, so the tag is never empty.
         /// </summary>
         private string LevelValueLabel(MasterInstrument master, double levelPrice, int signedTicks, int quantity)
         {
-            switch (ValueDisplay)
-            {
-                case ChartTradingValueDisplay.Ticks:
-                    return string.Format(Core.Globals.GeneralOptions.CurrentCulture, "{0:+0;-0}t", signedTicks);
-                case ChartTradingValueDisplay.Currency:
-                    double money = signedTicks * master.TickSize * master.PointValue * quantity;
-                    return string.Format(Core.Globals.GeneralOptions.CurrentCulture, "{0:+$#,##0.00;-$#,##0.00}", money);
-                default:
-                    return master.FormatPrice(levelPrice);
-            }
+            IFormatProvider culture = Core.Globals.GeneralOptions.CurrentCulture;
+            double signedPoints = signedTicks * master.TickSize;
+            List<string> parts = new List<string>();
+            if (ShowLevelPrice)
+                parts.Add(master.FormatPrice(levelPrice));
+            if (ShowLevelTicks)
+                parts.Add(string.Format(culture, "{0:+0;-0}t", signedTicks));
+            if (ShowLevelPoints)
+                parts.Add(string.Format(culture, "{0:+0.00##;-0.00##}pt", signedPoints));
+            if (ShowLevelMoney)
+                parts.Add(string.Format(culture, "{0:+$#,##0.00;-$#,##0.00}", signedPoints * master.PointValue * quantity));
+            if (parts.Count == 0)
+                return master.FormatPrice(levelPrice);
+            return string.Join("  ", parts);
         }
 
         private struct LevelInfo

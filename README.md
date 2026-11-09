@@ -86,8 +86,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   stop/target.
 - "Separate stacked stops": nudges colliding stop prices one tick apart so
   each stays individually draggable.
-- Tag position (left/center/right + margin); tag value shows price, tick
-  distance, or money value.
+- Tag position (left/center/right + margin). Stop and target tags show any
+  mix of price, ticks, points and money for the level's quantity (default:
+  price, ticks, money).
 - "ChartTrading ON/OFF" button (mounted in the ChartTrader panel, floating if
   ChartTrader is hidden): green = clicks place orders, gray = disabled.
   Starts OFF every time the indicator is added, reloaded or recompiled.
@@ -158,7 +159,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 - Labels every working order on the chart's instrument (any tool's orders,
   not just this repo's) with its distance from the position's average
-  price: ticks, optional points, optional money value for the order's
+  price: ticks, points and money value for the order's
   remaining quantity.
 - Profit-side orders also show their R multiple against the nearest
   working stop.
@@ -167,7 +168,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Colors by side: profit green, loss red; flat = neutral gray with
   distance from the last price instead.
 - Orders at the same price merge into one label with the summed quantity,
-  matching how the platform stacks their markers.
+  matching how the platform stacks their markers. Orders a few ticks apart
+  get their labels stacked so they never overlap.
+- Each value (ticks, points, money, R) has its own on/off setting.
 - "Right margin" setting (default 50 px) keeps the labels clear of the
   platform's own order markers.
 - Reads the ChartTrader-selected account; labels update tick by tick.
