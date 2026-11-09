@@ -48,6 +48,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     }
 
     /// <summary>
+    /// How each bracket pair's stop and target distances are set.
+    /// </summary>
+    public enum ChartTradingBracketDistance
+    {
+        Ticks,
+        Atr,
+    }
+
+    public enum ChartTradingAtrSmoothing
+    {
+        Exponential,
+        Wilder,
+    }
+
+    /// <summary>
     /// Where the order tags sit horizontally on the chart.
     /// </summary>
     public enum ChartTradingTagPosition
@@ -139,6 +154,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private readonly object orderLock = new object();
         private readonly List<BracketCommit> activeCommits = new List<BracketCommit>();
         private Account subscribedAccount;
+        private Series<double> atrSeries;
+        private double currentAtr;
 
         // Position cache fed by Account.PositionUpdate, the way ABCompleteChartTrader
         // tracks it; read on the market-data thread by the auto-breakeven trigger.
@@ -274,6 +291,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "enabled pairs either way.")]
         public int Percent3 { get; set; }
 
+        [Display(Name = "Distances", Order = 13, GroupName = "2. Bracket",
+                 Description = "Ticks uses each pair's stop and target in ticks. ATR puts every " +
+                               "stop the ATR multiple away, and each target that many R " +
+                               "(times the stop distance), matching the position sizer's stop.")]
+        public ChartTradingBracketDistance BracketDistance { get; set; }
+
+        [Range(0.01, double.MaxValue)]
+        [Display(Name = "Stop size (x ATR)", Order = 14, GroupName = "2. Bracket")]
+        public double StopAtrMultiple { get; set; }
+
+        [Range(1, int.MaxValue)]
+        [Display(Name = "ATR length", Order = 15, GroupName = "2. Bracket")]
+        public int AtrLength { get; set; }
+
+        [Display(Name = "ATR smoothing", Order = 16, GroupName = "2. Bracket")]
+        public ChartTradingAtrSmoothing AtrSmoothing { get; set; }
+
+        [Range(0.01, double.MaxValue)]
+        [Display(Name = "Target 1 (R)", Order = 17, GroupName = "2. Bracket")]
+        public double Target1R { get; set; }
+
+        [Range(0.01, double.MaxValue)]
+        [Display(Name = "Target 2 (R)", Order = 18, GroupName = "2. Bracket")]
+        public double Target2R { get; set; }
+
+        [Range(0.01, double.MaxValue)]
+        [Display(Name = "Target 3 (R)", Order = 19, GroupName = "2. Bracket")]
+        public double Target3R { get; set; }
+
         [Display(Name = "Tag position", Order = 1, GroupName = "4. Appearance",
                  Description = "Where the order tags sit: left, center, or right of the chart.")]
         public ChartTradingTagPosition TagPosition { get; set; }
@@ -356,7 +402,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 Description = @"Preview a click-to-trade bracket by holding a modifier key; click to submit it.";
                 Name = "ChartTrading";
-                Calculate = Calculate.OnBarClose;
+                Calculate = Calculate.OnPriceChange;
                 IsOverlay = true;
                 IsChartOnly = true;
                 DisplayInDataBox = false;
@@ -379,6 +425,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Stop3Ticks = 50;
                 Target3Ticks = 150;
                 Percent3 = 50;
+                BracketDistance = ChartTradingBracketDistance.Ticks;
+                StopAtrMultiple = 1.5;
+                AtrLength = 5;
+                AtrSmoothing = ChartTradingAtrSmoothing.Exponential;
+                Target1R = 1;
+                Target2R = 2;
+                Target3R = 3;
 
                 LimitSideType = ChartTradingLimitSideType.Limit;
                 StopSideType = ChartTradingStopSideType.StopMarket;
@@ -396,6 +449,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 EntryStroke = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Solid, 1f);
                 StopStroke = new Stroke(Brushes.Crimson, DashStyleHelper.Solid, 1f);
                 TargetStroke = new Stroke(Brushes.LimeGreen, DashStyleHelper.Solid, 1f);
+            }
+            else if (State == State.DataLoaded)
+            {
+                atrSeries = new Series<double>(this);
             }
             else if (State == State.Historical)
             {
@@ -762,8 +819,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             EntryPriceFields(entryType, isBuy, entryPrice, master, out limitPrice, out stopPrice);
 
             bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
-            int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
-            int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
+            int[] stopTicks;
+            int[] targetTicks;
+            ResolveBracketTicks(out stopTicks, out targetTicks);
             int[] percents = { Percent1, Percent2, Percent3 };
 
             bool[] effectiveEnabled;
@@ -1679,8 +1737,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // quantity, the way the orders would sit in the book. With no pair
                 // enabled, the click means a plain entry of the ChartTrader quantity.
                 bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
-                int[] stopTicks = { Stop1Ticks, Stop2Ticks, Stop3Ticks };
-                int[] targetTicks = { Target1Ticks, Target2Ticks, Target3Ticks };
+                int[] stopTicks;
+                int[] targetTicks;
+                ResolveBracketTicks(out stopTicks, out targetTicks);
                 int[] percents = { Percent1, Percent2, Percent3 };
 
                 bool[] effectiveEnabled;
@@ -1892,9 +1951,45 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
         #endregion
 
+        // Same ATR as the position sizer: true range smoothed with k = 2/(n+1)
+        // (exponential) or 1/n (Wilder), seeded with the running mean of the
+        // first AtrLength true ranges, live bar included.
         protected override void OnBarUpdate()
         {
-            // Chart interaction only; nothing to calculate per bar.
+            double barRange = High[0] - Low[0];
+            double trueRange = CurrentBar == 0
+                ? barRange
+                : Math.Max(barRange, Math.Max(Math.Abs(High[0] - Close[1]), Math.Abs(Low[0] - Close[1])));
+
+            if (CurrentBar == 0)
+                atrSeries[0] = trueRange;
+            else if (CurrentBar < AtrLength)
+                atrSeries[0] = (atrSeries[1] * CurrentBar + trueRange) / (CurrentBar + 1);
+            else
+            {
+                double k = AtrSmoothing == ChartTradingAtrSmoothing.Exponential
+                    ? 2.0 / (AtrLength + 1)
+                    : 1.0 / AtrLength;
+                atrSeries[0] = k * trueRange + (1 - k) * atrSeries[1];
+            }
+            currentAtr = atrSeries[0];
+        }
+
+        private void ResolveBracketTicks(out int[] stopTicks, out int[] targetTicks)
+        {
+            stopTicks = new[] { Stop1Ticks, Stop2Ticks, Stop3Ticks };
+            targetTicks = new[] { Target1Ticks, Target2Ticks, Target3Ticks };
+            double atr = currentAtr;
+            if (BracketDistance != ChartTradingBracketDistance.Atr || atr <= 0)
+                return;
+
+            int atrStopTicks = Math.Max(1, (int)Math.Round(atr * StopAtrMultiple / Instrument.MasterInstrument.TickSize));
+            double[] targetR = { Target1R, Target2R, Target3R };
+            for (int i = 0; i < 3; i++)
+            {
+                stopTicks[i] = atrStopTicks;
+                targetTicks[i] = Math.Max(1, (int)Math.Round(atrStopTicks * targetR[i]));
+            }
         }
     }
 }
