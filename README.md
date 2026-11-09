@@ -540,9 +540,8 @@ chart.
   style, width and color.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
-- Same per-tier price labels, transparent, right or left. Pine cannot read
-  the pane's right edge, so right-side prices sit "Right offset" bars past
-  the last visible bar (default 10); match it to the empty space you keep.
+- Same per-tier price labels, transparent, centered on the line at the
+  pane's right edge, center, or left edge.
 ## Chart palette
 
 The default colors of the NinjaTrader and TradingView tools follow one
