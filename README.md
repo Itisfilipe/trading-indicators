@@ -547,17 +547,17 @@ zone stay readable.
 
 ![Chart palette](docs/chart-palette.svg)
 
-| Role | Hex | RGB |
-|------|-----|-----|
-| Up body | `#6995D3` | `105, 149, 211` |
-| Up outline + wick | `#3E68A3` | `62, 104, 163` |
-| Down body | `#8F959E` | `143, 149, 158` |
-| Down outline + wick, crosshair | `#5F6773` | `95, 103, 115` |
-| Zones (rectangles), fill at 12% | `#B8862B` | `184, 134, 43` |
-| Text, strong lines | `#374151` | `55, 65, 81` |
-| Scale line, faint lines | `#D1D5DB` | `209, 213, 219` |
-| Pane separator | `#E5E7EB` | `229, 231, 235` |
-| Background | `#F8F9FB` | `248, 249, 251` |
+| Role | Hex | RGB | Opacity |
+|------|-----|-----|---------|
+| Up body | `#6995D3` | `105, 149, 211` | 100% |
+| Up outline + wick | `#3E68A3` | `62, 104, 163` | 100% |
+| Down body | `#8F959E` | `143, 149, 158` | 100% |
+| Down outline + wick, crosshair | `#5F6773` | `95, 103, 115` | 100% |
+| Zones (rectangles) | `#B8862B` | `184, 134, 43` | 100% outline, 12% fill |
+| Text, strong lines | `#374151` | `55, 65, 81` | 100% |
+| Scale line, faint lines | `#D1D5DB` | `209, 213, 219` | 100% |
+| Pane separator | `#E5E7EB` | `229, 231, 235` | 100% |
+| Background | `#F8F9FB` | `248, 249, 251` | 100% |
 
 NinjaTrader chart templates with this palette (1, 5 and 15-minute
 candlesticks, full ETH session) are in
