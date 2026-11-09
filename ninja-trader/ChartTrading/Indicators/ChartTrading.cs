@@ -654,13 +654,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // ChartTrader raises no account-changed event we hook, so a switched
             // account is picked up on the next pointer move over the chart;
-            // otherwise auto-breakeven would keep guarding the old account.
+            // otherwise auto-breakeven would keep guarding the old account. The
+            // switch waits while an entry on the old account is still working:
+            // its exits are placed from that account's fill updates.
             Account selectedAccount = ChartControl.OwnerChart?.ChartTrader?.Account;
-            if (selectedAccount != null && !ReferenceEquals(selectedAccount, subscribedAccount))
+            if (State < State.Terminated && selectedAccount != null && !ReferenceEquals(selectedAccount, subscribedAccount))
             {
+                bool switched = false;
                 lock (orderLock)
-                    EnsureAccountSubscription(selectedAccount);
-                SeedPositionCache(selectedAccount);
+                {
+                    if (!HasWorkingEntryOn(subscribedAccount))
+                    {
+                        EnsureAccountSubscription(selectedAccount);
+                        switched = true;
+                    }
+                }
+                if (switched)
+                    SeedPositionCache(selectedAccount);
             }
 
             System.Windows.Point pos = e.GetPosition(ChartControl as IInputElement);
@@ -827,6 +837,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // The click belongs to the commit; the chart must not also act on it.
             e.Handled = true;
+        }
+
+        private bool HasWorkingEntryOn(Account account)
+        {
+            foreach (BracketCommit commit in activeCommits)
+            {
+                if (commit.Entry == null || !ReferenceEquals(commit.Account, account))
+                    continue;
+                OrderState entryState = commit.Entry.OrderState;
+                if (entryState != OrderState.Filled && entryState != OrderState.Cancelled && entryState != OrderState.Rejected)
+                    return true;
+            }
+            return false;
         }
 
         private void EnsureAccountSubscription(Account account)

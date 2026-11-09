@@ -15,9 +15,9 @@
 
 input
   Tema_Escuro(true);
-  Passo(50);
-  Destaque_A_Cada(100);
-  Maior_A_Cada(1000);
+  Passo(50.0);
+  Destaque_A_Cada(100.0);
+  Maior_A_Cada(1000.0);
   Niveis_Acima_Abaixo(40);
 
   Estilo_Regular(2);             // 0=solido, 1=traco longo, 2=traco curto

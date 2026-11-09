@@ -780,12 +780,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     bool hasBar = newsEvent.ChartZoneTime <= lastBarTime;
                     if (hasBar)
                     {
-                        int barIndex = Bars.GetBar(newsEvent.ChartZoneTime);
+                        // Bars are stamped at their close: the release candle is
+                        // the first one stamped after the release time.
+                        int barIndex = Bars.GetBar(newsEvent.ChartZoneTime.AddSeconds(1));
                         if (LabelPosition == NewsLabelPosition.Auto)
                             below = Bars.GetClose(barIndex) >= Bars.GetOpen(barIndex);
                         anchorY = below
                             ? chartScale.GetYByValue(Bars.GetLow(barIndex)) + 4
                             : chartScale.GetYByValue(Bars.GetHigh(barIndex)) - captionHeight - 4;
+                        anchorY = Math.Max(panelTop + 4, Math.Min(anchorY, panelBottom - captionHeight - 4));
                     }
                     bool stacked = Math.Abs(x - previousX) < 2;
                     if (!stacked)
