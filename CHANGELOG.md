@@ -9,9 +9,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - New palette, "Modern Green": mint up candles (#37F09C), near-black down
   candles (#1A1C26) and one near-black outline, wick and doji color for
   both sides, on the same off-white background with amber zones.
-- The NinjaTrader chart templates are now "Modern Green 1m/5m/15m",
-  replacing "Blue Slate"; Renko with Wicks, Volume with EMA and MACD
-  Histogram default to the new candle colors.
+- One NinjaTrader chart template, "Modern Green", replaces the three
+  "Blue Slate" ones: a 1-minute ETH candlestick chart with the repo's
+  indicators added and configured. Renko with Wicks, Volume with EMA and
+  MACD Histogram default to the new candle colors.
 
 ### ChartTrading (changed)
 - Settings regrouped: Brackets (distance mode, then each pair's on/off,

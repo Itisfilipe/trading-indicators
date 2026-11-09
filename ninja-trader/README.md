@@ -12,14 +12,13 @@ Copy a project's `.cs` files into the matching folders under
 that has them installed and import the zip via Control Center > Tools > Import >
 NinjaScript Add-On.
 
-Chart templates with the [chart palette](../README.md#chart-palette) are in
-`templates/Chart/`: copy them to `Documents/NinjaTrader 8/templates/Chart/`,
-then right-click a chart > Templates > Load. A template also sets the bar
-type, interval and session, so pick the one that matches the chart: 1, 5 or
-15-minute candlesticks on the CME US Index Futures ETH (full) session. Loading a
-template also replaces the chart's indicators with the template's (none), so
-load it on a fresh chart, add your indicators, and save that as your own
-template.
+The "Modern Green" chart template ([chart palette](../README.md#chart-palette))
+is in `templates/Chart/`: copy it to `Documents/NinjaTrader 8/templates/Chart/`,
+then right-click a chart > Templates > Load. It is a complete 1-minute
+candlestick setup on the CME US Index Futures ETH (full) session, with this
+repo's indicators already added and configured. Loading it replaces the
+chart's indicators, interval and session with the template's; the
+indicators must be installed first, or NinjaTrader skips them.
 
 Two platform quirks worth knowing:
 
