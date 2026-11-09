@@ -670,15 +670,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
             }
             // A window crossing midnight belongs to the day it starts on, so
-            // yesterday stays in while it may still be running.
+            // yesterday's crossing windows stay in while they may still be running,
+            // even when history would otherwise drop yesterday.
             DateTime yesterday = todayTzDate.AddDays(-1);
-            if (!daysToDraw.Contains(yesterday))
-                foreach (MacroSpan span in spans)
-                    if (span.EndMinutes > 24 * 60)
-                    {
-                        daysToDraw.Add(yesterday);
-                        break;
-                    }
+            bool yesterdayCrossingOnly = !daysToDraw.Contains(yesterday);
+            if (yesterdayCrossingOnly)
+                daysToDraw.Add(yesterday);
             // Today and tomorrow go in whether or not they have bars yet: their
             // windows are the ones still ahead, which is the point of drawing them.
             daysToDraw.Add(todayTzDate);
@@ -716,6 +713,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 foreach (DateTime dayStart in daysToDraw)
                     foreach (MacroSpan span in spans)
                     {
+                        if (yesterdayCrossingOnly && dayStart == yesterday && span.EndMinutes <= 24 * 60)
+                            continue;
                         DateTime spanStart = ToChartZone(dayStart.AddMinutes(span.StartMinutes));
                         DateTime spanEnd = ToChartZone(dayStart.AddMinutes(span.EndMinutes));
                         double startX = XForTime(chartControl, spanStart, lastBarTime, lastBarX, pixelsPerMs);

@@ -32,6 +32,7 @@
           <Label>MNQ 12-26</Label>
           <MaxSerialized>0</MaxSerialized>
           <MinSerialized>0</MinSerialized>
+          <Panel>0</Panel>
           <PriceMarker>
             <BackgroundSerialize>DEFAULT</BackgroundSerialize>
             <IsVisible>true</IsVisible>
@@ -195,4 +196,30 @@
     </ChartPanels>
     <ChartAlerts />
   </NTTabPage>
+  <ChartTrader>
+    <Properties>
+      <ChartTraderProperties xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <AtmStrategySelectionMode>SelectActiveAtmStrategyOnOrderSubmission</AtmStrategySelectionMode>
+        <AutoScale>true</AutoScale>
+        <OrderDisplayBarLength>25</OrderDisplayBarLength>
+        <PnLDisplayUnit>Ticks</PnLDisplayUnit>
+        <QuantityModificationForStocks>IncreaseQuantity</QuantityModificationForStocks>
+        <ScaleQuantity>0</ScaleQuantity>
+        <ShowRealizedPnLWhenFlat>true</ShowRealizedPnLWhenFlat>
+        <SimulatedOrderVolumeTrigger>0</SimulatedOrderVolumeTrigger>
+        <StopLimitOffsetEnabled>true</StopLimitOffsetEnabled>
+        <StopLimitOffsetValue>1</StopLimitOffsetValue>
+        <ActionButtonsBackgroundSerialize>DEFAULT</ActionButtonsBackgroundSerialize>
+        <BuyButtonsBackgroundSerialize>DEFAULT</BuyButtonsBackgroundSerialize>
+        <SellButtonsBackgroundSerialize>DEFAULT</SellButtonsBackgroundSerialize>
+        <LimitSerialize>DEFAULT</LimitSerialize>
+        <MitSerialize>DEFAULT</MitSerialize>
+        <PositionEntryPriceSerialize>DEFAULT</PositionEntryPriceSerialize>
+        <ProfitTargetSerialize>DEFAULT</ProfitTargetSerialize>
+        <StopLimitSerialize>DEFAULT</StopLimitSerialize>
+        <StopLossSerialize>DEFAULT</StopLossSerialize>
+        <StopMarketSerialize>DEFAULT</StopMarketSerialize>
+      </ChartTraderProperties>
+    </Properties>
+  </ChartTrader>
 </NinjaTrader>

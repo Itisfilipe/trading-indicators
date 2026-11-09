@@ -156,8 +156,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Account subscribedAccount;
         private Series<double> atrSeries;
         private double currentAtr;
-        // The ATR stop of the latest click, so an R-based breakeven trigger
-        // measures against the stop the position was actually opened with.
+        // The ATR stop of the click that opened the current position, so an
+        // R-based breakeven trigger measures against that stop; 0 when unknown.
         private int lastClickAtrStopTicks;
 
         // Position cache fed by Account.PositionUpdate, the way ABCompleteChartTrader
@@ -354,7 +354,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                "in the direction of the entry.")]
         public int StopLimitOffsetTicks { get; set; }
 
-        [Display(Name = "Time in force", Order = 9, GroupName = "3. Trading",
+        [Display(Name = "Time in force", Order = 10, GroupName = "3. Trading",
                  Description = "Applies to the entry and to every stop and target it places. " +
                                "Day orders expire at session end; GTC orders rest until filled " +
                                "or cancelled.")]
@@ -373,13 +373,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int AutoBreakevenTriggerTicks { get; set; }
 
         [Range(0.01, double.MaxValue)]
-        [Display(Name = "Auto breakeven trigger (R)", Order = 7, GroupName = "3. Trading",
+        [Display(Name = "Auto breakeven trigger (R)", Order = 8, GroupName = "3. Trading",
                  Description = "With ATR distances, how many R in profit before the automatic move fires: " +
                                "1 means price has run one stop distance in the position's favor.")]
         public double AutoBreakevenTriggerR { get; set; }
 
         [Range(-100, 1000)]
-        [Display(Name = "Breakeven offset (ticks)", Order = 8, GroupName = "3. Trading",
+        [Display(Name = "Breakeven offset (ticks)", Order = 9, GroupName = "3. Trading",
                  Description = "Where breakeven lands relative to the position's average price, in the " +
                                "profit direction: 2 locks two ticks of profit, 0 is exact breakeven. " +
                                "Applies to the button and to auto breakeven.")]
@@ -844,7 +844,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
-            if (BracketDistance == ChartTradingBracketDistance.Atr)
+            if (BracketDistance == ChartTradingBracketDistance.Atr && currentMarketPosition == MarketPosition.Flat)
                 lastClickAtrStopTicks = stopTicks[0];
             int[] percents = { Percent1, Percent2, Percent3 };
 
@@ -1032,6 +1032,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (nowFlat || e.MarketPosition != currentMarketPosition)
                     autoBreakevenState = AutoBreakevenState.Armed;
+                if (nowFlat)
+                    lastClickAtrStopTicks = 0;
                 currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
                 currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
                 positionCacheGeneration++;
@@ -2001,8 +2003,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         // With ATR distances the trigger is an R multiple of the stop distance:
-        // the latest click's ATR stop, or the current ATR stop for a position
-        // opened some other way. Tick distances keep the fixed tick trigger.
+        // the ATR stop of the click that opened the position, or the current
+        // ATR stop for a position opened some other way. Tick distances keep the fixed tick trigger.
         private int AutoBreakevenTriggerTickCount()
         {
             if (BracketDistance != ChartTradingBracketDistance.Atr)
