@@ -578,8 +578,8 @@ NinjaTrader chart templates with this palette (1, 5 and 15-minute
 candlesticks, full ETH session) are in
 [`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/). Stock
 NinjaTrader candlesticks have one outline and wick color for both
-directions, so the templates use slate `#5F6773` for both (down bodies then
-read as solid slate); Renko with Wicks
+directions, so the templates use dark slate `#1F2937` (rgb `31, 41, 55`)
+for both, which keeps wick tips crisp for spotting gaps; Renko with Wicks
 draws the up and down outlines separately.
 
 Colors that carry meaning keep their own: stop and target red/green, news

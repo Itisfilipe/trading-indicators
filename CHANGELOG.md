@@ -9,6 +9,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Down candles are darker so up and down read apart at a glance: body
   slate #5F6773 (was #8F959E), outline and wick #374151 (was #5F6773).
   Applies to the NinjaTrader chart templates and Renko with Wicks defaults.
+- NinjaTrader chart templates: candle outline and wick are dark slate
+  #1F2937 (was #5F6773) for both directions.
 
 ### ChartTrading (changed)
 - Settings regrouped: Brackets (distance mode, then each pair's on/off,
