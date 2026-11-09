@@ -5,6 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### OrderDecorator (fixed)
+- The R multiple on target labels now measures risk to the nearest stop on
+  the losing side; a stop already trailed into profit no longer counts as
+  the risk basis.
+
 ### VolumeWithEMA (fixed)
 - On crypto instruments the EMA line now averages the same converted volume
   the histogram shows, so above/below-average bar colors are correct.

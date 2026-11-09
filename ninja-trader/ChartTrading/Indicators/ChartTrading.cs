@@ -313,7 +313,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Auto breakeven", Order = 6, GroupName = "3. Trading",
                  Description = "Once price runs the trigger distance in the position's favor, move every " +
-                               "working ChartTrading stop to breakeven automatically -- the same move as " +
+                               "working protective stop on the instrument to breakeven automatically -- the same move as " +
                                "the Stops-to-BE button, fired once per position. The button remains the " +
                                "manual bypass.")]
         public bool AutoBreakevenEnabled { get; set; }
@@ -354,7 +354,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = @"Preview a click-to-trade bracket by holding a modifier key. Places no orders.";
+                Description = @"Preview a click-to-trade bracket by holding a modifier key; click to submit it.";
                 Name = "ChartTrading";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
@@ -473,7 +473,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 toggleButton.Click += OnToggleClicked;
                 UpdateToggleVisual();
 
-                // Moves every working ChartTrading stop to its entry's fill price.
+                // Moves every working protective stop to the position's average price plus the offset.
                 breakevenButton = new System.Windows.Controls.Button
                 {
                     Content = "Stops to BE",

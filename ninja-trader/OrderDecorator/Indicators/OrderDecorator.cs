@@ -306,12 +306,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (master.InstrumentType == InstrumentType.Forex)
                 pointMoney *= account.ForexLotSize;
 
-            // Risk basis for R multiples: the nearest working stop to the reference.
+            // Risk basis for R multiples: the nearest working stop on the loss side of
+            // the reference; a stop already trailed into profit carries no risk.
             double nearestStopDistance = 0;
             if (hasPosition)
                 foreach (OrderInfo order in workingOrders)
                 {
                     if (!order.IsStopType)
+                        continue;
+                    bool isLossSide = positionIsLong ? order.Price < referencePrice : order.Price > referencePrice;
+                    if (!isLossSide)
                         continue;
                     double distance = Math.Abs(order.Price - referencePrice);
                     if (distance > 0 && (nearestStopDistance == 0 || distance < nearestStopDistance))
