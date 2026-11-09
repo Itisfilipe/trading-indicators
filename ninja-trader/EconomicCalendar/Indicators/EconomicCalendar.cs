@@ -438,7 +438,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Log("Economic Calendar: calendar fetch failed (" + error.Message + "); showing the saved weeks.", LogLevel.Warning);
                     }
 
-                    List<NewsEvent> merged = MergeEvents(LoadArchive(), fresh);
+                    List<NewsEvent> merged = fresh;
+                    try
+                    {
+                        merged = MergeEvents(LoadArchive(), fresh);
+                    }
+                    catch (Exception error)
+                    {
+                        Log("Economic Calendar: could not read the saved weeks (" + error.Message + ").", LogLevel.Warning);
+                    }
                     if (merged.Count > 0)
                     {
                         lock (sync)
@@ -467,9 +475,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             try
             {
+                // Named by the UTC Sunday that opens the feed's Sunday-to-Saturday
+                // week, so a revised feed or a platform time zone change overwrites
+                // the same file instead of leaving a stale copy beside it.
+                DateTime firstUtc = TimeZoneInfo.ConvertTimeToUtc(weekEvents[0].ChartZoneTime, Core.Globals.GeneralOptions.TimeZoneInfo);
+                DateTime weekSunday = firstUtc.Date.AddDays(-(int)firstUtc.DayOfWeek);
+                string target = Path.Combine(ArchiveDirectory, "ff_week_" + weekSunday.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".json");
+                // Several charts can save the same week at once; writing aside and
+                // copying over keeps a reader from ever seeing half a file.
                 Directory.CreateDirectory(ArchiveDirectory);
-                string weekName = weekEvents[0].ChartZoneTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                File.WriteAllText(Path.Combine(ArchiveDirectory, "ff_week_" + weekName + ".json"), json);
+                string temporary = Path.Combine(ArchiveDirectory, Guid.NewGuid().ToString("N") + ".tmp");
+                File.WriteAllText(temporary, json);
+                File.Copy(temporary, target, true);
+                File.Delete(temporary);
             }
             catch (Exception error)
             {
@@ -879,6 +897,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         else if (!goDown && aboveStack < panelTop + 4)
                             goDown = true;
                         captionY = goDown ? belowStack : aboveStack;
+                        captionY = Math.Max(panelTop + 4, Math.Min(captionY, panelBottom - captionHeight - 4));
                         stackTop = Math.Min(stackTop, captionY);
                         stackBottom = Math.Max(stackBottom, captionY + captionHeight);
                     }

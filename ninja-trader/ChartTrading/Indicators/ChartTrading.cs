@@ -1034,7 +1034,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (nowFlat || e.MarketPosition != currentMarketPosition)
                     autoBreakevenState = AutoBreakevenState.Armed;
-                if (nowFlat)
+                bool flipped = currentMarketPosition != MarketPosition.Flat && e.MarketPosition != currentMarketPosition;
+                if (nowFlat || flipped)
                     openingAtrStopTicks = 0;
                 currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
                 currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
@@ -1142,7 +1143,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
-                        if (commit.CoveredQuantity == 0 && commit.OpeningAtrStopTicks > 0)
+                        if (commit.CoveredQuantity == 0 && commit.OpeningAtrStopTicks > 0 && openingAtrStopTicks == 0)
                             openingAtrStopTicks = commit.OpeningAtrStopTicks;
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
