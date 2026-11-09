@@ -652,6 +652,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (ChartControl.PresentationSource == null)
                 return;
 
+            // ChartTrader raises no account-changed event we hook, so a switched
+            // account is picked up on the next pointer move over the chart;
+            // otherwise auto-breakeven would keep guarding the old account.
+            Account selectedAccount = ChartControl.OwnerChart?.ChartTrader?.Account;
+            if (selectedAccount != null && !ReferenceEquals(selectedAccount, subscribedAccount))
+            {
+                lock (orderLock)
+                    EnsureAccountSubscription(selectedAccount);
+                SeedPositionCache(selectedAccount);
+            }
+
             System.Windows.Point pos = e.GetPosition(ChartControl as IInputElement);
             pointerDeviceX = ChartingExtensions.ConvertToHorizontalPixels(pos.X, ChartControl.PresentationSource);
             pointerDeviceY = ChartingExtensions.ConvertToVerticalPixels(pos.Y, ChartControl.PresentationSource);

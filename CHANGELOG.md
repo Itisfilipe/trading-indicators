@@ -47,6 +47,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   color, width and dash: every 50 (regular), every 100 (highlighted) and
   every 1000 (major) by default.
 
+### ChartTrading (fixed)
+- After switching the account in ChartTrader, auto breakeven follows the
+  new account as soon as the pointer moves over the chart, instead of
+  guarding the previous account until the next click-to-trade.
+
 ### OrderDecorator (fixed)
 - The R multiple on target labels now measures risk to the nearest stop on
   the losing side; a stop already trailed into profit no longer counts as
