@@ -6,8 +6,9 @@ import subprocess
 import os
 import unicodedata
 
-PDF_PATH = "/Users/filipe/Code/renko-indicators/profit-chart/ManualNTSL.pdf"
-OUTPUT_DIR = "/Users/filipe/Code/renko-indicators/profit-chart/docs"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PDF_PATH = os.path.join(SCRIPT_DIR, "ManualNTSL.pdf")
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "docs")
 
 # Known chapter titles for validation (from TOC)
 KNOWN_CHAPTERS = {

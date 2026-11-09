@@ -8,14 +8,14 @@
 //   ACIMA do zero = agressao (quem esta empurrando o preco)
 //     - Verde = compradores dominando
 //     - Vermelho = vendedores dominando
-//     - Barra acima da linha branca = agressao ACIMA da media (forte)
+//     - Barra acima da linha de referencia = agressao ACIMA da media (forte)
 //     - Barra cinza = agressao abaixo da media
 //
 //   ABAIXO do zero = volume de contratos
 //     - Azul claro = volume acima da media (mercado ativo)
 //     - Cinza = volume abaixo da media (mercado parado)
 //
-//   Linhas brancas = referencia da media (valor 1.0)
+//   Linhas de referencia = referencia da media (valor 1.0)
 //   Valores normalizados: 1.0 = na media, 2.0 = 2x a media
 // ============================================================================
 
@@ -66,7 +66,7 @@ begin
     nSellWeak := RGB(214, 196, 198);      // cinza avermelhado
     nVolHigh := RGB(0, 220, 255);         // azul claro
     nVolLow := RGB(196, 204, 214);        // cinza azulado
-    nLineColor := RGB(255, 255, 255);     // branco
+    nLineColor := RGB(60, 60, 60);        // cinza escuro
   end;
 
   // -----------------------------------------------------------------------

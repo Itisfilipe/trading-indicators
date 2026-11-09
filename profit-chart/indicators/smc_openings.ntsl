@@ -14,7 +14,8 @@
 // Modo de horario:
 //   - Horario_Em_NY = true (default): inputs em NY clock; o indicador soma
 //     Offset_NY_Para_BR minutos pra converter pra BR.
-//     Default = 60 (DST abr-out). Mude para 120 no EST (nov-mar).
+//     60 do 2o domingo de marco ao 1o domingo de novembro (horario de verao
+//     dos EUA); 120 no resto do ano.
 //   - Horario_Em_NY = false: inputs em hora do Brasil direto.
 // =========================================================================
 

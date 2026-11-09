@@ -36,23 +36,23 @@ O indicador principal do sistema. Pinta cada candle/brick com base na confluenci
 
 **Tipos de sinal:**
 
-| Sinal | O que significa | Cor (tema claro) |
-|-------|----------------|------------------|
-| STRONG BUY | Compra a favor da tendencia maior, com volume e agressao confirmando | Azul |
-| STRONG SELL | Venda a favor da tendencia maior | Vermelho |
-| SCALP BUY | Compra contra tendencia maior, MACD menor confirmou a virada | Azul claro |
-| SCALP SELL | Venda contra tendencia maior | Vermelho escuro |
-| REJ BUY | Compra por rejeicao (agressao vendedora forte mas preco segurou + pavio grande) | Azul |
-| REJ SELL | Venda por rejeicao | Vermelho |
+| Sinal | O que significa | Tema escuro (padrao) | Tema claro |
+|-------|----------------|----------------------|------------|
+| STRONG BUY | Compra a favor da tendencia maior, com volume e agressao confirmando | Azul | Azul |
+| STRONG SELL | Venda a favor da tendencia maior | Fucsia | Vermelho |
+| SCALP BUY | Compra contra tendencia maior, MACD menor confirmou a virada | Azul escuro | Azul claro |
+| SCALP SELL | Venda contra tendencia maior | Fucsia escuro | Vermelho escuro |
+| REJ BUY | Compra por rejeicao (agressao vendedora forte mas preco segurou + pavio grande) | Azul | Azul |
+| REJ SELL | Venda por rejeicao | Fucsia | Vermelho |
 
 **Cores de tendencia (quando nao ha gatilho):**
 
-| Cor | Significado |
-|-----|-------------|
-| Verde | Ambos MACDs concordam para alta |
-| Verde claro | Apenas um MACD para alta |
-| Preto | Ambos MACDs concordam para baixa |
-| Cinza | Apenas um MACD para baixa |
+| Significado | Tema escuro (padrao) | Tema claro |
+|-------------|----------------------|------------|
+| Ambos MACDs concordam para alta | Verde do candle | Verde |
+| Apenas um MACD para alta | Verde escuro | Verde claro |
+| Ambos MACDs concordam para baixa | Vermelho do candle | Preto |
+| Apenas um MACD para baixa | Vermelho escuro | Cinza |
 
 **Regras que precisam concordar:**
 1. **MACD maior** (200/800/50) — define a tendencia principal. Sinais a favor = strong, contra = scalp
@@ -122,12 +122,12 @@ Mostra a forca dos compradores vs vendedores e o volume de contratos em histogra
 - **Acima do zero** = agressao (quem esta empurrando o preco)
   - Verde = compradores dominando
   - Vermelho = vendedores dominando
-  - Barra acima da linha branca = agressao acima da media (sinal forte)
+  - Barra acima da linha de referencia = agressao acima da media (sinal forte)
   - Barra cinza = agressao abaixo da media
 - **Abaixo do zero** = volume de contratos
   - Azul claro = volume acima da media (mercado ativo)
   - Cinza = volume abaixo da media (mercado parado)
-- **Linhas brancas** = referencia da media (valor 1.0)
+- **Linhas de referencia** = referencia da media (valor 1.0)
 - Valores normalizados: 1.0 = na media, 2.0 = o dobro da media
 
 **Parametros:**
@@ -154,7 +154,7 @@ Histograma do MACD com linha de contorno conectando os topos.
 - `Periodo_EMA_Rapida(21)` — EMA rapida
 - `Periodo_EMA_Lenta(89)` — EMA lenta
 - `Periodo_Sinal(42)` — linha de sinal
-- `Exibir_Linha_Contorno(true)` — mostrar linha branca
+- `Exibir_Linha_Contorno(true)` — mostrar linha de contorno
 
 ---
 
@@ -211,12 +211,49 @@ Mostra o "bias" (tendencia geral) baseado na posicao do preco em relacao a uma E
 
 **Arquivo:** `day-open.ntsl`
 
-Linha horizontal no preco de abertura do dia. Reseta automaticamente a cada novo dia.
+Linha horizontal no preco de abertura de cada dia: a de hoje e as dos dias anteriores, ate `Max_Dias_Passados`.
 
 **Como usar:**
 - Preco acima da linha = dia positivo ate agora
 - Preco abaixo da linha = dia negativo ate agora
 - Funciona como suporte/resistencia natural do dia
+
+**Parametros:**
+- `Tema_Escuro(true)` — cores do tema
+- `Max_Dias_Passados(5)` — dias anteriores com linha (maximo 5)
+- `Estilo_Linha(2)` — 0 = solido, 1 = traco longo, 2 = traco curto
+- `Espessura_Linha(2)` — espessura da linha
+
+---
+
+### SMC Openings (Indicador)
+
+**Arquivo:** `smc_openings.ntsl`
+
+Linhas horizontais nos precos de abertura chave: Midnight Open (00:00 NY), Weekly Open (domingo 18:00 NY), 8:30, 9:30 e 13:30 NY. Cada tipo guarda ate 5 dias passados.
+
+**Parametros:**
+- `Horario_Em_NY(true)` — horarios digitados em hora de NY; desligado, em hora do Brasil
+- `Offset_NY_Para_BR(60)` — minutos somados ao horario de NY: 60 do 2o domingo de marco ao 1o domingo de novembro (horario de verao dos EUA), 120 no resto do ano
+- `Ativar_*`, `*_Hora`, `*_Label` — liga, horario e texto de cada abertura
+- `Hora_Fim_Linha(1800)` — onde as linhas intraday terminam (18:00 NY)
+- `Max_Sessoes_Passadas(5)` — dias anteriores mostrados (maximo 5)
+- `Estilo_Linha(2)` / `Espessura_Linha(2)` — estilo das linhas
+
+---
+
+### SMC Sessions (Indicador)
+
+**Arquivo:** `smc_sessions.ntsl`
+
+Caixas em volta das killzones, cada uma com sua cor: Asia (20:00–00:00 NY), Londres (02:00–05:00), NY AM (09:30–11:00), NY Lunch (12:00–13:00) e NY PM (13:30–16:00). A maxima e a minima da sessao mais recente se estendem para a direita como niveis de liquidez.
+
+**Parametros:**
+- `Horario_Em_NY(true)` / `Offset_NY_Para_BR(60)` — mesmo esquema do SMC Openings
+- `Ativar_*`, `*_Inicio`, `*_Fim` — liga e horarios de cada sessao
+- `Mostrar_Niveis_Sessao(false)` — mostra os niveis de maxima/minima da sessao
+- `Espessura_Borda_Sessao(2)` — espessura da borda das caixas
+- `Max_Sessoes_Passadas(5)` — sessoes anteriores mostradas por tipo (maximo 5)
 
 ---
 
@@ -275,51 +312,9 @@ Opcional:
 
 ---
 
-## TradingView (Pine Script)
-
-Indicadores em Pine Script v6, na pasta `tradingview/`. Nao rodam no Profit Chart — sao para o TradingView.
-
-**Como instalar:** abra o **Pine Editor** no TradingView, cole o conteudo do arquivo `.pine`, clique em **Add to chart**.
-
-### Candle Countdown & Position Sizer
-
-**Arquivo:** `tradingview/candle-countdown-position-sizer.pine`
-
-Tabela sobre o grafico com relogio, contagem regressiva para o proximo candle e sugestao de tamanho de posicao por ATR. Voce informa quanto quer arriscar e a largura do stop (em multiplo de ATR); ele devolve o tamanho de lote que mantem a perda nesse risco caso o stop seja atingido.
-
-**Linhas da tabela:**
-- **Time** — relogio com segundos, no fuso escolhido
-- **Countdowns** — tempo ate o proximo candle, em ate 3 timeframes selecionaveis (pode ligar/desligar cada um e o grupo todo)
-- **Lot** — tamanho de lote sugerido (arredondado)
-- **ATR** — valor bruto do ATR
-- **Stop ATR (n)** — distancia do stop em pontos/preco (n = multiplo de ATR)
-- **Stop Cash (x%)** — dinheiro em risco no lote sugerido; aparece so no modo % of Account
-
-**Parametros principais:**
-- `Risk Mode` — `Fixed $` (arrisca valor fixo) ou `% of Account` (arrisca % do saldo)
-- `Risk Per Trade ($)` / `Account Size ($)` / `Risk Per Trade (%)` — conforme o Risk Mode
-- `Stop Size (× ATR)` — distancia do stop como multiplo do ATR
-- `ATR Length(5)` / `ATR Smoothing` — periodo e suavizacao (EMA ou RMA/Wilder)
-- `Show Countdowns` + `Timeframe 1/2/3` — quais candles contar
-- `Highlight Countdown Before New Candle` + `Alert Lead Time` — destaque antes do proximo candle
-
-### Time-Based Price Levels
-
-**Arquivo:** `tradingview/time-based-price-levels.pine`
-
-Plota linhas horizontais em ate 10 niveis de preco. Cada linha e um horario intraday (HH:MM no fuso escolhido) ou a abertura de um periodo maior: Diario, Semanal, Mensal, Trimestral, Semestral ou Anual.
-
-**Por linha voce escolhe:** liga/desliga, horario/periodo, tipo de preco (O/H/L/C) e cor. Largura e estilo das linhas sao globais para manter o painel compacto.
-
-**Parametros principais:**
-- `Time Zone` — fuso dos horarios intraday
-- `Days of History to Show(0)` — dias anteriores a exibir (0 = so o dia atual)
-- `Show Labels` / `Label Offset` / `Label Size` — labels automaticos (D.O, W.O, ... ou o horario)
-- `Line Width` / `Line Style` — estilo global das linhas
-
 ## Documentacao
 
-A pasta `profit-chart/docs/` contem a referencia completa da linguagem NTSL (27 capitulos, em portugues), convertida do manual oficial da Nelogica.
+A referencia da linguagem NTSL nao e versionada (conteudo da Nelogica). Coloque o `ManualNTSL.pdf` em `profit-chart/` e rode `python3 convert_to_md.py` (precisa do `pdftotext`, do poppler) para gerar `profit-chart/docs/` localmente.
 
 ## Licenca
 

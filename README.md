@@ -385,11 +385,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 ## Profit Chart (`profit-chart/`)
 
-- Confluence coloring system: paints each candle by how many rules agree
-  (major/minor MACD trend, tape reading, EMA pullback, rejection).
+- Confluence coloring system: paints each candle by the highest-priority
+  signal its rules produce (major/minor MACD trend, tape reading, EMA
+  pullback, rejection).
 - Companion tools: signal labels, signal board, tape-reading and MACD
-  histograms, MA cloud, day-open marker, Renko size calculator (live and stable box
-  size in ticks).
+  histograms, MA cloud, bias coloring, day-open marker, SMC openings and
+  session boxes, Renko size calculator (live and stable box size in ticks).
 - Full per-indicator documentation, in Portuguese:
   [`profit-chart/README.md`](profit-chart/README.md).
 

@@ -5,6 +5,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### Profit Chart indicators (fixed)
+- MACD Histogram: with the outline line off, the zero line still shows.
+- Tape Reading: light theme reference lines are dark gray instead of white,
+  so they are visible on a white background.
+- SMC Sessions: the live session box is redrawn once per candle instead of
+  on every tick, which stops stray edges when the session's high or low
+  extends inside a candle.
+
 ### ErgonomicCharts (fixed)
 - Removing or reloading the indicator now fully unhooks it from the chart
   window; old copies no longer keep reacting to mouse releases.

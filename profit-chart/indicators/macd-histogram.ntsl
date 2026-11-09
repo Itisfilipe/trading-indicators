@@ -43,6 +43,7 @@ var
   nNegativeColor: Integer;
   nLineColor: Integer;
   nZeroColor: Integer;
+  nZeroSlot: Integer;      // slot da linha do zero: logo apos o ultimo plot desenhado
 
 begin
   // -----------------------------------------------------------------------
@@ -85,19 +86,21 @@ begin
   // Desenha a linha de contorno (conecta os topos do histograma)
   // Ajuda a visualizar picos, vales e divergencias
   // -----------------------------------------------------------------------
+  nZeroSlot := 2;
   if Exibir_Linha_Contorno then begin
     PlotN(2, fHistogram);
     SetPlotType(2, 0);
     SetPlotWidth(2, 2);
     SetPlotColor(2, nLineColor);
+    nZeroSlot := 3;
   end;
 
   // -----------------------------------------------------------------------
   // Desenha a linha de referencia no zero
   // -----------------------------------------------------------------------
-  PlotN(3, 0);
-  SetPlotType(3, 0);
-  SetPlotWidth(3, 1);
-  SetPlotColor(3, nZeroColor);
+  PlotN(nZeroSlot, 0);
+  SetPlotType(nZeroSlot, 0);
+  SetPlotWidth(nZeroSlot, 1);
+  SetPlotColor(nZeroSlot, nZeroColor);
 
 end;
