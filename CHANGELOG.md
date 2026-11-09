@@ -17,6 +17,19 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Removing or reloading the indicator now fully unhooks it from the chart
   window; old copies no longer keep reacting to mouse releases.
 
+### Economic Calendar (changed)
+- Captions now sit at the release candle: above its high, below its low,
+  or Auto (default), opposite the candle's direction. Releases still
+  ahead stay at the panel's edge. New "Label Outline" (on by default)
+  boxes each caption in its impact color.
+- New "12-Hour Times" option for the table.
+- The table can sit at any of nine positions, adding the edge centers and
+  the middle.
+- The table border follows the chart's text color by default, so it shows
+  on dark charts; turn "Border Follows Chart Text" off to pick a color.
+- "Today" and "This Week" now roll over at midnight in the selected time
+  zone (New York by default) instead of the computer's clock.
+
 ### Economic Calendar (fixed)
 - A malformed calendar download keeps the previous event list instead of
   blanking the chart until the next hourly refresh.

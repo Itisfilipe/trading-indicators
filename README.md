@@ -372,14 +372,22 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   and text; currency filter with an Automatic mode that follows the
   chart's instrument — both sides of a forex pair, otherwise the
   instrument's denomination currency.
-- Chart history: today, this week, or a manual number of days back;
-  lines drawable for future releases only or past ones too.
+- Chart history: today, this week, or a manual number of days back (the
+  feed holds the current week only, so never earlier than this Monday);
+  lines drawable for future releases only or past ones too. "Today" and
+  "this week" roll at midnight in the selected timezone, not the
+  platform's.
+- Captions sit above the release candle's high, below its low, or (Auto,
+  the default) opposite the candle's direction; releases still ahead sit
+  at the panel's edge. Optional outline in the impact color.
 - Release times print in a selectable timezone (New York by default —
   the clock the news calendar is usually read in), independent of the
   chart axis; the lines still sit at the release moment on the axis's
   own clock.
-- Table times are 24-hour; needs an internet connection, and a failed
-  fetch keeps the previous list and retries in a few minutes.
+- Table: 24-hour or AM/PM times, nine positions (corners, edge centers,
+  middle), border in the chart's text color by default or a fixed color.
+- Needs an internet connection; a failed fetch keeps the previous list and
+  retries in a few minutes.
 - Use: add to the chart you trade; with Automatic currency on an NQ chart
   you get the USD calendar.
 

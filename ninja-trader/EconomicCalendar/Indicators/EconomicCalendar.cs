@@ -51,7 +51,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         TopLeft,
         TopRight,
         BottomLeft,
-        BottomRight
+        BottomRight,
+        TopCenter,
+        MiddleLeft,
+        MiddleCenter,
+        MiddleRight,
+        BottomCenter
+    }
+
+    public enum NewsLabelPosition
+    {
+        Above,
+        Below,
+        Auto
     }
 
     public enum NewsTimeZone
@@ -136,12 +148,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Name each release at the top of its line: impact letter, currency, title.")]
         public bool ShowLabels { get; set; }
 
-        [Display(Name = "Chart History", GroupName = "1. On Chart", Order = 7,
+        [Display(Name = "Label Position", GroupName = "1. On Chart", Order = 7,
+                 Description = "Above the release candle's high, below its low, or Auto: opposite the candle's direction. Releases still ahead have no candle and sit at the panel's top (bottom for Below).")]
+        public NewsLabelPosition LabelPosition { get; set; }
+
+        [Display(Name = "Label Outline", GroupName = "1. On Chart", Order = 8)]
+        public bool ShowLabelOutline { get; set; }
+
+        [Display(Name = "Chart History", GroupName = "1. On Chart", Order = 9,
                  Description = "How far back past releases stay on the chart. Today, this week, or a manual number of days.")]
         public NewsHistory ChartHistory { get; set; }
 
         [Range(1, 30)]
-        [Display(Name = "Manual Days", GroupName = "1. On Chart", Order = 8)]
+        [Display(Name = "Manual Days", GroupName = "1. On Chart", Order = 10,
+                 Description = "The feed carries the current week only, so nothing older than this Monday can show.")]
         public int ManualDays { get; set; }
 
         [Display(Name = "High", GroupName = "2. Expected Impact", Order = 1)]
@@ -189,11 +209,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Zone the release times print in. Lines still sit at the release moment on the chart's own axis regardless.")]
         public NewsTimeZone TimeZoneSelection { get; set; }
 
-        [Display(Name = "Position", GroupName = "4. Table", Order = 4)]
+        [Display(Name = "12-Hour Times", GroupName = "4. Table", Order = 4,
+                 Description = "AM/PM times instead of 24-hour.")]
+        public bool Use12HourTimes { get; set; }
+
+        [Display(Name = "Position", GroupName = "4. Table", Order = 5)]
         public NewsTableCorner TablePosition { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Header Text Color", GroupName = "4. Table", Order = 5)]
+        [Display(Name = "Header Text Color", GroupName = "4. Table", Order = 6)]
         public Brush HeaderTextColor { get; set; }
         [Browsable(false)]
         public string HeaderTextColorSerializable
@@ -203,7 +227,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Header Background Color", GroupName = "4. Table", Order = 6)]
+        [Display(Name = "Header Background Color", GroupName = "4. Table", Order = 7)]
         public Brush HeaderBackColor { get; set; }
         [Browsable(false)]
         public string HeaderBackColorSerializable
@@ -213,7 +237,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Row Text Color", GroupName = "4. Table", Order = 7)]
+        [Display(Name = "Row Text Color", GroupName = "4. Table", Order = 8)]
         public Brush RowTextColor { get; set; }
         [Browsable(false)]
         public string RowTextColorSerializable
@@ -223,7 +247,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Past Row Text Color", GroupName = "4. Table", Order = 8)]
+        [Display(Name = "Past Row Text Color", GroupName = "4. Table", Order = 9)]
         public Brush RowPastTextColor { get; set; }
         [Browsable(false)]
         public string RowPastTextColorSerializable
@@ -233,7 +257,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Row Background Color", GroupName = "4. Table", Order = 9)]
+        [Display(Name = "Row Background Color", GroupName = "4. Table", Order = 10)]
         public Brush RowBackColor { get; set; }
         [Browsable(false)]
         public string RowBackColorSerializable
@@ -242,8 +266,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             set { RowBackColor = Serialize.StringToBrush(value); }
         }
 
-        [Display(Name = "Border", GroupName = "4. Table", Order = 10)]
+        [Display(Name = "Border", GroupName = "4. Table", Order = 11)]
         public bool ShowTableBorder { get; set; }
+
+        [Display(Name = "Border Follows Chart Text", GroupName = "4. Table", Order = 12,
+                 Description = "Draw the border in the chart's text color, so it stays visible on dark and light charts. Off uses the color below.")]
+        public bool AutoBorderColor { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Border Color", GroupName = "4. Table", Order = 13)]
+        public Brush BorderColor { get; set; }
+        [Browsable(false)]
+        public string BorderColorSerializable
+        {
+            get { return Serialize.BrushToString(BorderColor); }
+            set { BorderColor = Serialize.StringToBrush(value); }
+        }
 
         #endregion
 
@@ -265,6 +303,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 LineWidth = 1;
                 LineOpacity = 60;
                 ShowLabels = true;
+                LabelPosition = NewsLabelPosition.Auto;
+                ShowLabelOutline = true;
                 ChartHistory = NewsHistory.ThisWeek;
                 ManualDays = 30;
 
@@ -278,6 +318,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowTable = true;
                 TableMode = NewsTableMode.ThisWeek;
                 TimeZoneSelection = NewsTimeZone.NewYork;
+                Use12HourTimes = false;
                 TablePosition = NewsTableCorner.BottomRight;
                 HeaderTextColor = Rgb(0xDE, 0xE1, 0xE9);
                 HeaderBackColor = Rgb(0x28, 0x3C, 0x70);
@@ -285,6 +326,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 RowPastTextColor = Rgb(0x78, 0x7B, 0x86);
                 RowBackColor = Rgb(0xDE, 0xE1, 0xE9);
                 ShowTableBorder = true;
+                AutoBorderColor = true;
+                BorderColor = Rgb(0x00, 0x00, 0x00);
             }
             else if (State == State.DataLoaded)
             {
@@ -598,7 +641,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             rowTextBrushDx = WpfToDx(RowTextColor, 255);
             rowPastTextBrushDx = WpfToDx(RowPastTextColor, 255);
             rowBackBrushDx = WpfToDx(RowBackColor, 230);
-            borderBrushDx = SolidDx(0, 0, 0, 255);
+            borderBrushDx = WpfToDx(AutoBorderColor ? ChartControl.Properties.ChartText : BorderColor, 255);
         }
 
         private static string ImpactLetter(NewsImpact impact)
@@ -633,6 +676,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             RenderTarget.AntialiasMode = SharpDX.Direct2D1.AntialiasMode.PerPrimitive;
 
             DateTime now = PlatformNow();
+            DateTime displayToday = ToDisplayZone(now).Date;
             HashSet<string> currencies = ActiveCurrencies();
 
             // Impact and currency filter both surfaces; the chart-history cutoff
@@ -651,9 +695,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 textFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
                 if (ShowLines || ShowLabels)
-                    DrawEventLines(chartControl, visible, now, textFormat);
+                    DrawEventLines(chartControl, chartScale, visible, now, displayToday, textFormat);
                 if (ShowTable)
-                    DrawEventTable(visible, now, textFormat);
+                    DrawEventTable(visible, now, displayToday, textFormat);
             }
             finally
             {
@@ -661,8 +705,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private void DrawEventLines(ChartControl chartControl, List<NewsEvent> visible, DateTime now,
-            SharpDX.DirectWrite.TextFormat textFormat)
+        // The calendar's day starts at midnight on the clock it is read in (New
+        // York by default), not at the platform's midnight.
+        private DateTime ToDisplayZone(DateTime platformTime)
+        {
+            TimeZoneInfo printZone = displayZone ?? Core.Globals.GeneralOptions.TimeZoneInfo;
+            return TimeZoneInfo.ConvertTime(platformTime, Core.Globals.GeneralOptions.TimeZoneInfo, printZone);
+        }
+
+        private DateTime FromDisplayZone(DateTime displayTime)
+        {
+            TimeZoneInfo printZone = displayZone ?? Core.Globals.GeneralOptions.TimeZoneInfo;
+            return TimeZoneInfo.ConvertTime(displayTime, printZone, Core.Globals.GeneralOptions.TimeZoneInfo);
+        }
+
+        private void DrawEventLines(ChartControl chartControl, ChartScale chartScale, List<NewsEvent> visible,
+            DateTime now, DateTime displayToday, SharpDX.DirectWrite.TextFormat textFormat)
         {
             float panelLeft = ChartPanel.X;
             float panelRight = ChartPanel.X + ChartPanel.W;
@@ -670,15 +728,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             float panelBottom = ChartPanel.Y + ChartPanel.H;
 
             // How far back past releases keep their lines; future ones always draw.
-            DateTime historyCutoff;
+            DateTime displayCutoff;
             switch (ChartHistory)
             {
-                case NewsHistory.Today: historyCutoff = now.Date; break;
-                case NewsHistory.ManualDays: historyCutoff = now.Date.AddDays(-ManualDays); break;
+                case NewsHistory.Today: displayCutoff = displayToday; break;
+                case NewsHistory.ManualDays: displayCutoff = displayToday.AddDays(-ManualDays); break;
                 default: // this week, back to Monday
-                    historyCutoff = now.Date.AddDays(-(((int)now.Date.DayOfWeek + 6) % 7));
+                    displayCutoff = displayToday.AddDays(-(((int)displayToday.DayOfWeek + 6) % 7));
                     break;
             }
+            DateTime historyCutoff = FromDisplayZone(displayCutoff);
 
             DateTime lastBarTime = Bars.GetTime(Bars.Count - 1);
             double lastBarX = chartControl.GetXByTime(lastBarTime);
@@ -688,9 +747,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double pixelsPerMs = paceMs > 0 ? (lastBarX - chartControl.GetXByTime(paceBackTime)) / paceMs : 0;
 
             // Releases sharing a minute (a data drop) would print their captions
-            // on top of one another; same-X captions stack downward instead.
+            // on top of one another; same-X captions stack away from the candle.
             double previousX = double.MinValue;
-            float captionY = panelTop + 4;
+            float captionY = 0;
 
             foreach (NewsEvent newsEvent in visible)
             {
@@ -715,10 +774,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     Core.Globals.DirectWriteFactory, caption, textFormat, 600, textFormat.FontSize);
                 try
                 {
-                    captionY = Math.Abs(x - previousX) < 2 ? captionY + layout.Metrics.Height + 2 : panelTop + 4;
+                    float captionHeight = layout.Metrics.Height;
+                    bool below = LabelPosition == NewsLabelPosition.Below;
+                    float anchorY = below ? panelBottom - captionHeight - 4 : panelTop + 4;
+                    bool hasBar = newsEvent.ChartZoneTime <= lastBarTime;
+                    if (hasBar)
+                    {
+                        int barIndex = Bars.GetBar(newsEvent.ChartZoneTime);
+                        if (LabelPosition == NewsLabelPosition.Auto)
+                            below = Bars.GetClose(barIndex) >= Bars.GetOpen(barIndex);
+                        anchorY = below
+                            ? chartScale.GetYByValue(Bars.GetLow(barIndex)) + 4
+                            : chartScale.GetYByValue(Bars.GetHigh(barIndex)) - captionHeight - 4;
+                    }
+                    bool stacked = Math.Abs(x - previousX) < 2;
+                    if (!stacked)
+                        captionY = anchorY;
+                    else if (hasBar == below)
+                        captionY += captionHeight + 2;
+                    else
+                        captionY -= captionHeight + 2;
+
+                    SharpDX.Direct2D1.Brush captionBrush = impactTextBrushes[(int)newsEvent.Impact];
                     RenderTarget.DrawTextLayout(
                         new SharpDX.Vector2((float)x + 4, captionY),
-                        layout, impactTextBrushes[(int)newsEvent.Impact], SharpDX.Direct2D1.DrawTextOptions.NoSnap);
+                        layout, captionBrush, SharpDX.Direct2D1.DrawTextOptions.NoSnap);
+                    if (ShowLabelOutline)
+                        RenderTarget.DrawRectangle(
+                            new SharpDX.RectangleF((float)x + 2, captionY - 1, layout.Metrics.Width + 4, captionHeight + 2),
+                            captionBrush, 1);
                 }
                 finally
                 {
@@ -728,7 +812,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private void DrawEventTable(List<NewsEvent> visible, DateTime now, SharpDX.DirectWrite.TextFormat textFormat)
+        private void DrawEventTable(List<NewsEvent> visible, DateTime now, DateTime displayToday,
+            SharpDX.DirectWrite.TextFormat textFormat)
         {
             const float CellPadX = 6f;
             const float CellPadY = 3f;
@@ -736,7 +821,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             List<NewsEvent> rows = new List<NewsEvent>();
             foreach (NewsEvent newsEvent in visible)
-                if (TableMode == NewsTableMode.ThisWeek || newsEvent.ChartZoneTime.Date == now.Date)
+                if (TableMode == NewsTableMode.ThisWeek || ToDisplayZone(newsEvent.ChartZoneTime).Date == displayToday)
                     rows.Add(newsEvent);
             if (rows.Count == 0)
                 return;
@@ -757,13 +842,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // Times print in the selected zone (NY by default); the chart's
             // line placement stays in the axis's own zone.
-            TimeZoneInfo printZone = displayZone ?? Core.Globals.GeneralOptions.TimeZoneInfo;
+            string timeFormat = Use12HourTimes ? "ddd h:mm tt" : "ddd HH:mm";
             List<string[]> cells = new List<string[]>();
             foreach (NewsEvent newsEvent in rows)
                 cells.Add(new[]
                 {
-                    TimeZoneInfo.ConvertTime(newsEvent.ChartZoneTime, Core.Globals.GeneralOptions.TimeZoneInfo, printZone)
-                        .ToString("ddd HH:mm", CultureInfo.InvariantCulture),
+                    ToDisplayZone(newsEvent.ChartZoneTime).ToString(timeFormat, CultureInfo.InvariantCulture),
                     newsEvent.Currency,
                     ImpactLetter(newsEvent.Impact),
                     newsEvent.Title
@@ -790,10 +874,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 foreach (float width in columnWidths)
                     tableWidth += width;
                 float tableHeight = (rows.Count + 1) * rowHeight;
-                bool onRight = TablePosition == NewsTableCorner.TopRight || TablePosition == NewsTableCorner.BottomRight;
-                bool onTop = TablePosition == NewsTableCorner.TopLeft || TablePosition == NewsTableCorner.TopRight;
-                float tableX = onRight ? ChartPanel.X + ChartPanel.W - tableWidth - Margin : ChartPanel.X + Margin;
-                float tableY = onTop ? ChartPanel.Y + Margin : ChartPanel.Y + ChartPanel.H - tableHeight - Margin;
+                float leftX = ChartPanel.X + Margin;
+                float centerX = ChartPanel.X + (ChartPanel.W - tableWidth) / 2;
+                float rightX = ChartPanel.X + ChartPanel.W - tableWidth - Margin;
+                float topY = ChartPanel.Y + Margin;
+                float middleY = ChartPanel.Y + (ChartPanel.H - tableHeight) / 2;
+                float bottomY = ChartPanel.Y + ChartPanel.H - tableHeight - Margin;
+                float tableX;
+                float tableY;
+                switch (TablePosition)
+                {
+                    case NewsTableCorner.TopLeft: tableX = leftX; tableY = topY; break;
+                    case NewsTableCorner.TopCenter: tableX = centerX; tableY = topY; break;
+                    case NewsTableCorner.TopRight: tableX = rightX; tableY = topY; break;
+                    case NewsTableCorner.MiddleLeft: tableX = leftX; tableY = middleY; break;
+                    case NewsTableCorner.MiddleCenter: tableX = centerX; tableY = middleY; break;
+                    case NewsTableCorner.MiddleRight: tableX = rightX; tableY = middleY; break;
+                    case NewsTableCorner.BottomLeft: tableX = leftX; tableY = bottomY; break;
+                    case NewsTableCorner.BottomCenter: tableX = centerX; tableY = bottomY; break;
+                    default: tableX = rightX; tableY = bottomY; break;
+                }
 
                 RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY, tableWidth, rowHeight), headerBackBrushDx);
                 RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY + rowHeight, tableWidth, tableHeight - rowHeight), rowBackBrushDx);
