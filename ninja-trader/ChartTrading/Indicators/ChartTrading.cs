@@ -156,6 +156,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Account subscribedAccount;
         private Series<double> atrSeries;
         private double currentAtr;
+        // The ATR stop of the latest click, so an R-based breakeven trigger
+        // measures against the stop the position was actually opened with.
+        private int lastClickAtrStopTicks;
 
         // Position cache fed by Account.PositionUpdate, the way ABCompleteChartTrader
         // tracks it; read on the market-data thread by the auto-breakeven trigger.
@@ -366,8 +369,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Range(1, 10000)]
         [Display(Name = "Auto breakeven trigger (ticks)", Order = 7, GroupName = "3. Trading",
-                 Description = "How many ticks in profit before the automatic move fires.")]
+                 Description = "How many ticks in profit before the automatic move fires. Used with tick distances.")]
         public int AutoBreakevenTriggerTicks { get; set; }
+
+        [Range(0.01, double.MaxValue)]
+        [Display(Name = "Auto breakeven trigger (R)", Order = 7, GroupName = "3. Trading",
+                 Description = "With ATR distances, how many R in profit before the automatic move fires: " +
+                               "1 means price has run one stop distance in the position's favor.")]
+        public double AutoBreakevenTriggerR { get; set; }
 
         [Range(-100, 1000)]
         [Display(Name = "Breakeven offset (ticks)", Order = 8, GroupName = "3. Trading",
@@ -447,6 +456,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 OrderTimeInForce = ChartTradingTimeInForce.Day;
                 AutoBreakevenEnabled = false;
                 AutoBreakevenTriggerTicks = 30;
+                AutoBreakevenTriggerR = 1;
                 BreakevenOffsetTicks = 0;
                 TagPosition = ChartTradingTagPosition.Center;
                 TagMargin = 40;
@@ -834,6 +844,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
+            if (BracketDistance == ChartTradingBracketDistance.Atr)
+                lastClickAtrStopTicks = stopTicks[0];
             int[] percents = { Percent1, Percent2, Percent3 };
 
             bool[] effectiveEnabled;
@@ -1513,7 +1525,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // The offset has to land inside the market when the move fires, or the
             // clamp would park the stop at the last price; require at least one tick
             // of room beyond it before triggering.
-            int triggerTicks = Math.Max(AutoBreakevenTriggerTicks, BreakevenOffsetTicks + 1);
+            int triggerTicks = Math.Max(AutoBreakevenTriggerTickCount(), BreakevenOffsetTicks + 1);
             double trigger = triggerTicks * master.TickSize;
             double price = marketDataUpdate.Price;
             bool reached = position == MarketPosition.Long
@@ -1986,6 +1998,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 atrSeries[0] = k * trueRange + (1 - k) * atrSeries[1];
             }
             currentAtr = atrSeries[0];
+        }
+
+        // With ATR distances the trigger is an R multiple of the stop distance:
+        // the latest click's ATR stop, or the current ATR stop for a position
+        // opened some other way. Tick distances keep the fixed tick trigger.
+        private int AutoBreakevenTriggerTickCount()
+        {
+            if (BracketDistance != ChartTradingBracketDistance.Atr)
+                return AutoBreakevenTriggerTicks;
+
+            int stopTicks = lastClickAtrStopTicks;
+            if (stopTicks <= 0)
+            {
+                int[] currentStopTicks;
+                int[] unusedTargetTicks;
+                if (!ResolveBracketTicks(out currentStopTicks, out unusedTargetTicks))
+                    return AutoBreakevenTriggerTicks;
+                stopTicks = currentStopTicks[0];
+            }
+            return Math.Max(1, (int)Math.Round(stopTicks * AutoBreakevenTriggerR, MidpointRounding.AwayFromZero));
         }
 
         // False when ATR distances are on but no ATR exists yet: the caller must

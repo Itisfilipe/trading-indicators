@@ -68,7 +68,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   3R). The ATR settings default to the Candle Countdown & Position Sizer's
   (1.5 x ATR, length 5, exponential), so the bracket uses the stop the
   sizer sized the lot for — keep both indicators' ATR settings equal if
-  you change them. Distances are taken at click time.
+  you change them. Distances are taken at click time. Auto breakeven then
+  triggers in R too ("Auto breakeven trigger (R)", default 1R: once price
+  has run one stop distance in your favor), measured against the latest
+  click's ATR stop.
 - Entry always trades the ChartTrader quantity outright (never multiplied by
   pair count); each enabled pair gets its percentage share of that quantity,
   split into whole lots as evenly as the math allows (e.g. 4 lots at

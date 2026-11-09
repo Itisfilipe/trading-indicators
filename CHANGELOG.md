@@ -92,7 +92,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ### ChartTrading (changed)
 - New "Distances" setting: ATR mode places every stop at a multiple of ATR
   and each target at an R multiple of that stop (defaults 1.5 x ATR, 1R,
-  2R, 3R), matching the stop the position sizer uses to size the lot.
+  2R, 3R), matching the stop the position sizer uses to size the lot. In
+  ATR mode auto breakeven triggers at an R multiple of that stop (new
+  "Auto breakeven trigger (R)", default 1R) instead of a fixed tick count.
 - Click-to-trade now starts OFF whenever the indicator is added, reloaded
   or recompiled; click the ON/OFF button to arm it.
 
