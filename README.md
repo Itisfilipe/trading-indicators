@@ -421,10 +421,6 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   width and dash.
 - Lines cover the visible price range and follow scrolling and zooming;
   "Maximum lines" caps how many draw at once.
-- Optional price labels, switched per tier (all off by default):
-  the price printed just above its line in the line's color, no
-  background, at the right or left end. The price axis does not mark these
-  levels.
 - Use: add to the chart; set the step and the two tier intervals in price
   units for the instrument you trade.
 
@@ -540,8 +536,6 @@ chart.
   style, width and color.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
-- No price labels: TradingView already bolds these levels on the price
-  axis.
 ## Chart palette
 
 The default colors of the NinjaTrader and TradingView tools follow one

@@ -19,11 +19,6 @@ input
   Destaque_A_Cada(100.0);
   Maior_A_Cada(1000.0);
   Niveis_Acima_Abaixo(40);
-  Precos_Regular(false);         // Escreve o preco nas linhas de cada tipo
-  Precos_Destaque(false);
-  Precos_Maior(false);
-  Precos_A_Esquerda(false);      // false = preco na ponta direita da linha
-  Casas_Decimais(0);
 
   Estilo_Regular(2);             // 0=solido, 1=traco longo, 2=traco curto
   Espessura_Regular(1);
@@ -37,8 +32,6 @@ var
   nCenter, nWantLow, nWantHigh, nFrom, nTo, i : Integer;
   nDrawnLow, nDrawnHigh : Integer;
   fLevel, fTolerance : Float;
-  sLabel : String;
-  nTextPos : Integer;
   bAlreadyDrawn, bMajor, bHighlight : Boolean;
 
 begin
@@ -58,10 +51,6 @@ begin
     if (nDrawnLow = 0) or (nDrawnLow[1] < nDrawnLow) then
       nDrawnLow := nDrawnLow[1];
   end;
-
-  nTextPos := tpTopRight;
-  if Precos_A_Esquerda then
-    nTextPos := tpTopLeft;
 
   if LastBarOnChart and (Passo > 0) then begin
     nCenter := Round(Close / Passo);
@@ -93,17 +82,12 @@ begin
         if Destaque_A_Cada > 0 then
           bHighlight := Abs(fLevel - Round(fLevel / Destaque_A_Cada) * Destaque_A_Cada) <= fTolerance;
 
-        sLabel := "";
-        if (bMajor and Precos_Maior) or ((not bMajor) and bHighlight and Precos_Destaque)
-           or ((not bMajor) and (not bHighlight) and Precos_Regular) then
-          sLabel := FloatToString(fLevel, Casas_Decimais);
-
         if bMajor then
-          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, sLabel, 8, nTextPos)
+          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, "")
         else if bHighlight then
-          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, sLabel, 8, nTextPos)
+          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, "")
         else
-          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, sLabel, 8, nTextPos);
+          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, "");
       end;
     end;
 
