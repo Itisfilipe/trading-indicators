@@ -75,6 +75,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   distance, or money value.
 - "ChartTrading ON/OFF" button (mounted in the ChartTrader panel, floating if
   ChartTrader is hidden): green = clicks place orders, gray = disabled.
+  Starts OFF every time the indicator is added, reloaded or recompiled.
 - "Stops to BE" button: moves every working protective stop on the
   instrument — whatever tool placed it — to the position's average fill
   price plus an offset, clamped inside the market; survives
@@ -247,9 +248,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Risk sized as a fixed dollar amount or a percent of account — the
   settings panel only shows the fields of the selected mode; stop
   distance is a multiple of ATR (EMA or Wilder smoothing); the Lot row is
-  the contract count that keeps the loss at the risk budget if that stop is
-  hit, from the instrument's point value. Percent mode adds a Stop Cash row
-  with the dollars actually at risk at the rounded lot count.
+  the largest whole contract count that keeps the loss within the risk
+  budget if that stop is hit, from the instrument's point value (0 when
+  even one contract risks more). Percent mode adds a Stop Cash row with
+  the dollars actually at risk at that lot count.
 - Clock timezone selectable (Exchange, UTC, New York, London, Tokyo,
   Sydney); Exchange means the instrument's own trading-hours zone. Table
   corner, margin from the viewport edges, and colors configurable; the
@@ -421,7 +423,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - On-chart table: current time and live countdowns to the next candle close
   on three configurable timeframes (default 1/5/15 minutes, each toggleable).
 - Position sizer: turns account risk and stop distance into a contract/share
-  quantity.
+  quantity, rounded down so the loss stays within the risk budget.
 - The ATR and stop-distance rows can each be switched off for a tighter
   table.
 

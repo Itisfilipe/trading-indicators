@@ -123,7 +123,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition toggleButtonRow;
         private bool buttonInChartTrader;
-        private bool tradingEnabled = true;
+        private bool tradingEnabled = false;
 
         // Tag text picks black or white per level for contrast against the tag fill.
         private SharpDX.Direct2D1.Brush textWhiteBrushDx;

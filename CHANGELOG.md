@@ -47,6 +47,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   color, width and dash: every 50 (regular), every 100 (highlighted) and
   every 1000 (major) by default.
 
+### ChartTrading (changed)
+- Click-to-trade now starts OFF whenever the indicator is added, reloaded
+  or recompiled; click the ON/OFF button to arm it.
+
+### Candle Countdown & Position Sizer (changed, NinjaTrader and TradingView)
+- The Lot row rounds down instead of to the nearest contract, so the loss
+  at the stop never exceeds the risk budget (1.5 shows 1; under 1 shows 0).
+
 ### ChartTrading (fixed)
 - After switching the account in ChartTrader, auto breakeven follows the
   new account as soon as the pointer moves over the chart, instead of

@@ -450,9 +450,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AddCountdownRow(rows, Countdown3Enabled, Countdown3Minutes);
             }
 
-            // Away-from-zero to match Pine's math.round; .NET's default banker's
-            // rounding would show 0 contracts where the original shows 1.
-            int roundedLot = double.IsNaN(lotSize) ? 0 : (int)Math.Round(lotSize, MidpointRounding.AwayFromZero);
+            // Rounded down so the stop never risks more than the budget.
+            int roundedLot = double.IsNaN(lotSize) ? 0 : (int)Math.Floor(lotSize);
             rows.Add(new TableRow { Label = "Lot", Value = double.IsNaN(lotSize) ? "-" : roundedLot.ToString() });
             if (ShowAtrRow)
                 rows.Add(new TableRow { Label = "ATR", Value = master.FormatPrice(atr) });
