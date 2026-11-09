@@ -345,7 +345,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<PendingLabel> labels = new List<PendingLabel>();
             try
             {
-
                 // The execution (average price) line: live unrealized P&L in ticks and
                 // money, so the entry line answers "where am I" without the trader
                 // toggling the platform's own P&L display.
