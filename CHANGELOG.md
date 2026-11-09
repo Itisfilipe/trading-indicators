@@ -5,6 +5,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### ICT Killzones (changed)
+- Each killzone's high and low now draw as lines in the zone's color,
+  starting at the candle that made them and running right until a later
+  candle trades through them; a mitigated line stops at that candle.
+  Only candles after the window closes count. "Show Session High/Low" (on
+  by default), "High/Low Line Width" and "High/Low Line Style" control them.
+
 ### Profit Chart indicators (fixed)
 - MACD Histogram: with the outline line off, the zero line still shows.
 - Tape Reading: light theme reference lines are dark gray instead of white,

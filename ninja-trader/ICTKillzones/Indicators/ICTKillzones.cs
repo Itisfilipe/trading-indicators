@@ -44,6 +44,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double Low;
             public DateTime StartChartTime;
             public DateTime LastBarChartTime;
+            public DateTime HighChartTime;
+            public DateTime LowChartTime;
+            // DateTime.MinValue while the level is still unmitigated.
+            public DateTime HighMitigatedChartTime;
+            public DateTime LowMitigatedChartTime;
         }
 
         // One parsed zone, keyed to the day the window STARTS on. EndMinutes
@@ -56,6 +61,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public bool Wraps;
             public System.Windows.Media.Brush Color;
             public SharpDX.Direct2D1.Brush BrushDx;
+            public SharpDX.Direct2D1.Brush LineBrushDx;
             public List<ZoneRecord> Records = new List<ZoneRecord>();
         }
 
@@ -63,6 +69,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private readonly object sync = new object();
         private readonly List<ZoneSlot> slots = new List<ZoneSlot>();
         private TimeZoneInfo displayZone;
+        private Stroke levelDashCarrier;
 
         #region Properties
 
@@ -78,6 +85,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 100)]
         [Display(Name = "Fill Opacity (%)", GroupName = "1. General", Order = 3)]
         public int FillOpacity { get; set; }
+
+        [Display(Name = "Show Session High/Low", GroupName = "1. General", Order = 4,
+                 Description = "A line from each session's high and low, in the zone's color, running right until a later bar trades through it.")]
+        public bool ShowSessionLevels { get; set; }
+
+        [Range(1, 5)]
+        [Display(Name = "High/Low Line Width", GroupName = "1. General", Order = 5)]
+        public int LevelLineWidth { get; set; }
+
+        [Display(Name = "High/Low Line Style", GroupName = "1. General", Order = 6)]
+        public DashStyleHelper LevelDashStyle { get; set; }
 
         [Display(Name = "Zone 1", GroupName = "2. Zones", Order = 10)]
         public bool Zone1Enabled { get; set; }
@@ -241,6 +259,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 TimeZoneSelection = KillzoneTimeZone.NewYork;
                 DaysToShow = 5;
                 FillOpacity = 15;
+                ShowSessionLevels = true;
+                LevelLineWidth = 1;
+                LevelDashStyle = DashStyleHelper.Solid;
 
                 // The playbook's killzones for index futures, New York time; the
                 // session blocks fill the remaining slots but start off.
@@ -370,6 +391,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     slot.Records.RemoveAll(r => (tzTime.Date - r.Day).TotalDays > DaysToShow
                         && tzTime > r.Day.AddMinutes(slot.EndMinutes));
 
+                // A level made inside the window is only mitigated by bars after
+                // the window closes; the session's own later bars built it.
+                foreach (ZoneSlot slot in slots)
+                    foreach (ZoneRecord record in slot.Records)
+                    {
+                        if (tzTime <= record.Day.AddMinutes(slot.EndMinutes))
+                            continue;
+                        if (record.HighMitigatedChartTime == DateTime.MinValue && High[0] >= record.High)
+                            record.HighMitigatedChartTime = chartZoneTime;
+                        if (record.LowMitigatedChartTime == DateTime.MinValue && Low[0] <= record.Low)
+                            record.LowMitigatedChartTime = chartZoneTime;
+                    }
+
                 foreach (ZoneSlot slot in slots)
                 {
                     // A window is under 24 hours, so a bar can sit in at most one
@@ -400,14 +434,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     High = High[0],
                     Low = Low[0],
                     StartChartTime = leftEdgeChartTime,
-                    LastBarChartTime = chartZoneTime
+                    LastBarChartTime = chartZoneTime,
+                    HighChartTime = chartZoneTime,
+                    LowChartTime = chartZoneTime
                 };
                 slot.Records.Add(record);
             }
             else
             {
-                record.High = Math.Max(record.High, High[0]);
-                record.Low = Math.Min(record.Low, Low[0]);
+                if (High[0] > record.High)
+                {
+                    record.High = High[0];
+                    record.HighChartTime = chartZoneTime;
+                }
+                if (Low[0] < record.Low)
+                {
+                    record.Low = Low[0];
+                    record.LowChartTime = chartZoneTime;
+                }
                 record.LastBarChartTime = chartZoneTime;
             }
             return true;
@@ -428,7 +472,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         slot.BrushDx.Dispose();
                         slot.BrushDx = null;
                     }
+                    if (slot.LineBrushDx != null)
+                    {
+                        slot.LineBrushDx.Dispose();
+                        slot.LineBrushDx = null;
+                    }
                 }
+            levelDashCarrier = null;
         }
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
@@ -443,10 +493,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             float panelTop = ChartPanel.Y;
             float panelBottom = ChartPanel.Y + ChartPanel.H;
 
+            // Lends its StrokeStyle to the level lines; the zone brushes carry the color.
+            if (levelDashCarrier == null)
+                levelDashCarrier = new Stroke(Brushes.Black, LevelDashStyle, LevelLineWidth) { RenderTarget = RenderTarget };
+
             lock (sync)
                 foreach (ZoneSlot slot in slots)
                 {
-                    // Fill brushes are built lazily: the render target can change
+                    // Brushes are built lazily: the render target can change
                     // before the slots exist, and the slots before the target.
                     if (slot.BrushDx == null)
                     {
@@ -454,6 +508,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         System.Windows.Media.Color c = solid != null ? solid.Color : Colors.Gray;
                         slot.BrushDx = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget,
                             new SharpDX.Color(c.R, c.G, c.B, (byte)(255 * FillOpacity / 100)));
+                        slot.LineBrushDx = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget,
+                            new SharpDX.Color(c.R, c.G, c.B, (byte)255));
                     }
 
                     foreach (ZoneRecord record in slot.Records)
@@ -465,12 +521,36 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         // zoomed-in chart does not paint over its neighbors.
                         float y1 = Math.Max(chartScale.GetYByValue(record.High), panelTop);
                         float y2 = Math.Min(chartScale.GetYByValue(record.Low), panelBottom);
-                        if (x2 <= x1 || y2 <= y1)
-                            continue;
+                        if (x2 > x1 && y2 > y1)
+                            RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, y1, x2 - x1, y2 - y1), slot.BrushDx);
 
-                        RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, y1, x2 - x1, y2 - y1), slot.BrushDx);
+                        if (ShowSessionLevels)
+                        {
+                            DrawLevelLine(chartControl, chartScale, record.High, record.HighChartTime, record.HighMitigatedChartTime, slot.LineBrushDx);
+                            DrawLevelLine(chartControl, chartScale, record.Low, record.LowChartTime, record.LowMitigatedChartTime, slot.LineBrushDx);
+                        }
                     }
                 }
+        }
+
+        // Runs from the bar that set the level to the bar that traded through
+        // it, or to the panel's right edge while it is still unmitigated.
+        private void DrawLevelLine(ChartControl chartControl, ChartScale chartScale, double price,
+            DateTime fromChartTime, DateTime mitigatedChartTime, SharpDX.Direct2D1.Brush brush)
+        {
+            float panelLeft = ChartPanel.X;
+            float panelRight = ChartPanel.X + ChartPanel.W;
+            float x1 = Math.Max(chartControl.GetXByTime(fromChartTime), panelLeft);
+            float x2 = mitigatedChartTime == DateTime.MinValue
+                ? panelRight
+                : Math.Min(chartControl.GetXByTime(mitigatedChartTime), panelRight);
+            if (x2 <= x1)
+                return;
+            float y = chartScale.GetYByValue(price);
+            if (y < ChartPanel.Y || y > ChartPanel.Y + ChartPanel.H)
+                return;
+            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
+                brush, LevelLineWidth, levelDashCarrier.StrokeStyle);
         }
     }
 }
