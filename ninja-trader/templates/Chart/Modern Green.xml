@@ -412,7 +412,7 @@
           <ZOrder>10006</ZOrder>
           <TimeZoneSelection>NewYork</TimeZoneSelection>
           <DaysToShow>15</DaysToShow>
-          <FillOpacity>10</FillOpacity>
+          <FillOpacity>50</FillOpacity>
           <ShowSessionLevels>true</ShowSessionLevels>
           <LevelLineWidth>1</LevelLineWidth>
           <LevelDashStyle>Solid</LevelDashStyle>
