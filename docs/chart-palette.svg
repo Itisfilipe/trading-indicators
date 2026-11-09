@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="884" height="480" viewBox="0 0 884 480" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
-<rect width="884" height="480" rx="14" fill="#1F2633"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="884" height="548" viewBox="0 0 884 548" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="884" height="548" rx="14" fill="#1F2633"/>
 <text x="32" y="40" font-size="20" font-weight="600" fill="#F3F4F6">Chart palette</text>
 <text x="32" y="58" font-size="12.5" fill="#9CA3AF">Off-white chart for long sessions: muted blue up, slate down at equal brightness, amber zones.</text>
 <rect x="32" y="72" width="820" height="300" rx="8" fill="#F8F9FB"/>
@@ -118,21 +118,37 @@
 <line x1="32" y1="128.4" x2="776" y2="128.4" stroke="#5F6773" stroke-dasharray="3 3"/>
 <rect x="778" y="119.4" width="68" height="18" rx="3" fill="#374151"/>
 <text x="784" y="132.4" font-size="11" fill="#FFFFFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">21,336.00</text>
-<rect x="32.0" y="398" width="24" height="24" rx="5" fill="#6995D3" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="66.0" y="415" font-size="12.5" fill="#E5E7EB">Up body</text>
-<rect x="241.0" y="398" width="24" height="24" rx="5" fill="#3E68A3" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="275.0" y="415" font-size="12.5" fill="#E5E7EB">Up outline + wick</text>
-<rect x="450.0" y="398" width="24" height="24" rx="5" fill="#8F959E" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="484.0" y="415" font-size="12.5" fill="#E5E7EB">Down body</text>
-<rect x="659.0" y="398" width="24" height="24" rx="5" fill="#5F6773" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="693.0" y="415" font-size="12.5" fill="#E5E7EB">Down outline + wick</text>
-<rect x="32.0" y="444" width="24" height="24" rx="5" fill="#374151" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="66.0" y="461" font-size="12.5" fill="#E5E7EB">Text, strong lines</text>
-<rect x="241.0" y="444" width="24" height="24" rx="5" fill="#D1D5DB" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="275.0" y="461" font-size="12.5" fill="#E5E7EB">Faint lines</text>
-<rect x="450.0" y="444" width="24" height="24" rx="5" fill="#F8F9FB"/>
-<rect x="450.0" y="444" width="24" height="24" rx="5" fill="#B8862B" fill-opacity="0.12" stroke="#B8862B"/>
-<text x="484.0" y="461" font-size="12.5" fill="#E5E7EB">Zones (12% fill)</text>
-<rect x="659.0" y="444" width="24" height="24" rx="5" fill="#F8F9FB" stroke="#FFFFFF" stroke-opacity="0.25"/>
-<text x="693.0" y="461" font-size="12.5" fill="#E5E7EB">Background</text>
+<rect x="32.0" y="398" width="44" height="44" rx="7" fill="#6995D3" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="88.0" y="411" font-size="12.5" font-weight="600" fill="#F3F4F6">Up body</text>
+<text x="88.0" y="427" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#6995D3</text>
+<text x="88.0" y="442" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 105, 149, 211</text>
+<rect x="241.0" y="398" width="44" height="44" rx="7" fill="#3E68A3" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="297.0" y="411" font-size="12.5" font-weight="600" fill="#F3F4F6">Up outline + wick</text>
+<text x="297.0" y="427" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#3E68A3</text>
+<text x="297.0" y="442" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 62, 104, 163</text>
+<rect x="450.0" y="398" width="44" height="44" rx="7" fill="#8F959E" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="506.0" y="411" font-size="12.5" font-weight="600" fill="#F3F4F6">Down body</text>
+<text x="506.0" y="427" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#8F959E</text>
+<text x="506.0" y="442" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 143, 149, 158</text>
+<rect x="659.0" y="398" width="44" height="44" rx="7" fill="#5F6773" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="715.0" y="411" font-size="12.5" font-weight="600" fill="#F3F4F6">Down outline + wick</text>
+<text x="715.0" y="427" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#5F6773</text>
+<text x="715.0" y="442" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 95, 103, 115</text>
+<rect x="32.0" y="468" width="44" height="44" rx="7" fill="#374151" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="88.0" y="481" font-size="12.5" font-weight="600" fill="#F3F4F6">Text, strong lines</text>
+<text x="88.0" y="497" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#374151</text>
+<text x="88.0" y="512" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 55, 65, 81</text>
+<rect x="241.0" y="468" width="44" height="44" rx="7" fill="#D1D5DB" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="297.0" y="481" font-size="12.5" font-weight="600" fill="#F3F4F6">Faint lines</text>
+<text x="297.0" y="497" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#D1D5DB</text>
+<text x="297.0" y="512" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 209, 213, 219</text>
+<rect x="450.0" y="468" width="44" height="44" rx="7" fill="#F8F9FB"/>
+<rect x="450.0" y="468" width="44" height="44" rx="7" fill="#B8862B" fill-opacity="0.12" stroke="#B8862B"/>
+<text x="506.0" y="481" font-size="12.5" font-weight="600" fill="#F3F4F6">Zones (12% fill)</text>
+<text x="506.0" y="497" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#B8862B</text>
+<text x="506.0" y="512" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 184, 134, 43</text>
+<rect x="659.0" y="468" width="44" height="44" rx="7" fill="#F8F9FB" stroke="#FFFFFF" stroke-opacity="0.25"/>
+<text x="715.0" y="481" font-size="12.5" font-weight="600" fill="#F3F4F6">Background</text>
+<text x="715.0" y="497" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">#F8F9FB</text>
+<text x="715.0" y="512" font-size="11.5" fill="#9CA3AF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">rgb 248, 249, 251</text>
 </svg>
