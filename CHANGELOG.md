@@ -49,7 +49,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The table draws inside the indicator's own panel instead of at the top of
   the chart.
 
-### Psych Levels (changed, all platforms)
+### Psych Levels (changed, NinjaTrader and Profit Chart)
 - Price labels: each level's price printed just above its line in the
   line's color, with no background, at the right (default) or left end.
   Switch them per tier; all start off.

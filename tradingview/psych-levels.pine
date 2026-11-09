@@ -1,5 +1,5 @@
 //@version=6
-indicator("Psych Levels", overlay = true, max_lines_count = 500, max_boxes_count = 500)
+indicator("Psych Levels", overlay = true, max_lines_count = 500)
 
 // Settings groups
 const string GROUP_LEVELS = "Level Calculation"
@@ -7,7 +7,6 @@ const string GROUP_REGULAR = "Regular Levels"
 const string GROUP_HIGHLIGHT = "Highlighted Levels"
 const string GROUP_MAJOR = "Major Levels"
 const string GROUP_DISPLAY = "Display"
-const string GROUP_LABELS = "Price Labels"
 
 // Level calculation
 stepSize = input.float(
@@ -72,11 +71,6 @@ majorColor = input.color(#374151, "Line color", group = GROUP_MAJOR)
 // Display
 maxLines = input.int(250, "Maximum lines", minval = 1, maxval = 500, group = GROUP_DISPLAY)
 
-// Price labels
-showRegularPrices = input.bool(false, "Regular levels", group = GROUP_LABELS)
-showHighlightPrices = input.bool(false, "Highlighted levels", group = GROUP_LABELS)
-showMajorPrices = input.bool(false, "Major levels", group = GROUP_LABELS)
-labelPosition = input.string("Right", "Position", options = ["Right", "Center", "Left"], group = GROUP_LABELS)
 
 toLineStyle(string styleName) =>
     switch styleName
@@ -92,14 +86,9 @@ isMultipleOf(float price, float every) =>
 string lineStyle = toLineStyle(styleInput)
 string highlightStyle = toLineStyle(highlightStyleInput)
 string majorStyle = toLineStyle(majorStyleInput)
-string labelHalign = switch labelPosition
-    "Left" => text.align_left
-    "Center" => text.align_center
-    => text.align_right
 
 // Store drawn lines and the visible price range
 var array<line> levelLines = array.new<line>()
-var array<box> levelLabels = array.new<box>()
 var float visibleLow = na
 var float visibleHigh = na
 
@@ -113,9 +102,6 @@ if barstate.islast
     for levelLine in levelLines
         line.delete(levelLine)
     array.clear(levelLines)
-    for levelLabel in levelLabels
-        box.delete(levelLabel)
-    array.clear(levelLabels)
 
     if not na(visibleLow) and not na(visibleHigh)
         int firstIndex = int(math.ceil(visibleLow / stepSize)) - offsetLevels
@@ -131,17 +117,14 @@ if barstate.islast
                 color currentColor = lineColor
                 string currentStyle = lineStyle
                 int currentWidth = lineWidth
-                bool currentShowPrice = showRegularPrices
                 if isMultipleOf(priceLevel, majorEvery)
                     currentColor := majorColor
                     currentStyle := majorStyle
                     currentWidth := majorWidth
-                    currentShowPrice := showMajorPrices
                 else if isMultipleOf(priceLevel, highlightEvery)
                     currentColor := highlightColor
                     currentStyle := highlightStyle
                     currentWidth := highlightWidth
-                    currentShowPrice := showHighlightPrices
 
                 line newLine = line.new(
                      x1 = chart.left_visible_bar_time,
@@ -156,22 +139,3 @@ if barstate.islast
                 )
 
                 array.push(levelLines, newLine)
-
-                // A zero-height box extended both ways spans the pane, so its text
-                // aligns to the real screen edge, which a label cannot reach.
-                if currentShowPrice
-                    array.push(levelLabels, box.new(
-                         left = chart.left_visible_bar_time,
-                         top = priceLevel,
-                         right = chart.right_visible_bar_time,
-                         bottom = priceLevel,
-                         xloc = xloc.bar_time,
-                         extend = extend.both,
-                         border_color = color.new(color.white, 100),
-                         bgcolor = color.new(color.white, 100),
-                         text = str.tostring(priceLevel, format.mintick),
-                         text_color = currentColor,
-                         text_size = size.small,
-                         text_halign = labelHalign,
-                         text_valign = text.align_center
-                    ))

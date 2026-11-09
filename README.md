@@ -540,8 +540,8 @@ chart.
   style, width and color.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
-- Same per-tier price labels, transparent, centered on the line at the
-  pane's right edge, center, or left edge.
+- No price labels: TradingView already bolds these levels on the price
+  axis.
 ## Chart palette
 
 The default colors of the NinjaTrader and TradingView tools follow one
