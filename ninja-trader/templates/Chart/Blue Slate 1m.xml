@@ -64,7 +64,7 @@
                 <IsVisible>true</IsVisible>
                 <BarWidth>3</BarWidth>
                 <ChartStyleTypeSerialize>1</ChartStyleTypeSerialize>
-                <DownBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF8F959E&lt;/SolidColorBrush&gt;</DownBrushSerialize>
+                <DownBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF5F6773&lt;/SolidColorBrush&gt;</DownBrushSerialize>
                 <UpBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF6995D3&lt;/SolidColorBrush&gt;</UpBrushSerialize>
                 <StrokeSerialize>&lt;Pen Brush="#FF5F6773" Thickness="1" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;
   &lt;Pen.DashStyle&gt;

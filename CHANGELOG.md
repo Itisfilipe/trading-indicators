@@ -5,6 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### Chart palette (changed)
+- Down candles are darker so up and down read apart at a glance: body
+  slate #5F6773 (was #8F959E), outline and wick #374151 (was #5F6773).
+  Applies to the NinjaTrader chart templates and Renko with Wicks defaults.
+
 ### ChartTrading (changed)
 - Settings regrouped: Brackets (distance mode, then each pair's on/off,
   percent, stop and target), ATR stop, Trading, Breakeven, Appearance,
@@ -15,6 +20,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   together, each with its own setting ("Show price", "Show ticks", "Show
   points", "Show money"); this replaces the single "Level value" choice,
   which resets to the new defaults (price, ticks, money).
+  With all four off, stops and targets draw without a price tag.
 
 ### Order Decorator (changed)
 - "Show Ticks" setting: the tick distance can be hidden like the other

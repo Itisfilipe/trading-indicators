@@ -554,8 +554,9 @@ chart.
 
 The default colors of the NinjaTrader and TradingView tools follow one
 palette, built for long sessions on an off-white chart: less glare than
-pure white, a muted blue for up candles and slate for down candles at the
-same brightness, both outlines one step darker than their body, and zones
+pure white, a muted blue for up candles and darker slate for down candles,
+so direction reads by brightness as well as hue, both outlines one step
+darker than their body, and zones
 in amber, the hue farthest from both candle colors, so candles inside a
 zone stay readable.
 
@@ -565,8 +566,8 @@ zone stay readable.
 |------|-----|-----|---------|
 | Up body | `#6995D3` | `105, 149, 211` | 100% |
 | Up outline + wick | `#3E68A3` | `62, 104, 163` | 100% |
-| Down body | `#8F959E` | `143, 149, 158` | 100% |
-| Down outline + wick, crosshair | `#5F6773` | `95, 103, 115` | 100% |
+| Down body, crosshair | `#5F6773` | `95, 103, 115` | 100% |
+| Down outline + wick | `#374151` | `55, 65, 81` | 100% |
 | Zones (rectangles) | `#B8862B` | `184, 134, 43` | 100% outline, 12% fill |
 | Text, strong lines | `#374151` | `55, 65, 81` | 100% |
 | Scale line, faint lines | `#D1D5DB` | `209, 213, 219` | 100% |
@@ -577,7 +578,8 @@ NinjaTrader chart templates with this palette (1, 5 and 15-minute
 candlesticks, full ETH session) are in
 [`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/). Stock
 NinjaTrader candlesticks have one outline and wick color for both
-directions, so the templates use slate `#5F6773` for both; Renko with Wicks
+directions, so the templates use slate `#5F6773` for both (down bodies then
+read as solid slate); Renko with Wicks
 draws the up and down outlines separately.
 
 Colors that carry meaning keep their own: stop and target red/green, news

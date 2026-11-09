@@ -327,7 +327,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int TagMargin { get; set; }
 
         [Display(Name = "Show price", Order = 3, GroupName = "6. Appearance",
-                 Description = "Stop and target tags show the level's price. The entry always shows its price.")]
+                 Description = "Stop and target tags show the level's price. The entry always shows its price. " +
+                               "With every value below off, stops and targets draw without a price tag.")]
         public bool ShowLevelPrice { get; set; }
 
         [Display(Name = "Show ticks", Order = 4, GroupName = "6. Appearance",
@@ -1864,11 +1865,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 float tagBoxW = labelLayout.Metrics.Width + 2f * padX;
                 float tagH = labelLayout.Metrics.Height + 2f * padY;
                 float tip = tagH / 2f;
-                float priceBoxW = priceLayout.Metrics.Width + 2f * padX;
+                bool hasPriceTag = priceLabel.Length > 0;
+                float priceBoxW = hasPriceTag ? priceLayout.Metrics.Width + 2f * padX : 0f;
 
                 // The price tag hugs the right edge, its point aimed at the level.
                 float priceBoxX = panelRight - priceBoxW;
-                float priceTipX = priceBoxX - tip;
+                float priceTipX = hasPriceTag ? priceBoxX - tip : panelRight;
 
                 float tagX;
                 switch (TagPosition)
@@ -1906,6 +1908,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 });
                 RenderTarget.DrawTextLayout(new Vector2(tagX + padX, top + padY), labelLayout, textBrush);
 
+                if (!hasPriceTag)
+                    return;
+
                 // Price tag: rectangle against the right edge with a point on its left.
                 FillTagGeometry(stroke.BrushDX, new[]
                 {
@@ -1941,8 +1946,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// <summary>
         /// What the right-side tag reads on a stop or target: each enabled value of
         /// the level price, the signed distance from entry in ticks and points, and
-        /// the signed money value for the level's quantity. With every value off it
-        /// falls back to the price, so the tag is never empty.
+        /// the signed money value for the level's quantity. Empty with every value
+        /// off, which drops the price tag.
         /// </summary>
         private string LevelValueLabel(MasterInstrument master, double levelPrice, int signedTicks, int quantity)
         {
@@ -1957,8 +1962,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 parts.Add(string.Format(culture, "{0:+0.00##;-0.00##}pt", signedPoints));
             if (ShowLevelMoney)
                 parts.Add(string.Format(culture, "{0:+$#,##0.00;-$#,##0.00}", signedPoints * master.PointValue * quantity));
-            if (parts.Count == 0)
-                return master.FormatPrice(levelPrice);
             return string.Join("  ", parts);
         }
 

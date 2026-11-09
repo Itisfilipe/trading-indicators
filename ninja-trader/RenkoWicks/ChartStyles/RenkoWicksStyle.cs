@@ -185,9 +185,9 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 upColor.Freeze();
                 upEdgeColor.Freeze();
                 System.Windows.Media.Brush downColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x8F, 0x95, 0x9E));
-                System.Windows.Media.Brush downEdgeColor = new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(0x5F, 0x67, 0x73));
+                System.Windows.Media.Brush downEdgeColor = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(0x37, 0x41, 0x51));
                 downColor.Freeze();
                 downEdgeColor.Freeze();
 
