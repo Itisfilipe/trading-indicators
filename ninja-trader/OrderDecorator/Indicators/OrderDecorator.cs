@@ -121,7 +121,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 RightMarginPixels = 50;
                 ProfitColor = Brushes.SeaGreen;
                 LossColor = Brushes.Crimson;
-                NeutralColor = Rgb(0x6B, 0x72, 0x80);
+                NeutralColor = Rgb(0x5F, 0x67, 0x73);
             }
             else if (State == State.Terminated)
             {

@@ -67,6 +67,13 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             set { if (!value) Levels = RectangleMidlineLevels.None; }
         }
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             base.OnStateChange();
@@ -76,8 +83,11 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 Name = "Rectangle Midline";
                 Description = "Rectangle with midline/quadrant/octet levels and a snap-free horizontal extend handle.";
                 Levels = RectangleMidlineLevels.Midline;
-                MidlineStroke = new Stroke(Brushes.CornflowerBlue, DashStyleHelper.Dash, 1f);
-                QuarterStroke = new Stroke(Brushes.CornflowerBlue, DashStyleHelper.Dot, 1f);
+                OutlineStroke = new Stroke(Rgb(0xB8, 0x86, 0x2B), DashStyleHelper.Solid, 1f);
+                AreaBrush = Rgb(0xB8, 0x86, 0x2B);
+                AreaOpacity = 12;
+                MidlineStroke = new Stroke(Rgb(0xB8, 0x86, 0x2B), DashStyleHelper.Dash, 1f);
+                QuarterStroke = new Stroke(Rgb(0xB8, 0x86, 0x2B), DashStyleHelper.Dot, 1f);
             }
         }
 

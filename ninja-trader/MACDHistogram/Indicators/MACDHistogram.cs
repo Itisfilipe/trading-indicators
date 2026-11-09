@@ -124,10 +124,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 				
 
                 // Set default color values.
-                PositiveRisingColor = Rgb(0x2F, 0x6F, 0xD0);
-                PositiveFallingColor = Rgb(0x5B, 0x9C, 0xF5);
-                NegativeFallingColor = Rgb(0x6B, 0x72, 0x80);
-                NegativeRisingColor = Rgb(0x96, 0x9B, 0xA4);
+                PositiveRisingColor = Rgb(0x3E, 0x68, 0xA3);
+                PositiveFallingColor = Rgb(0x69, 0x95, 0xD3);
+                NegativeFallingColor = Rgb(0x5F, 0x67, 0x73);
+                NegativeRisingColor = Rgb(0x8F, 0x95, 0x9E);
                 NeutralColor = Rgb(0xD1, 0xD5, 0xDB);
 
                 // Create a Stroke using the PositiveRisingColor as an initial color.

@@ -119,7 +119,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PeriodValue = 15;
                 BrickSizeTicks = 20;
                 EmaPeriod = 20;
-                EMAColor = Rgb(0x2F, 0x6F, 0xD0);
+                EMAColor = Rgb(0x3E, 0x68, 0xA3);
 
                 AddPlot(new Stroke(EMAColor), PlotStyle.Line, "EMA");
             }

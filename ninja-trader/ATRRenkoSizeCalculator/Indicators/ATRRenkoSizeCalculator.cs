@@ -181,8 +181,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (RenderTarget != null)
             {
                 tableBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x37, 0x41, 0x51, 230));
-                headerBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x6B, 0x72, 0x80, 230));
-                borderBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x6B, 0x72, 0x80, 255));
+                headerBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x5F, 0x67, 0x73, 230));
+                borderBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x5F, 0x67, 0x73, 255));
                 textBrushWhite = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(255, 255, 255, 255));
                 textBrushBlue = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0, 150, 255, 255));
                 textBrushGreen = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0, 200, 0, 255));

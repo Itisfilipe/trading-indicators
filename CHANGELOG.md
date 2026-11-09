@@ -50,6 +50,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   the chart.
 
 ### Chart palette (NinjaTrader and TradingView, changed)
+- Calmer for long sessions: up candles a muted blue (#6995D3, outline
+  #3E68A3) and down candles slate (#8F959E, outline #5F6773) at the same
+  brightness. Rectangle Midline zones default to amber (#B8862B outline,
+  12% fill, matching midline and quarter lines), the hue farthest from both
+  candle colors, so candles inside a zone stay readable.
 - Default colors follow one palette for white charts (see the README's
   Chart palette): Renko with Wicks candles blue up and slate down with
   matching outlines and wicks; MACD Histogram blue above zero and slate

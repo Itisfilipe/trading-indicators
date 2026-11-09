@@ -453,7 +453,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ValueDisplay = ChartTradingValueDisplay.Price;
 
                 // Solid and thin, matching how the platform draws a working order.
-                EntryStroke = new Stroke(Rgb(0x2F, 0x6F, 0xD0), DashStyleHelper.Solid, 1f);
+                EntryStroke = new Stroke(Rgb(0x3E, 0x68, 0xA3), DashStyleHelper.Solid, 1f);
                 StopStroke = new Stroke(Brushes.Crimson, DashStyleHelper.Solid, 1f);
                 TargetStroke = new Stroke(Brushes.LimeGreen, DashStyleHelper.Solid, 1f);
             }

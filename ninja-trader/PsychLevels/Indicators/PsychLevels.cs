@@ -77,8 +77,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MajorEvery = 1000;
                 MaxLines = 250;
 
-                RegularStroke = new Stroke(Rgb(0x96, 0x9B, 0xA4), DashStyleHelper.Dash, 1f);
-                HighlightStroke = new Stroke(Rgb(0x6B, 0x72, 0x80), DashStyleHelper.Solid, 1f);
+                RegularStroke = new Stroke(Rgb(0x8F, 0x95, 0x9E), DashStyleHelper.Dash, 1f);
+                HighlightStroke = new Stroke(Rgb(0x5F, 0x67, 0x73), DashStyleHelper.Solid, 1f);
                 MajorStroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Solid, 2f);
             }
         }

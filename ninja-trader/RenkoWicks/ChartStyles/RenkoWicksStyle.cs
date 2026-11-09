@@ -179,14 +179,14 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 // set of defaults -- the platform cannot vary them per skin). Frozen
                 // because chart property brushes are read off the UI thread.
                 System.Windows.Media.Brush upColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x5B, 0x9C, 0xF5));
+                    System.Windows.Media.Color.FromRgb(0x69, 0x95, 0xD3));
                 System.Windows.Media.Brush upEdgeColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x2F, 0x6F, 0xD0));
+                    System.Windows.Media.Color.FromRgb(0x3E, 0x68, 0xA3));
                 upColor.Freeze();
                 System.Windows.Media.Brush downColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x96, 0x9B, 0xA4));
+                    System.Windows.Media.Color.FromRgb(0x8F, 0x95, 0x9E));
                 System.Windows.Media.Brush downEdgeColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x6B, 0x72, 0x80));
+                    System.Windows.Media.Color.FromRgb(0x5F, 0x67, 0x73));
                 downColor.Freeze();
 
                 UpBrush = upColor;

@@ -537,18 +537,21 @@ chart.
 ## Chart palette
 
 The default colors of the NinjaTrader and TradingView tools follow one
-palette, built for an off-white chart (less glare than pure white over long
-sessions): blue up candles, slate down candles, both outlines one step
-darker than their body.
+palette, built for long sessions on an off-white chart: less glare than
+pure white, a muted blue for up candles and slate for down candles at the
+same brightness, both outlines one step darker than their body, and zones
+in amber, the hue farthest from both candle colors, so candles inside a
+zone stay readable.
 
 ![Chart palette](docs/palette.svg)
 
 | Role | Hex | RGB |
 |------|-----|-----|
-| Up body | `#5B9CF5` | `91, 156, 245` |
-| Up outline + wick | `#2F6FD0` | `47, 111, 208` |
-| Down body | `#969BA4` | `150, 155, 164` |
-| Down outline + wick, crosshair | `#6B7280` | `107, 114, 128` |
+| Up body | `#6995D3` | `105, 149, 211` |
+| Up outline + wick | `#3E68A3` | `62, 104, 163` |
+| Down body | `#8F959E` | `143, 149, 158` |
+| Down outline + wick, crosshair | `#5F6773` | `95, 103, 115` |
+| Zones (rectangles), fill at 12% | `#B8862B` | `184, 134, 43` |
 | Text, strong lines | `#374151` | `55, 65, 81` |
 | Scale line, faint lines | `#D1D5DB` | `209, 213, 219` |
 | Pane separator | `#E5E7EB` | `229, 231, 235` |
@@ -556,10 +559,11 @@ darker than their body.
 
 ```text
 role                            hex       rgb
-up body                         #5B9CF5   91, 156, 245
-up outline + wick               #2F6FD0   47, 111, 208
-down body                       #969BA4   150, 155, 164
-down outline + wick, crosshair  #6B7280   107, 114, 128
+up body                         #6995D3   105, 149, 211
+up outline + wick               #3E68A3   62, 104, 163
+down body                       #8F959E   143, 149, 158
+down outline + wick, crosshair  #5F6773   95, 103, 115
+zones (rectangles), 12% fill    #B8862B   184, 134, 43
 text, strong lines              #374151   55, 65, 81
 scale line, faint lines         #D1D5DB   209, 213, 219
 pane separator                  #E5E7EB   229, 231, 235

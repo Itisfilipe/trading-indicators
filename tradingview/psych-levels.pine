@@ -32,7 +32,7 @@ styleInput = input.string(
     group = GROUP_REGULAR
 )
 lineWidth = input.int(1, "Line width", minval = 1, maxval = 5, group = GROUP_REGULAR)
-lineColor = input.color(#969BA4, "Line color", group = GROUP_REGULAR)
+lineColor = input.color(#8F959E, "Line color", group = GROUP_REGULAR)
 
 // Highlighted level style
 highlightEvery = input.float(
@@ -49,7 +49,7 @@ highlightStyleInput = input.string(
      group = GROUP_HIGHLIGHT
 )
 highlightWidth = input.int(1, "Line width", minval = 1, maxval = 5, group = GROUP_HIGHLIGHT)
-highlightColor = input.color(#6B7280, "Line color", group = GROUP_HIGHLIGHT)
+highlightColor = input.color(#5F6773, "Line color", group = GROUP_HIGHLIGHT)
 
 // Major level style
 majorEvery = input.float(

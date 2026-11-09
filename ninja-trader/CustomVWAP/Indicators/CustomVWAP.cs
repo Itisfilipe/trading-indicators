@@ -124,10 +124,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Band3Deviations = 0;
 
                 AddPlot(new Stroke(System.Windows.Media.Brushes.DarkOrange, 2), PlotStyle.Line, "VWAP");
-                AddPlot(new Stroke(Rgb(0x6B, 0x72, 0x80), 1), PlotStyle.Line, "Upper 1");
-                AddPlot(new Stroke(Rgb(0x6B, 0x72, 0x80), 1), PlotStyle.Line, "Lower 1");
-                AddPlot(new Stroke(Rgb(0x96, 0x9B, 0xA4), 1), PlotStyle.Line, "Upper 2");
-                AddPlot(new Stroke(Rgb(0x96, 0x9B, 0xA4), 1), PlotStyle.Line, "Lower 2");
+                AddPlot(new Stroke(Rgb(0x5F, 0x67, 0x73), 1), PlotStyle.Line, "Upper 1");
+                AddPlot(new Stroke(Rgb(0x5F, 0x67, 0x73), 1), PlotStyle.Line, "Lower 1");
+                AddPlot(new Stroke(Rgb(0x8F, 0x95, 0x9E), 1), PlotStyle.Line, "Upper 2");
+                AddPlot(new Stroke(Rgb(0x8F, 0x95, 0x9E), 1), PlotStyle.Line, "Lower 2");
                 AddPlot(new Stroke(Rgb(0xD1, 0xD5, 0xDB), 1), PlotStyle.Line, "Upper 3");
                 AddPlot(new Stroke(Rgb(0xD1, 0xD5, 0xDB), 1), PlotStyle.Line, "Lower 3");
             }

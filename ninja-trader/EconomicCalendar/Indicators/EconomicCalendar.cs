@@ -323,7 +323,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HeaderTextColor = Rgb(0xDE, 0xE1, 0xE9);
                 HeaderBackColor = Rgb(0x28, 0x3C, 0x70);
                 RowTextColor = Rgb(0x37, 0x41, 0x51);
-                RowPastTextColor = Rgb(0x96, 0x9B, 0xA4);
+                RowPastTextColor = Rgb(0x8F, 0x95, 0x9E);
                 RowBackColor = Rgb(0xDE, 0xE1, 0xE9);
                 ShowTableBorder = true;
                 AutoBorderColor = true;

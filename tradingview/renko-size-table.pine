@@ -57,7 +57,7 @@ tablePos = input.string("top_right", "Position", options = ["top_left", "top_cen
 textSize = input.string("normal", "Text Size", options = ["tiny", "small", "normal", "large", "huge", "auto"], group = "Display")
 
 bgColor      = input.color(color.new(#374151, 10), "Background",   group = "Colors")
-headerColor  = input.color(color.new(#6B7280, 10),     "Header",       group = "Colors")
+headerColor  = input.color(color.new(#5F6773, 10),     "Header",       group = "Colors")
 textColor    = input.color(color.white,                "Label Text",   group = "Colors")
 atrColor     = input.color(#0096ff,                    "ATR Text",     group = "Colors")
 tickColor    = input.color(#00c800,                    "Ticks Text",   group = "Colors")

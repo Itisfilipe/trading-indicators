@@ -82,8 +82,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Period = 14;
 
                 // Set default colors
-                VolumeAboveColor = Rgb(0x5B, 0x9C, 0xF5);
-                VolumeBelowColor = Rgb(0x96, 0x9B, 0xA4);
+                VolumeAboveColor = Rgb(0x69, 0x95, 0xD3);
+                VolumeBelowColor = Rgb(0x8F, 0x95, 0x9E);
                 EMAColor = Rgb(0x37, 0x41, 0x51);
 
                 // Add two plots:
