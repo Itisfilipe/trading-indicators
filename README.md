@@ -82,6 +82,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pair whose share rounds down to zero lots is skipped for that order.
 - Entry type: Limit or MIT on the favorable side of the market, Stop-Market
   or Stop-Limit (with a tick offset) beyond it.
+- "Entry price: Market" turns every click into a market order instead: the
+  modifier key picks buy or sell, the pointer position doesn't matter, and
+  the preview sits at the ask (buy) or bid (sell). Stops and targets are
+  placed from the actual fill price, so slippage doesn't shift the bracket.
 - Time in force: Day (default) or GTC, applied to the entry and every
   stop/target.
 - "Separate stacked stops": nudges colliding stop prices one tick apart so

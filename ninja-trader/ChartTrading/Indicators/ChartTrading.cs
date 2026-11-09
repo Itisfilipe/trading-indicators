@@ -73,6 +73,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     }
 
     /// <summary>
+    /// Where a click's entry goes: at the price under the mouse, or at the market.
+    /// </summary>
+    public enum ChartTradingEntryPrice
+    {
+        Mouse,
+        Market,
+    }
+
+    /// <summary>
     /// Entry type used when the click is on the favorable side of the market.
     /// </summary>
     public enum ChartTradingLimitSideType
@@ -347,6 +356,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Stop and target tags show the signed money value of the distance for the level's quantity.")]
         public bool ShowLevelMoney { get; set; }
 
+        [Display(Name = "Entry price", Order = 0, GroupName = "4. Trading",
+                 Description = "Mouse places the entry at the price under the pointer. Market sends a " +
+                               "market order on click, wherever the pointer is; the preview sits at the " +
+                               "ask for a buy and the bid for a sell, and the bracket is placed from the fill.")]
+        [System.ComponentModel.RefreshProperties(System.ComponentModel.RefreshProperties.All)]
+        public ChartTradingEntryPrice EntryPriceMode { get; set; }
+
         [Display(Name = "Limit-side entry", Order = 1, GroupName = "4. Trading",
                  Description = "Order type when the click is on the favorable side of the market: " +
                                "plain limit, or market-if-touched.")]
@@ -437,6 +453,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 TradingEnabled = true;
+                EntryPriceMode = ChartTradingEntryPrice.Mouse;
                 BuyModifier = ChartTradingModifier.Shift;
                 SellModifier = ChartTradingModifier.Alt;
                 Bracket1Enabled = true;
@@ -837,13 +854,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
 
             int quantity = chartTrader.Quantity > 0 ? chartTrader.Quantity : previewQuantity;
-            double entryPrice = master.RoundToTickSize(scale.GetValueByY(pointerDeviceY));
             bool isBuy = previewSide == Side.Buy;
             int profitSign = isBuy ? 1 : -1;
             double tick = master.TickSize;
 
+            double entryPrice;
             string entryLabel;
-            OrderType entryType = InferEntryType(isBuy, entryPrice, out entryLabel);
+            OrderType entryType;
+            if (!ResolveEntry(isBuy, scale, master, out entryPrice, out entryType, out entryLabel))
+                return;
             double limitPrice;
             double stopPrice;
             EntryPriceFields(entryType, isBuy, entryPrice, master, out limitPrice, out stopPrice);
@@ -1430,6 +1449,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
+        /// The price and order type a click would enter with. Market mode prices the
+        /// entry at the ask for a buy and the bid for a sell, falling back to the
+        /// last price before quotes arrive; false when there is no price at all.
+        /// </summary>
+        private bool ResolveEntry(bool isBuy, ChartScale scale, MasterInstrument master,
+            out double entryPrice, out OrderType entryType, out string entryLabel)
+        {
+            if (EntryPriceMode == ChartTradingEntryPrice.Mouse)
+            {
+                entryPrice = master.RoundToTickSize(scale.GetValueByY(pointerDeviceY));
+                entryType = InferEntryType(isBuy, entryPrice, out entryLabel);
+                return true;
+            }
+
+            entryType = OrderType.Market;
+            entryLabel = "MKT";
+            entryPrice = isBuy ? GetCurrentAsk() : GetCurrentBid();
+            if (entryPrice <= 0 && Bars != null && Bars.Count > 0)
+                entryPrice = Bars.GetClose(Bars.Count - 1);
+            entryPrice = master.RoundToTickSize(entryPrice);
+            return entryPrice > 0;
+        }
+
+        /// <summary>
         /// The entry order type a click at this price would submit: the configured
         /// limit-side type on the favorable side of the last traded price, the
         /// configured stop-side type beyond it, and market exactly at it.
@@ -1754,7 +1797,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (master == null || EntryStroke?.BrushDX == null)
                 return;
 
-            double entryPrice = master.RoundToTickSize(chartScale.GetValueByY(pointerDeviceY));
             double tick = master.TickSize;
             bool isBuy = previewSide == Side.Buy;
 
@@ -1766,8 +1808,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             string exit = isBuy ? "Sell" : "Buy";
 
             // The label previews exactly the order type a click would submit.
+            double entryPrice;
             string entryType;
-            InferEntryType(isBuy, entryPrice, out entryType);
+            OrderType ignoredType;
+            if (!ResolveEntry(isBuy, chartScale, master, out entryPrice, out ignoredType, out entryType))
+                return;
 
             SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
             try
@@ -2090,6 +2135,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             "AutoBreakevenTriggerR",
         };
 
+        private static readonly string[] MouseEntryProperties =
+        {
+            "LimitSideType", "StopSideType", "StopLimitOffsetTicks",
+        };
+
         public override System.ComponentModel.PropertyDescriptorCollection GetProperties(System.ComponentModel.ITypeDescriptorContext context, object component, Attribute[] attributes)
         {
             ChartTrading indicator = component as ChartTrading;
@@ -2101,9 +2151,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (indicator == null || properties == null)
                 return properties;
 
-            string[] hidden = indicator.BracketDistance == ChartTradingBracketDistance.Atr
+            List<string> hidden = new List<string>(indicator.BracketDistance == ChartTradingBracketDistance.Atr
                 ? TickDistanceProperties
-                : AtrDistanceProperties;
+                : AtrDistanceProperties);
+            if (indicator.EntryPriceMode == ChartTradingEntryPrice.Market)
+                hidden.AddRange(MouseEntryProperties);
             foreach (string name in hidden)
             {
                 System.ComponentModel.PropertyDescriptor descriptor = properties[name];
