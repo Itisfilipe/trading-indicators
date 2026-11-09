@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" viewBox="0 0 720 300" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
-  <rect width="720" height="300" rx="10" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <rect width="720" height="300" rx="10" fill="#F8F9FB" stroke="#E5E7EB"/>
 
   <g font-size="13" fill="#374151">
     <rect x="24" y="24" width="36" height="28" rx="4" fill="#5B9CF5" stroke="#2F6FD0"/>
@@ -20,12 +20,12 @@
     <rect x="24" y="224" width="36" height="28" rx="4" fill="#D1D5DB"/>
     <text x="72" y="238">Scale line, faint lines</text><text x="72" y="252" fill="#6B7280" font-family="ui-monospace, Menlo, Consolas, monospace">#D1D5DB</text>
 
-    <rect x="24" y="264" width="36" height="22" rx="4" fill="#FFFFFF" stroke="#D1D5DB"/>
-    <text x="72" y="280">Background <tspan fill="#6B7280" font-family="ui-monospace, Menlo, Consolas, monospace">#FFFFFF</tspan></text>
+    <rect x="24" y="264" width="36" height="22" rx="4" fill="#F8F9FB" stroke="#D1D5DB"/>
+    <text x="72" y="280">Background <tspan fill="#6B7280" font-family="ui-monospace, Menlo, Consolas, monospace">#F8F9FB</tspan></text>
   </g>
 
   <g transform="translate(330 24)">
-    <rect width="366" height="252" fill="#FFFFFF" stroke="#E5E7EB"/>
+    <rect width="366" height="252" fill="#F8F9FB" stroke="#E5E7EB"/>
     <line x1="0" y1="96" x2="366" y2="96" stroke="#374151" stroke-width="2"/>
     <line x1="0" y1="176" x2="366" y2="176" stroke="#6B7280"/>
     <line x1="0" y1="56" x2="366" y2="56" stroke="#969BA4" stroke-dasharray="5 4"/>

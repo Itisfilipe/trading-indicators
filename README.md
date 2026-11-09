@@ -534,8 +534,9 @@ chart.
 ## Chart palette
 
 The default colors of the NinjaTrader and TradingView tools follow one
-palette, built for a white chart: blue up candles, slate down candles, both
-outlines one step darker than their body.
+palette, built for an off-white chart (less glare than pure white over long
+sessions): blue up candles, slate down candles, both outlines one step
+darker than their body.
 
 ![Chart palette](docs/palette.svg)
 
@@ -548,7 +549,7 @@ outlines one step darker than their body.
 | Text, strong lines | `#374151` |
 | Scale line, faint lines | `#D1D5DB` |
 | Pane separator | `#E5E7EB` |
-| Background | `#FFFFFF` |
+| Background | `#F8F9FB` |
 
 ```text
 #5B9CF5  up body
@@ -558,7 +559,7 @@ outlines one step darker than their body.
 #374151  text, strong lines
 #D1D5DB  scale line, faint lines
 #E5E7EB  pane separator
-#FFFFFF  background
+#F8F9FB  background
 ```
 
 Colors that carry meaning keep their own: stop and target red/green, news
