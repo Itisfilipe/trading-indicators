@@ -421,7 +421,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   width and dash.
 - Lines cover the visible price range and follow scrolling and zooming;
   "Maximum lines" caps how many draw at once.
-- Price labels per tier (highlighted and major on, regular off by default):
+- Optional price labels, switched per tier (all off by default):
   the price printed just above its line in the line's color, no
   background, at the right or left end. The price axis does not mark these
   levels.

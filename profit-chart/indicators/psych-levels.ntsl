@@ -20,8 +20,8 @@ input
   Maior_A_Cada(1000.0);
   Niveis_Acima_Abaixo(40);
   Precos_Regular(false);         // Escreve o preco nas linhas de cada tipo
-  Precos_Destaque(true);
-  Precos_Maior(true);
+  Precos_Destaque(false);
+  Precos_Maior(false);
   Precos_A_Esquerda(false);      // false = preco na ponta direita da linha
   Casas_Decimais(0);
 

@@ -74,8 +74,8 @@ maxLines = input.int(250, "Maximum lines", minval = 1, maxval = 500, group = GRO
 
 // Price labels
 showRegularPrices = input.bool(false, "Regular levels", group = GROUP_LABELS)
-showHighlightPrices = input.bool(true, "Highlighted levels", group = GROUP_LABELS)
-showMajorPrices = input.bool(true, "Major levels", group = GROUP_LABELS)
+showHighlightPrices = input.bool(false, "Highlighted levels", group = GROUP_LABELS)
+showMajorPrices = input.bool(false, "Major levels", group = GROUP_LABELS)
 labelPosition = input.string("Right", "Position", options = ["Right", "Center", "Left"], group = GROUP_LABELS)
 
 toLineStyle(string styleName) =>

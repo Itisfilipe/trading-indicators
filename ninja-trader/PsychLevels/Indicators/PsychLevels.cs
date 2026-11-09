@@ -98,8 +98,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MajorEvery = 1000;
                 MaxLines = 250;
                 ShowRegularPrices = false;
-                ShowHighlightPrices = true;
-                ShowMajorPrices = true;
+                ShowHighlightPrices = false;
+                ShowMajorPrices = false;
                 LabelPosition = PsychLabelPosition.Right;
 
                 RegularStroke = new Stroke(Rgb(0x8F, 0x95, 0x9E), DashStyleHelper.Dash, 1f);
