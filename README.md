@@ -107,7 +107,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   a configured tick trigger in the position's favor, once per position,
   re-arms on close/flip; shares the offset setting with the button.
 - No live-account gate — whichever account is selected in ChartTrader is
-  what a click trades; the ON/OFF button is the only switch.
+  what a click trades; the ON/OFF button (or the "Enabled" setting) is the
+  only switch.
 - Auto-breakeven only runs while the chart is open (local automation, not
   server-side).
 - Removing the indicator leaves its working orders working.
@@ -164,7 +165,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 - Labels every working order on the chart's instrument (any tool's orders,
   not just this repo's) with its distance from the position's average
-  price: ticks, points and money value for the order's
+  price: ticks, optional points, and money value for the order's
   remaining quantity.
 - Profit-side orders also show their R multiple against the nearest
   working stop.

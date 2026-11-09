@@ -565,9 +565,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             if (ShowSessionLevels)
                             {
                                 DrawLevelLine(chartControl, chartScale, record.High, record.HighChartTime, record.HighMitigatedChartTime, slot.LineBrushDx,
-                                    labelFormat, LevelLabelText(slot.Name, "High", record.High), true);
+                                    labelFormat, slot.Name, "High", true);
                                 DrawLevelLine(chartControl, chartScale, record.Low, record.LowChartTime, record.LowMitigatedChartTime, slot.LineBrushDx,
-                                    labelFormat, LevelLabelText(slot.Name, "Low", record.Low), false);
+                                    labelFormat, slot.Name, "Low", false);
                             }
                         }
                     }
@@ -591,7 +591,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // it, or to the panel's right edge while it is still unmitigated.
         private void DrawLevelLine(ChartControl chartControl, ChartScale chartScale, double price,
             DateTime fromChartTime, DateTime mitigatedChartTime, SharpDX.Direct2D1.Brush brush,
-            SharpDX.DirectWrite.TextFormat labelFormat, string labelText, bool labelAbove)
+            SharpDX.DirectWrite.TextFormat labelFormat, string zoneName, string side, bool labelAbove)
         {
             float panelLeft = ChartPanel.X;
             float panelRight = ChartPanel.X + ChartPanel.W;
@@ -607,15 +607,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
                 brush, LevelLineWidth, levelDashCarrier.StrokeStyle);
 
-            if (labelFormat == null)
+            // Labels sit off the chart's pan gesture like the boxes; the line alone
+            // stays clickable for selecting the indicator.
+            if (labelFormat == null || IsInHitTest)
                 return;
             SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
-                Core.Globals.DirectWriteFactory, labelText, labelFormat, ChartPanel.W, labelFormat.FontSize * 2);
+                Core.Globals.DirectWriteFactory, LevelLabelText(zoneName, side, price), labelFormat, ChartPanel.W, labelFormat.FontSize * 2);
             try
             {
                 float labelX = LevelLabelPosition == KillzoneLabelPosition.Start
                     ? x1 + 4
-                    : x2 - layout.Metrics.Width - 4;
+                    : Math.Max(x1, x2 - layout.Metrics.Width - 4);
                 float labelY = labelAbove
                     ? y - layout.Metrics.Height - 1
                     : y + 1;

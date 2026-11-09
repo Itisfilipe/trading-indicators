@@ -441,8 +441,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         // Orders a few ticks apart would print their labels on top of each other.
         // Walking the labels top to bottom pushes each one just below the previous,
-        // then a bottom-up pass pulls back any that were pushed off the panel; the
-        // price order of the labels never changes.
+        // a bottom-up pass pulls back any pushed off the panel's bottom, and a final
+        // top-down pass keeps them below its top; price order never changes.
         private void DrawWithoutOverlap(List<PendingLabel> labels)
         {
             const float gap = 1f;
@@ -461,6 +461,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 tops[i] = Math.Min(tops[i], nextTop - gap - labels[i].Layout.Metrics.Height);
                 nextTop = tops[i];
+            }
+
+            previousBottom = ChartPanel.Y - gap;
+            for (int i = 0; i < labels.Count; i++)
+            {
+                tops[i] = Math.Max(tops[i], previousBottom + gap);
+                previousBottom = tops[i] + labels[i].Layout.Metrics.Height;
             }
 
             float panelRight = ChartPanel.X + ChartPanel.W;
