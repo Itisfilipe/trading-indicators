@@ -540,26 +540,27 @@ darker than their body.
 
 ![Chart palette](docs/palette.svg)
 
-| Role | Hex |
-|------|-----|
-| Up body | `#5B9CF5` |
-| Up outline + wick | `#2F6FD0` |
-| Down body | `#969BA4` |
-| Down outline + wick, crosshair | `#6B7280` |
-| Text, strong lines | `#374151` |
-| Scale line, faint lines | `#D1D5DB` |
-| Pane separator | `#E5E7EB` |
-| Background | `#F8F9FB` |
+| Role | Hex | RGB | HSL | HSV / HSB |
+|------|-----|-----|-----|-----------|
+| Up body | `#5B9CF5` | `91, 156, 245` | `215°, 89%, 66%` | `215°, 63%, 96%` |
+| Up outline + wick | `#2F6FD0` | `47, 111, 208` | `216°, 63%, 50%` | `216°, 77%, 82%` |
+| Down body | `#969BA4` | `150, 155, 164` | `219°, 7%, 62%` | `219°, 9%, 64%` |
+| Down outline + wick, crosshair | `#6B7280` | `107, 114, 128` | `220°, 9%, 46%` | `220°, 16%, 50%` |
+| Text, strong lines | `#374151` | `55, 65, 81` | `217°, 19%, 27%` | `217°, 32%, 32%` |
+| Scale line, faint lines | `#D1D5DB` | `209, 213, 219` | `216°, 12%, 84%` | `216°, 5%, 86%` |
+| Pane separator | `#E5E7EB` | `229, 231, 235` | `220°, 13%, 91%` | `220°, 3%, 92%` |
+| Background | `#F8F9FB` | `248, 249, 251` | `220°, 27%, 98%` | `220°, 1%, 98%` |
 
 ```text
-#5B9CF5  up body
-#2F6FD0  up outline + wick
-#969BA4  down body
-#6B7280  down outline + wick, crosshair
-#374151  text, strong lines
-#D1D5DB  scale line, faint lines
-#E5E7EB  pane separator
-#F8F9FB  background
+role                            hex       rgb
+up body                         #5B9CF5   91, 156, 245
+up outline + wick               #2F6FD0   47, 111, 208
+down body                       #969BA4   150, 155, 164
+down outline + wick, crosshair  #6B7280   107, 114, 128
+text, strong lines              #374151   55, 65, 81
+scale line, faint lines         #D1D5DB   209, 213, 219
+pane separator                  #E5E7EB   229, 231, 235
+background                      #F8F9FB   248, 249, 251
 ```
 
 Colors that carry meaning keep their own: stop and target red/green, news
