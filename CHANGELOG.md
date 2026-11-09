@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### ATRRenkoSizeCalculator (fixed)
+- The table draws inside the indicator's own panel instead of at the top of
+  the chart.
+
 ### OrderDecorator (fixed)
 - The R multiple on target labels now measures risk to the nearest stop on
   the losing side; a stop already trailed into profit no longer counts as

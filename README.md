@@ -22,13 +22,13 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   volume. This includes session boundaries: with Break at EOD on, the
   overnight move is walked with faded bricks to the session open instead of
   leaving an unspanned jump — the chain never shows a void.
-- "Candle Outline" and "Candle Wick" color settings; bar-width changes apply
-  immediately.
+- Separate outline and wick colors for up and down bricks ("Candle outline
+  (up)", "Candle wick (down)", ...); bar-width changes apply immediately.
 - Defaults: 50-tick bricks, 15 days of data.
 - Tick Replay not supported for this bars type.
-- Use: compile both files, restart NinjaTrader, select "Renko Wicks" as the
-  chart's bar type in Data Series ("Brick Size" = ticks), F5 to rebuild after
-  changing the size.
+- Use: compile both files, restart NinjaTrader, select "Renko with Wicks" as
+  the chart's bar type in Data Series ("Brick Size" = ticks), F5 to rebuild
+  after changing the size.
 
 ### ErgonomicCharts — native-feeling zoom and pan
 
@@ -103,8 +103,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - "Ignore gaps" (default on) excludes the session-open gap from the true
   range.
 - Settings: ATR length, decimal places, table and half-ATR toggles.
-- Use: add to the instrument you trade, read "Renko Size" (half ATR in
-  ticks) as the brick size.
+- Use: add to the instrument you trade, read "Half ATR (Ticks)" as the
+  brick size.
 
 ### MACDHistogram — momentum-colored MACD histogram
 
@@ -203,7 +203,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   read; the Med columns hold steady through outlier days (one hot session
   out of ten doesn't move them), so Med Ticks is the more stable
   brick-size pick on volatile instruments.
-- Each timeframe has its own ATR lookback in days (defaults: 2min/3d,
+- Each timeframe has its own ATR lookback in days (defaults: 1min/3d,
   5min/5d, 15min/10d, 60min/20d), converted to a bar count from how many
   bars that timeframe's sessions actually hold. ATR smoothing is
   exponential. The chart needs at least the largest configured day count
@@ -397,8 +397,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 ### Candle Countdown & Position Sizer
 
-- On-chart table: current time, live countdown to the next candle close and
-  to the next higher-timeframe close.
+- On-chart table: current time and live countdowns to the next candle close
+  on three configurable timeframes (default 1/5/15 minutes, each toggleable).
 - Position sizer: turns account risk and stop distance into a contract/share
   quantity.
 - The ATR and stop-distance rows can each be switched off for a tighter

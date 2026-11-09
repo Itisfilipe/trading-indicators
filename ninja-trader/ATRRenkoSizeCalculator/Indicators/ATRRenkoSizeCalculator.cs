@@ -209,8 +209,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             float cellPadding = 8;
 
             // Position table at top right with margin
-            float tableX = ChartPanel.W - tableWidth - 10;
-            float tableY = 10;
+            float tableX = ChartPanel.X + ChartPanel.W - tableWidth - 10;
+            float tableY = ChartPanel.Y + 10;
 
             // Draw table background
             RectangleF tableRect = new RectangleF(tableX, tableY, tableWidth, headerHeight + (rowHeight * 3));
