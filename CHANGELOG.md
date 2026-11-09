@@ -65,6 +65,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   indicator to get the new defaults.
 
 ### ChartTrading (changed)
+- New "Distances" setting: ATR mode places every stop at a multiple of ATR
+  and each target at an R multiple of that stop (defaults 1.5 x ATR, 1R,
+  2R, 3R), matching the stop the position sizer uses to size the lot.
 - Click-to-trade now starts OFF whenever the indicator is added, reloaded
   or recompiled; click the ON/OFF button to arm it.
 

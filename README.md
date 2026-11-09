@@ -58,6 +58,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   what gets submitted to the tick.
 - Up to three stop/target pairs, each with its own checkbox, tick distances,
   and percentage share.
+- Optional ATR distances: every stop sits "Stop size (x ATR)" away and each
+  target that many R (stop distance times the pair's R; defaults 1R, 2R,
+  3R). The ATR settings default to the Candle Countdown & Position Sizer's
+  (1.5 x ATR, length 5, exponential), so the bracket uses the stop the
+  sizer sized the lot for — keep both indicators' ATR settings equal if
+  you change them. Distances are taken at click time.
 - Entry always trades the ChartTrader quantity outright (never multiplied by
   pair count); each enabled pair gets its percentage share of that quantity,
   split into whole lots as evenly as the math allows (e.g. 4 lots at
