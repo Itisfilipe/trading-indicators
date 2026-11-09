@@ -8,6 +8,9 @@ Personal collection of trading indicators and chart tools for three platforms:
 | [`profit-chart/`](profit-chart/) | Profit Chart (Nelogica) | NTSL |
 | [`tradingview/`](tradingview/) | TradingView | Pine Script |
 
+> Shared as-is, with no guarantees, and built mostly with AI assistance —
+> read the [Disclaimer](#disclaimer) before using anything here.
+
 ## NinjaTrader 8 (`ninja-trader/`)
 
 Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/README.md).
@@ -540,16 +543,16 @@ darker than their body.
 
 ![Chart palette](docs/palette.svg)
 
-| Role | Hex | RGB | HSL | HSV / HSB |
-|------|-----|-----|-----|-----------|
-| Up body | `#5B9CF5` | `91, 156, 245` | `215°, 89%, 66%` | `215°, 63%, 96%` |
-| Up outline + wick | `#2F6FD0` | `47, 111, 208` | `216°, 63%, 50%` | `216°, 77%, 82%` |
-| Down body | `#969BA4` | `150, 155, 164` | `219°, 7%, 62%` | `219°, 9%, 64%` |
-| Down outline + wick, crosshair | `#6B7280` | `107, 114, 128` | `220°, 9%, 46%` | `220°, 16%, 50%` |
-| Text, strong lines | `#374151` | `55, 65, 81` | `217°, 19%, 27%` | `217°, 32%, 32%` |
-| Scale line, faint lines | `#D1D5DB` | `209, 213, 219` | `216°, 12%, 84%` | `216°, 5%, 86%` |
-| Pane separator | `#E5E7EB` | `229, 231, 235` | `220°, 13%, 91%` | `220°, 3%, 92%` |
-| Background | `#F8F9FB` | `248, 249, 251` | `220°, 27%, 98%` | `220°, 1%, 98%` |
+| Role | Hex | RGB |
+|------|-----|-----|
+| Up body | `#5B9CF5` | `91, 156, 245` |
+| Up outline + wick | `#2F6FD0` | `47, 111, 208` |
+| Down body | `#969BA4` | `150, 155, 164` |
+| Down outline + wick, crosshair | `#6B7280` | `107, 114, 128` |
+| Text, strong lines | `#374151` | `55, 65, 81` |
+| Scale line, faint lines | `#D1D5DB` | `209, 213, 219` |
+| Pane separator | `#E5E7EB` | `229, 231, 235` |
+| Background | `#F8F9FB` | `248, 249, 251` |
 
 ```text
 role                            hex       rgb
@@ -582,11 +585,19 @@ Their outputs are gitignored and stay on your machine.
 
 ## Disclaimer
 
-Built for my own personal trading, shared as-is. **No responsibility** taken
-for use by anyone, for any losses, missed trades, or misbehavior — use
-entirely at your own risk. Not financial advice; the code may contain bugs.
-Trading involves substantial risk of loss. Test in simulation before trading
-real money, and read the code before you trade with it.
+Built for my own personal trading, shared as-is. **No guarantees of any
+kind**: not that the tools are correct, accurate, complete, or that they work
+on your platform version, and no warranty that they are fit for any purpose.
+**No responsibility** taken for use by anyone, for any losses, missed trades,
+wrong orders, or misbehavior — use entirely at your own risk.
+
+**Built mostly with AI assistance.** I test the tools on my own charts, but
+much of the code was written by an AI model and may contain bugs a human
+author would not make. Treat it like code from an unknown source.
+
+Not financial advice. Trading involves substantial risk of loss. Test in
+simulation before trading real money, and read the code before you trade
+with it — especially the tools that place or move orders.
 
 ## License
 
