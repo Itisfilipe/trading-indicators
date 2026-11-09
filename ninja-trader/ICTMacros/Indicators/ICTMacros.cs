@@ -110,125 +110,269 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Band Opacity (%)", GroupName = "2. Band", Order = 5)]
         public int BandOpacity { get; set; }
 
-        [Display(Name = "Macro 1", GroupName = "3. Macros", Order = 10)]
+        [Display(Name = "Macro 1", GroupName = "3. Asia Macros", Order = 10)]
         public bool Macro1Enabled { get; set; }
-        [Display(Name = "Macro 1 Start", GroupName = "3. Macros", Order = 11)]
+        [Display(Name = "Macro 1 Start", GroupName = "3. Asia Macros", Order = 11)]
         public string Macro1Start { get; set; }
-        [Display(Name = "Macro 1 End", GroupName = "3. Macros", Order = 12)]
+        [Display(Name = "Macro 1 End", GroupName = "3. Asia Macros", Order = 12,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro1End { get; set; }
-        [Display(Name = "Macro 1 Label", GroupName = "3. Macros", Order = 13,
+        [Display(Name = "Macro 1 Label", GroupName = "3. Asia Macros", Order = 13,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro1Label { get; set; }
 
-        [Display(Name = "Macro 2", GroupName = "3. Macros", Order = 20)]
+        [Display(Name = "Macro 2", GroupName = "3. Asia Macros", Order = 20)]
         public bool Macro2Enabled { get; set; }
-        [Display(Name = "Macro 2 Start", GroupName = "3. Macros", Order = 21)]
+        [Display(Name = "Macro 2 Start", GroupName = "3. Asia Macros", Order = 21)]
         public string Macro2Start { get; set; }
-        [Display(Name = "Macro 2 End", GroupName = "3. Macros", Order = 22)]
+        [Display(Name = "Macro 2 End", GroupName = "3. Asia Macros", Order = 22,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro2End { get; set; }
-        [Display(Name = "Macro 2 Label", GroupName = "3. Macros", Order = 23,
+        [Display(Name = "Macro 2 Label", GroupName = "3. Asia Macros", Order = 23,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro2Label { get; set; }
 
-        [Display(Name = "Macro 3", GroupName = "3. Macros", Order = 30)]
+        [Display(Name = "Macro 3", GroupName = "3. Asia Macros", Order = 30)]
         public bool Macro3Enabled { get; set; }
-        [Display(Name = "Macro 3 Start", GroupName = "3. Macros", Order = 31)]
+        [Display(Name = "Macro 3 Start", GroupName = "3. Asia Macros", Order = 31)]
         public string Macro3Start { get; set; }
-        [Display(Name = "Macro 3 End", GroupName = "3. Macros", Order = 32)]
+        [Display(Name = "Macro 3 End", GroupName = "3. Asia Macros", Order = 32,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro3End { get; set; }
-        [Display(Name = "Macro 3 Label", GroupName = "3. Macros", Order = 33,
+        [Display(Name = "Macro 3 Label", GroupName = "3. Asia Macros", Order = 33,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro3Label { get; set; }
 
-        [Display(Name = "Macro 4", GroupName = "3. Macros", Order = 40)]
+        [Display(Name = "Macro 4", GroupName = "3. Asia Macros", Order = 40)]
         public bool Macro4Enabled { get; set; }
-        [Display(Name = "Macro 4 Start", GroupName = "3. Macros", Order = 41)]
+        [Display(Name = "Macro 4 Start", GroupName = "3. Asia Macros", Order = 41)]
         public string Macro4Start { get; set; }
-        [Display(Name = "Macro 4 End", GroupName = "3. Macros", Order = 42)]
+        [Display(Name = "Macro 4 End", GroupName = "3. Asia Macros", Order = 42,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro4End { get; set; }
-        [Display(Name = "Macro 4 Label", GroupName = "3. Macros", Order = 43,
+        [Display(Name = "Macro 4 Label", GroupName = "3. Asia Macros", Order = 43,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro4Label { get; set; }
 
-        [Display(Name = "Macro 5", GroupName = "3. Macros", Order = 50)]
+        [Display(Name = "Macro 5", GroupName = "3. Asia Macros", Order = 50)]
         public bool Macro5Enabled { get; set; }
-        [Display(Name = "Macro 5 Start", GroupName = "3. Macros", Order = 51)]
+        [Display(Name = "Macro 5 Start", GroupName = "3. Asia Macros", Order = 51)]
         public string Macro5Start { get; set; }
-        [Display(Name = "Macro 5 End", GroupName = "3. Macros", Order = 52)]
+        [Display(Name = "Macro 5 End", GroupName = "3. Asia Macros", Order = 52,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro5End { get; set; }
-        [Display(Name = "Macro 5 Label", GroupName = "3. Macros", Order = 53,
+        [Display(Name = "Macro 5 Label", GroupName = "3. Asia Macros", Order = 53,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro5Label { get; set; }
 
-        [Display(Name = "Macro 6", GroupName = "3. Macros", Order = 60)]
+        [Display(Name = "Macro 6", GroupName = "3. Asia Macros", Order = 60)]
         public bool Macro6Enabled { get; set; }
-        [Display(Name = "Macro 6 Start", GroupName = "3. Macros", Order = 61)]
+        [Display(Name = "Macro 6 Start", GroupName = "3. Asia Macros", Order = 61)]
         public string Macro6Start { get; set; }
-        [Display(Name = "Macro 6 End", GroupName = "3. Macros", Order = 62)]
+        [Display(Name = "Macro 6 End", GroupName = "3. Asia Macros", Order = 62,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro6End { get; set; }
-        [Display(Name = "Macro 6 Label", GroupName = "3. Macros", Order = 63,
+        [Display(Name = "Macro 6 Label", GroupName = "3. Asia Macros", Order = 63,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro6Label { get; set; }
 
-        [Display(Name = "Macro 7", GroupName = "3. Macros", Order = 70)]
+        [Display(Name = "Macro 7", GroupName = "3. Asia Macros", Order = 70)]
         public bool Macro7Enabled { get; set; }
-        [Display(Name = "Macro 7 Start", GroupName = "3. Macros", Order = 71)]
+        [Display(Name = "Macro 7 Start", GroupName = "3. Asia Macros", Order = 71)]
         public string Macro7Start { get; set; }
-        [Display(Name = "Macro 7 End", GroupName = "3. Macros", Order = 72)]
+        [Display(Name = "Macro 7 End", GroupName = "3. Asia Macros", Order = 72,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro7End { get; set; }
-        [Display(Name = "Macro 7 Label", GroupName = "3. Macros", Order = 73,
+        [Display(Name = "Macro 7 Label", GroupName = "3. Asia Macros", Order = 73,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro7Label { get; set; }
 
-        [Display(Name = "Macro 8", GroupName = "3. Macros", Order = 80)]
+        [Display(Name = "Macro 8", GroupName = "4. London Macros", Order = 80)]
         public bool Macro8Enabled { get; set; }
-        [Display(Name = "Macro 8 Start", GroupName = "3. Macros", Order = 81)]
+        [Display(Name = "Macro 8 Start", GroupName = "4. London Macros", Order = 81)]
         public string Macro8Start { get; set; }
-        [Display(Name = "Macro 8 End", GroupName = "3. Macros", Order = 82)]
+        [Display(Name = "Macro 8 End", GroupName = "4. London Macros", Order = 82,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro8End { get; set; }
-        [Display(Name = "Macro 8 Label", GroupName = "3. Macros", Order = 83,
+        [Display(Name = "Macro 8 Label", GroupName = "4. London Macros", Order = 83,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro8Label { get; set; }
 
-        [Display(Name = "Macro 9", GroupName = "3. Macros", Order = 90)]
+        [Display(Name = "Macro 9", GroupName = "4. London Macros", Order = 90)]
         public bool Macro9Enabled { get; set; }
-        [Display(Name = "Macro 9 Start", GroupName = "3. Macros", Order = 91)]
+        [Display(Name = "Macro 9 Start", GroupName = "4. London Macros", Order = 91)]
         public string Macro9Start { get; set; }
-        [Display(Name = "Macro 9 End", GroupName = "3. Macros", Order = 92)]
+        [Display(Name = "Macro 9 End", GroupName = "4. London Macros", Order = 92,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro9End { get; set; }
-        [Display(Name = "Macro 9 Label", GroupName = "3. Macros", Order = 93,
+        [Display(Name = "Macro 9 Label", GroupName = "4. London Macros", Order = 93,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro9Label { get; set; }
 
-        [Display(Name = "Macro 10", GroupName = "3. Macros", Order = 100)]
+        [Display(Name = "Macro 10", GroupName = "4. London Macros", Order = 100)]
         public bool Macro10Enabled { get; set; }
-        [Display(Name = "Macro 10 Start", GroupName = "3. Macros", Order = 101)]
+        [Display(Name = "Macro 10 Start", GroupName = "4. London Macros", Order = 101)]
         public string Macro10Start { get; set; }
-        [Display(Name = "Macro 10 End", GroupName = "3. Macros", Order = 102)]
+        [Display(Name = "Macro 10 End", GroupName = "4. London Macros", Order = 102,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro10End { get; set; }
-        [Display(Name = "Macro 10 Label", GroupName = "3. Macros", Order = 103,
+        [Display(Name = "Macro 10 Label", GroupName = "4. London Macros", Order = 103,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro10Label { get; set; }
 
-        [Display(Name = "Macro 11", GroupName = "3. Macros", Order = 110)]
+        [Display(Name = "Macro 11", GroupName = "4. London Macros", Order = 110)]
         public bool Macro11Enabled { get; set; }
-        [Display(Name = "Macro 11 Start", GroupName = "3. Macros", Order = 111)]
+        [Display(Name = "Macro 11 Start", GroupName = "4. London Macros", Order = 111)]
         public string Macro11Start { get; set; }
-        [Display(Name = "Macro 11 End", GroupName = "3. Macros", Order = 112)]
+        [Display(Name = "Macro 11 End", GroupName = "4. London Macros", Order = 112,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro11End { get; set; }
-        [Display(Name = "Macro 11 Label", GroupName = "3. Macros", Order = 113,
+        [Display(Name = "Macro 11 Label", GroupName = "4. London Macros", Order = 113,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro11Label { get; set; }
 
-        [Display(Name = "Macro 12", GroupName = "3. Macros", Order = 120)]
+        [Display(Name = "Macro 12", GroupName = "5. NY Pre-Market Macros", Order = 120)]
         public bool Macro12Enabled { get; set; }
-        [Display(Name = "Macro 12 Start", GroupName = "3. Macros", Order = 121)]
+        [Display(Name = "Macro 12 Start", GroupName = "5. NY Pre-Market Macros", Order = 121)]
         public string Macro12Start { get; set; }
-        [Display(Name = "Macro 12 End", GroupName = "3. Macros", Order = 122)]
+        [Display(Name = "Macro 12 End", GroupName = "5. NY Pre-Market Macros", Order = 122,
+                 Description = "An end at or before the start runs into the next day.")]
         public string Macro12End { get; set; }
-        [Display(Name = "Macro 12 Label", GroupName = "3. Macros", Order = 123,
+        [Display(Name = "Macro 12 Label", GroupName = "5. NY Pre-Market Macros", Order = 123,
                  Description = "Caption on the band. Empty uses the window's times.")]
         public string Macro12Label { get; set; }
+
+        [Display(Name = "Macro 13", GroupName = "5. NY Pre-Market Macros", Order = 130)]
+        public bool Macro13Enabled { get; set; }
+        [Display(Name = "Macro 13 Start", GroupName = "5. NY Pre-Market Macros", Order = 131)]
+        public string Macro13Start { get; set; }
+        [Display(Name = "Macro 13 End", GroupName = "5. NY Pre-Market Macros", Order = 132,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro13End { get; set; }
+        [Display(Name = "Macro 13 Label", GroupName = "5. NY Pre-Market Macros", Order = 133,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro13Label { get; set; }
+
+        [Display(Name = "Macro 14", GroupName = "5. NY Pre-Market Macros", Order = 140)]
+        public bool Macro14Enabled { get; set; }
+        [Display(Name = "Macro 14 Start", GroupName = "5. NY Pre-Market Macros", Order = 141)]
+        public string Macro14Start { get; set; }
+        [Display(Name = "Macro 14 End", GroupName = "5. NY Pre-Market Macros", Order = 142,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro14End { get; set; }
+        [Display(Name = "Macro 14 Label", GroupName = "5. NY Pre-Market Macros", Order = 143,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro14Label { get; set; }
+
+        [Display(Name = "Macro 15", GroupName = "5. NY Pre-Market Macros", Order = 150)]
+        public bool Macro15Enabled { get; set; }
+        [Display(Name = "Macro 15 Start", GroupName = "5. NY Pre-Market Macros", Order = 151)]
+        public string Macro15Start { get; set; }
+        [Display(Name = "Macro 15 End", GroupName = "5. NY Pre-Market Macros", Order = 152,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro15End { get; set; }
+        [Display(Name = "Macro 15 Label", GroupName = "5. NY Pre-Market Macros", Order = 153,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro15Label { get; set; }
+
+        [Display(Name = "Macro 16", GroupName = "6. NY AM Macros", Order = 160)]
+        public bool Macro16Enabled { get; set; }
+        [Display(Name = "Macro 16 Start", GroupName = "6. NY AM Macros", Order = 161)]
+        public string Macro16Start { get; set; }
+        [Display(Name = "Macro 16 End", GroupName = "6. NY AM Macros", Order = 162,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro16End { get; set; }
+        [Display(Name = "Macro 16 Label", GroupName = "6. NY AM Macros", Order = 163,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro16Label { get; set; }
+
+        [Display(Name = "Macro 17", GroupName = "6. NY AM Macros", Order = 170)]
+        public bool Macro17Enabled { get; set; }
+        [Display(Name = "Macro 17 Start", GroupName = "6. NY AM Macros", Order = 171)]
+        public string Macro17Start { get; set; }
+        [Display(Name = "Macro 17 End", GroupName = "6. NY AM Macros", Order = 172,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro17End { get; set; }
+        [Display(Name = "Macro 17 Label", GroupName = "6. NY AM Macros", Order = 173,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro17Label { get; set; }
+
+        [Display(Name = "Macro 18", GroupName = "6. NY AM Macros", Order = 180)]
+        public bool Macro18Enabled { get; set; }
+        [Display(Name = "Macro 18 Start", GroupName = "6. NY AM Macros", Order = 181)]
+        public string Macro18Start { get; set; }
+        [Display(Name = "Macro 18 End", GroupName = "6. NY AM Macros", Order = 182,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro18End { get; set; }
+        [Display(Name = "Macro 18 Label", GroupName = "6. NY AM Macros", Order = 183,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro18Label { get; set; }
+
+        [Display(Name = "Macro 19", GroupName = "7. NY Lunch Macros", Order = 190)]
+        public bool Macro19Enabled { get; set; }
+        [Display(Name = "Macro 19 Start", GroupName = "7. NY Lunch Macros", Order = 191)]
+        public string Macro19Start { get; set; }
+        [Display(Name = "Macro 19 End", GroupName = "7. NY Lunch Macros", Order = 192,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro19End { get; set; }
+        [Display(Name = "Macro 19 Label", GroupName = "7. NY Lunch Macros", Order = 193,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro19Label { get; set; }
+
+        [Display(Name = "Macro 20", GroupName = "8. NY PM Macros", Order = 200)]
+        public bool Macro20Enabled { get; set; }
+        [Display(Name = "Macro 20 Start", GroupName = "8. NY PM Macros", Order = 201)]
+        public string Macro20Start { get; set; }
+        [Display(Name = "Macro 20 End", GroupName = "8. NY PM Macros", Order = 202,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro20End { get; set; }
+        [Display(Name = "Macro 20 Label", GroupName = "8. NY PM Macros", Order = 203,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro20Label { get; set; }
+
+        [Display(Name = "Macro 21", GroupName = "8. NY PM Macros", Order = 210)]
+        public bool Macro21Enabled { get; set; }
+        [Display(Name = "Macro 21 Start", GroupName = "8. NY PM Macros", Order = 211)]
+        public string Macro21Start { get; set; }
+        [Display(Name = "Macro 21 End", GroupName = "8. NY PM Macros", Order = 212,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro21End { get; set; }
+        [Display(Name = "Macro 21 Label", GroupName = "8. NY PM Macros", Order = 213,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro21Label { get; set; }
+
+        [Display(Name = "Macro 22", GroupName = "9. Final Hour Macros", Order = 220)]
+        public bool Macro22Enabled { get; set; }
+        [Display(Name = "Macro 22 Start", GroupName = "9. Final Hour Macros", Order = 221)]
+        public string Macro22Start { get; set; }
+        [Display(Name = "Macro 22 End", GroupName = "9. Final Hour Macros", Order = 222,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro22End { get; set; }
+        [Display(Name = "Macro 22 Label", GroupName = "9. Final Hour Macros", Order = 223,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro22Label { get; set; }
+
+        [Display(Name = "Macro 23", GroupName = "9. Final Hour Macros", Order = 230)]
+        public bool Macro23Enabled { get; set; }
+        [Display(Name = "Macro 23 Start", GroupName = "9. Final Hour Macros", Order = 231)]
+        public string Macro23Start { get; set; }
+        [Display(Name = "Macro 23 End", GroupName = "9. Final Hour Macros", Order = 232,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro23End { get; set; }
+        [Display(Name = "Macro 23 Label", GroupName = "9. Final Hour Macros", Order = 233,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro23Label { get; set; }
+
+        [Display(Name = "Macro 24", GroupName = "9. Final Hour Macros", Order = 240)]
+        public bool Macro24Enabled { get; set; }
+        [Display(Name = "Macro 24 Start", GroupName = "9. Final Hour Macros", Order = 241)]
+        public string Macro24Start { get; set; }
+        [Display(Name = "Macro 24 End", GroupName = "9. Final Hour Macros", Order = 242,
+                 Description = "An end at or before the start runs into the next day.")]
+        public string Macro24End { get; set; }
+        [Display(Name = "Macro 24 Label", GroupName = "9. Final Hour Macros", Order = 243,
+                 Description = "Caption on the band. Empty uses the window's times.")]
+        public string Macro24Label { get; set; }
 
         #endregion
 
@@ -259,20 +403,32 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // The macro rule is :50 to :10 around every top of the hour, with
                 // the last RTH hour split into the Final Hour and Market On Close
                 // windows instead. The playbook trades the six RTH windows plus
-                // those two, so exactly that set is on; the pre-market pair and
-                // the London pair are carried for convenience but start off.
-                Macro1Enabled = false; Macro1Start = "07:50"; Macro1End = "08:10"; Macro1Label = "";
-                Macro2Enabled = false; Macro2Start = "08:50"; Macro2End = "09:10"; Macro2Label = "";
-                Macro3Enabled = true; Macro3Start = "09:50"; Macro3End = "10:10"; Macro3Label = "";
-                Macro4Enabled = true; Macro4Start = "10:50"; Macro4End = "11:10"; Macro4Label = "";
-                Macro5Enabled = true; Macro5Start = "11:50"; Macro5End = "12:10"; Macro5Label = "";
-                Macro6Enabled = true; Macro6Start = "12:50"; Macro6End = "13:10"; Macro6Label = "";
-                Macro7Enabled = true; Macro7Start = "13:50"; Macro7End = "14:10"; Macro7Label = "";
-                Macro8Enabled = true; Macro8Start = "14:50"; Macro8End = "15:10"; Macro8Label = "";
-                Macro9Enabled = true; Macro9Start = "15:15"; Macro9End = "15:45"; Macro9Label = "Final Hour";
-                Macro10Enabled = true; Macro10Start = "15:45"; Macro10End = "16:00"; Macro10Label = "MOC";
-                Macro11Enabled = false; Macro11Start = "02:33"; Macro11End = "03:00"; Macro11Label = "London Macro 1";
-                Macro12Enabled = false; Macro12Start = "04:03"; Macro12End = "04:30"; Macro12Label = "London Macro 2";
+                // those two, so exactly that set is on; every other session's
+                // windows are carried for convenience but start off.
+                Macro1Enabled = false; Macro1Start = "18:50"; Macro1End = "19:10"; Macro1Label = "";
+                Macro2Enabled = false; Macro2Start = "19:50"; Macro2End = "20:10"; Macro2Label = "";
+                Macro3Enabled = false; Macro3Start = "20:50"; Macro3End = "21:10"; Macro3Label = "";
+                Macro4Enabled = false; Macro4Start = "21:50"; Macro4End = "22:10"; Macro4Label = "";
+                Macro5Enabled = false; Macro5Start = "22:50"; Macro5End = "23:10"; Macro5Label = "";
+                Macro6Enabled = false; Macro6Start = "23:50"; Macro6End = "00:10"; Macro6Label = "";
+                Macro7Enabled = false; Macro7Start = "00:50"; Macro7End = "01:10"; Macro7Label = "";
+                Macro8Enabled = false; Macro8Start = "01:50"; Macro8End = "02:10"; Macro8Label = "";
+                Macro9Enabled = false; Macro9Start = "02:50"; Macro9End = "03:10"; Macro9Label = "";
+                Macro10Enabled = false; Macro10Start = "03:50"; Macro10End = "04:10"; Macro10Label = "";
+                Macro11Enabled = false; Macro11Start = "04:50"; Macro11End = "05:10"; Macro11Label = "";
+                Macro12Enabled = false; Macro12Start = "05:50"; Macro12End = "06:10"; Macro12Label = "";
+                Macro13Enabled = false; Macro13Start = "06:50"; Macro13End = "07:10"; Macro13Label = "";
+                Macro14Enabled = false; Macro14Start = "07:50"; Macro14End = "08:10"; Macro14Label = "";
+                Macro15Enabled = false; Macro15Start = "08:50"; Macro15End = "09:10"; Macro15Label = "";
+                Macro16Enabled = true; Macro16Start = "09:50"; Macro16End = "10:10"; Macro16Label = "";
+                Macro17Enabled = true; Macro17Start = "10:50"; Macro17End = "11:10"; Macro17Label = "";
+                Macro18Enabled = true; Macro18Start = "11:50"; Macro18End = "12:10"; Macro18Label = "";
+                Macro19Enabled = true; Macro19Start = "12:50"; Macro19End = "13:10"; Macro19Label = "";
+                Macro20Enabled = true; Macro20Start = "13:50"; Macro20End = "14:10"; Macro20Label = "";
+                Macro21Enabled = true; Macro21Start = "14:50"; Macro21End = "15:10"; Macro21Label = "";
+                Macro22Enabled = true; Macro22Start = "15:15"; Macro22End = "15:45"; Macro22Label = "Final Hour";
+                Macro23Enabled = true; Macro23Start = "15:45"; Macro23End = "16:00"; Macro23Label = "MOC";
+                Macro24Enabled = false; Macro24Start = "15:50"; Macro24End = "16:00"; Macro24Label = "Settlement";
             }
             else if (State == State.DataLoaded)
             {
@@ -290,6 +446,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AddMacro(Macro10Enabled, Macro10Start, Macro10End, Macro10Label);
                 AddMacro(Macro11Enabled, Macro11Start, Macro11End, Macro11Label);
                 AddMacro(Macro12Enabled, Macro12Start, Macro12End, Macro12Label);
+                AddMacro(Macro13Enabled, Macro13Start, Macro13End, Macro13Label);
+                AddMacro(Macro14Enabled, Macro14Start, Macro14End, Macro14Label);
+                AddMacro(Macro15Enabled, Macro15Start, Macro15End, Macro15Label);
+                AddMacro(Macro16Enabled, Macro16Start, Macro16End, Macro16Label);
+                AddMacro(Macro17Enabled, Macro17Start, Macro17End, Macro17Label);
+                AddMacro(Macro18Enabled, Macro18Start, Macro18End, Macro18Label);
+                AddMacro(Macro19Enabled, Macro19Start, Macro19End, Macro19Label);
+                AddMacro(Macro20Enabled, Macro20Start, Macro20End, Macro20Label);
+                AddMacro(Macro21Enabled, Macro21Start, Macro21End, Macro21Label);
+                AddMacro(Macro22Enabled, Macro22Start, Macro22End, Macro22Label);
+                AddMacro(Macro23Enabled, Macro23Start, Macro23End, Macro23Label);
+                AddMacro(Macro24Enabled, Macro24Start, Macro24End, Macro24Label);
             }
             else if (State == State.Realtime)
             {
@@ -379,11 +547,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Log("ICT Macros: skipping macro \"" + startText + "\" to \"" + endText + "\", expected times as HH:MM.", LogLevel.Warning);
                 return;
             }
-            if (endMinutes <= startMinutes)
+            if (endMinutes == startMinutes)
             {
-                Log("ICT Macros: skipping macro \"" + startText + "\" to \"" + endText + "\", a window has to end after it starts on the same day.", LogLevel.Warning);
+                Log("ICT Macros: skipping macro \"" + startText + "\" to \"" + endText + "\", a window cannot end the minute it starts.", LogLevel.Warning);
                 return;
             }
+            // An end before the start rolls into the next day, which is what
+            // lets the 23:50 window close at 00:10.
+            if (endMinutes < startMinutes)
+                endMinutes += 24 * 60;
             // A named window keeps its name; the unnamed ones caption with
             // their times, which is how the :50-:10 rule windows read best.
             string trimmedLabel = (label ?? string.Empty).Trim();
@@ -393,7 +565,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 EndMinutes = endMinutes,
                 Caption = trimmedLabel.Length > 0
                     ? trimmedLabel
-                    : "Macro " + ClockText(startMinutes) + "-" + ClockText(endMinutes)
+                    : "Macro " + ClockText(startMinutes) + "-" + ClockText(endMinutes % (24 * 60))
             });
         }
 

@@ -47,6 +47,16 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   color, width and dash: every 50 (regular), every 100 (highlighted) and
   every 1000 (major) by default.
 
+### ICT Macros (NinjaTrader, changed)
+- Same 24-slot macro map as the TradingView version, grouped by session
+  (Asia, London, NY pre-market, AM, lunch, PM, final hour). The old
+  02:33-03:00 and 04:03-04:30 "London macro" slots are gone in favor of
+  the :50-:10 London windows, and a Settlement (15:50-16:00) slot is
+  added, off by default.
+- Windows can cross midnight (23:50-00:10).
+- Saved charts keep their values by slot number, so remove and re-add the
+  indicator to get the new defaults.
+
 ### ChartTrading (changed)
 - Click-to-trade now starts OFF whenever the indicator is added, reloaded
   or recompiled; click the ON/OFF button to arm it.

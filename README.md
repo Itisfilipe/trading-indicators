@@ -314,12 +314,16 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   window ("in 4:32") and then counts out what is left of it ("12:10
   left"). Windows are drawn for the whole day, the ones still ahead
   included.
-- Twelve slots, each with its own label ("Final Hour", "MOC" and the
-  London pair come pre-named; an empty label captions with the window's
-  times). The on-by-default set is the tradeable one: the six :50-:10
-  windows inside regular hours plus the Final Hour (15:15-15:45) and
-  Market On Close (15:45-16:00) windows. The pre-market pair (07:50,
-  08:50) and the two London macros are carried but start off.
+- 24 slots — the full :50-:10 macro map, grouped by session in the
+  settings: Asia (18:50 through 00:50), London (01:50 through 04:50), NY
+  pre-market (05:50 through 08:50), NY AM, lunch and PM, plus the Final
+  Hour (15:15-15:45), Market On Close (15:45-16:00) and Settlement
+  (15:50-16:00) specials. Each slot has its own label; an empty one
+  captions with the window's times. The on-by-default set is the
+  tradeable one: the six :50-:10 windows inside regular hours plus Final
+  Hour and MOC.
+- A window may cross midnight (23:50-00:10 does) and stays keyed to the
+  day it starts on.
 - Bands ride a strip pinned to the bottom (or top) of the viewport — bottom
   by default so the strip never collides with Time-Based Vertical Lines
   captions at the top when both are on the same chart.
