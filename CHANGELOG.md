@@ -23,6 +23,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   points", "Show money"); this replaces the single "Level value" choice,
   which resets to the new defaults (price, ticks, money).
   With all four off, stops and targets draw without a price tag.
+- ChartTrading no longer switches itself OFF on every add, reload or
+  recompile: the ON/OFF state is kept and saved with the workspace, and a
+  new "Enabled" setting (on by default) sets it.
 
 ### Order Decorator (changed)
 - "Show Ticks" setting: the tick distance can be hidden like the other

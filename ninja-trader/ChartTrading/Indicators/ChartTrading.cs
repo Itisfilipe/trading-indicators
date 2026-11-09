@@ -129,7 +129,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition toggleButtonRow;
         private bool buttonInChartTrader;
-        private bool tradingEnabled = false;
 
         // Tag text picks black or white per level for contrast against the tag fill.
         private SharpDX.Direct2D1.Brush textWhiteBrushDx;
@@ -221,6 +220,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Buy modifier", Order = 1, GroupName = "1. Gesture",
                  Description = "Hold this key and move over the chart to preview a buy bracket.")]
         public ChartTradingModifier BuyModifier { get; set; }
+
+        [Display(Name = "Enabled", Order = 0, GroupName = "1. Gesture",
+                 Description = "Whether clicks place orders. The ChartTrading ON/OFF button flips this, " +
+                               "and the state is kept across reloads and saved with the workspace.")]
+        public bool TradingEnabled { get; set; }
 
         [Display(Name = "Sell modifier", Order = 2, GroupName = "1. Gesture",
                  Description = "Hold this key and move over the chart to preview a sell bracket.")]
@@ -432,6 +436,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DrawVerticalGridLines = false;
                 PaintPriceMarkers = false;
 
+                TradingEnabled = true;
                 BuyModifier = ChartTradingModifier.Shift;
                 SellModifier = ChartTradingModifier.Alt;
                 Bracket1Enabled = true;
@@ -694,7 +699,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// </remarks>
         private Side ResolveSide()
         {
-            if (!tradingEnabled)
+            if (!TradingEnabled)
                 return Side.None;
 
             ModifierKeys held = Keyboard.Modifiers;
@@ -707,7 +712,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void OnToggleClicked(object sender, RoutedEventArgs e)
         {
-            tradingEnabled = !tradingEnabled;
+            TradingEnabled = !TradingEnabled;
             UpdateToggleVisual();
             // Clears any armed preview the moment trading is switched off.
             UpdatePreview(Side.None);
@@ -718,8 +723,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (toggleButton == null)
                 return;
 
-            toggleButton.Content = tradingEnabled ? "ChartTrading ON" : "ChartTrading OFF";
-            toggleButton.Background = tradingEnabled ? Brushes.SeaGreen : Brushes.DimGray;
+            toggleButton.Content = TradingEnabled ? "ChartTrading ON" : "ChartTrading OFF";
+            toggleButton.Background = TradingEnabled ? Brushes.SeaGreen : Brushes.DimGray;
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
@@ -814,7 +819,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Order submission
         private void OnPanelClick(object sender, MouseButtonEventArgs e)
         {
-            if (!tradingEnabled || previewSide == Side.None || !pointerOverPanel)
+            if (!TradingEnabled || previewSide == Side.None || !pointerOverPanel)
                 return;
 
             MasterInstrument master = Instrument?.MasterInstrument;

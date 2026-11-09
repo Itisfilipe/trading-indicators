@@ -91,7 +91,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   price, ticks, money).
 - "ChartTrading ON/OFF" button (mounted in the ChartTrader panel, floating if
   ChartTrader is hidden): green = clicks place orders, gray = disabled.
-  Starts OFF every time the indicator is added, reloaded or recompiled.
+  The state is kept across reloads and saved with the workspace; "Enabled"
+  in the settings sets it too.
 - "Stops to BE" button: moves every working protective stop on the
   instrument — whatever tool placed it — to the position's average fill
   price plus an offset, clamped inside the market; survives
