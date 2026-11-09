@@ -821,7 +821,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
             int[] stopTicks;
             int[] targetTicks;
-            ResolveBracketTicks(out stopTicks, out targetTicks);
+            if (!ResolveBracketTicks(out stopTicks, out targetTicks))
+            {
+                Log("ChartTrading: ATR distances are on but no ATR is available yet; order not placed.",
+                    NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
             int[] percents = { Percent1, Percent2, Percent3 };
 
             bool[] effectiveEnabled;
@@ -1739,7 +1744,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 bool[] pairEnabled = { Bracket1Enabled, Bracket2Enabled, Bracket3Enabled };
                 int[] stopTicks;
                 int[] targetTicks;
-                ResolveBracketTicks(out stopTicks, out targetTicks);
+                if (!ResolveBracketTicks(out stopTicks, out targetTicks))
+                    return;
                 int[] percents = { Percent1, Percent2, Percent3 };
 
                 bool[] effectiveEnabled;
@@ -1975,13 +1981,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             currentAtr = atrSeries[0];
         }
 
-        private void ResolveBracketTicks(out int[] stopTicks, out int[] targetTicks)
+        // False when ATR distances are on but no ATR exists yet: the caller must
+        // not fall back to the tick distances the trader did not choose.
+        private bool ResolveBracketTicks(out int[] stopTicks, out int[] targetTicks)
         {
             stopTicks = new[] { Stop1Ticks, Stop2Ticks, Stop3Ticks };
             targetTicks = new[] { Target1Ticks, Target2Ticks, Target3Ticks };
+            if (BracketDistance != ChartTradingBracketDistance.Atr)
+                return true;
             double atr = currentAtr;
-            if (BracketDistance != ChartTradingBracketDistance.Atr || atr <= 0)
-                return;
+            if (atr <= 0)
+                return false;
 
             int atrStopTicks = Math.Max(1, (int)Math.Round(atr * StopAtrMultiple / Instrument.MasterInstrument.TickSize));
             double[] targetR = { Target1R, Target2R, Target3R };
@@ -1990,6 +2000,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 stopTicks[i] = atrStopTicks;
                 targetTicks[i] = Math.Max(1, (int)Math.Round(atrStopTicks * targetR[i]));
             }
+            return true;
         }
     }
 }

@@ -355,7 +355,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   configurable (default 5).
 - Session high and low lines (on by default, in the zone's color, width and
   dash configurable): each starts at the candle that made it and runs right
-  until a later candle trades through it, then stops at that candle. Only
+  until a later candle touches or trades through it, then stops at that candle. Only
   candles after the window closes can mitigate it.
 - Use: add to the chart you trade; each slot's name field is a reminder of
   what it marks, nothing is drawn from it.

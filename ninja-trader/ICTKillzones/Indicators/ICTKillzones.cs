@@ -87,7 +87,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int FillOpacity { get; set; }
 
         [Display(Name = "Show Session High/Low", GroupName = "1. General", Order = 4,
-                 Description = "A line from each session's high and low, in the zone's color, running right until a later bar trades through it.")]
+                 Description = "A line from each session's high and low, in the zone's color, running right until a later bar touches or trades through it.")]
         public bool ShowSessionLevels { get; set; }
 
         [Range(1, 5)]

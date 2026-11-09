@@ -669,6 +669,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             daysToDraw.Add(trackedDay);
                 }
             }
+            // A window crossing midnight belongs to the day it starts on, so
+            // yesterday stays in while it may still be running.
+            DateTime yesterday = todayTzDate.AddDays(-1);
+            if (!daysToDraw.Contains(yesterday))
+                foreach (MacroSpan span in spans)
+                    if (span.EndMinutes > 24 * 60)
+                    {
+                        daysToDraw.Add(yesterday);
+                        break;
+                    }
             // Today and tomorrow go in whether or not they have bars yet: their
             // windows are the ones still ahead, which is the point of drawing them.
             daysToDraw.Add(todayTzDate);
