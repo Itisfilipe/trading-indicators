@@ -601,8 +601,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private static string FieldText(Dictionary<string, object> fields, string key)
         {
-            object value;
-            return fields.TryGetValue(key, out value) && value is string ? (string)value : string.Empty;
+            object field;
+            if (fields.TryGetValue(key, out field) && field is string)
+                return (string)field;
+            return string.Empty;
         }
 
         private bool ImpactVisible(NewsImpact impact)
