@@ -36,7 +36,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   they stack, keeping price order, and stay inside the chart.
 
 ### ICT Killzones (changed)
-- Killzone boxes default to 50% fill opacity (was 15%).
+- Killzone boxes default to 8% fill opacity (was 15%), lighter behind the candles.
 - London Open KZ defaults to soft purple (#CE93D8) instead of soft green,
   which blended with the mint up candles inside it.
 - Click-and-drag inside a killzone box pans the chart again; the box no

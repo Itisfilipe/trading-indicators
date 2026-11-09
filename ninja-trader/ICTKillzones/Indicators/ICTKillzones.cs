@@ -280,7 +280,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 TimeZoneSelection = KillzoneTimeZone.NewYork;
                 DaysToShow = 5;
-                FillOpacity = 50;
+                FillOpacity = 8;
                 ShowSessionLevels = true;
                 LevelLineWidth = 1;
                 LevelDashStyle = DashStyleHelper.Solid;
