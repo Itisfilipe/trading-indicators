@@ -412,7 +412,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<NewsEvent> parsed = new List<NewsEvent>();
             object[] entries = new JavaScriptSerializer().DeserializeObject(json) as object[];
             if (entries == null)
-                return parsed;
+                throw new FormatException("the feed is not a JSON array");
 
             foreach (object entry in entries)
             {

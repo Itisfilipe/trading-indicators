@@ -5,6 +5,18 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-09
 
+### ErgonomicCharts (fixed)
+- Removing or reloading the indicator now fully unhooks it from the chart
+  window; old copies no longer keep reacting to mouse releases.
+
+### Economic Calendar (fixed)
+- A malformed calendar download keeps the previous event list instead of
+  blanking the chart until the next hourly refresh.
+
+### Time-Based Price Levels (TradingView, fixed)
+- Higher-timeframe High, Low and Close lines follow the developing period
+  live instead of freezing at the value they had when drawn.
+
 ### ATRRenkoSizeCalculator (fixed)
 - The table draws inside the indicator's own panel instead of at the top of
   the chart.

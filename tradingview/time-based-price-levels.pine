@@ -8,7 +8,7 @@
 //
 // Description:
 // Plots horizontal lines at up to 10 key price levels. Each line is either:
-// - An intraday time (any HH:MM in the selected time zone), or
+// - An intraday time (any half hour in the selected time zone), or
 // - A higher-timeframe period: Daily, Weekly, Monthly, Quarterly,
 //   Semi-Annual, or Yearly.
 // Lines extend through the session with an end-of-day cutoff and an optional
@@ -465,6 +465,14 @@ process_line(idx, enabled, time_str, price_type, line_color) =>
                     current_label = array.get(htf_labels, idx)
                     if lbl_show and not na(current_label)
                         label.set_x(current_label, bar_index + lbl_offset)
+
+            htf_line = array.get(htf_lines, idx)
+            if not na(htf_line)
+                line.set_y1(htf_line, new_price)
+                line.set_y2(htf_line, new_price)
+            htf_label = array.get(htf_labels, idx)
+            if not na(htf_label)
+                label.set_y(htf_label, new_price)
 
         else // Time-based line
             current_date = get_tz_date()

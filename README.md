@@ -323,7 +323,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   captions at the top when both are on the same chart.
 - Same timezone, history and include-tomorrow controls as Time-Based
   Vertical Lines; one stroke sets the color, width and dash of every
-  window's lines and band border, with fill opacity separate.
+  window's lines and band border, with band opacity separate.
 - Use: add to the chart you trade; on anything but NY-time instruments set
   the zone accordingly.
 
@@ -407,7 +407,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 ### Time-Based Price Levels
 
 - Up to 10 horizontal price levels.
-- Each anchored to an intraday time (any HH:MM, your time zone) or a
+- Each anchored to an intraday time (any half hour, your time zone) or a
   higher-timeframe open (daily, weekly, monthly, quarterly, semi-annual,
   yearly).
 - Extended through the session with an end-of-day cutoff.

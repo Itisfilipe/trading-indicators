@@ -202,10 +202,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ChartControl owner = chartControl;
                 if (owner != null)
-                    owner.Dispatcher.InvokeAsync(() => DetachEventHandlers(owner));
+                    owner.Dispatcher.InvokeAsync(() =>
+                    {
+                        DetachEventHandlers(owner);
+                        chartWindow = null;
+                    });
 
                 chartControl = null;
-                chartWindow = null;
             }
         }
 
