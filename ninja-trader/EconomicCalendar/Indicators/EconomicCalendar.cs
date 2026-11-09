@@ -322,12 +322,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 TablePosition = NewsTableCorner.BottomRight;
                 HeaderTextColor = Rgb(0xDE, 0xE1, 0xE9);
                 HeaderBackColor = Rgb(0x28, 0x3C, 0x70);
-                RowTextColor = Rgb(0x00, 0x00, 0x00);
-                RowPastTextColor = Rgb(0x78, 0x7B, 0x86);
+                RowTextColor = Rgb(0x37, 0x41, 0x51);
+                RowPastTextColor = Rgb(0x96, 0x9B, 0xA4);
                 RowBackColor = Rgb(0xDE, 0xE1, 0xE9);
                 ShowTableBorder = true;
                 AutoBorderColor = true;
-                BorderColor = Rgb(0x00, 0x00, 0x00);
+                BorderColor = Rgb(0x37, 0x41, 0x51);
             }
             else if (State == State.DataLoaded)
             {
@@ -777,7 +777,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     float captionHeight = layout.Metrics.Height;
                     bool below = LabelPosition == NewsLabelPosition.Below;
                     float anchorY = below ? panelBottom - captionHeight - 4 : panelTop + 4;
-                    bool hasBar = newsEvent.ChartZoneTime <= lastBarTime;
+                    bool hasBar = newsEvent.ChartZoneTime <= now && newsEvent.ChartZoneTime < lastBarTime;
                     if (hasBar)
                     {
                         // Bars are stamped at their close: the release candle is
@@ -797,6 +797,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         captionY += captionHeight + 2;
                     else
                         captionY -= captionHeight + 2;
+                    captionY = Math.Max(panelTop + 4, Math.Min(captionY, panelBottom - captionHeight - 4));
 
                     SharpDX.Direct2D1.Brush captionBrush = impactTextBrushes[(int)newsEvent.Impact];
                     RenderTarget.DrawTextLayout(

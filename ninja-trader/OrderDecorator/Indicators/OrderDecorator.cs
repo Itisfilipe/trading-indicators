@@ -96,6 +96,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -114,7 +121,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 RightMarginPixels = 50;
                 ProfitColor = Brushes.SeaGreen;
                 LossColor = Brushes.Crimson;
-                NeutralColor = Brushes.DimGray;
+                NeutralColor = Rgb(0x6B, 0x72, 0x80);
             }
             else if (State == State.Terminated)
             {

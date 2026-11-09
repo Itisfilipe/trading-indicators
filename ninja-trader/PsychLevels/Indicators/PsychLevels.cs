@@ -53,6 +53,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Major", GroupName = "2. Style", Order = 3)]
         public Stroke MajorStroke { get; set; }
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -70,9 +77,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MajorEvery = 1000;
                 MaxLines = 250;
 
-                RegularStroke = new Stroke(Brushes.Gray, DashStyleHelper.Dash, 1f);
-                HighlightStroke = new Stroke(Brushes.Gray, DashStyleHelper.Solid, 1f);
-                MajorStroke = new Stroke(Brushes.DimGray, DashStyleHelper.Solid, 2f);
+                RegularStroke = new Stroke(Rgb(0x96, 0x9B, 0xA4), DashStyleHelper.Dash, 1f);
+                HighlightStroke = new Stroke(Rgb(0x6B, 0x72, 0x80), DashStyleHelper.Solid, 1f);
+                MajorStroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Solid, 2f);
             }
         }
 

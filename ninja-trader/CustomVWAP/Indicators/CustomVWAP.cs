@@ -97,6 +97,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -117,12 +124,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Band3Deviations = 0;
 
                 AddPlot(new Stroke(System.Windows.Media.Brushes.DarkOrange, 2), PlotStyle.Line, "VWAP");
-                AddPlot(new Stroke(System.Windows.Media.Brushes.DimGray, 1), PlotStyle.Line, "Upper 1");
-                AddPlot(new Stroke(System.Windows.Media.Brushes.DimGray, 1), PlotStyle.Line, "Lower 1");
-                AddPlot(new Stroke(System.Windows.Media.Brushes.DarkGray, 1), PlotStyle.Line, "Upper 2");
-                AddPlot(new Stroke(System.Windows.Media.Brushes.DarkGray, 1), PlotStyle.Line, "Lower 2");
-                AddPlot(new Stroke(System.Windows.Media.Brushes.LightGray, 1), PlotStyle.Line, "Upper 3");
-                AddPlot(new Stroke(System.Windows.Media.Brushes.LightGray, 1), PlotStyle.Line, "Lower 3");
+                AddPlot(new Stroke(Rgb(0x6B, 0x72, 0x80), 1), PlotStyle.Line, "Upper 1");
+                AddPlot(new Stroke(Rgb(0x6B, 0x72, 0x80), 1), PlotStyle.Line, "Lower 1");
+                AddPlot(new Stroke(Rgb(0x96, 0x9B, 0xA4), 1), PlotStyle.Line, "Upper 2");
+                AddPlot(new Stroke(Rgb(0x96, 0x9B, 0xA4), 1), PlotStyle.Line, "Lower 2");
+                AddPlot(new Stroke(Rgb(0xD1, 0xD5, 0xDB), 1), PlotStyle.Line, "Upper 3");
+                AddPlot(new Stroke(Rgb(0xD1, 0xD5, 0xDB), 1), PlotStyle.Line, "Lower 3");
             }
             else if (State == State.Configure)
             {

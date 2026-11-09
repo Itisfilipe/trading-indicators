@@ -29,7 +29,7 @@ input
 
 var
   nRegularColor, nHighlightColor, nMajorColor : Integer;
-  nCenter, nWantLow, nWantHigh, i : Integer;
+  nCenter, nWantLow, nWantHigh, nFrom, nTo, i : Integer;
   nDrawnLow, nDrawnHigh : Integer;
   fLevel, fTolerance : Float;
   bAlreadyDrawn, bMajor, bHighlight : Boolean;
@@ -59,7 +59,17 @@ begin
     if nWantLow < 1 then
       nWantLow := 1;
 
-    for i := nWantLow to nWantHigh do begin
+    // Tambem cobre o vao entre o intervalo ja desenhado e o novo, se o preco saltou.
+    nFrom := nWantLow;
+    nTo := nWantHigh;
+    if nDrawnHigh > 0 then begin
+      if nDrawnLow < nFrom then
+        nFrom := nDrawnLow;
+      if nDrawnHigh > nTo then
+        nTo := nDrawnHigh;
+    end;
+
+    for i := nFrom to nTo do begin
       bAlreadyDrawn := (nDrawnHigh > 0) and (i >= nDrawnLow) and (i <= nDrawnHigh);
       if not bAlreadyDrawn then begin
         fLevel := i * Passo;

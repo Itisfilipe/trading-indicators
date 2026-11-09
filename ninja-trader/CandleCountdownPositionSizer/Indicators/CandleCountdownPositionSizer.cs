@@ -246,9 +246,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 TextColor = Brushes.White;
                 // Frozen because the render thread reads the brush's color; an
                 // unfrozen WPF brush is bound to its creating thread.
-                SolidColorBrush translucentBlack = new SolidColorBrush(Color.FromArgb(200, 0, 0, 0));
-                translucentBlack.Freeze();
-                BackgroundColor = translucentBlack;
+                SolidColorBrush translucentSlate = new SolidColorBrush(Color.FromArgb(230, 0x37, 0x41, 0x51));
+                translucentSlate.Freeze();
+                BackgroundColor = translucentSlate;
                 AlertTextColor = Brushes.Black;
                 AlertBackgroundColor = Brushes.Red;
 
@@ -431,7 +431,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 displayZone = ResolveDisplayZone();
 
             double atr = currentAtr;
-            double stopDistance = StopAtrMultiple * atr;
+            // Whole ticks, rounded like ChartTrading's ATR brackets, so the lot is
+            // sized for the stop a click actually places.
+            double stopTicks = Math.Round(StopAtrMultiple * atr / master.TickSize, MidpointRounding.AwayFromZero);
+            double stopDistance = atr > 0 ? Math.Max(1, stopTicks) * master.TickSize : 0;
             double riskPerLot = stopDistance * master.PointValue;
             double riskAmount = RiskMode == CountdownRiskMode.FixedDollar
                 ? RiskDollars

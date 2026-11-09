@@ -67,52 +67,52 @@ g_lines = 'Lines'
 l1_enabled = input.bool(true, '', inline = 'l1', group = g_lines)
 l1_time = input.string('00:00', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l1', group = g_lines)
 l1_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l1', group = g_lines)
-l1_color = input.color(color.black, '', inline = 'l1', group = g_lines)
+l1_color = input.color(#374151, '', inline = 'l1', group = g_lines)
 
 l2_enabled = input.bool(true, '', inline = 'l2', group = g_lines)
 l2_time = input.string('08:30', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l2', group = g_lines)
 l2_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l2', group = g_lines)
-l2_color = input.color(color.black, '', inline = 'l2', group = g_lines)
+l2_color = input.color(#374151, '', inline = 'l2', group = g_lines)
 
 l3_enabled = input.bool(true, '', inline = 'l3', group = g_lines)
 l3_time = input.string('09:30', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l3', group = g_lines)
 l3_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l3', group = g_lines)
-l3_color = input.color(color.black, '', inline = 'l3', group = g_lines)
+l3_color = input.color(#374151, '', inline = 'l3', group = g_lines)
 
 l4_enabled = input.bool(false, '', inline = 'l4', group = g_lines)
 l4_time = input.string('13:30', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l4', group = g_lines)
 l4_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l4', group = g_lines)
-l4_color = input.color(color.black, '', inline = 'l4', group = g_lines)
+l4_color = input.color(#374151, '', inline = 'l4', group = g_lines)
 
 l5_enabled = input.bool(false, '', inline = 'l5', group = g_lines)
 l5_time = input.string('16:00', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l5', group = g_lines)
 l5_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l5', group = g_lines)
-l5_color = input.color(color.black, '', inline = 'l5', group = g_lines)
+l5_color = input.color(#374151, '', inline = 'l5', group = g_lines)
 
 l6_enabled = input.bool(false, '', inline = 'l6', group = g_lines)
 l6_time = input.string('D', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l6', group = g_lines)
 l6_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l6', group = g_lines)
-l6_color = input.color(color.black, '', inline = 'l6', group = g_lines)
+l6_color = input.color(#374151, '', inline = 'l6', group = g_lines)
 
 l7_enabled = input.bool(true, '', inline = 'l7', group = g_lines)
 l7_time = input.string('W', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l7', group = g_lines)
 l7_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l7', group = g_lines)
-l7_color = input.color(color.black, '', inline = 'l7', group = g_lines)
+l7_color = input.color(#374151, '', inline = 'l7', group = g_lines)
 
 l8_enabled = input.bool(true, '', inline = 'l8', group = g_lines)
 l8_time = input.string('M', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l8', group = g_lines)
 l8_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l8', group = g_lines)
-l8_color = input.color(color.black, '', inline = 'l8', group = g_lines)
+l8_color = input.color(#374151, '', inline = 'l8', group = g_lines)
 
 l9_enabled = input.bool(false, '', inline = 'l9', group = g_lines)
 l9_time = input.string('3M', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l9', group = g_lines)
 l9_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l9', group = g_lines)
-l9_color = input.color(color.black, '', inline = 'l9', group = g_lines)
+l9_color = input.color(#374151, '', inline = 'l9', group = g_lines)
 
 l10_enabled = input.bool(false, '', inline = 'l10', group = g_lines)
 l10_time = input.string('12M', '', options = ['00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00', '05:30', '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', 'D', 'W', 'M', '3M', '6M', '12M'], tooltip = TIME_TOOLTIP, inline = 'l10', group = g_lines)
 l10_price = input.string('Open', '', options = ['Open', 'High', 'Low', 'Close'], inline = 'l10', group = g_lines)
-l10_color = input.color(color.black, '', inline = 'l10', group = g_lines)
+l10_color = input.color(#374151, '', inline = 'l10', group = g_lines)
 
 //==============================================================================
 // FUNCTIONS

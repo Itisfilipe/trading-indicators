@@ -207,6 +207,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -246,16 +253,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Level10Enabled = false;
                 Level10Time = "12M";
 
-                Level1Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level2Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level3Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level4Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level5Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level6Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level7Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level8Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level9Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
-                Level10Stroke = new Stroke(Brushes.Black, DashStyleHelper.Dash, 1f);
+                Level1Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level2Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level3Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level4Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level5Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level6Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level7Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level8Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level9Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
+                Level10Stroke = new Stroke(Rgb(0x37, 0x41, 0x51), DashStyleHelper.Dash, 1f);
             }
             else if (State == State.DataLoaded)
             {

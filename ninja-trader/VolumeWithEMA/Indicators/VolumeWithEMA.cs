@@ -62,6 +62,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -75,9 +82,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Period = 14;
 
                 // Set default colors
-                VolumeAboveColor = Brushes.Blue;
-                VolumeBelowColor = Brushes.Gray;
-                EMAColor = Brushes.Goldenrod;
+                VolumeAboveColor = Rgb(0x5B, 0x9C, 0xF5);
+                VolumeBelowColor = Rgb(0x96, 0x9B, 0xA4);
+                EMAColor = Rgb(0x37, 0x41, 0x51);
 
                 // Add two plots:
                 // Plot 0: Volume histogram - using a Stroke to allow dynamic coloring.

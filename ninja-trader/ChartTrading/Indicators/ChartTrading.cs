@@ -396,6 +396,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public Stroke TargetStroke { get; set; }
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -446,7 +453,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ValueDisplay = ChartTradingValueDisplay.Price;
 
                 // Solid and thin, matching how the platform draws a working order.
-                EntryStroke = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Solid, 1f);
+                EntryStroke = new Stroke(Rgb(0x2F, 0x6F, 0xD0), DashStyleHelper.Solid, 1f);
                 StopStroke = new Stroke(Brushes.Crimson, DashStyleHelper.Solid, 1f);
                 TargetStroke = new Stroke(Brushes.LimeGreen, DashStyleHelper.Solid, 1f);
             }
@@ -712,15 +719,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // ChartTrader raises no account-changed event we hook, so a switched
             // account is picked up on the next pointer move over the chart;
             // otherwise auto-breakeven would keep guarding the old account. The
-            // switch waits while an entry on the old account is still working:
-            // its exits are placed from that account's fill updates.
+            // switch waits until the old account is flat with no working entry:
+            // exits are placed and resized from that account's order updates.
             Account selectedAccount = ChartControl.OwnerChart?.ChartTrader?.Account;
             if (State < State.Terminated && selectedAccount != null && !ReferenceEquals(selectedAccount, subscribedAccount))
             {
                 bool switched = false;
                 lock (orderLock)
                 {
-                    if (!HasWorkingEntryOn(subscribedAccount))
+                    if (currentMarketPosition == MarketPosition.Flat && !HasWorkingEntryOn(subscribedAccount))
                     {
                         EnsureAccountSubscription(selectedAccount);
                         switched = true;
@@ -1993,12 +2000,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (atr <= 0)
                 return false;
 
-            int atrStopTicks = Math.Max(1, (int)Math.Round(atr * StopAtrMultiple / Instrument.MasterInstrument.TickSize));
+            int atrStopTicks = Math.Max(1, (int)Math.Round(atr * StopAtrMultiple / Instrument.MasterInstrument.TickSize, MidpointRounding.AwayFromZero));
             double[] targetR = { Target1R, Target2R, Target3R };
             for (int i = 0; i < 3; i++)
             {
                 stopTicks[i] = atrStopTicks;
-                targetTicks[i] = Math.Max(1, (int)Math.Round(atrStopTicks * targetR[i]));
+                targetTicks[i] = Math.Max(1, (int)Math.Round(atrStopTicks * targetR[i], MidpointRounding.AwayFromZero));
             }
             return true;
         }

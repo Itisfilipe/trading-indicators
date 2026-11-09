@@ -115,8 +115,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 ### MACDHistogram — momentum-colored MACD histogram
 
-- Bright color when momentum grows (rising above zero, falling below), dark
-  when it fades back toward zero, neutral color at exactly zero.
+- Strong shade when momentum grows (rising above zero, falling below),
+  light shade when it fades back toward zero, neutral color at exactly
+  zero. Defaults follow the chart palette: blue above zero, slate below.
 - All five colors configurable, persist across workspace reloads.
 - Histogram bar width matches the chart's bar width.
 - Settings: fast/slow/smooth periods (12/26/9 defaults) plus the colors.
@@ -530,6 +531,40 @@ chart.
   style, width and color.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
+## Chart palette
+
+The default colors of the NinjaTrader and TradingView tools follow one
+palette, built for a white chart: blue up candles, slate down candles, both
+outlines one step darker than their body.
+
+![Chart palette](docs/palette.svg)
+
+| Role | Hex |
+|------|-----|
+| Up body | `#5B9CF5` |
+| Up outline + wick | `#2F6FD0` |
+| Down body | `#969BA4` |
+| Down outline + wick, crosshair | `#6B7280` |
+| Text, strong lines | `#374151` |
+| Scale line, faint lines | `#D1D5DB` |
+| Pane separator | `#E5E7EB` |
+| Background | `#FFFFFF` |
+
+```text
+#5B9CF5  up body
+#2F6FD0  up outline + wick
+#969BA4  down body
+#6B7280  down outline + wick, crosshair
+#374151  text, strong lines
+#D1D5DB  scale line, faint lines
+#E5E7EB  pane separator
+#FFFFFF  background
+```
+
+Colors that carry meaning keep their own: stop and target red/green, news
+impact, killzone zones, macro orange, the VWAP line. The Profit Chart tools
+are built for a black chart and keep their own palette.
+
 ## Vendor documentation is not included
 
 NinjaTrader's developer docs and Nelogica's NTSL manual belong to their

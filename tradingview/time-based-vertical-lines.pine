@@ -81,7 +81,7 @@ LINE_TOOLTIP = 'On/off, time as HH:MM in the selected zone, label text (leave em
 line1_on = input.bool(true, '1', inline = 'l1', tooltip = LINE_TOOLTIP, group = GRP_LINES)
 line1_time = input.string('00:00', '', inline = 'l1', group = GRP_LINES)
 line1_text = input.string('NY Midnight', '', inline = 'l1', group = GRP_LINES)
-line1_color = input.color(#787B86, '', inline = 'l1', group = GRP_LINES)
+line1_color = input.color(#6B7280, '', inline = 'l1', group = GRP_LINES)
 line1_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l1', group = GRP_LINES)
 
 line2_on = input.bool(true, '2', inline = 'l2', group = GRP_LINES)
@@ -93,19 +93,19 @@ line2_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted']
 line3_on = input.bool(true, '3', inline = 'l3', group = GRP_LINES)
 line3_time = input.string('09:30', '', inline = 'l3', group = GRP_LINES)
 line3_text = input.string('NY Open', '', inline = 'l3', group = GRP_LINES)
-line3_color = input.color(#2962FF, '', inline = 'l3', group = GRP_LINES)
+line3_color = input.color(#2F6FD0, '', inline = 'l3', group = GRP_LINES)
 line3_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l3', group = GRP_LINES)
 
 line4_on = input.bool(false, '4', inline = 'l4', group = GRP_LINES)
 line4_time = input.string('16:00', '', inline = 'l4', group = GRP_LINES)
 line4_text = input.string('NY Close', '', inline = 'l4', group = GRP_LINES)
-line4_color = input.color(#2962FF, '', inline = 'l4', group = GRP_LINES)
+line4_color = input.color(#2F6FD0, '', inline = 'l4', group = GRP_LINES)
 line4_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l4', group = GRP_LINES)
 
 line5_on = input.bool(false, '5', inline = 'l5', group = GRP_LINES)
 line5_time = input.string('18:00', '', inline = 'l5', group = GRP_LINES)
 line5_text = input.string('Futures Open', '', inline = 'l5', group = GRP_LINES)
-line5_color = input.color(#787B86, '', inline = 'l5', group = GRP_LINES)
+line5_color = input.color(#6B7280, '', inline = 'l5', group = GRP_LINES)
 line5_style = input.string('Dashed', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l5', group = GRP_LINES)
 
 line6_on = input.bool(false, '6', inline = 'l6', group = GRP_LINES)
@@ -129,13 +129,13 @@ line8_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted']
 line9_on = input.bool(false, '9', inline = 'l9', group = GRP_LINES)
 line9_time = input.string('17:00', '', inline = 'l9', group = GRP_LINES)
 line9_text = input.string('Session Break', '', inline = 'l9', group = GRP_LINES)
-line9_color = input.color(#787B86, '', inline = 'l9', group = GRP_LINES)
+line9_color = input.color(#6B7280, '', inline = 'l9', group = GRP_LINES)
 line9_style = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l9', group = GRP_LINES)
 
 line10_on = input.bool(false, '10', inline = 'l10', group = GRP_LINES)
 line10_time = input.string('12:00', '', inline = 'l10', group = GRP_LINES)
 line10_text = input.string('', '', inline = 'l10', group = GRP_LINES)
-line10_color = input.color(#787B86, '', inline = 'l10', group = GRP_LINES)
+line10_color = input.color(#6B7280, '', inline = 'l10', group = GRP_LINES)
 line10_style = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], inline = 'l10', group = GRP_LINES)
 
 //==============================================================================

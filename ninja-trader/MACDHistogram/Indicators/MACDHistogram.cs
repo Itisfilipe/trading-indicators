@@ -104,6 +104,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -117,11 +124,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 				
 
                 // Set default color values.
-                PositiveRisingColor = Brushes.Lime;
-                PositiveFallingColor = Brushes.DarkGreen;
-                NegativeFallingColor = Brushes.Red;
-                NegativeRisingColor = Brushes.DarkRed;
-                NeutralColor = Brushes.Gray;
+                PositiveRisingColor = Rgb(0x2F, 0x6F, 0xD0);
+                PositiveFallingColor = Rgb(0x5B, 0x9C, 0xF5);
+                NegativeFallingColor = Rgb(0x6B, 0x72, 0x80);
+                NegativeRisingColor = Rgb(0x96, 0x9B, 0xA4);
+                NeutralColor = Rgb(0xD1, 0xD5, 0xDB);
 
                 // Create a Stroke using the PositiveRisingColor as an initial color.
                 Stroke histStroke = new Stroke(PositiveRisingColor);

@@ -219,16 +219,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Line9Enabled = false; Line9Time = "17:00"; Line9Text = "Session Break";
                 Line10Enabled = false; Line10Time = "12:00"; Line10Text = "";
 
-                Line1Stroke = new Stroke(Rgb(0x78, 0x7B, 0x86), DashStyleHelper.Dash, 1f);
+                Line1Stroke = new Stroke(Rgb(0x6B, 0x72, 0x80), DashStyleHelper.Dash, 1f);
                 Line2Stroke = new Stroke(Rgb(0xEF, 0x53, 0x50), DashStyleHelper.Dot, 1f);
-                Line3Stroke = new Stroke(Rgb(0x29, 0x62, 0xFF), DashStyleHelper.Solid, 1f);
-                Line4Stroke = new Stroke(Rgb(0x29, 0x62, 0xFF), DashStyleHelper.Solid, 1f);
-                Line5Stroke = new Stroke(Rgb(0x78, 0x7B, 0x86), DashStyleHelper.Dash, 1f);
+                Line3Stroke = new Stroke(Rgb(0x2F, 0x6F, 0xD0), DashStyleHelper.Solid, 1f);
+                Line4Stroke = new Stroke(Rgb(0x2F, 0x6F, 0xD0), DashStyleHelper.Solid, 1f);
+                Line5Stroke = new Stroke(Rgb(0x6B, 0x72, 0x80), DashStyleHelper.Dash, 1f);
                 Line6Stroke = new Stroke(Rgb(0x26, 0xA6, 0x9A), DashStyleHelper.Dash, 1f);
                 Line7Stroke = new Stroke(Rgb(0x26, 0xA6, 0x9A), DashStyleHelper.Dash, 1f);
                 Line8Stroke = new Stroke(Rgb(0xEF, 0x53, 0x50), DashStyleHelper.Dot, 1f);
-                Line9Stroke = new Stroke(Rgb(0x78, 0x7B, 0x86), DashStyleHelper.Dot, 1f);
-                Line10Stroke = new Stroke(Rgb(0x78, 0x7B, 0x86), DashStyleHelper.Solid, 1f);
+                Line9Stroke = new Stroke(Rgb(0x6B, 0x72, 0x80), DashStyleHelper.Dot, 1f);
+                Line10Stroke = new Stroke(Rgb(0x6B, 0x72, 0x80), DashStyleHelper.Solid, 1f);
             }
             else if (State == State.DataLoaded)
             {

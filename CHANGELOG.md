@@ -49,6 +49,21 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The table draws inside the indicator's own panel instead of at the top of
   the chart.
 
+### Chart palette (NinjaTrader and TradingView, changed)
+- Default colors follow one palette for white charts (see the README's
+  Chart palette): Renko with Wicks candles blue up and slate down with
+  matching outlines and wicks; MACD Histogram blue above zero and slate
+  below; Volume with EMA blue above average and slate below with a dark
+  slate average; Psych Levels, VWAP bands, Time-Based Price Levels and the
+  gray Time-Based Vertical Lines in slate grays; the info tables on a dark
+  slate background. Saved charts keep their colors; re-add an indicator
+  to pick up the new defaults.
+
+### Candle Countdown & Position Sizer (changed)
+- The stop distance is rounded to whole ticks before sizing, so the lot
+  count matches the stop ChartTrading's ATR mode actually places and never
+  exceeds the risk budget at that stop.
+
 ### Psych Levels (new, NinjaTrader, TradingView and Profit Chart)
 - Horizontal lines at round price levels in three tiers, each with its own
   color, width and dash: every 50 (regular), every 100 (highlighted) and
@@ -77,8 +92,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ### ChartTrading (fixed)
 - After switching the account in ChartTrader, auto breakeven follows the
-  new account as soon as the pointer moves over the chart, instead of
-  guarding the previous account until the next click-to-trade.
+  new account once the previous one is flat with no working entry and the
+  pointer moves over the chart, instead of guarding the previous account
+  until the next click-to-trade.
 
 ### OrderDecorator (fixed)
 - The R multiple on target labels now measures risk to the nearest stop on

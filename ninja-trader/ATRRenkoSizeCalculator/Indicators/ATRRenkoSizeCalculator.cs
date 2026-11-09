@@ -180,9 +180,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // Create new resources if RenderTarget is available
             if (RenderTarget != null)
             {
-                tableBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0, 0, 0, 200));
-                headerBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(70, 70, 70, 180));
-                borderBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(128, 128, 128, 255));
+                tableBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x37, 0x41, 0x51, 230));
+                headerBgBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x6B, 0x72, 0x80, 230));
+                borderBrush = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0x6B, 0x72, 0x80, 255));
                 textBrushWhite = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(255, 255, 255, 255));
                 textBrushBlue = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0, 150, 255, 255));
                 textBrushGreen = new SharpDX.Direct2D1.SolidColorBrush(RenderTarget, new SharpDX.Color(0, 200, 0, 255));

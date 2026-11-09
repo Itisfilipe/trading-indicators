@@ -98,6 +98,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #endregion
 
+        private static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -112,7 +119,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PeriodValue = 15;
                 BrickSizeTicks = 20;
                 EmaPeriod = 20;
-                EMAColor = Brushes.DodgerBlue;
+                EMAColor = Rgb(0x2F, 0x6F, 0xD0);
 
                 AddPlot(new Stroke(EMAColor), PlotStyle.Line, "EMA");
             }
