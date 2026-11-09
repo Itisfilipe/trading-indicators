@@ -50,8 +50,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   the chart.
 
 ### Psych Levels (changed, all platforms)
-- New "Show prices" option (on by default): each level's price is printed on
-  its line at the right edge, in the line's color.
+- Price labels: each level's price printed just above its line in the
+  line's color, with no background, at the right (default) or left end.
+  Switch them per tier; highlighted and major are on, regular off.
 
 ### NinjaTrader chart templates (new)
 - "Blue Slate 1m", "Blue Slate 5m" and "Blue Slate 15m": candlestick charts

@@ -20,6 +20,12 @@ using NinjaTrader.NinjaScript;
 //This namespace holds Indicators in this folder and is required. Do not change it.
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
+    public enum PsychLabelPosition
+    {
+        Right,
+        Left
+    }
+
     public class PsychLevels : Indicator
     {
         [NinjaScriptProperty]
@@ -45,9 +51,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Upper bound on lines drawn at once, centered on the visible range.")]
         public int MaxLines { get; set; }
 
-        [Display(Name = "Show prices", GroupName = "1. Levels", Order = 5,
-                 Description = "Print each level's price on its line at the right edge, in the line's color.")]
-        public bool ShowPriceLabels { get; set; }
+        [Display(Name = "Regular prices", GroupName = "3. Price labels", Order = 1,
+                 Description = "Print the price on each regular line, in the line's color.")]
+        public bool ShowRegularPrices { get; set; }
+
+        [Display(Name = "Highlighted prices", GroupName = "3. Price labels", Order = 2)]
+        public bool ShowHighlightPrices { get; set; }
+
+        [Display(Name = "Major prices", GroupName = "3. Price labels", Order = 3)]
+        public bool ShowMajorPrices { get; set; }
+
+        [Display(Name = "Position", GroupName = "3. Price labels", Order = 4,
+                 Description = "Which end of the line the price sits on.")]
+        public PsychLabelPosition LabelPosition { get; set; }
 
         [Display(Name = "Regular", GroupName = "2. Style", Order = 1)]
         public Stroke RegularStroke { get; set; }
@@ -81,7 +97,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HighlightEvery = 100;
                 MajorEvery = 1000;
                 MaxLines = 250;
-                ShowPriceLabels = true;
+                ShowRegularPrices = false;
+                ShowHighlightPrices = true;
+                ShowMajorPrices = true;
+                LabelPosition = PsychLabelPosition.Right;
 
                 RegularStroke = new Stroke(Rgb(0x8F, 0x95, 0x9E), DashStyleHelper.Dash, 1f);
                 HighlightStroke = new Stroke(Rgb(0x5F, 0x67, 0x73), DashStyleHelper.Solid, 1f);
@@ -112,7 +131,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             float left = ChartPanel.X;
             float right = ChartPanel.X + ChartPanel.W;
 
-            SharpDX.DirectWrite.TextFormat labelFormat = ShowPriceLabels
+            SharpDX.DirectWrite.TextFormat labelFormat = ShowRegularPrices || ShowHighlightPrices || ShowMajorPrices
                 ? chartControl.Properties.LabelFont.ToDirectWriteTextFormat()
                 : null;
             try
@@ -121,10 +140,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     double price = index * StepSize;
                     Stroke stroke = RegularStroke;
+                    bool showPrice = ShowRegularPrices;
                     if (IsMultipleOf(price, MajorEvery))
+                    {
                         stroke = MajorStroke;
+                        showPrice = ShowMajorPrices;
+                    }
                     else if (IsMultipleOf(price, HighlightEvery))
+                    {
                         stroke = HighlightStroke;
+                        showPrice = ShowHighlightPrices;
+                    }
 
                     float y = chartScale.GetYByValue(price);
                     RenderTarget.DrawLine(
@@ -132,8 +158,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         new SharpDX.Vector2(right, y),
                         stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
 
-                    if (labelFormat != null)
-                        DrawPriceLabel(price, right, y, labelFormat, stroke.BrushDX);
+                    if (showPrice && labelFormat != null)
+                        DrawPriceLabel(price, left, right, y, labelFormat, stroke.BrushDX);
                 }
             }
             finally
@@ -143,15 +169,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private void DrawPriceLabel(double price, float right, float y,
+        private void DrawPriceLabel(double price, float left, float right, float y,
             SharpDX.DirectWrite.TextFormat labelFormat, SharpDX.Direct2D1.Brush brush)
         {
             string text = Instrument.MasterInstrument.FormatPrice(price);
             using (SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
                 Core.Globals.DirectWriteFactory, text, labelFormat, 300, labelFormat.FontSize))
             {
+                float x = LabelPosition == PsychLabelPosition.Left ? left + 6 : right - layout.Metrics.Width - 6;
                 RenderTarget.DrawTextLayout(
-                    new SharpDX.Vector2(right - layout.Metrics.Width - 6, y - layout.Metrics.Height - 1),
+                    new SharpDX.Vector2(x, y - layout.Metrics.Height - 1),
                     layout, brush, SharpDX.Direct2D1.DrawTextOptions.NoSnap);
             }
         }

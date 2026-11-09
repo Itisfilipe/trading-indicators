@@ -267,7 +267,9 @@ Linhas horizontais nos niveis redondos de preco, em tres estilos: regular a cada
 - `Tema_Escuro(true)` — cores do tema
 - `Passo(50)` / `Destaque_A_Cada(100)` / `Maior_A_Cada(1000)` — intervalos em pontos
 - `Niveis_Acima_Abaixo(40)` — niveis desenhados acima e abaixo do preco
-- `Mostrar_Precos(true)` / `Casas_Decimais(0)` — escreve o preco em cada linha, a direita
+- `Precos_Regular(false)` / `Precos_Destaque(true)` / `Precos_Maior(true)` — escreve o preco nas linhas de cada tipo
+- `Precos_A_Esquerda(false)` — preco na ponta esquerda em vez da direita
+- `Casas_Decimais(0)` — casas decimais do preco
 - `Estilo_*` (0 = solido, 1 = traco longo, 2 = traco curto) e `Espessura_*` — estilo de cada nivel
 
 ---

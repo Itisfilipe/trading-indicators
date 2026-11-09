@@ -7,6 +7,7 @@ const string GROUP_REGULAR = "Regular Levels"
 const string GROUP_HIGHLIGHT = "Highlighted Levels"
 const string GROUP_MAJOR = "Major Levels"
 const string GROUP_DISPLAY = "Display"
+const string GROUP_LABELS = "Price Labels"
 
 // Level calculation
 stepSize = input.float(
@@ -70,7 +71,13 @@ majorColor = input.color(#374151, "Line color", group = GROUP_MAJOR)
 
 // Display
 maxLines = input.int(250, "Maximum lines", minval = 1, maxval = 500, group = GROUP_DISPLAY)
-showPrices = input.bool(true, "Show prices", tooltip = "Print each level's price on its line at the right edge, in the line's color.", group = GROUP_DISPLAY)
+
+// Price labels
+showRegularPrices = input.bool(false, "Regular levels", group = GROUP_LABELS)
+showHighlightPrices = input.bool(true, "Highlighted levels", group = GROUP_LABELS)
+showMajorPrices = input.bool(true, "Major levels", group = GROUP_LABELS)
+labelPosition = input.string("Right", "Position", options = ["Right", "Left"], group = GROUP_LABELS)
+labelOffset = input.int(10, "Right offset (bars)", minval = 0, maxval = 200, tooltip = "How many bars past the last visible bar the right-side prices sit. Pine cannot read the pane edge, so match it to the empty space you keep on the right.", group = GROUP_LABELS)
 
 toLineStyle(string styleName) =>
     switch styleName
@@ -121,14 +128,17 @@ if barstate.islast
                 color currentColor = lineColor
                 string currentStyle = lineStyle
                 int currentWidth = lineWidth
+                bool currentShowPrice = showRegularPrices
                 if isMultipleOf(priceLevel, majorEvery)
                     currentColor := majorColor
                     currentStyle := majorStyle
                     currentWidth := majorWidth
+                    currentShowPrice := showMajorPrices
                 else if isMultipleOf(priceLevel, highlightEvery)
                     currentColor := highlightColor
                     currentStyle := highlightStyle
                     currentWidth := highlightWidth
+                    currentShowPrice := showHighlightPrices
 
                 line newLine = line.new(
                      x1 = chart.left_visible_bar_time,
@@ -144,14 +154,16 @@ if barstate.islast
 
                 array.push(levelLines, newLine)
 
-                if showPrices
+                if currentShowPrice
+                    bool onRight = labelPosition == "Right"
+                    int labelTime = onRight ? chart.right_visible_bar_time + labelOffset * timeframe.in_seconds() * 1000 : chart.left_visible_bar_time
                     array.push(levelLabels, label.new(
-                         x = chart.right_visible_bar_time,
+                         x = labelTime,
                          y = priceLevel,
                          text = str.tostring(priceLevel, format.mintick),
                          xloc = xloc.bar_time,
-                         style = label.style_label_right,
-                         color = chart.bg_color,
+                         style = onRight ? label.style_label_lower_right : label.style_label_lower_left,
+                         color = color.new(color.white, 100),
                          textcolor = currentColor,
                          size = size.small
                     ))

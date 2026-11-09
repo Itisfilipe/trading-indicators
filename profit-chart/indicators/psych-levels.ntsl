@@ -19,7 +19,10 @@ input
   Destaque_A_Cada(100.0);
   Maior_A_Cada(1000.0);
   Niveis_Acima_Abaixo(40);
-  Mostrar_Precos(true);          // Escreve o preco em cada linha, a direita
+  Precos_Regular(false);         // Escreve o preco nas linhas de cada tipo
+  Precos_Destaque(true);
+  Precos_Maior(true);
+  Precos_A_Esquerda(false);      // false = preco na ponta direita da linha
   Casas_Decimais(0);
 
   Estilo_Regular(2);             // 0=solido, 1=traco longo, 2=traco curto
@@ -35,6 +38,7 @@ var
   nDrawnLow, nDrawnHigh : Integer;
   fLevel, fTolerance : Float;
   sLabel : String;
+  nTextPos : Integer;
   bAlreadyDrawn, bMajor, bHighlight : Boolean;
 
 begin
@@ -54,6 +58,10 @@ begin
     if (nDrawnLow = 0) or (nDrawnLow[1] < nDrawnLow) then
       nDrawnLow := nDrawnLow[1];
   end;
+
+  nTextPos := tpTopRight;
+  if Precos_A_Esquerda then
+    nTextPos := tpTopLeft;
 
   if LastBarOnChart and (Passo > 0) then begin
     nCenter := Round(Close / Passo);
@@ -86,15 +94,16 @@ begin
           bHighlight := Abs(fLevel - Round(fLevel / Destaque_A_Cada) * Destaque_A_Cada) <= fTolerance;
 
         sLabel := "";
-        if Mostrar_Precos then
+        if (bMajor and Precos_Maior) or ((not bMajor) and bHighlight and Precos_Destaque)
+           or ((not bMajor) and (not bHighlight) and Precos_Regular) then
           sLabel := FloatToString(fLevel, Casas_Decimais);
 
         if bMajor then
-          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, sLabel, 8, tpTopRight)
+          HorizontalLineCustom(fLevel, nMajorColor, Espessura_Maior, Estilo_Maior, sLabel, 8, nTextPos)
         else if bHighlight then
-          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, sLabel, 8, tpTopRight)
+          HorizontalLineCustom(fLevel, nHighlightColor, Espessura_Destaque, Estilo_Destaque, sLabel, 8, nTextPos)
         else
-          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, sLabel, 8, tpTopRight);
+          HorizontalLineCustom(fLevel, nRegularColor, Espessura_Regular, Estilo_Regular, sLabel, 8, nTextPos);
       end;
     end;
 
