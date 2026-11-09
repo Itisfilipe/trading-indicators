@@ -553,35 +553,28 @@ chart.
   above and below, recomputed when you scroll or zoom.
 ## Chart palette
 
-The default colors of the NinjaTrader and TradingView tools follow one
-palette, built for long sessions on an off-white chart: less glare than
-pure white, a muted blue for up candles and darker slate for down candles,
-so direction reads by brightness as well as hue, both outlines one step
-darker than their body, and zones
-in amber, the hue farthest from both candle colors, so candles inside a
-zone stay readable.
+The default colors of the NinjaTrader tools follow one palette, "Modern
+Green": an off-white chart (less glare than pure white), mint up candles
+and near-black down candles, so direction reads at a glance by brightness
+alone, one near-black outline and wick on both sides so wick tips stay
+crisp for spotting gaps, and zones in amber, away from both candle colors.
 
 ![Chart palette](docs/chart-palette.svg)
 
 | Role | Hex | RGB | Opacity |
 |------|-----|-----|---------|
-| Up body | `#6995D3` | `105, 149, 211` | 100% |
-| Up outline + wick | `#3E68A3` | `62, 104, 163` | 100% |
-| Down body, crosshair | `#5F6773` | `95, 103, 115` | 100% |
-| Down outline + wick | `#374151` | `55, 65, 81` | 100% |
+| Up body | `#37F09C` | `55, 240, 156` | 100% |
+| Down body, outline + wick (both sides), doji | `#1A1C26` | `26, 28, 38` | 100% |
+| Crosshair | `#5F6773` | `95, 103, 115` | 100% |
 | Zones (rectangles) | `#B8862B` | `184, 134, 43` | 100% outline, 12% fill |
 | Text, strong lines | `#374151` | `55, 65, 81` | 100% |
 | Scale line, faint lines | `#D1D5DB` | `209, 213, 219` | 100% |
 | Pane separator | `#E5E7EB` | `229, 231, 235` | 100% |
 | Background | `#F8F9FB` | `248, 249, 251` | 100% |
 
-NinjaTrader chart templates with this palette (1, 5 and 15-minute
-candlesticks, full ETH session) are in
-[`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/). Stock
-NinjaTrader candlesticks have one outline and wick color for both
-directions, so the templates use dark slate `#1F2937` (rgb `31, 41, 55`)
-for both, which keeps wick tips crisp for spotting gaps; Renko with Wicks
-draws the up and down outlines separately.
+NinjaTrader chart templates with this palette ("Modern Green" 1, 5 and
+15-minute candlesticks, full ETH session) are in
+[`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/).
 
 Colors that carry meaning keep their own: stop and target red/green, news
 impact, killzone zones, macro orange, the VWAP line. The Profit Chart tools

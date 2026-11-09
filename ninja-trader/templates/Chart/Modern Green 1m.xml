@@ -16,7 +16,7 @@
             <MarketDataType>Last</MarketDataType>
             <PointAndFigurePriceType>Close</PointAndFigurePriceType>
             <ReversalType>Tick</ReversalType>
-            <Value>15</Value>
+            <Value>1</Value>
             <Value2>1</Value2>
           </BarsPeriod>
           <RangeType>Days</RangeType>
@@ -50,8 +50,8 @@
           <PositionPenLoserSerialize>DEFAULT</PositionPenLoserSerialize>
           <PositionPenWinnerSerialize>DEFAULT</PositionPenWinnerSerialize>
           <ShortExecutionBrushSerialize>DEFAULT</ShortExecutionBrushSerialize>
-          <BarsSeriesId>793e6a58d1424cdebd32587a982eb6f8</BarsSeriesId>
-          <Id>62f25ab498c04b44aa782675b0efc915</Id>
+          <BarsSeriesId>efd901b65d144980b1049dbe39207f58</BarsSeriesId>
+          <Id>66309c7d39f64ec2bab7a3f0471982f4</Id>
           <Instrument>MNQ 12-26</Instrument>
           <IsLinked>true</IsLinked>
           <IsPrimarySeries>true</IsPrimarySeries>
@@ -64,18 +64,19 @@
                 <IsVisible>true</IsVisible>
                 <BarWidth>3</BarWidth>
                 <ChartStyleTypeSerialize>1</ChartStyleTypeSerialize>
-                <DownBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF5F6773&lt;/SolidColorBrush&gt;</DownBrushSerialize>
-                <UpBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF6995D3&lt;/SolidColorBrush&gt;</UpBrushSerialize>
-                <StrokeSerialize>&lt;Pen Brush="#FF1F2937" Thickness="1" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;
+                <DownBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF1A1C26&lt;/SolidColorBrush&gt;</DownBrushSerialize>
+                <UpBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF37F09C&lt;/SolidColorBrush&gt;</UpBrushSerialize>
+                <StrokeSerialize>&lt;Pen Brush="#FF1A1C26" Thickness="1" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;
   &lt;Pen.DashStyle&gt;
     &lt;DashStyle /&gt;
   &lt;/Pen.DashStyle&gt;
 &lt;/Pen&gt;</StrokeSerialize>
-                <Stroke2Serialize>&lt;Pen Brush="#FF1F2937" Thickness="1" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;
+                <Stroke2Serialize>&lt;Pen Brush="#FF1A1C26" Thickness="1" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;
   &lt;Pen.DashStyle&gt;
     &lt;DashStyle /&gt;
   &lt;/Pen.DashStyle&gt;
 &lt;/Pen&gt;</Stroke2Serialize>
+                <DojiBrushSerialize>&lt;SolidColorBrush xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"&gt;#FF1A1C26&lt;/SolidColorBrush&gt;</DojiBrushSerialize>
               </CandleStyle>
             </CandleStyle>
           </ChartStyle>

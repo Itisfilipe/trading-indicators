@@ -174,20 +174,20 @@ namespace NinjaTrader.NinjaScript.ChartStyles
                 // Defaults let the base class bind these to the render target. Without
                 // them, OnRender would have to build a Stroke per bar and read BrushDX
                 // off a stroke that was never bound to a target. The chart palette:
-                // each side's outline and wick share one color, a step darker than its
-                // body (chart styles get a single set of defaults -- the platform
+                // mint up bodies, near-black down bodies, and one near-black outline
+                // and wick on both sides (chart styles get a single set of defaults -- the platform
                 // cannot vary them per skin). Frozen because chart property brushes
                 // are read off the UI thread.
                 System.Windows.Media.Brush upColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x69, 0x95, 0xD3));
+                    System.Windows.Media.Color.FromRgb(0x37, 0xF0, 0x9C));
                 System.Windows.Media.Brush upEdgeColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x3E, 0x68, 0xA3));
+                    System.Windows.Media.Color.FromRgb(0x1A, 0x1C, 0x26));
                 upColor.Freeze();
                 upEdgeColor.Freeze();
                 System.Windows.Media.Brush downColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x5F, 0x67, 0x73));
+                    System.Windows.Media.Color.FromRgb(0x1A, 0x1C, 0x26));
                 System.Windows.Media.Brush downEdgeColor = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x37, 0x41, 0x51));
+                    System.Windows.Media.Color.FromRgb(0x1A, 0x1C, 0x26));
                 downColor.Freeze();
                 downEdgeColor.Freeze();
 

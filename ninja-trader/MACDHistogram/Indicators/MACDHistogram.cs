@@ -124,9 +124,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 				
 
                 // Set default color values.
-                PositiveRisingColor = Rgb(0x3E, 0x68, 0xA3);
-                PositiveFallingColor = Rgb(0x69, 0x95, 0xD3);
-                NegativeFallingColor = Rgb(0x5F, 0x67, 0x73);
+                PositiveRisingColor = Rgb(0x37, 0xF0, 0x9C);
+                PositiveFallingColor = Rgb(0xA7, 0xF3, 0xD0);
+                NegativeFallingColor = Rgb(0x1A, 0x1C, 0x26);
                 NegativeRisingColor = Rgb(0x8F, 0x95, 0x9E);
                 NeutralColor = Rgb(0xD1, 0xD5, 0xDB);
 

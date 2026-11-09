@@ -6,11 +6,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-11-09
 
 ### Chart palette (changed)
-- Down candles are darker so up and down read apart at a glance: body
-  slate #5F6773 (was #8F959E), outline and wick #374151 (was #5F6773).
-  Applies to the NinjaTrader chart templates and Renko with Wicks defaults.
-- NinjaTrader chart templates: candle outline and wick are dark slate
-  #1F2937 (was #5F6773) for both directions.
+- New palette, "Modern Green": mint up candles (#37F09C), near-black down
+  candles (#1A1C26) and one near-black outline, wick and doji color for
+  both sides, on the same off-white background with amber zones.
+- The NinjaTrader chart templates are now "Modern Green 1m/5m/15m",
+  replacing "Blue Slate"; Renko with Wicks, Volume with EMA and MACD
+  Histogram default to the new candle colors.
 
 ### ChartTrading (changed)
 - Settings regrouped: Brackets (distance mode, then each pair's on/off,
