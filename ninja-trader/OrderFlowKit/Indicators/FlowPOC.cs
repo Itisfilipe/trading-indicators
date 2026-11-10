@@ -102,7 +102,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
                 Marker = FlowPocMarker.Circle;
-                MarkerSize = 20;
+                MarkerSize = 18;
                 FillOpacity = 40;
                 ShowBarStats = true;
 
@@ -362,7 +362,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                     if (baseline > 0 && strength > baseline * AverageMultiplier)
                     {
-                        float growth = (float)Math.Min(1.6, Math.Max(0.8, Math.Sqrt(strength / baseline)));
+                        float growth = (float)Math.Min(1.25, Math.Max(0.9, Math.Sqrt(strength / baseline)));
                         float radius = MarkerSize / 2f * growth;
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
@@ -395,9 +395,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (ShowBarStats)
                     {
                         double delta = barDelta.GetValueAt(barIndex);
-                        float statsTop = chartScale.GetYByValue(Bars.GetLow(barIndex)) + 4;
-                        DrawCenteredText(FormatVolume(barVolume.GetValueAt(barIndex)), textFormat, x, statsTop + rowHeight / 2, textBrush);
-                        DrawCenteredText((delta > 0 ? "+" : "") + delta.ToString("0"), textFormat, x, statsTop + rowHeight * 1.5f,
+                        bool closedDown = Bars.GetClose(barIndex) < Bars.GetOpen(barIndex);
+                        float volumeY = closedDown
+                            ? chartScale.GetYByValue(Bars.GetHigh(barIndex)) - 4 - rowHeight / 2
+                            : chartScale.GetYByValue(Bars.GetLow(barIndex)) + 4 + rowHeight / 2;
+                        float deltaY = closedDown ? volumeY - rowHeight : volumeY + rowHeight;
+                        DrawCenteredText(FormatVolume(barVolume.GetValueAt(barIndex)), textFormat, x, volumeY, textBrush);
+                        DrawCenteredText((delta > 0 ? "+" : "") + delta.ToString("0"), textFormat, x, deltaY,
                             lines[delta >= 0 ? BuyColor : SellColor]);
                     }
                 }
@@ -463,7 +467,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Fill opacity (%)", Order = 3, GroupName = "2. Appearance")]
         public int FillOpacity { get; set; }
 
-        [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta under its low.", Order = 4, GroupName = "2. Appearance")]
+        [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta at its opening end: above a falling candle, below a rising one.", Order = 4, GroupName = "2. Appearance")]
         public bool ShowBarStats { get; set; }
 
         [Display(Name = "Font", Order = 5, GroupName = "2. Appearance")]

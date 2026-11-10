@@ -458,7 +458,9 @@ the two count toward volume only.
   sells; "Label" = Volume shows all contracts traded there instead); the
   rest get a short dash. "Strength measure" picks what is compared with
   the average: the POC's volume (default) or its leftover lots.
-  Each candle's volume and delta print under its low. "Price grouping"
+  Each candle's volume and delta print at its opening end: above a
+  falling candle, below a rising one, so they stay clear of the next
+  candles in a trend. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"
   grays a POC unless one side's share beats it.
   "Strength baseline" set to SameTimeOfDay compares each POC with the
