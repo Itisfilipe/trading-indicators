@@ -340,6 +340,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             SharpDX.Direct2D1.Brush textBrush = TextColor.ToDxBrush(RenderTarget);
             SharpDX.Direct2D1.Brush absorptionBrush = AbsorptionColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush backgroundBrush = chartControl.Properties.ChartBackground.ToDxBrush(RenderTarget);
 
             try
             {
@@ -369,6 +370,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (Marker == FlowPocMarker.Circle)
                         {
                             SharpDX.Direct2D1.Ellipse ellipse = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
+                            RenderTarget.FillEllipse(ellipse, backgroundBrush);
                             RenderTarget.FillEllipse(ellipse, fills[color]);
                             RenderTarget.DrawEllipse(ellipse, lines[color], 1.5f);
                             if (isAbsorption)
@@ -377,6 +379,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         else
                         {
                             SharpDX.RectangleF square = new SharpDX.RectangleF(x - radius, y - radius, radius * 2, radius * 2);
+                            RenderTarget.FillRectangle(square, backgroundBrush);
                             RenderTarget.FillRectangle(square, fills[color]);
                             RenderTarget.DrawRectangle(square, lines[color], 1.5f);
                             if (isAbsorption)
@@ -411,6 +414,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 textFormat.Dispose();
                 textBrush.Dispose();
                 absorptionBrush.Dispose();
+                backgroundBrush.Dispose();
                 foreach (SharpDX.Direct2D1.Brush brush in fills.Values)
                     brush.Dispose();
                 foreach (SharpDX.Direct2D1.Brush brush in lines.Values)

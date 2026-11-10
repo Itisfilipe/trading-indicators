@@ -36,6 +36,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   price again, as the reference chart does (a tied, gray POC there still
   reads 84); leftover lots stay available as "Label" and "Strength
   measure" = Delta.
+- Flow POC markers are solid over the chart background, so the number
+  stays readable on dark candle bodies.
 - Flow Absorption finds many more levels: it reads net aggression over
   4-tick zones instead of gross volume at one tick, with lower defaults
   (50 lots, 2x the candle average, bottom/top half of the candle). Bands
