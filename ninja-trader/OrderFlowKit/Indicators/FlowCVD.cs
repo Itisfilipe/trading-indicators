@@ -15,6 +15,12 @@ using NinjaTrader.NinjaScript.DrawingTools;
 
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
+    public enum FlowDeltaSource
+    {
+        BidAsk,
+        CandleRange
+    }
+
     /// <summary>
     /// Cumulative delta drawn as candles, with its swing pivots, the pivot
     /// levels until the delta closes through them, and absorption bands where
@@ -63,6 +69,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ResetEachSession = false;
                 ResetAtTime = false;
                 ResetTime = "09:30";
+                DeltaSource = FlowDeltaSource.BidAsk;
                 HeikinAshi = true;
                 PivotStrength = 3;
                 ShowBrokenLevels = false;
@@ -98,9 +105,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 hasResetTime = ResetAtTime && TimeSpan.TryParse(ResetTime, CultureInfo.InvariantCulture, out resetTimeOfDay);
                 if (ResetAtTime && !hasResetTime)
                     Draw.TextFixed(this, "FlowCvdResetTime", "Flow CVD: reset time must be HH:MM", TextPosition.TopLeft);
-                if (Calculate == Calculate.OnBarClose)
+                if (Calculate == Calculate.OnBarClose && DeltaSource == FlowDeltaSource.BidAsk)
                     Draw.TextFixed(this, "FlowCvdCalculate", "Flow CVD: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
-                if (!Bars.IsTickReplay)
+                if (!Bars.IsTickReplay && DeltaSource == FlowDeltaSource.BidAsk)
                     Draw.TextFixed(this, "FlowCvdTickReplay", "Flow CVD: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
             }
         }
@@ -111,24 +118,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
+            if (DeltaSource != FlowDeltaSource.BidAsk)
+                return;
 
-            if (CurrentBar != activeBar)
-            {
-                activeBar = CurrentBar;
-                activeBarIsReset = IsResetBar(CurrentBar);
-                if (activeBarIsReset)
-                {
-                    cumulativeDelta = 0;
-                    lock (pivots)
-                        foreach (PivotLevel level in pivots)
-                            if (level.BrokenAt < 0)
-                                level.BrokenAt = CurrentBar - 1;
-                }
-                cvdOpen[0] = cumulativeDelta;
-                cvdHigh[0] = cumulativeDelta;
-                cvdLow[0] = cumulativeDelta;
-            }
-
+            StartBarIfNew();
             if (e.Price >= e.Ask)
                 cumulativeDelta += e.Volume;
             else if (e.Price <= e.Bid)
@@ -138,6 +131,40 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             cvdLow[0] = Math.Min(cvdLow[0], cumulativeDelta);
             cvdClose[0] = cumulativeDelta;
             Value[0] = cumulativeDelta;
+            UpdateShownCandle();
+        }
+
+        private void StartBarIfNew()
+        {
+            if (CurrentBar == activeBar)
+                return;
+
+            activeBar = CurrentBar;
+            activeBarIsReset = IsResetBar(CurrentBar);
+            if (activeBarIsReset)
+            {
+                cumulativeDelta = 0;
+                lock (pivots)
+                    foreach (PivotLevel level in pivots)
+                        if (level.BrokenAt < 0)
+                            level.BrokenAt = CurrentBar - 1;
+            }
+            cvdOpen[0] = cumulativeDelta;
+            cvdHigh[0] = cumulativeDelta;
+            cvdLow[0] = cumulativeDelta;
+        }
+
+        private void UpdateFromCandleRange()
+        {
+            StartBarIfNew();
+            double range = High[0] - Low[0];
+            double barDelta = range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
+            double close = cvdOpen[0] + barDelta;
+            cvdHigh[0] = Math.Max(cvdOpen[0], close);
+            cvdLow[0] = Math.Min(cvdOpen[0], close);
+            cvdClose[0] = close;
+            Value[0] = close;
+            cumulativeDelta = close;
             UpdateShownCandle();
         }
 
@@ -169,6 +196,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
+            if (DeltaSource == FlowDeltaSource.CandleRange)
+                UpdateFromCandleRange();
+
             if (!IsFirstTickOfBar || CurrentBar < 1)
                 return;
 
@@ -395,27 +425,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
         public string ResetTime { get; set; }
 
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; follows price, like the reference trader's 1-minute CVD.", Order = 4, GroupName = "1. CVD")]
+        public FlowDeltaSource DeltaSource { get; set; }
+
         [NinjaScriptProperty]
-        [Display(Name = "Heikin-Ashi candles", Description = "Draw the cumulative delta as Heikin-Ashi candles: smoother runs, fewer pivots. Pivots and their breaks follow the candles drawn.", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Heikin-Ashi candles", Description = "Draw the cumulative delta as Heikin-Ashi candles: smoother runs, fewer pivots. Pivots and their breaks follow the candles drawn.", Order = 5, GroupName = "1. CVD")]
         public bool HeikinAshi { get; set; }
 
         [Range(1, 20), NinjaScriptProperty]
-        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 5, GroupName = "1. CVD")]
+        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 6, GroupName = "1. CVD")]
         public int PivotStrength { get; set; }
 
-        [Display(Name = "Show broken levels", Description = "Keep each pivot's line up to the candle that closed through it. Off: only levels the CVD has not crossed yet are drawn.", Order = 6, GroupName = "1. CVD")]
+        [Display(Name = "Show broken levels", Description = "Keep each pivot's line up to the candle that closed through it. Off: only levels the CVD has not crossed yet are drawn.", Order = 7, GroupName = "1. CVD")]
         public bool ShowBrokenLevels { get; set; }
 
         [Range(5, 500), NinjaScriptProperty]
-        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 7, GroupName = "1. CVD")]
+        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 8, GroupName = "1. CVD")]
         public int AbsorptionLookback { get; set; }
 
         [Range(0.5, 10), NinjaScriptProperty]
-        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 8, GroupName = "1. CVD")]
+        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 9, GroupName = "1. CVD")]
         public double AbsorptionZScore { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Band opacity (%)", Order = 9, GroupName = "1. CVD")]
+        [Display(Name = "Band opacity (%)", Order = 10, GroupName = "1. CVD")]
         public int BandOpacity { get; set; }
 
         [XmlIgnore]

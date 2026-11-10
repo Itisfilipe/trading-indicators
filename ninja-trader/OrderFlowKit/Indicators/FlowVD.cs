@@ -50,6 +50,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowZScore = false;
                 ZScoreLookback = 60;
                 SmoothingPeriod = 4;
+                DeltaSource = FlowDeltaSource.BidAsk;
                 BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;
 
@@ -65,9 +66,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Historical)
             {
-                if (Calculate == Calculate.OnBarClose)
+                if (Calculate == Calculate.OnBarClose && DeltaSource == FlowDeltaSource.BidAsk)
                     Draw.TextFixed(this, "FlowVdCalculate", "Flow VD: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
-                if (!Bars.IsTickReplay)
+                if (!Bars.IsTickReplay && DeltaSource == FlowDeltaSource.BidAsk)
                     Draw.TextFixed(this, "FlowVdTickReplay", "Flow VD: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
             }
         }
@@ -79,6 +80,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Value[0] = 0;
                 rawDelta[0] = 0;
             }
+
+            if (DeltaSource == FlowDeltaSource.CandleRange)
+            {
+                StartBarIfNew();
+                double range = High[0] - Low[0];
+                delta = range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
+                ShowDelta();
+            }
         }
 
         protected override void OnMarketData(MarketDataEventArgs e)
@@ -87,23 +96,33 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
+            if (DeltaSource != FlowDeltaSource.BidAsk)
+                return;
 
-            if (CurrentBar != activeBar)
-            {
-                activeBar = CurrentBar;
-                delta = 0;
-                previousSmoothedSize = CurrentBar > 0 && smoothedSize.IsValidDataPointAt(CurrentBar - 1)
-                    ? smoothedSize.GetValueAt(CurrentBar - 1)
-                    : double.NaN;
-                if (ShowZScore)
-                    MeasurePreviousDeltas();
-            }
-
+            StartBarIfNew();
             if (e.Price >= e.Ask)
                 delta += e.Volume;
             else if (e.Price <= e.Bid)
                 delta -= e.Volume;
+            ShowDelta();
+        }
 
+        private void StartBarIfNew()
+        {
+            if (CurrentBar == activeBar)
+                return;
+
+            activeBar = CurrentBar;
+            delta = 0;
+            previousSmoothedSize = CurrentBar > 0 && smoothedSize.IsValidDataPointAt(CurrentBar - 1)
+                ? smoothedSize.GetValueAt(CurrentBar - 1)
+                : double.NaN;
+            if (ShowZScore)
+                MeasurePreviousDeltas();
+        }
+
+        private void ShowDelta()
+        {
             rawDelta[0] = delta;
             double shown = delta;
             if (ShowZScore)
@@ -157,6 +176,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 50), NinjaScriptProperty]
         [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
         public int SmoothingPeriod { get; set; }
+
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; follows price, like the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
+        public FlowDeltaSource DeltaSource { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Buyer color", Order = 1, GroupName = "2. Colors")]

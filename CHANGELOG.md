@@ -38,6 +38,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   measure" = Delta.
 - Flow POC markers are solid over the chart background, so the number
   stays readable on dark candle bodies.
+- Flow CVD and Flow VD can compute delta from each candle's range
+  ("Delta source" = CandleRange) to look like the reference trader's 1-minute
+  panels; the default stays the real bid/ask delta.
 - Flow Absorption finds many more levels: it reads net aggression over
   4-tick zones instead of gross volume at one tick, with lower defaults
   (50 lots, 2x the candle average, bottom/top half of the candle). Bands

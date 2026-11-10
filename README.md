@@ -484,7 +484,15 @@ the two count toward volume only.
   the raw delta, which is what to use on the chart where you read the
   exact lot balance.
 - **Flow CVD** (own panel): cumulative delta drawn as Heikin-Ashi candles
-  ("Heikin-Ashi candles" off draws the raw CVD candles). Swing highs
+  ("Heikin-Ashi candles" off draws the raw CVD candles). "Delta source"
+  on Flow CVD and Flow VD picks what delta means: BidAsk (default) is real
+  aggression from each trade's bid and ask; CandleRange splits each
+  candle's volume by where it closed in its range, volume x (2 close -
+  high - low) / range. CandleRange follows price, cannot show absorption
+  and needs no Tick Replay; it reproduces the reference trader's 1-minute
+  CVD and VD (which move by thousands of lots and fall on red candles,
+  where real delta can rise), so his explanations can be read on your
+  chart. Swing highs
   and lows ("Pivot strength" candles on each side, 3 by default) get a
   circle and a level line while no CVD close has crossed it; "Show broken
   levels" keeps crossed lines up to the crossing candle. A shaded band marks absorption: a candle whose delta is
