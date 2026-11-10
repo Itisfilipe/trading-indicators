@@ -41,10 +41,6 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Flow CVD and Flow VD can compute delta from each candle's range
   ("Delta source" = CandleRange) to look like the reference trader's 1-minute
   panels; the default stays the real bid/ask delta.
-- "Delta source" = CandleDirection signs each candle's whole volume by its
-  color, the other candidate for the reference trader's 1-minute CVD.
-- "Delta source" = TickRule classifies each trade by uptick or downtick
-  against the previous trade, the third candidate for his 1-minute CVD.
 - Flow Absorption counts all the one-sided aggression in a zone (not the
   net) and keeps a level until its lots are eaten, even after price closes
   beyond it, as on the reference chart.

@@ -22,8 +22,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double delta;
-        private double lastTradePrice = double.NaN;
-        private int tickRuleSide;
         private double windowMean;
         private double windowDeviation;
         private Series<double> rawDelta;
@@ -87,9 +85,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 StartBarIfNew();
                 double range = High[0] - Low[0];
-                delta = DeltaSource == FlowDeltaSource.CandleDirection
-                    ? Math.Sign(Close[0] - Open[0]) * Volume[0]
-                    : range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
+                delta = range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
                 ShowDelta();
             }
         }
@@ -110,18 +106,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private bool UsesTrades
         {
-            get { return DeltaSource == FlowDeltaSource.BidAsk || DeltaSource == FlowDeltaSource.TickRule; }
+            get { return DeltaSource == FlowDeltaSource.BidAsk; }
         }
 
-        private int TradeSide(MarketDataEventArgs e)
+        private static int TradeSide(MarketDataEventArgs e)
         {
-            if (DeltaSource == FlowDeltaSource.BidAsk)
-                return e.Price >= e.Ask ? 1 : e.Price <= e.Bid ? -1 : 0;
-
-            if (!double.IsNaN(lastTradePrice) && e.Price != lastTradePrice)
-                tickRuleSide = e.Price > lastTradePrice ? 1 : -1;
-            lastTradePrice = e.Price;
-            return tickRuleSide;
+            return e.Price >= e.Ask ? 1 : e.Price <= e.Bid ? -1 : 0;
         }
 
         private void StartBarIfNew()
@@ -194,7 +184,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
         public int SmoothingPeriod { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; CandleDirection: each candle's whole volume, positive on a rising candle and negative on a falling one. Both follow price. TickRule: a trade above the previous trade's price is a buy, below it a sell, at the same price the last side (needs Tick Replay). The candle and tick sources are candidates for the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; follows price, like the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [XmlIgnore]
