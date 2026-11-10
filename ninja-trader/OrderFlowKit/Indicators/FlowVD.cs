@@ -81,11 +81,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 rawDelta[0] = 0;
             }
 
-            if (DeltaSource == FlowDeltaSource.CandleRange)
+            if (DeltaSource != FlowDeltaSource.BidAsk)
             {
                 StartBarIfNew();
                 double range = High[0] - Low[0];
-                delta = range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
+                delta = DeltaSource == FlowDeltaSource.CandleDirection
+                    ? Math.Sign(Close[0] - Open[0]) * Volume[0]
+                    : range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
                 ShowDelta();
             }
         }
@@ -177,7 +179,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
         public int SmoothingPeriod { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; follows price, like the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; CandleDirection: each candle's whole volume, positive on a rising candle and negative on a falling one. Both follow price, like the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [XmlIgnore]

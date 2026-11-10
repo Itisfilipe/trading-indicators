@@ -488,7 +488,9 @@ the two count toward volume only.
   on Flow CVD and Flow VD picks what delta means: BidAsk (default) is real
   aggression from each trade's bid and ask; CandleRange splits each
   candle's volume by where it closed in its range, volume x (2 close -
-  high - low) / range. CandleRange follows price, cannot show absorption
+  high - low) / range; CandleDirection counts each candle's whole volume,
+  positive on a rising candle and negative on a falling one (on-balance
+  volume). The candle sources follow price, cannot show absorption
   and needs no Tick Replay; it reproduces the reference trader's 1-minute
   CVD and VD (which move by thousands of lots and fall on red candles,
   where real delta can rise), so his explanations can be read on your
