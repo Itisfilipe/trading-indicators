@@ -63,12 +63,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AbsorptionZScore = 1.5;
                 BandOpacity = 25;
 
-                UpColor = Brushes.LimeGreen;
-                DownColor = Brushes.LightCoral;
-                PivotHighColor = Brushes.Red;
-                PivotLowColor = Brushes.Green;
-                BuyAbsorptionColor = Brushes.RoyalBlue;
-                SellAbsorptionColor = Brushes.Red;
+                UpColor = Brushes.SeaGreen;
+                DownColor = Brushes.Crimson;
+                PivotHighColor = Brushes.Crimson;
+                PivotLowColor = Brushes.SeaGreen;
+                BuyAbsorptionColor = Brushes.SeaGreen;
+                SellAbsorptionColor = Brushes.Crimson;
 
                 AddPlot(new Stroke(Brushes.Transparent, 1), PlotStyle.Line, "CVD");
             }

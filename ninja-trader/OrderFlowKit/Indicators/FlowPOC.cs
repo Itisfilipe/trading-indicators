@@ -21,6 +21,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Square
     }
 
+    public enum FlowPocLabel
+    {
+        Delta,
+        Volume
+    }
+
     public enum FlowPocStrength
     {
         RecentCandles,
@@ -60,6 +66,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private bool useTimeOfDay;
         private readonly Dictionary<TimeSpan, List<double>> slotHistory = new Dictionary<TimeSpan, List<double>>();
 
+        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -77,19 +90,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AverageMultiplier = 1.0;
                 NeutralBandPercent = 0;
                 StrengthMode = FlowPocStrength.RecentCandles;
+                PocLabel = FlowPocLabel.Delta;
                 SessionsBack = 20;
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
                 Marker = FlowPocMarker.Circle;
                 MarkerSize = 20;
-                FillOpacity = 70;
+                FillOpacity = 40;
                 ShowBarStats = true;
 
-                BuyColor = Brushes.LimeGreen;
-                SellColor = Brushes.Red;
-                NeutralColor = Brushes.Gray;
-                AbsorptionColor = Brushes.RoyalBlue;
-                TextColor = Brushes.Black;
+                BuyColor = Brushes.SeaGreen;
+                SellColor = Brushes.Crimson;
+                NeutralColor = Rgb(0x5F, 0x67, 0x73);
+                AbsorptionColor = Rgb(0xB8, 0x86, 0x2B);
+                TextColor = Rgb(0x37, 0x41, 0x51);
                 LabelFont = new SimpleFont("Arial", 10);
             }
             else if (State == State.DataLoaded)
@@ -353,7 +367,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             if (isAbsorption)
                                 RenderTarget.DrawRectangle(new SharpDX.RectangleF(x - ringRadius, y - ringRadius, ringRadius * 2, ringRadius * 2), absorptionBrush, 2.5f);
                         }
-                        DrawCenteredText(volume.ToString("0"), textFormat, x, y, textBrush);
+                        double labelValue = PocLabel == FlowPocLabel.Delta
+                            ? Math.Abs(pocBuys.GetValueAt(barIndex) - pocSells.GetValueAt(barIndex))
+                            : volume;
+                        DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, textBrush);
                     }
                     else
                     {
@@ -402,6 +419,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Strength baseline", Description = "RecentCandles: average of the previous candles' POCs. SameTimeOfDay: median POC volume at the same time in past sessions.", Order = 5, GroupName = "1. POC")]
         public FlowPocStrength StrengthMode { get; set; }
+
+        [Display(Name = "Label", Description = "Delta: the lots left over at the POC price (buys minus sells, side shown by the color). Volume: all contracts traded at the POC price.", Order = 9, GroupName = "1. POC")]
+        public FlowPocLabel PocLabel { get; set; }
 
         [Range(1, 250), NinjaScriptProperty]
         [Display(Name = "Sessions back", Description = "Past sessions in the same-time median. Needs that many days loaded.", Order = 6, GroupName = "1. POC")]

@@ -454,7 +454,9 @@ the two count toward volume only.
   green when buyers dominated that price, red when sellers did, gray when
   neither did. A POC whose volume beats the average of the previous 30
   candles' POCs (times the multiplier) gets a circle or square that grows
-  with volume and shows its contract count; the rest get a short dash.
+  with volume and shows the lots left over at that price (buys minus
+  sells; "Label" = Volume shows all contracts traded there instead); the
+  rest get a short dash.
   Each candle's volume and delta print under its low. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"
   grays a POC unless one side's share beats it.
@@ -495,8 +497,12 @@ the two count toward volume only.
   it (ended levels stay faded with "Show consumed levels").
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
-  high nor low is gray; a triangle marks a color change after a run of
-  "Candles before a reversal" candles, on closed candles only. CCZ zones
+  high nor low, or breaks both, is gray (absorption); a triangle marks a
+  color change after a run of "Candles before a reversal" candles, on
+  closed candles only. "Smoothing period" above 0 smooths the candles'
+  open, high, low and close with an EMA before the Heikin-Ashi math.
+  Dotted lines at the previous candle's high, middle and low show the
+  traffic area (stop on the far side, add zone in the near half). CCZ zones
   box the range of each Heikin-Ashi candle whose body is at most "Body (%
   of range)" of its range (7% by default), colored while open and gray
   once a candle closes outside the box.

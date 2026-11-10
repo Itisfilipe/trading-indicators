@@ -23,6 +23,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> haHigh;
         private Series<double> haLow;
         private Series<double> haClose;
+        private EMA smoothedOpen;
+        private EMA smoothedHigh;
+        private EMA smoothedLow;
+        private EMA smoothedClose;
 
         private class CczZone
         {
@@ -34,6 +38,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private readonly List<CczZone> cczZones = new List<CczZone>();
         private int lastCczBar = -1;
+
+        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
+            brush.Freeze();
+            return brush;
+        }
 
         protected override void OnStateChange()
         {
@@ -47,6 +58,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 HidePriceBars = true;
+                SmoothingPeriod = 0;
+                ShowTrafficArea = true;
                 MarkInsideCandles = true;
                 MinBarsForReversal = 2;
                 ShowCczZones = true;
@@ -54,15 +67,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 CczOpacity = 10;
                 SignalOffsetTicks = 3;
 
-                UpColor = Brushes.LimeGreen;
-                DownColor = Brushes.Red;
-                InsideColor = Brushes.Silver;
-                ActiveCczColor = Brushes.Goldenrod;
-                FinishedCczColor = Brushes.Gray;
-                WickColor = Brushes.Black;
+                UpColor = Rgb(0x37, 0xF0, 0x9C);
+                DownColor = Rgb(0x1A, 0x1C, 0x26);
+                InsideColor = Rgb(0xD1, 0xD5, 0xDB);
+                ActiveCczColor = Rgb(0xB8, 0x86, 0x2B);
+                FinishedCczColor = Rgb(0x5F, 0x67, 0x73);
+                WickColor = Rgb(0x1A, 0x1C, 0x26);
+                TrafficColor = Rgb(0x5F, 0x67, 0x73);
             }
             else if (State == State.DataLoaded)
             {
+                if (SmoothingPeriod > 0)
+                {
+                    smoothedOpen = EMA(Open, SmoothingPeriod);
+                    smoothedHigh = EMA(High, SmoothingPeriod);
+                    smoothedLow = EMA(Low, SmoothingPeriod);
+                    smoothedClose = EMA(Close, SmoothingPeriod);
+                }
                 haOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 haHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 haLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
@@ -72,12 +93,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
-            double open = CurrentBar == 0 ? (Open[0] + Close[0]) / 2 : (haOpen[1] + haClose[1]) / 2;
-            double close = (Open[0] + High[0] + Low[0] + Close[0]) / 4;
+            bool smoothed = SmoothingPeriod > 0;
+            double barOpen = smoothed ? smoothedOpen[0] : Open[0];
+            double barHigh = smoothed ? smoothedHigh[0] : High[0];
+            double barLow = smoothed ? smoothedLow[0] : Low[0];
+            double barClose = smoothed ? smoothedClose[0] : Close[0];
+
+            double open = CurrentBar == 0 ? (barOpen + barClose) / 2 : (haOpen[1] + haClose[1]) / 2;
+            double close = (barOpen + barHigh + barLow + barClose) / 4;
             haOpen[0] = open;
             haClose[0] = close;
-            haHigh[0] = Math.Max(High[0], Math.Max(open, close));
-            haLow[0] = Math.Min(Low[0], Math.Min(open, close));
+            haHigh[0] = Math.Max(barHigh, Math.Max(open, close));
+            haLow[0] = Math.Min(barLow, Math.Min(open, close));
 
             if (HidePriceBars)
             {
@@ -119,11 +146,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return haClose.GetValueAt(barIndex) >= haOpen.GetValueAt(barIndex);
         }
 
-        private bool IsInside(int barIndex)
+        private bool IsAbsorptionCandle(int barIndex)
         {
-            return barIndex > 0
-                && haHigh.GetValueAt(barIndex) <= haHigh.GetValueAt(barIndex - 1)
-                && haLow.GetValueAt(barIndex) >= haLow.GetValueAt(barIndex - 1);
+            if (barIndex <= 0)
+                return false;
+            bool brokeHigh = haHigh.GetValueAt(barIndex) > haHigh.GetValueAt(barIndex - 1);
+            bool brokeLow = haLow.GetValueAt(barIndex) < haLow.GetValueAt(barIndex - 1);
+            return brokeHigh == brokeLow;
         }
 
         private bool IsReversal(int barIndex)
@@ -177,6 +206,34 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
+        private void DrawTrafficArea(ChartControl chartControl, ChartScale chartScale, int previousBar)
+        {
+            if (!haHigh.IsValidDataPointAt(previousBar) || previousBar > ChartBars.ToIndex)
+                return;
+
+            double high = haHigh.GetValueAt(previousBar);
+            double low = haLow.GetValueAt(previousBar);
+            float x1 = chartControl.GetXByBarIndex(ChartBars, previousBar);
+            float x2 = ChartPanel.X + ChartPanel.W;
+
+            SharpDX.Direct2D1.Brush brush = TrafficColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.StrokeStyle dotted = new SharpDX.Direct2D1.StrokeStyle(Core.Globals.D2DFactory,
+                new SharpDX.Direct2D1.StrokeStyleProperties { DashStyle = SharpDX.Direct2D1.DashStyle.Dot });
+            try
+            {
+                foreach (double price in new[] { high, (high + low) / 2, low })
+                {
+                    float y = chartScale.GetYByValue(price);
+                    RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y), brush, 1.5f, dotted);
+                }
+            }
+            finally
+            {
+                dotted.Dispose();
+                brush.Dispose();
+            }
+        }
+
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
             base.OnRender(chartControl, chartScale);
@@ -198,6 +255,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 float barWidth = Math.Max(1f, (float)chartControl.GetBarPaintWidth(ChartBars));
                 float triangleHalfWidth = Math.Max(4f, barWidth / 2);
                 int formingBar = State == State.Realtime ? Bars.Count - 1 : Bars.Count;
+
+                if (ShowTrafficArea && Bars.Count >= 2)
+                    DrawTrafficArea(chartControl, chartScale, Bars.Count - 2);
 
                 if (ShowCczZones)
                 {
@@ -233,7 +293,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     bool rising = close >= open;
 
                     SharpDX.Direct2D1.Brush bodyBrush = rising ? upBrush : downBrush;
-                    if (MarkInsideCandles && IsInside(barIndex))
+                    if (MarkInsideCandles && IsAbsorptionCandle(barIndex))
                         bodyBrush = insideBrush;
 
                     float highY = chartScale.GetYByValue(haHigh.GetValueAt(barIndex));
@@ -280,7 +340,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Hide price bars", Description = "Paint the chart's own candles transparent so only the Heikin-Ashi candles show.", Order = 1, GroupName = "1. Heikin-Ashi")]
         public bool HidePriceBars { get; set; }
 
-        [Display(Name = "Gray inside candles", Description = "Gray a candle that breaks neither the previous Heikin-Ashi high nor low.", Order = 2, GroupName = "1. Heikin-Ashi")]
+        [Display(Name = "Gray absorption candles", Description = "Gray a candle that breaks neither the previous Heikin-Ashi high nor low, or breaks both.", Order = 2, GroupName = "1. Heikin-Ashi")]
         public bool MarkInsideCandles { get; set; }
 
         [Range(1, 20), NinjaScriptProperty]
@@ -290,6 +350,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 100)]
         [Display(Name = "Triangle offset (ticks)", Order = 4, GroupName = "1. Heikin-Ashi")]
         public int SignalOffsetTicks { get; set; }
+
+        [Range(0, 200), NinjaScriptProperty]
+        [Display(Name = "Smoothing period", Description = "0 = classic Heikin-Ashi. Above 0, the candles' open, high, low and close are smoothed with an EMA of this period first.", Order = 5, GroupName = "1. Heikin-Ashi")]
+        public int SmoothingPeriod { get; set; }
+
+        [Display(Name = "Show traffic area", Description = "Dotted lines at the previous Heikin-Ashi candle's high, low and middle: the stop and the zone for adding lots.", Order = 6, GroupName = "1. Heikin-Ashi")]
+        public bool ShowTrafficArea { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Traffic area", Order = 6, GroupName = "2. Colors")]
+        public System.Windows.Media.Brush TrafficColor { get; set; }
+
+        [Browsable(false)]
+        public string TrafficColorSerializable
+        {
+            get { return Serialize.BrushToString(TrafficColor); }
+            set { TrafficColor = Serialize.StringToBrush(value); }
+        }
 
         [XmlIgnore]
         [Display(Name = "Rising candle", Order = 1, GroupName = "2. Colors")]

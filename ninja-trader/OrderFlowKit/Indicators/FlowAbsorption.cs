@@ -45,6 +45,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private int levelsBar = -1;
         private int finalizedBar = -1;
 
+        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -64,9 +71,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 FillOpacity = 35;
                 ShowConsumed = true;
 
-                BuyersAbsorbingColor = Brushes.RoyalBlue;
-                SellersAbsorbingColor = Brushes.Red;
-                TextColor = Brushes.Black;
+                BuyersAbsorbingColor = Brushes.SeaGreen;
+                SellersAbsorbingColor = Brushes.Crimson;
+                TextColor = Rgb(0x37, 0x41, 0x51);
                 LabelFont = new SimpleFont("Arial", 10);
             }
             else if (State == State.DataLoaded)

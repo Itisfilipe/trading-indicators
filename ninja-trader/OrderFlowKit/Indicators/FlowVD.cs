@@ -26,6 +26,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double windowDeviation;
         private Series<double> rawDelta;
 
+        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -40,12 +47,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AbsoluteBars = true;
                 ShowZScore = false;
                 ZScoreLookback = 60;
-                BuyColor = Brushes.Green;
-                SellColor = Brushes.Red;
+                BuyColor = Brushes.SeaGreen;
+                SellColor = Brushes.Crimson;
 
-                AddPlot(new Stroke(Brushes.Green, 2), PlotStyle.Bar, "Delta");
+                AddPlot(new Stroke(BuyColor, 2), PlotStyle.Bar, "Delta");
                 Plots[0].AutoWidth = true;
-                AddLine(Brushes.DarkGray, 0, "Zero");
+                AddLine(Rgb(0xD1, 0xD5, 0xDB), 0, "Zero");
             }
             else if (State == State.DataLoaded)
             {
