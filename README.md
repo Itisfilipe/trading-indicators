@@ -458,9 +458,21 @@ the two count toward volume only.
   Each candle's volume and delta print under its low. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"
   grays a POC unless one side's share beats it.
+  "Strength baseline" set to SameTimeOfDay compares each POC with the
+  median POC volume at the same time of day over the last "Sessions back"
+  sessions instead of the recent candles, so the open is not judged
+  against the overnight; it needs at least 3 past sessions loaded (and
+  Tick Replay makes that slow). Times are read in the exchange's time
+  zone, so daylight-saving changes do not shift the slots; on bars that
+  are not time-based it falls back to recent candles with a note. "Highlight absorption POCs" rings a strong POC on a closed candle
+  when the losing side's aggression sits at the candle's edge: sellers in
+  the bottom "Absorption edge" share of a candle that closes above the
+  POC, or buyers at the top of one that closes below it.
 - **Flow VD** (own panel): each candle's delta, updated while the candle
   forms. Bars grow up from zero colored by side, or above and below zero
-  with "Bars from zero up" off.
+  with "Bars from zero up" off. "Show as z-score" plots how many deviations
+  the delta sits from the average of the previous "Z-score lookback"
+  candles, so a 1-minute and a 5-minute panel read on the same scale.
 - **Flow CVD** (own panel): cumulative delta drawn as candles. Swing highs
   and lows get a circle and a level line that stops where a CVD close
   crosses it. A shaded band marks absorption: a candle whose delta is

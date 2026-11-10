@@ -21,6 +21,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Square
     }
 
+    public enum FlowPocStrength
+    {
+        RecentCandles,
+        SameTimeOfDay
+    }
+
     /// <summary>
     /// Marks each candle's point of control (the most traded price) colored by
     /// the aggressor that dominated it, labels the strong ones with their
@@ -47,6 +53,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> pocSells;
         private Series<double> barVolume;
         private Series<double> barDelta;
+        private Series<double> slotBaseline;
+
+        private const int MinimumSessions = 3;
+        private bool useTimeOfDay;
+        private readonly Dictionary<TimeSpan, List<double>> slotHistory = new Dictionary<TimeSpan, List<double>>();
 
         protected override void OnStateChange()
         {
@@ -64,6 +75,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AverageBars = 30;
                 AverageMultiplier = 1.0;
                 NeutralBandPercent = 0;
+                StrengthMode = FlowPocStrength.RecentCandles;
+                SessionsBack = 20;
+                HighlightAbsorption = false;
+                AbsorptionEdgePercent = 25;
                 Marker = FlowPocMarker.Circle;
                 MarkerSize = 20;
                 FillOpacity = 70;
@@ -72,6 +87,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 BuyColor = Brushes.LimeGreen;
                 SellColor = Brushes.Red;
                 NeutralColor = Brushes.Gray;
+                AbsorptionColor = Brushes.RoyalBlue;
                 TextColor = Brushes.Black;
                 LabelFont = new SimpleFont("Arial", 10);
             }
@@ -83,9 +99,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 pocSells = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 barVolume = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 barDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                slotBaseline = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
             {
+                useTimeOfDay = StrengthMode == FlowPocStrength.SameTimeOfDay && Bars.BarsType.IsTimeBased;
+                if (StrengthMode == FlowPocStrength.SameTimeOfDay && !useTimeOfDay)
+                    Draw.TextFixed(this, "FlowPocStrength", "Flow POC: same time of day needs time-based bars; using recent candles", TextPosition.TopLeft);
                 if (Calculate == Calculate.OnBarClose)
                     Draw.TextFixed(this, "FlowPocCalculate", "Flow POC: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
                 if (!Bars.IsTickReplay)
@@ -95,6 +115,40 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
+            if (!useTimeOfDay || !IsFirstTickOfBar)
+                return;
+
+            if (CurrentBar > 0 && pocVolume.IsValidDataPoint(1))
+                SlotVolumes(ExchangeTimeOfDay(1)).Add(pocVolume[1]);
+
+            List<double> history = SlotVolumes(ExchangeTimeOfDay(0));
+            if (history.Count >= MinimumSessions)
+                slotBaseline[0] = MedianOfLast(history, SessionsBack);
+        }
+
+        private TimeSpan ExchangeTimeOfDay(int barsAgo)
+        {
+            return TimeZoneInfo.ConvertTime(Time[barsAgo], Core.Globals.GeneralOptions.TimeZoneInfo, Bars.TradingHours.TimeZoneInfo).TimeOfDay;
+        }
+
+        private List<double> SlotVolumes(TimeSpan timeOfDay)
+        {
+            List<double> volumes;
+            if (!slotHistory.TryGetValue(timeOfDay, out volumes))
+            {
+                volumes = new List<double>();
+                slotHistory.Add(timeOfDay, volumes);
+            }
+            return volumes;
+        }
+
+        private static double MedianOfLast(List<double> values, int count)
+        {
+            int taken = Math.Min(count, values.Count);
+            List<double> recent = values.GetRange(values.Count - taken, taken);
+            recent.Sort();
+            int middle = taken / 2;
+            return taken % 2 == 1 ? recent[middle] : (recent[middle - 1] + recent[middle]) / 2;
         }
 
         protected override void OnMarketData(MarketDataEventArgs e)
@@ -162,16 +216,50 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return sum / AverageBars;
         }
 
-        private System.Windows.Media.Brush AggressorColor(double buys, double sells)
+        private double StrengthBaseline(int barIndex)
+        {
+            if (!useTimeOfDay)
+                return AveragePocVolume(barIndex);
+            return slotBaseline.IsValidDataPointAt(barIndex) ? slotBaseline.GetValueAt(barIndex) : 0;
+        }
+
+        private bool IsAbsorptionPoc(int barIndex, int aggressorSide)
+        {
+            bool isClosed = barIndex < Bars.Count - 1 || State != State.Realtime;
+            double high = Bars.GetHigh(barIndex);
+            double low = Bars.GetLow(barIndex);
+            if (!isClosed || high <= low)
+                return false;
+
+            double pocLow = pocPrice.GetValueAt(barIndex);
+            double pocHigh = pocLow + (PriceGrouping - 1) * TickSize;
+            double positionPercent = 100 * ((pocLow + pocHigh) / 2 - low) / (high - low);
+            double close = Bars.GetClose(barIndex);
+
+            if (aggressorSide < 0 && positionPercent <= AbsorptionEdgePercent && close > pocHigh)
+                return true;
+            return aggressorSide > 0 && positionPercent >= 100 - AbsorptionEdgePercent && close < pocLow;
+        }
+
+        private int AggressorSide(double buys, double sells)
         {
             double traded = buys + sells;
             if (traded <= 0)
-                return NeutralColor;
+                return 0;
 
             double imbalancePercent = 100.0 * (buys - sells) / traded;
             if (imbalancePercent > NeutralBandPercent)
-                return BuyColor;
+                return 1;
             if (imbalancePercent < -NeutralBandPercent)
+                return -1;
+            return 0;
+        }
+
+        private System.Windows.Media.Brush SideColor(int aggressorSide)
+        {
+            if (aggressorSide > 0)
+                return BuyColor;
+            if (aggressorSide < 0)
                 return SellColor;
             return NeutralColor;
         }
@@ -219,6 +307,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 lines.Add(color, color.ToDxBrush(RenderTarget));
             }
             SharpDX.Direct2D1.Brush textBrush = TextColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush absorptionBrush = AbsorptionColor.ToDxBrush(RenderTarget);
 
             try
             {
@@ -234,24 +323,31 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
                     float y = chartScale.GetYByValue(pocPrice.GetValueAt(barIndex) + groupOffset);
                     double volume = pocVolume.GetValueAt(barIndex);
-                    System.Windows.Media.Brush color = AggressorColor(pocBuys.GetValueAt(barIndex), pocSells.GetValueAt(barIndex));
-                    double average = AveragePocVolume(barIndex);
+                    int aggressorSide = AggressorSide(pocBuys.GetValueAt(barIndex), pocSells.GetValueAt(barIndex));
+                    System.Windows.Media.Brush color = SideColor(aggressorSide);
+                    double baseline = StrengthBaseline(barIndex);
 
-                    if (average > 0 && volume > average * AverageMultiplier)
+                    if (baseline > 0 && volume > baseline * AverageMultiplier)
                     {
-                        float growth = (float)Math.Min(1.6, Math.Max(0.8, Math.Sqrt(volume / average)));
+                        float growth = (float)Math.Min(1.6, Math.Max(0.8, Math.Sqrt(volume / baseline)));
                         float radius = MarkerSize / 2f * growth;
+                        float ringRadius = radius + 4;
+                        bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
                         if (Marker == FlowPocMarker.Circle)
                         {
                             SharpDX.Direct2D1.Ellipse ellipse = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
                             RenderTarget.FillEllipse(ellipse, fills[color]);
                             RenderTarget.DrawEllipse(ellipse, lines[color], 1.5f);
+                            if (isAbsorption)
+                                RenderTarget.DrawEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), ringRadius, ringRadius), absorptionBrush, 2.5f);
                         }
                         else
                         {
                             SharpDX.RectangleF square = new SharpDX.RectangleF(x - radius, y - radius, radius * 2, radius * 2);
                             RenderTarget.FillRectangle(square, fills[color]);
                             RenderTarget.DrawRectangle(square, lines[color], 1.5f);
+                            if (isAbsorption)
+                                RenderTarget.DrawRectangle(new SharpDX.RectangleF(x - ringRadius, y - ringRadius, ringRadius * 2, ringRadius * 2), absorptionBrush, 2.5f);
                         }
                         DrawCenteredText(volume.ToString("0"), textFormat, x, y, textBrush);
                     }
@@ -274,6 +370,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 textFormat.Dispose();
                 textBrush.Dispose();
+                absorptionBrush.Dispose();
                 foreach (SharpDX.Direct2D1.Brush brush in fills.Values)
                     brush.Dispose();
                 foreach (SharpDX.Direct2D1.Brush brush in lines.Values)
@@ -292,12 +389,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int AverageBars { get; set; }
 
         [Range(0.1, 20), NinjaScriptProperty]
-        [Display(Name = "Average multiplier", Description = "A POC is strong when its volume beats the average times this.", Order = 3, GroupName = "1. POC")]
+        [Display(Name = "Average multiplier", Description = "A POC is strong when its volume beats the baseline (average or same-time median) times this.", Order = 3, GroupName = "1. POC")]
         public double AverageMultiplier { get; set; }
 
         [Range(0, 100), NinjaScriptProperty]
         [Display(Name = "Neutral band (%)", Description = "POCs whose buy/sell imbalance is inside this band are drawn neutral.", Order = 4, GroupName = "1. POC")]
         public int NeutralBandPercent { get; set; }
+
+        [Display(Name = "Strength baseline", Description = "RecentCandles: average of the previous candles' POCs. SameTimeOfDay: median POC volume at the same time in past sessions.", Order = 5, GroupName = "1. POC")]
+        public FlowPocStrength StrengthMode { get; set; }
+
+        [Range(1, 250), NinjaScriptProperty]
+        [Display(Name = "Sessions back", Description = "Past sessions in the same-time median. Needs that many days loaded.", Order = 6, GroupName = "1. POC")]
+        public int SessionsBack { get; set; }
+
+        [Display(Name = "Highlight absorption POCs", Description = "Ring a strong closed POC sitting at the candle's edge with the aggressor that lost: sellers at the bottom of a candle closing above it, or buyers at the top of one closing below it.", Order = 7, GroupName = "1. POC")]
+        public bool HighlightAbsorption { get; set; }
+
+        [Range(1, 50)]
+        [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 8, GroupName = "1. POC")]
+        public int AbsorptionEdgePercent { get; set; }
 
         [Display(Name = "Marker", Order = 1, GroupName = "2. Appearance")]
         public FlowPocMarker Marker { get; set; }
@@ -347,6 +458,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             get { return Serialize.BrushToString(NeutralColor); }
             set { NeutralColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Absorption ring", Order = 5, GroupName = "3. Colors")]
+        public System.Windows.Media.Brush AbsorptionColor { get; set; }
+
+        [Browsable(false)]
+        public string AbsorptionColorSerializable
+        {
+            get { return Serialize.BrushToString(AbsorptionColor); }
+            set { AbsorptionColor = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]

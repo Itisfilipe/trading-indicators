@@ -16,6 +16,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Flow HA: Heikin-Ashi candles over the chart, inside candles grayed,
   reversal triangles after a run.
 - POC, VD and CVD need Tick Replay to show history.
+- Flow POC can judge strength against the same time of day in past
+  sessions, and can ring absorption POCs (losing aggression at the
+  candle's edge). Flow VD can plot delta as a z-score. All off by default.
 
 ## 2026-11-09
 

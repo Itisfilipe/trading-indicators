@@ -21,6 +21,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     {
         private int activeBar = -1;
         private double delta;
+        private double windowMean;
+        private double windowDeviation;
+        private Series<double> rawDelta;
 
         protected override void OnStateChange()
         {
@@ -34,12 +37,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 BarsRequiredToPlot = 0;
 
                 AbsoluteBars = true;
+                ShowZScore = false;
+                ZScoreLookback = 60;
                 BuyColor = Brushes.Green;
                 SellColor = Brushes.Red;
 
                 AddPlot(new Stroke(Brushes.Green, 2), PlotStyle.Bar, "Delta");
                 Plots[0].AutoWidth = true;
                 AddLine(Brushes.DarkGray, 0, "Zero");
+            }
+            else if (State == State.DataLoaded)
+            {
+                rawDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
             {
@@ -53,7 +62,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnBarUpdate()
         {
             if (CurrentBar != activeBar)
+            {
                 Value[0] = 0;
+                rawDelta[0] = 0;
+            }
         }
 
         protected override void OnMarketData(MarketDataEventArgs e)
@@ -65,6 +77,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 activeBar = CurrentBar;
                 delta = 0;
+                if (ShowZScore)
+                    MeasurePreviousDeltas();
             }
 
             if (e.Price >= e.Ask)
@@ -72,8 +86,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             else if (e.Price <= e.Bid)
                 delta -= e.Volume;
 
-            Value[0] = AbsoluteBars ? Math.Abs(delta) : delta;
-            PlotBrushes[0][0] = delta >= 0 ? BuyColor : SellColor;
+            rawDelta[0] = delta;
+            double shown = delta;
+            if (ShowZScore)
+                shown = windowDeviation > 0 ? (delta - windowMean) / windowDeviation : 0;
+
+            Value[0] = AbsoluteBars ? Math.Abs(shown) : shown;
+            PlotBrushes[0][0] = shown >= 0 ? BuyColor : SellColor;
+        }
+
+        private void MeasurePreviousDeltas()
+        {
+            windowDeviation = 0;
+            if (CurrentBar < ZScoreLookback)
+                return;
+
+            double sum = 0;
+            double sumOfSquares = 0;
+            for (int barsAgo = 1; barsAgo <= ZScoreLookback; barsAgo++)
+            {
+                if (!rawDelta.IsValidDataPoint(barsAgo))
+                    return;
+                sum += rawDelta[barsAgo];
+                sumOfSquares += rawDelta[barsAgo] * rawDelta[barsAgo];
+            }
+
+            windowMean = sum / ZScoreLookback;
+            double variance = sumOfSquares / ZScoreLookback - windowMean * windowMean;
+            if (variance > 0)
+                windowDeviation = Math.Sqrt(variance);
         }
 
         #region Properties
@@ -81,6 +122,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [NinjaScriptProperty]
         [Display(Name = "Bars from zero up", Description = "On: every bar grows up from zero and the color tells the side. Off: selling bars grow down.", Order = 1, GroupName = "1. Display")]
         public bool AbsoluteBars { get; set; }
+
+        [NinjaScriptProperty]
+        [Display(Name = "Show as z-score", Description = "Plot how many deviations the candle's delta sits from the average of the previous candles, so different timeframes and sessions read on one scale.", Order = 2, GroupName = "1. Display")]
+        public bool ShowZScore { get; set; }
+
+        [Range(5, 250), NinjaScriptProperty]
+        [Display(Name = "Z-score lookback", Description = "Previous candles the z-score is measured against.", Order = 3, GroupName = "1. Display")]
+        public int ZScoreLookback { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Buyer color", Order = 1, GroupName = "2. Colors")]
