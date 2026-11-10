@@ -62,6 +62,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Flow VD smooths bar height with a 4-candle EMA by default (color still
   follows each candle's own delta), matching the reference panel; set
   "Smoothing period" to 0 for the raw delta.
+- Flow POC can export a per-candle table (OHLC, volume, delta, POC and the
+  full price ladder) to a CSV, to compare its POCs with another platform's.
   "Strength measure" can judge strong POCs by those leftover lots instead
   of their volume.
 - Flow HA grays candles that break both the previous high and low, not
