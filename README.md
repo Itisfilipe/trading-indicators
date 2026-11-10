@@ -453,7 +453,7 @@ the two count toward volume only.
 - **Flow POC** (price panel): a marker at each candle's most traded price,
   green when buyers dominated that price, red when sellers did, gray when
   neither did. A POC whose volume beats the average of the previous 30
-  candles' POCs (times the multiplier) gets a circle or square that grows
+  candles' POCs (times the multiplier) gets a square (or circle) that grows
   with volume and shows the lots left over at that price (buys minus
   sells; "Label" = Volume shows all contracts traded there instead); the
   rest get a short dash. "Strength measure" picks what is compared with
