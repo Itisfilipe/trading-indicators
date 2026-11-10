@@ -463,11 +463,6 @@ the two count toward volume only.
   candles in a trend. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"
   grays a POC unless one side's share beats it.
-  "Export candle table" writes every closed candle's OHLC, volume, delta,
-  POC and full price ladder (buys/sells/total per price) to
-  `Documents\\NinjaTrader 8\\FlowPOC\\<instrument> <period>.csv` when the
-  chart goes live and when it closes, for checking the POCs against another
-  platform's.
   "Strength baseline" set to SameTimeOfDay compares each POC with the
   median POC volume at the same time of day over the last "Sessions back"
   sessions instead of the recent candles, so the open is not judged

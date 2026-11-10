@@ -3,9 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Windows.Media;
 using System.Xml.Serialization;
 using NinjaTrader.Data;
@@ -57,7 +54,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         private readonly Dictionary<double, LevelVolume> levels = new Dictionary<double, LevelVolume>();
-        private readonly List<string> exportRows = new List<string>();
         private int levelsBar = -1;
         private double pocKey;
         private double runningVolume;
@@ -109,7 +105,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MarkerSize = 16;
                 FillOpacity = 40;
                 ShowBarStats = true;
-                ExportTable = false;
 
                 BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;
@@ -128,11 +123,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 barVolume = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 barDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 slotBaseline = new Series<double>(this, MaximumBarsLookBack.Infinite);
-            }
-            else if (State == State.Realtime || State == State.Terminated)
-            {
-                if (ExportTable && pocVolume != null)
-                    WriteExport();
             }
             else if (State == State.Historical)
             {
@@ -193,8 +183,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             if (CurrentBar != levelsBar)
             {
-                if (ExportTable && levelsBar >= 0)
-                    RecordExportRow(levelsBar);
                 levels.Clear();
                 levelsBar = CurrentBar;
                 pocKey = double.NaN;
@@ -236,58 +224,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             pocSells[0] = poc.Sells;
             barVolume[0] = runningVolume;
             barDelta[0] = runningDelta;
-        }
-
-        private void RecordExportRow(int barIndex)
-        {
-            if (!pocVolume.IsValidDataPointAt(barIndex))
-                return;
-
-            DateTime newYorkEnd = TimeZoneInfo.ConvertTime(Bars.GetTime(barIndex), Core.Globals.GeneralOptions.TimeZoneInfo,
-                TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"));
-            List<string> ladder = new List<string>();
-            foreach (KeyValuePair<double, LevelVolume> entry in levels)
-                ladder.Add(string.Format(CultureInfo.InvariantCulture, "{0}:{1}/{2}/{3}", entry.Key, entry.Value.Buys, entry.Value.Sells, entry.Value.Total));
-
-            exportRows.Add(string.Join(",", new[]
-            {
-                newYorkEnd.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                Bars.GetOpen(barIndex).ToString(CultureInfo.InvariantCulture),
-                Bars.GetHigh(barIndex).ToString(CultureInfo.InvariantCulture),
-                Bars.GetLow(barIndex).ToString(CultureInfo.InvariantCulture),
-                Bars.GetClose(barIndex).ToString(CultureInfo.InvariantCulture),
-                Bars.GetVolume(barIndex).ToString(CultureInfo.InvariantCulture),
-                barVolume.GetValueAt(barIndex).ToString(CultureInfo.InvariantCulture),
-                barDelta.GetValueAt(barIndex).ToString(CultureInfo.InvariantCulture),
-                pocPrice.GetValueAt(barIndex).ToString(CultureInfo.InvariantCulture),
-                pocVolume.GetValueAt(barIndex).ToString(CultureInfo.InvariantCulture),
-                pocBuys.GetValueAt(barIndex).ToString(CultureInfo.InvariantCulture),
-                pocSells.GetValueAt(barIndex).ToString(CultureInfo.InvariantCulture),
-                "\"" + string.Join(";", ladder) + "\"",
-            }));
-        }
-
-        private void WriteExport()
-        {
-            if (exportRows.Count == 0)
-                return;
-            try
-            {
-                string folder = Path.Combine(Core.Globals.UserDataDir, "FlowPOC");
-                Directory.CreateDirectory(folder);
-                string fileName = Instrument.FullName + " " + BarsPeriod + ".csv";
-                foreach (char invalid in Path.GetInvalidFileNameChars())
-                    fileName = fileName.Replace(invalid, '_');
-                StringBuilder csv = new StringBuilder();
-                csv.AppendLine("bar_end_ny,open,high,low,close,bar_volume,traded_volume,delta,poc_price,poc_volume,poc_buys,poc_sells,ladder_price_buys_sells_total");
-                foreach (string row in exportRows)
-                    csv.AppendLine(row);
-                File.WriteAllText(Path.Combine(folder, fileName), csv.ToString());
-            }
-            catch (Exception exception)
-            {
-                Print("Flow POC: could not write the export: " + exception.Message);
-            }
         }
 
         private double PocStrength(int barIndex)
@@ -519,9 +455,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(1, 50)]
         [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 8, GroupName = "1. POC")]
         public int AbsorptionEdgePercent { get; set; }
-
-        [Display(Name = "Export candle table", Description = "Write every closed candle's OHLC, volume, delta, POC and full price ladder (buys/sells/total per price) to Documents\\NinjaTrader 8\\FlowPOC when the chart goes live and when it closes. For comparing with another platform's POCs.", Order = 9, GroupName = "1. POC")]
-        public bool ExportTable { get; set; }
 
         [Display(Name = "Marker", Order = 1, GroupName = "2. Appearance")]
         public FlowPocMarker Marker { get; set; }
