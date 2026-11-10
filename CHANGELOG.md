@@ -38,9 +38,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   measure" = Delta.
 - Flow POC markers are solid over the chart background, so the number
   stays readable on dark candle bodies.
-- Flow CVD and Flow VD can compute delta from each candle's range
-  ("Delta source" = CandleRange) to look like the reference trader's 1-minute
-  panels; the default stays the real bid/ask delta.
+- Flow CVD and Flow VD can build delta the way the reference trader's
+  1-minute panels do ("Delta source" = HeikinAshiVolume): each candle's
+  whole volume, signed by a Heikin-Ashi candle of price. The default stays
+  the real bid/ask delta.
 - Flow Absorption counts all the one-sided aggression in a zone (not the
   net) and keeps a level until its lots are eaten, even after price closes
   beyond it, as on the reference chart.
@@ -70,9 +71,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Flow CVD draws the cumulative delta as Heikin-Ashi candles by default,
   like the reference trader's panel: smoother runs and fewer pivots.
   "Heikin-Ashi candles" off restores the raw candles.
-- Flow VD smooths bar height with a 4-candle EMA by default (color still
-  follows each candle's own delta), matching the reference panel; set
-  "Smoothing period" to 0 for the raw delta.
+- Flow VD can smooth bar height with an EMA ("Smoothing period", off by
+  default; the color still follows each candle's own delta).
   "Strength measure" can judge strong POCs by those leftover lots instead
   of their volume.
 - Flow HA grays candles that break both the previous high and low, not

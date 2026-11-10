@@ -25,6 +25,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double windowMean;
         private double windowDeviation;
         private Series<double> rawDelta;
+        private Series<double> priceHaOpen;
+        private Series<double> priceHaClose;
         private Series<double> smoothedSize;
         private double previousSmoothedSize = double.NaN;
 
@@ -49,7 +51,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AbsoluteBars = true;
                 ShowZScore = false;
                 ZScoreLookback = 60;
-                SmoothingPeriod = 4;
+                SmoothingPeriod = 0;
                 DeltaSource = FlowDeltaSource.BidAsk;
                 BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;
@@ -62,6 +64,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 sessionIterator = new SessionIterator(Bars);
                 rawDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                priceHaOpen = new Series<double>(this);
+                priceHaClose = new Series<double>(this);
                 smoothedSize = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
@@ -84,8 +88,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!UsesTrades)
             {
                 StartBarIfNew();
-                double range = High[0] - Low[0];
-                delta = range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
+                delta = HeikinAshiVolumeDelta();
                 ShowDelta();
             }
         }
@@ -112,6 +115,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private static int TradeSide(MarketDataEventArgs e)
         {
             return e.Price >= e.Ask ? 1 : e.Price <= e.Bid ? -1 : 0;
+        }
+
+        private double HeikinAshiVolumeDelta()
+        {
+            double haClose = (Open[0] + High[0] + Low[0] + Close[0]) / 4;
+            double haOpen = CurrentBar > 0 ? (priceHaOpen[1] + priceHaClose[1]) / 2 : (Open[0] + Close[0]) / 2;
+            priceHaOpen[0] = haOpen;
+            priceHaClose[0] = haClose;
+            return haClose >= haOpen ? Volume[0] : -Volume[0];
         }
 
         private void StartBarIfNew()
@@ -184,7 +196,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
         public int SmoothingPeriod { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; follows price, like the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). HeikinAshiVolume: each candle's whole volume, positive while a Heikin-Ashi candle built from price is rising and negative while it falls; the reference trader's 1-minute VD and CVD are built this way. It follows price and needs no Tick Replay.", Order = 5, GroupName = "1. Display")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [XmlIgnore]

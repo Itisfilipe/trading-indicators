@@ -18,7 +18,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public enum FlowDeltaSource
     {
         BidAsk,
-        CandleRange
+        HeikinAshiVolume
     }
 
     /// <summary>
@@ -48,6 +48,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> cvdHigh;
         private Series<double> cvdLow;
         private Series<double> cvdClose;
+        private Series<double> priceHaOpen;
+        private Series<double> priceHaClose;
         private Series<double> shownOpen;
         private Series<double> shownHigh;
         private Series<double> shownLow;
@@ -93,6 +95,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 cvdHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                priceHaOpen = new Series<double>(this);
+                priceHaClose = new Series<double>(this);
                 shownOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 shownHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 shownLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
@@ -161,11 +165,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             cvdLow[0] = cumulativeDelta;
         }
 
+        private double HeikinAshiVolumeDelta()
+        {
+            double haClose = (Open[0] + High[0] + Low[0] + Close[0]) / 4;
+            double haOpen = CurrentBar > 0 ? (priceHaOpen[1] + priceHaClose[1]) / 2 : (Open[0] + Close[0]) / 2;
+            priceHaOpen[0] = haOpen;
+            priceHaClose[0] = haClose;
+            return haClose >= haOpen ? Volume[0] : -Volume[0];
+        }
+
         private void UpdateFromCandle()
         {
             StartBarIfNew();
-            double range = High[0] - Low[0];
-            double barDelta = range > 0 ? Volume[0] * (2 * Close[0] - High[0] - Low[0]) / range : 0;
+            double barDelta = HeikinAshiVolumeDelta();
             double close = cvdOpen[0] + barDelta;
             cvdHigh[0] = Math.Max(cvdOpen[0], close);
             cvdLow[0] = Math.Min(cvdOpen[0], close);
@@ -432,7 +444,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
         public string ResetTime { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; follows price, like the reference trader's 1-minute CVD.", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). HeikinAshiVolume: each candle's whole volume, positive while a Heikin-Ashi candle built from price is rising and negative while it falls; the reference trader's 1-minute VD and CVD are built this way. It follows price and needs no Tick Replay.", Order = 4, GroupName = "1. CVD")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [NinjaScriptProperty]

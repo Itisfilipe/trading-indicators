@@ -478,21 +478,19 @@ the two count toward volume only.
   with "Bars from zero up" off. "Show as z-score" plots how many deviations
   the delta sits from the average of the previous "Z-score lookback"
   candles, so a 1-minute and a 5-minute panel read on the same scale.
-  "Smoothing period" (4 by default) makes each bar's height an EMA of the
-  recent candles' delta size while its color stays the candle's own side,
-  so a burst fades over a few bars instead of dropping to zero; 0 shows
-  the raw delta, which is what to use on the chart where you read the
-  exact lot balance.
+  "Smoothing period" above 0 makes each bar's height an EMA of the recent
+  candles' delta size while its color stays the candle's own side, so a
+  burst fades over a few bars instead of dropping to zero.
 - **Flow CVD** (own panel): cumulative delta drawn as Heikin-Ashi candles
   ("Heikin-Ashi candles" off draws the raw CVD candles). "Delta source"
   on Flow CVD and Flow VD picks what delta means: BidAsk (default) is real
-  aggression from each trade's bid and ask; CandleRange splits each
-  candle's volume by where it closed in its range, volume x (2 close -
-  high - low) / range. CandleRange follows price, cannot show absorption
-  and needs no Tick Replay; it reproduces the reference trader's 1-minute
-  CVD and VD (which move by thousands of lots and fall on red candles,
-  where real delta can rise), so his explanations can be read on your
-  chart. Swing highs
+  aggression from each trade's bid and ask; HeikinAshiVolume counts each
+  candle's whole volume, positive while a Heikin-Ashi candle built from
+  price is rising and negative while it falls. HeikinAshiVolume is how the
+  reference trader's 1-minute VD and CVD are built (his VD settings call it
+  "Volume Delta por candle Heiken-Ashi"), so his explanations can be read
+  on your chart; it follows price, cannot show absorption and needs no
+  Tick Replay. Swing highs
   and lows ("Pivot strength" candles on each side, 3 by default) get a
   circle and a level line while no CVD close has crossed it; "Show broken
   levels" keeps crossed lines up to the crossing candle. A shaded band marks absorption: a candle whose delta is
