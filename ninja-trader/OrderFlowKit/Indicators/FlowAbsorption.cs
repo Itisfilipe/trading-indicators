@@ -70,7 +70,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 EdgePercent = 50;
                 FillOpacity = 40;
                 MinimumBandHeight = 8;
-                ShowConsumed = true;
+                ShowConsumed = false;
 
                 BuyersAbsorbingColor = Brushes.DodgerBlue;
                 SellersAbsorbingColor = Brushes.Crimson;
