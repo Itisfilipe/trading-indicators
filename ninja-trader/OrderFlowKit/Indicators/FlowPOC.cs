@@ -102,7 +102,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
                 Marker = FlowPocMarker.Square;
-                MarkerSize = 18;
+                MarkerSize = 16;
                 FillOpacity = 40;
                 ShowBarStats = true;
 
@@ -111,7 +111,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 NeutralColor = Rgb(0x5F, 0x67, 0x73);
                 AbsorptionColor = Rgb(0xB8, 0x86, 0x2B);
                 TextColor = Rgb(0x37, 0x41, 0x51);
-                LabelFont = new SimpleFont("Arial", 10);
+                LabelFont = new SimpleFont("Arial", 9);
             }
             else if (State == State.DataLoaded)
             {
@@ -362,7 +362,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                     if (baseline > 0 && strength > baseline * AverageMultiplier)
                     {
-                        float growth = (float)Math.Min(1.25, Math.Max(0.9, Math.Sqrt(strength / baseline)));
+                        float growth = (float)Math.Min(1.1, Math.Max(1.0, Math.Sqrt(strength / baseline)));
                         float radius = MarkerSize / 2f * growth;
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);

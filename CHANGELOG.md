@@ -39,6 +39,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   (50 lots, 2x the candle average, bottom/top half of the candle). Bands
   are at least 8 px tall, buyers absorbing are blue, and the lot count
   sits in a colored box on the right edge.
+- Flow POC squares default to 16 px and barely grow (10% at most), with
+  9 pt text; absorption bands are 40% opaque with bold lot boxes.
   "Strength measure" can judge strong POCs by those leftover lots instead
   of their volume.
 - Flow HA grays candles that break both the previous high and low, not

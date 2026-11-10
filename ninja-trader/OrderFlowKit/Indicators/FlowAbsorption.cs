@@ -68,14 +68,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MinimumLots = 50;
                 LevelMultiplier = 2.0;
                 EdgePercent = 50;
-                FillOpacity = 45;
+                FillOpacity = 40;
                 MinimumBandHeight = 8;
                 ShowConsumed = true;
 
                 BuyersAbsorbingColor = Rgb(0x3B, 0x82, 0xF6);
                 SellersAbsorbingColor = Brushes.Crimson;
                 TextColor = Brushes.White;
-                LabelFont = new SimpleFont("Arial", 10);
+                LabelFont = new SimpleFont("Arial", 9) { Bold = true };
             }
             else if (State == State.DataLoaded)
             {
