@@ -32,6 +32,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   ones, and strong POC markers grow less, to keep busy charts readable.
 - Flow POC draws strong POCs as squares by default; "Marker" = Circle
   brings the circles back.
+- Flow POC judges strong POCs by leftover lots (buys minus sells) by
+  default, so a busy price with a small balance gets a dash.
+- Flow Absorption finds many more levels: it reads net aggression over
+  4-tick zones instead of gross volume at one tick, with lower defaults
+  (50 lots, 2x the candle average, bottom/top half of the candle). Bands
+  are at least 8 px tall, buyers absorbing are blue, and the lot count
+  sits in a colored box on the right edge.
   "Strength measure" can judge strong POCs by those leftover lots instead
   of their volume.
 - Flow HA grays candles that break both the previous high and low, not

@@ -64,16 +64,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DisplayInDataBox = false;
                 PaintPriceMarkers = false;
 
-                PriceGrouping = 1;
-                MinimumLots = 100;
-                LevelMultiplier = 3.0;
-                EdgePercent = 40;
-                FillOpacity = 35;
+                PriceGrouping = 4;
+                MinimumLots = 50;
+                LevelMultiplier = 2.0;
+                EdgePercent = 50;
+                FillOpacity = 45;
+                MinimumBandHeight = 8;
                 ShowConsumed = true;
 
-                BuyersAbsorbingColor = Brushes.SeaGreen;
+                BuyersAbsorbingColor = Rgb(0x3B, 0x82, 0xF6);
                 SellersAbsorbingColor = Brushes.Crimson;
-                TextColor = Rgb(0x37, 0x41, 0x51);
+                TextColor = Brushes.White;
                 LabelFont = new SimpleFont("Arial", 10);
             }
             else if (State == State.DataLoaded)
@@ -179,10 +180,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (range <= 0 || barLevels.Count == 0)
                     return;
 
-                double aggression = 0;
+                double netAggression = 0;
                 foreach (LevelVolume volume in barLevels.Values)
-                    aggression += volume.Buys + volume.Sells;
-                double perLevelAverage = aggression / barLevels.Count;
+                    netAggression += Math.Abs(volume.Sells - volume.Buys);
+                double perLevelAverage = netAggression / barLevels.Count;
                 double threshold = Math.Max(MinimumLots, perLevelAverage * LevelMultiplier);
                 double edge = range * EdgePercent / 100.0;
 
@@ -190,10 +191,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     double price = entry.Key;
                     double levelTop = price + groupTop;
-                    if (entry.Value.Sells >= threshold && price <= low + edge && close > levelTop)
-                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = true, InitialLots = entry.Value.Sells, RemainingLots = entry.Value.Sells });
-                    else if (entry.Value.Buys >= threshold && levelTop >= high - edge && close < price)
-                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = false, InitialLots = entry.Value.Buys, RemainingLots = entry.Value.Buys });
+                    double netSells = entry.Value.Sells - entry.Value.Buys;
+                    if (netSells >= threshold && price <= low + edge && close > levelTop)
+                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = true, InitialLots = netSells, RemainingLots = netSells });
+                    else if (-netSells >= threshold && levelTop >= high - edge && close < price)
+                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = false, InitialLots = -netSells, RemainingLots = -netSells });
                 }
             }
         }
@@ -210,6 +212,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             SharpDX.Direct2D1.Brush buyersConsumed = BuyersAbsorbingColor.ToDxBrush(RenderTarget, FillOpacity / 300f);
             SharpDX.Direct2D1.Brush sellersConsumed = SellersAbsorbingColor.ToDxBrush(RenderTarget, FillOpacity / 300f);
             SharpDX.Direct2D1.Brush textBrush = TextColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush buyersBox = BuyersAbsorbingColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush sellersBox = SellersAbsorbingColor.ToDxBrush(RenderTarget);
             SharpDX.DirectWrite.TextFormat textFormat = LabelFont.ToDirectWriteTextFormat();
             textFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
 
@@ -231,7 +235,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         float x2 = consumed ? chartControl.GetXByBarIndex(ChartBars, level.EndBar) : panelRight;
                         float top = chartScale.GetYByValue(level.Price + groupTop + TickSize / 2);
                         float bottom = chartScale.GetYByValue(level.Price - TickSize / 2);
-                        float height = Math.Max(2f, bottom - top);
+                        float height = Math.Max(MinimumBandHeight, bottom - top);
+                        if (bottom - top < MinimumBandHeight)
+                            top = (top + bottom - height) / 2;
                         if (x2 <= x1)
                             continue;
 
@@ -249,6 +255,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         {
                             float labelX = panelRight - layout.Metrics.Width - 4;
                             float labelY = top + height / 2 - layout.Metrics.Height / 2;
+                            RenderTarget.FillRectangle(new SharpDX.RectangleF(labelX - 3, labelY - 1, layout.Metrics.Width + 6, layout.Metrics.Height + 2),
+                                level.BuyersAbsorbing ? buyersBox : sellersBox);
                             RenderTarget.DrawTextLayout(new SharpDX.Vector2(labelX, labelY), layout, textBrush, SharpDX.Direct2D1.DrawTextOptions.NoSnap);
                         }
                         finally
@@ -264,6 +272,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 buyersConsumed.Dispose();
                 sellersConsumed.Dispose();
                 textBrush.Dispose();
+                buyersBox.Dispose();
+                sellersBox.Dispose();
                 textFormat.Dispose();
             }
         }
@@ -275,11 +285,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int PriceGrouping { get; set; }
 
         [Range(1, 100000), NinjaScriptProperty]
-        [Display(Name = "Minimum lots", Description = "One-sided aggression a price needs before it can become a level.", Order = 2, GroupName = "1. Absorption")]
+        [Display(Name = "Minimum lots", Description = "Net one-sided aggression (sells minus buys, or the reverse) a price zone needs before it can become a level.", Order = 2, GroupName = "1. Absorption")]
         public int MinimumLots { get; set; }
 
         [Range(1, 50), NinjaScriptProperty]
-        [Display(Name = "Level multiplier", Description = "The price's one-sided aggression must also reach the candle's average aggression per price times this.", Order = 3, GroupName = "1. Absorption")]
+        [Display(Name = "Level multiplier", Description = "The zone's net aggression must also reach the candle's average net aggression per zone times this.", Order = 3, GroupName = "1. Absorption")]
         public double LevelMultiplier { get; set; }
 
         [Range(1, 100), NinjaScriptProperty]
@@ -293,7 +303,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Fill opacity (%)", Order = 1, GroupName = "2. Appearance")]
         public int FillOpacity { get; set; }
 
-        [Display(Name = "Font", Order = 2, GroupName = "2. Appearance")]
+        [Range(1, 40)]
+        [Display(Name = "Minimum band height (px)", Description = "Bands thinner than this on screen are drawn this tall, centered on the level.", Order = 2, GroupName = "2. Appearance")]
+        public int MinimumBandHeight { get; set; }
+
+        [Display(Name = "Font", Order = 3, GroupName = "2. Appearance")]
         public SimpleFont LabelFont { get; set; }
 
         [XmlIgnore]

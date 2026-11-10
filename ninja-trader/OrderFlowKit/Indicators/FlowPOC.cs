@@ -97,7 +97,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 NeutralBandPercent = 0;
                 StrengthMode = FlowPocStrength.RecentCandles;
                 PocLabel = FlowPocLabel.Delta;
-                StrengthMeasure = FlowPocMeasure.Volume;
+                StrengthMeasure = FlowPocMeasure.Delta;
                 SessionsBack = 20;
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
