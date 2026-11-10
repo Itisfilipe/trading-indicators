@@ -22,6 +22,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double delta;
+        private double lastTradePrice = double.NaN;
+        private int tickRuleSide;
         private double windowMean;
         private double windowDeviation;
         private Series<double> rawDelta;
@@ -66,9 +68,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Historical)
             {
-                if (Calculate == Calculate.OnBarClose && DeltaSource == FlowDeltaSource.BidAsk)
+                if (Calculate == Calculate.OnBarClose && UsesTrades)
                     Draw.TextFixed(this, "FlowVdCalculate", "Flow VD: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
-                if (!Bars.IsTickReplay && DeltaSource == FlowDeltaSource.BidAsk)
+                if (!Bars.IsTickReplay && UsesTrades)
                     Draw.TextFixed(this, "FlowVdTickReplay", "Flow VD: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
             }
         }
@@ -81,7 +83,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 rawDelta[0] = 0;
             }
 
-            if (DeltaSource != FlowDeltaSource.BidAsk)
+            if (!UsesTrades)
             {
                 StartBarIfNew();
                 double range = High[0] - Low[0];
@@ -98,15 +100,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
-            if (DeltaSource != FlowDeltaSource.BidAsk)
+            if (!UsesTrades)
                 return;
 
             StartBarIfNew();
-            if (e.Price >= e.Ask)
-                delta += e.Volume;
-            else if (e.Price <= e.Bid)
-                delta -= e.Volume;
+            delta += TradeSide(e) * e.Volume;
             ShowDelta();
+        }
+
+        private bool UsesTrades
+        {
+            get { return DeltaSource == FlowDeltaSource.BidAsk || DeltaSource == FlowDeltaSource.TickRule; }
+        }
+
+        private int TradeSide(MarketDataEventArgs e)
+        {
+            if (DeltaSource == FlowDeltaSource.BidAsk)
+                return e.Price >= e.Ask ? 1 : e.Price <= e.Bid ? -1 : 0;
+
+            if (!double.IsNaN(lastTradePrice) && e.Price != lastTradePrice)
+                tickRuleSide = e.Price > lastTradePrice ? 1 : -1;
+            lastTradePrice = e.Price;
+            return tickRuleSide;
         }
 
         private void StartBarIfNew()
@@ -179,7 +194,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
         public int SmoothingPeriod { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; CandleDirection: each candle's whole volume, positive on a rising candle and negative on a falling one. Both follow price, like the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; CandleDirection: each candle's whole volume, positive on a rising candle and negative on a falling one. Both follow price. TickRule: a trade above the previous trade's price is a buy, below it a sell, at the same price the last side (needs Tick Replay). The candle and tick sources are candidates for the reference trader's 1-minute VD.", Order = 5, GroupName = "1. Display")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [XmlIgnore]

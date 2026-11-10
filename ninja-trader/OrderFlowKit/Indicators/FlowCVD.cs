@@ -19,7 +19,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     {
         BidAsk,
         CandleRange,
-        CandleDirection
+        CandleDirection,
+        TickRule
     }
 
     /// <summary>
@@ -41,6 +42,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double cumulativeDelta;
+        private double lastTradePrice = double.NaN;
+        private int tickRuleSide;
         private TimeSpan resetTimeOfDay;
         private bool hasResetTime;
         private TimeZoneInfo newYorkZone;
@@ -106,9 +109,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 hasResetTime = ResetAtTime && TimeSpan.TryParse(ResetTime, CultureInfo.InvariantCulture, out resetTimeOfDay);
                 if (ResetAtTime && !hasResetTime)
                     Draw.TextFixed(this, "FlowCvdResetTime", "Flow CVD: reset time must be HH:MM", TextPosition.TopLeft);
-                if (Calculate == Calculate.OnBarClose && DeltaSource == FlowDeltaSource.BidAsk)
+                if (Calculate == Calculate.OnBarClose && UsesTrades)
                     Draw.TextFixed(this, "FlowCvdCalculate", "Flow CVD: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
-                if (!Bars.IsTickReplay && DeltaSource == FlowDeltaSource.BidAsk)
+                if (!Bars.IsTickReplay && UsesTrades)
                     Draw.TextFixed(this, "FlowCvdTickReplay", "Flow CVD: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
             }
         }
@@ -119,20 +122,33 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
-            if (DeltaSource != FlowDeltaSource.BidAsk)
+            if (!UsesTrades)
                 return;
 
             StartBarIfNew();
-            if (e.Price >= e.Ask)
-                cumulativeDelta += e.Volume;
-            else if (e.Price <= e.Bid)
-                cumulativeDelta -= e.Volume;
+            cumulativeDelta += TradeSide(e) * e.Volume;
 
             cvdHigh[0] = Math.Max(cvdHigh[0], cumulativeDelta);
             cvdLow[0] = Math.Min(cvdLow[0], cumulativeDelta);
             cvdClose[0] = cumulativeDelta;
             Value[0] = cumulativeDelta;
             UpdateShownCandle();
+        }
+
+        private bool UsesTrades
+        {
+            get { return DeltaSource == FlowDeltaSource.BidAsk || DeltaSource == FlowDeltaSource.TickRule; }
+        }
+
+        private int TradeSide(MarketDataEventArgs e)
+        {
+            if (DeltaSource == FlowDeltaSource.BidAsk)
+                return e.Price >= e.Ask ? 1 : e.Price <= e.Bid ? -1 : 0;
+
+            if (!double.IsNaN(lastTradePrice) && e.Price != lastTradePrice)
+                tickRuleSide = e.Price > lastTradePrice ? 1 : -1;
+            lastTradePrice = e.Price;
+            return tickRuleSide;
         }
 
         private void StartBarIfNew()
@@ -199,7 +215,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
-            if (DeltaSource != FlowDeltaSource.BidAsk)
+            if (!UsesTrades)
                 UpdateFromCandle();
 
             if (!IsFirstTickOfBar || CurrentBar < 1)
@@ -428,7 +444,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
         public string ResetTime { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; CandleDirection: each candle's whole volume, positive on a rising candle and negative on a falling one (on-balance volume). Both follow price, like the reference trader's 1-minute CVD.", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). CandleRange: each candle's volume split by where it closed in its range, volume x (2 close - high - low) / range; CandleDirection: each candle's whole volume, positive on a rising candle and negative on a falling one (on-balance volume). Both follow price. TickRule: a trade above the previous trade's price is a buy, below it a sell, at the same price the last side (needs Tick Replay). The candle and tick sources are candidates for the reference trader's 1-minute CVD.", Order = 4, GroupName = "1. CVD")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [NinjaScriptProperty]
