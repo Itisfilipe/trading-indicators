@@ -27,6 +27,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Volume
     }
 
+    public enum FlowPocMeasure
+    {
+        Volume,
+        Delta
+    }
+
     public enum FlowPocStrength
     {
         RecentCandles,
@@ -91,6 +97,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 NeutralBandPercent = 0;
                 StrengthMode = FlowPocStrength.RecentCandles;
                 PocLabel = FlowPocLabel.Delta;
+                StrengthMeasure = FlowPocMeasure.Volume;
                 SessionsBack = 20;
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
@@ -135,7 +142,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             if (CurrentBar > 0 && pocVolume.IsValidDataPoint(1))
-                SlotVolumes(ExchangeTimeOfDay(1)).Add(pocVolume[1]);
+                SlotVolumes(ExchangeTimeOfDay(1)).Add(PocStrength(CurrentBar - 1));
 
             List<double> history = SlotVolumes(ExchangeTimeOfDay(0));
             if (history.Count >= MinimumSessions)
@@ -219,7 +226,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             barDelta[0] = runningDelta;
         }
 
-        private double AveragePocVolume(int barIndex)
+        private double PocStrength(int barIndex)
+        {
+            if (StrengthMeasure == FlowPocMeasure.Volume)
+                return pocVolume.GetValueAt(barIndex);
+            return Math.Abs(pocBuys.GetValueAt(barIndex) - pocSells.GetValueAt(barIndex));
+        }
+
+        private double AveragePocStrength(int barIndex)
         {
             if (barIndex < AverageBars)
                 return 0;
@@ -229,7 +243,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 if (!pocVolume.IsValidDataPointAt(index))
                     return 0;
-                sum += pocVolume.GetValueAt(index);
+                sum += PocStrength(index);
             }
             return sum / AverageBars;
         }
@@ -237,7 +251,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double StrengthBaseline(int barIndex)
         {
             if (!useTimeOfDay)
-                return AveragePocVolume(barIndex);
+                return AveragePocStrength(barIndex);
             return slotBaseline.IsValidDataPointAt(barIndex) ? slotBaseline.GetValueAt(barIndex) : 0;
         }
 
@@ -341,13 +355,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
                     float y = chartScale.GetYByValue(pocPrice.GetValueAt(barIndex) + groupOffset);
                     double volume = pocVolume.GetValueAt(barIndex);
+                    double strength = PocStrength(barIndex);
                     int aggressorSide = AggressorSide(pocBuys.GetValueAt(barIndex), pocSells.GetValueAt(barIndex));
                     System.Windows.Media.Brush color = SideColor(aggressorSide);
                     double baseline = StrengthBaseline(barIndex);
 
-                    if (baseline > 0 && volume > baseline * AverageMultiplier)
+                    if (baseline > 0 && strength > baseline * AverageMultiplier)
                     {
-                        float growth = (float)Math.Min(1.6, Math.Max(0.8, Math.Sqrt(volume / baseline)));
+                        float growth = (float)Math.Min(1.6, Math.Max(0.8, Math.Sqrt(strength / baseline)));
                         float radius = MarkerSize / 2f * growth;
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
@@ -422,6 +437,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Label", Description = "Delta: the lots left over at the POC price (buys minus sells, side shown by the color). Volume: all contracts traded at the POC price.", Order = 9, GroupName = "1. POC")]
         public FlowPocLabel PocLabel { get; set; }
+
+        [Display(Name = "Strength measure", Description = "What is compared with the baseline: the POC's volume, or its leftover lots (buys minus sells, either side).", Order = 10, GroupName = "1. POC")]
+        public FlowPocMeasure StrengthMeasure { get; set; }
 
         [Range(1, 250), NinjaScriptProperty]
         [Display(Name = "Sessions back", Description = "Past sessions in the same-time median. Needs that many days loaded.", Order = 6, GroupName = "1. POC")]

@@ -28,6 +28,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   range, gray once price closes outside it.
 - Flow POC labels strong POCs with the lots left over at that price (buys
   minus sells) by default; the old contract count is the "Volume" label.
+  "Strength measure" can judge strong POCs by those leftover lots instead
+  of their volume.
 - Flow HA grays candles that break both the previous high and low, not
   only those that break neither; adds an optional EMA smoothing and dotted
   traffic-area lines at the previous candle's high, middle and low.

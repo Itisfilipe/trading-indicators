@@ -456,7 +456,8 @@ the two count toward volume only.
   candles' POCs (times the multiplier) gets a circle or square that grows
   with volume and shows the lots left over at that price (buys minus
   sells; "Label" = Volume shows all contracts traded there instead); the
-  rest get a short dash.
+  rest get a short dash. "Strength measure" picks what is compared with
+  the average: the POC's volume (default) or its leftover lots.
   Each candle's volume and delta print under its low. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"
   grays a POC unless one side's share beats it.
