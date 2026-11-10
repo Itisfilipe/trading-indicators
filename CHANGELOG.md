@@ -3,6 +3,20 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-10
+
+### OrderFlowKit (new)
+- Flow POC: each candle's most traded price marked and colored by the side
+  that dominated it; strong ones (above the 30-candle average) drawn as a
+  circle or square with the contract count, the rest as a dash. Volume and
+  delta print under every candle.
+- Flow VD: per-candle delta histogram, live while the candle forms.
+- Flow CVD: cumulative delta as candles, with swing circles, level lines
+  until the CVD closes through them, and blue/red absorption bands.
+- Flow HA: Heikin-Ashi candles over the chart, inside candles grayed,
+  reversal triangles after a run.
+- POC, VD and CVD need Tick Replay to show history.
+
 ## 2026-11-09
 
 ### Chart palette (changed)

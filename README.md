@@ -444,6 +444,47 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart; set the step and the two tier intervals in price
   units for the instrument you trade.
 
+### OrderFlowKit — candle POC, volume delta, CVD candles, Heikin-Ashi
+
+Four indicators for reading aggression candle by candle. Trades count as
+buys at the ask or above and as sells at the bid or below; trades between
+the two count toward volume only.
+
+- **Flow POC** (price panel): a marker at each candle's most traded price,
+  green when buyers dominated that price, red when sellers did, gray when
+  neither did. A POC whose volume beats the average of the previous 30
+  candles' POCs (times the multiplier) gets a circle or square that grows
+  with volume and shows its contract count; the rest get a short dash.
+  Each candle's volume and delta print under its low. "Price grouping"
+  merges ticks into one level before the POC is picked; "Neutral band"
+  grays a POC unless one side's share beats it.
+- **Flow VD** (own panel): each candle's delta, updated while the candle
+  forms. Bars grow up from zero colored by side, or above and below zero
+  with "Bars from zero up" off.
+- **Flow CVD** (own panel): cumulative delta drawn as candles. Swing highs
+  and lows get a circle and a level line that stops where a CVD close
+  crosses it. A shaded band marks absorption: a candle whose delta is
+  "Absorption z-score" deviations out (against the last "Absorption
+  lookback" candles) but closes the other way, blue when selling failed,
+  red when buying failed. "Reset each session" starts the CVD at zero on
+  each session's first candle.
+- **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
+  candles (hidden by default). A candle that breaks neither the previous
+  high nor low is gray; a triangle marks a color change after a run of
+  "Candles before a reversal" candles, on closed candles only.
+- Flow POC, VD and CVD need **Tick Replay** on the data series to show past
+  candles (Tools > Options > Market Data > Show Tick Replay, then tick it
+  in the chart's Data Series). Without it they start counting when the
+  chart loads and say so in the corner. Tick Replay makes loading slow:
+  load only a few days.
+- The side of each trade comes from the bid and ask stored with it. A data
+  feed without historical bid/ask makes every past trade a sell, so delta
+  and POC colors only mean something on feeds that carry it.
+- Calculate must be On each tick or On price change; On bar close is
+  refused with a note in the corner.
+- Use: Flow POC on a 5-minute chart, Flow VD and Flow CVD under a 1-minute
+  chart, Flow HA on a second 5-minute chart.
+
 ## Profit Chart (`profit-chart/`)
 
 - Confluence coloring system: paints each candle by the highest-priority
