@@ -45,6 +45,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   color, the other candidate for the reference trader's 1-minute CVD.
 - "Delta source" = TickRule classifies each trade by uptick or downtick
   against the previous trade, the third candidate for his 1-minute CVD.
+- Flow Absorption counts all the one-sided aggression in a zone (not the
+  net) and keeps a level until its lots are eaten, even after price closes
+  beyond it, as on the reference chart.
 - Flow Absorption finds many more levels: it reads net aggression over
   4-tick zones instead of gross volume at one tick, with lower defaults
   (50 lots, 2x the candle average, bottom/top half of the candle). Bands

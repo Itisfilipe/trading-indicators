@@ -18,8 +18,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// <summary>
     /// Absorption levels: a price inside a closed candle that took heavy
     /// one-sided aggression and held, drawn as a band to the right with the
-    /// lots still defending it, until later aggression eats them or a candle
-    /// closes through the level.
+    /// lots still defending it, until later aggression at that price eats
+    /// them.
     /// </summary>
     public class FlowAbsorption : Indicator
     {
@@ -65,7 +65,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 PriceGrouping = 4;
-                MinimumLots = 50;
+                MinimumLots = 100;
                 LevelMultiplier = 2.0;
                 EdgePercent = 50;
                 FillOpacity = 40;
@@ -167,23 +167,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (absorptionLevels)
             {
-                foreach (AbsorptionLevel level in absorptionLevels)
-                {
-                    if (level.EndBar >= 0 || level.StartBar >= closedBar)
-                        continue;
-                    bool closedThrough = level.BuyersAbsorbing ? close < level.Price : close > level.Price + groupTop;
-                    if (closedThrough)
-                        level.EndBar = closedBar;
-                }
-
                 double range = high - low;
                 if (range <= 0 || barLevels.Count == 0)
                     return;
 
-                double netAggression = 0;
+                double aggression = 0;
                 foreach (LevelVolume volume in barLevels.Values)
-                    netAggression += Math.Abs(volume.Sells - volume.Buys);
-                double perLevelAverage = netAggression / barLevels.Count;
+                    aggression += volume.Buys + volume.Sells;
+                double perLevelAverage = aggression / barLevels.Count;
                 double threshold = Math.Max(MinimumLots, perLevelAverage * LevelMultiplier);
                 double edge = range * EdgePercent / 100.0;
 
@@ -191,11 +182,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     double price = entry.Key;
                     double levelTop = price + groupTop;
-                    double netSells = entry.Value.Sells - entry.Value.Buys;
-                    if (netSells >= threshold && price <= low + edge && close > levelTop)
-                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = true, InitialLots = netSells, RemainingLots = netSells });
-                    else if (-netSells >= threshold && levelTop >= high - edge && close < price)
-                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = false, InitialLots = -netSells, RemainingLots = -netSells });
+                    double sells = entry.Value.Sells;
+                    double buys = entry.Value.Buys;
+                    if (sells > buys && sells >= threshold && price <= low + edge && close > levelTop)
+                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = true, InitialLots = sells, RemainingLots = sells });
+                    else if (buys > sells && buys >= threshold && levelTop >= high - edge && close < price)
+                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = false, InitialLots = buys, RemainingLots = buys });
                 }
             }
         }
@@ -285,18 +277,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int PriceGrouping { get; set; }
 
         [Range(1, 100000), NinjaScriptProperty]
-        [Display(Name = "Minimum lots", Description = "Net one-sided aggression (sells minus buys, or the reverse) a price zone needs before it can become a level.", Order = 2, GroupName = "1. Absorption")]
+        [Display(Name = "Minimum lots", Description = "One-sided aggression (sells into a low zone, or buys into a high one) a price zone needs before it can become a level.", Order = 2, GroupName = "1. Absorption")]
         public int MinimumLots { get; set; }
 
         [Range(1, 50), NinjaScriptProperty]
-        [Display(Name = "Level multiplier", Description = "The zone's net aggression must also reach the candle's average net aggression per zone times this.", Order = 3, GroupName = "1. Absorption")]
+        [Display(Name = "Level multiplier", Description = "The zone's one-sided aggression must also reach the candle's average aggression per zone times this.", Order = 3, GroupName = "1. Absorption")]
         public double LevelMultiplier { get; set; }
 
         [Range(1, 100), NinjaScriptProperty]
         [Display(Name = "Edge (%)", Description = "How close to the candle's low (selling absorbed) or high (buying absorbed) the price must be, as a share of the candle's range.", Order = 4, GroupName = "1. Absorption")]
         public int EdgePercent { get; set; }
 
-        [Display(Name = "Show consumed levels", Description = "Keep faded bands for levels already eaten or closed through.", Order = 5, GroupName = "1. Absorption")]
+        [Display(Name = "Show consumed levels", Description = "Keep faded bands for levels whose lots were already eaten.", Order = 5, GroupName = "1. Absorption")]
         public bool ShowConsumed { get; set; }
 
         [Range(0, 100)]

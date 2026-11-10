@@ -508,16 +508,16 @@ the two count toward volume only.
   holding "Reset time" (New York time, default 09:30). After a weekend or
   holiday gap it also restarts at the first candle back.
 - **Flow Absorption** (price panel): absorption levels. When a candle
-  closes, any price zone in it ("Price grouping", 4 ticks by default) whose
-  net one-sided aggression reached "Minimum lots" (and "Level multiplier"
-  times the candle's average net per zone) and held becomes a band: net
+  closes, any price zone in it ("Price grouping", 4 ticks by default) that
+  took at least "Minimum lots" of one-sided aggression (and "Level
+  multiplier" times the candle's average per zone) and held becomes a band:
   selling into a zone in the bottom "Edge" share of a candle that closed
-  above it (blue, buyers absorbing), or net buying at the top of one that
-  closed below it (red). The band runs right with the net lots still
-  defending it in a colored box on the right edge; later aggression at that
-  zone into the defenders eats the count, and the level ends when the count
-  reaches zero or a candle closes through it (ended levels stay faded
-  with "Show consumed levels").
+  above it (blue, buyers absorbing), or buying into the top of one that
+  closed below it (red). The band runs right with the lots still defending
+  it in a colored box on the right edge; later aggression into the
+  defenders at that zone eats the count, and the level ends only when the
+  count reaches zero, even if price trades or closes beyond it (ended
+  levels stay faded with "Show consumed levels").
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
   high nor low, or breaks both, is gray (absorption); a triangle marks a
