@@ -444,9 +444,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart; set the step and the two tier intervals in price
   units for the instrument you trade.
 
-### OrderFlowKit — candle POC, volume delta, CVD candles, Heikin-Ashi
+### OrderFlowKit — candle POC, volume delta, CVD, absorption, Heikin-Ashi
 
-Four indicators for reading aggression candle by candle. Trades count as
+Five indicators for reading aggression candle by candle. Trades count as
 buys at the ask or above and as sells at the bid or below; trades between
 the two count toward volume only.
 
@@ -483,11 +483,24 @@ the two count toward volume only.
   evening, so use "Reset at time" instead: the CVD restarts on the candle
   holding "Reset time" (New York time, default 09:30). After a weekend or
   holiday gap it also restarts at the first candle back.
+- **Flow Absorption** (price panel): absorption levels. When a candle
+  closes, any price in it that took at least "Minimum lots" of one-sided
+  aggression (and "Level multiplier" times the candle's average per price)
+  and held becomes a band: sellers hitting a price in the bottom "Edge"
+  share of a candle that closed above it (blue, buyers absorbing), or
+  buyers lifting a price at the top of one that closed below it (red).
+  The band runs right with the lots still defending it on the right edge;
+  later aggression at that price into the defenders eats the count, and
+  the level ends when the count reaches zero or a candle closes through
+  it (ended levels stay faded with "Show consumed levels").
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
   high nor low is gray; a triangle marks a color change after a run of
-  "Candles before a reversal" candles, on closed candles only.
-- Flow POC, VD and CVD need **Tick Replay** on the data series to show past
+  "Candles before a reversal" candles, on closed candles only. CCZ zones
+  box the range of each Heikin-Ashi candle whose body is at most "Body (%
+  of range)" of its range (7% by default), colored while open and gray
+  once a candle closes outside the box.
+- Flow POC, VD, CVD and Absorption need **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
   in the chart's Data Series). Without it they start counting when the
   chart loads and say so in the corner. Tick Replay makes loading slow:
@@ -497,8 +510,8 @@ the two count toward volume only.
   and POC colors only mean something on feeds that carry it.
 - Calculate must be On each tick or On price change; On bar close is
   refused with a note in the corner.
-- Use: Flow POC on a 5-minute chart, Flow VD and Flow CVD under a 1-minute
-  chart, Flow HA on a second 5-minute chart.
+- Use: Flow POC and Flow Absorption on a 5-minute chart, Flow VD and Flow
+  CVD under a 1-minute chart, Flow HA on a second 5-minute chart.
 
 ## Profit Chart (`profit-chart/`)
 

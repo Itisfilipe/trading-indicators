@@ -31,6 +31,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         private readonly List<PivotLevel> pivots = new List<PivotLevel>();
+        private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double cumulativeDelta;
         private TimeSpan resetTimeOfDay;
@@ -73,6 +74,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
+                sessionIterator = new SessionIterator(Bars);
                 cvdOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
@@ -95,6 +97,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnMarketData(MarketDataEventArgs e)
         {
             if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+                return;
+            if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
 
             if (CurrentBar != activeBar)

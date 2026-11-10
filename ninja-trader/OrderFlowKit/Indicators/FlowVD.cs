@@ -19,6 +19,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// </summary>
     public class FlowVD : Indicator
     {
+        private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double delta;
         private double windowMean;
@@ -48,6 +49,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
+                sessionIterator = new SessionIterator(Bars);
                 rawDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
@@ -71,6 +73,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnMarketData(MarketDataEventArgs e)
         {
             if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+                return;
+            if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
 
             if (CurrentBar != activeBar)

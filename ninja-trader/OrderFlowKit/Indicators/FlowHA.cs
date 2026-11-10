@@ -1,5 +1,6 @@
 #region Using declarations
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
@@ -23,6 +24,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> haLow;
         private Series<double> haClose;
 
+        private class CczZone
+        {
+            public int StartBar;
+            public double Top;
+            public double Bottom;
+            public int EndBar = -1;
+        }
+
+        private readonly List<CczZone> cczZones = new List<CczZone>();
+        private int lastCczBar = -1;
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -37,11 +49,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HidePriceBars = true;
                 MarkInsideCandles = true;
                 MinBarsForReversal = 2;
+                ShowCczZones = true;
+                CczBodyPercent = 7;
+                CczOpacity = 10;
                 SignalOffsetTicks = 3;
 
                 UpColor = Brushes.LimeGreen;
                 DownColor = Brushes.Red;
                 InsideColor = Brushes.Silver;
+                ActiveCczColor = Brushes.Goldenrod;
+                FinishedCczColor = Brushes.Gray;
                 WickColor = Brushes.Black;
             }
             else if (State == State.DataLoaded)
@@ -66,6 +83,34 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 BarBrush = Brushes.Transparent;
                 CandleOutlineBrush = Brushes.Transparent;
+            }
+
+            if (ShowCczZones && IsFirstTickOfBar)
+            {
+                bool barIsComplete = Calculate == Calculate.OnBarClose || (State == State.Historical && !Bars.IsTickReplay);
+                int closedBarsAgo = barIsComplete ? 0 : 1;
+                if (CurrentBar >= closedBarsAgo && CurrentBar - closedBarsAgo > lastCczBar)
+                    UpdateCczZones(closedBarsAgo);
+            }
+        }
+
+        private void UpdateCczZones(int closedBarsAgo)
+        {
+            int closedBar = CurrentBar - closedBarsAgo;
+            lastCczBar = closedBar;
+            double close = Close[closedBarsAgo];
+            double body = Math.Abs(haClose[closedBarsAgo] - haOpen[closedBarsAgo]);
+            double top = haHigh[closedBarsAgo];
+            double bottom = haLow[closedBarsAgo];
+
+            lock (cczZones)
+            {
+                foreach (CczZone zone in cczZones)
+                    if (zone.EndBar < 0 && zone.StartBar < closedBar && (close > zone.Top || close < zone.Bottom))
+                        zone.EndBar = closedBar;
+
+                if (top > bottom && body <= (top - bottom) * CczBodyPercent / 100.0)
+                    cczZones.Add(new CczZone { StartBar = closedBar, Top = top, Bottom = bottom });
             }
         }
 
@@ -143,12 +188,39 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             SharpDX.Direct2D1.Brush downBrush = DownColor.ToDxBrush(RenderTarget);
             SharpDX.Direct2D1.Brush insideBrush = InsideColor.ToDxBrush(RenderTarget);
             SharpDX.Direct2D1.Brush wickBrush = WickColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush activeCczFill = ActiveCczColor.ToDxBrush(RenderTarget, CczOpacity / 100f);
+            SharpDX.Direct2D1.Brush finishedCczFill = FinishedCczColor.ToDxBrush(RenderTarget, CczOpacity / 100f);
+            SharpDX.Direct2D1.Brush activeCczLine = ActiveCczColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush finishedCczLine = FinishedCczColor.ToDxBrush(RenderTarget);
 
             try
             {
                 float barWidth = Math.Max(1f, (float)chartControl.GetBarPaintWidth(ChartBars));
                 float triangleHalfWidth = Math.Max(4f, barWidth / 2);
                 int formingBar = State == State.Realtime ? Bars.Count - 1 : Bars.Count;
+
+                if (ShowCczZones)
+                {
+                    float panelRight = ChartPanel.X + ChartPanel.W;
+                    lock (cczZones)
+                        foreach (CczZone zone in cczZones)
+                        {
+                            bool finished = zone.EndBar >= 0;
+                            if (zone.StartBar > ChartBars.ToIndex || (finished && zone.EndBar < ChartBars.FromIndex))
+                                continue;
+
+                            float x1 = chartControl.GetXByBarIndex(ChartBars, zone.StartBar) - barWidth / 2;
+                            float x2 = finished ? chartControl.GetXByBarIndex(ChartBars, zone.EndBar) : panelRight;
+                            float top = chartScale.GetYByValue(zone.Top);
+                            float bottom = chartScale.GetYByValue(zone.Bottom);
+                            if (x2 <= x1 || bottom <= top)
+                                continue;
+
+                            SharpDX.RectangleF box = new SharpDX.RectangleF(x1, top, x2 - x1, bottom - top);
+                            RenderTarget.FillRectangle(box, finished ? finishedCczFill : activeCczFill);
+                            RenderTarget.DrawRectangle(box, finished ? finishedCczLine : activeCczLine, 1f);
+                        }
+                }
 
                 for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
                 {
@@ -196,6 +268,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 downBrush.Dispose();
                 insideBrush.Dispose();
                 wickBrush.Dispose();
+                activeCczFill.Dispose();
+                finishedCczFill.Dispose();
+                activeCczLine.Dispose();
+                finishedCczLine.Dispose();
             }
         }
 
@@ -246,6 +322,39 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             get { return Serialize.BrushToString(InsideColor); }
             set { InsideColor = Serialize.StringToBrush(value); }
+        }
+
+        [Display(Name = "Show CCZ zones", Description = "Box the range of each Heikin-Ashi candle whose body is a sliver of its range, until a candle closes outside the box.", Order = 1, GroupName = "3. CCZ zones")]
+        public bool ShowCczZones { get; set; }
+
+        [Range(1, 50), NinjaScriptProperty]
+        [Display(Name = "Body (% of range)", Description = "Largest body, as a share of the candle's range, that still opens a zone.", Order = 2, GroupName = "3. CCZ zones")]
+        public int CczBodyPercent { get; set; }
+
+        [Range(0, 100)]
+        [Display(Name = "Zone opacity (%)", Order = 3, GroupName = "3. CCZ zones")]
+        public int CczOpacity { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Open zone", Order = 4, GroupName = "3. CCZ zones")]
+        public System.Windows.Media.Brush ActiveCczColor { get; set; }
+
+        [Browsable(false)]
+        public string ActiveCczColorSerializable
+        {
+            get { return Serialize.BrushToString(ActiveCczColor); }
+            set { ActiveCczColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Finished zone", Order = 5, GroupName = "3. CCZ zones")]
+        public System.Windows.Media.Brush FinishedCczColor { get; set; }
+
+        [Browsable(false)]
+        public string FinishedCczColorSerializable
+        {
+            get { return Serialize.BrushToString(FinishedCczColor); }
+            set { FinishedCczColor = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]

@@ -47,6 +47,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double runningVolume;
         private double runningDelta;
 
+        private SessionIterator sessionIterator;
         private Series<double> pocPrice;
         private Series<double> pocVolume;
         private Series<double> pocBuys;
@@ -93,6 +94,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
+                sessionIterator = new SessionIterator(Bars);
                 pocPrice = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 pocVolume = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 pocBuys = new Series<double>(this, MaximumBarsLookBack.Infinite);
@@ -154,6 +156,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnMarketData(MarketDataEventArgs e)
         {
             if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+                return;
+            if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
                 return;
 
             if (CurrentBar != levelsBar)

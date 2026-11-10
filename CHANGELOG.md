@@ -21,6 +21,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   candle's edge). Flow VD can plot delta as a z-score. All off by default.
 - Flow CVD can restart at a time of day (New York time, default 09:30),
   for ETH charts whose sessions open in the evening.
+- Flow Absorption (new): blue and red bands at prices that took heavy
+  one-sided aggression and held, labeled with the lots still defending
+  them, ending when those lots are eaten or a candle closes through.
+- Flow HA draws CCZ zones: a box over each small-body Heikin-Ashi candle's
+  range, gray once price closes outside it.
 
 ## 2026-11-09
 
