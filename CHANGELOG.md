@@ -41,6 +41,27 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   sits in a colored box on the right edge.
 - Flow POC squares default to 16 px and barely grow (10% at most), with
   9 pt text; absorption bands are 40% opaque with bold lot boxes.
+- Flow Alignment (new): a corner table with Heikin-Ashi, CVD and VD
+  direction on the 1-minute chart and on 5 and 15 minutes built from it,
+  the 15-minute lot balance, and BUY/SELL aligned shading when all agree
+  with at least 500 lots behind them.
+- Flow Alignment's replay journal trades each new alignment in a New York
+  window by fixed rules (stop past the previous 5-minute Heikin-Ashi
+  candle, 60-tick target, exit on VD flip or time), marks each trade with
+  its R on the chart, sums the results in the corner and writes them to a
+  CSV under Documents\NinjaTrader 8\FlowAlignment.
+- Buying is blue instead of green across Flow POC, VD, CVD, Absorption and
+  Alignment (selling stays red), which also reads under red-green color
+  blindness. Flow HA keeps the chart's candle colors.
+- Flow CVD draws only the pivot levels the CVD has not crossed yet ("Show
+  broken levels" brings the rest back) and needs 3 candles on each side
+  for a pivot, so the panel carries far fewer lines.
+- Flow CVD draws the cumulative delta as Heikin-Ashi candles by default,
+  like the reference trader's panel: smoother runs and fewer pivots.
+  "Heikin-Ashi candles" off restores the raw candles.
+- Flow VD smooths bar height with a 4-candle EMA by default (color still
+  follows each candle's own delta), matching the reference panel; set
+  "Smoothing period" to 0 for the raw delta.
   "Strength measure" can judge strong POCs by those leftover lots instead
   of their volume.
 - Flow HA grays candles that break both the previous high and low, not

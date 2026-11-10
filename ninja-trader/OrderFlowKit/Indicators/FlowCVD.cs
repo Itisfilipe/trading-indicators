@@ -42,6 +42,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> cvdHigh;
         private Series<double> cvdLow;
         private Series<double> cvdClose;
+        private Series<double> shownOpen;
+        private Series<double> shownHigh;
+        private Series<double> shownLow;
+        private Series<double> shownClose;
+        private bool activeBarIsReset;
         private Series<double> absorption;
 
         protected override void OnStateChange()
@@ -58,16 +63,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ResetEachSession = false;
                 ResetAtTime = false;
                 ResetTime = "09:30";
-                PivotStrength = 2;
+                HeikinAshi = true;
+                PivotStrength = 3;
+                ShowBrokenLevels = false;
                 AbsorptionLookback = 60;
                 AbsorptionZScore = 1.5;
                 BandOpacity = 25;
 
-                UpColor = Brushes.SeaGreen;
+                UpColor = Brushes.DodgerBlue;
                 DownColor = Brushes.Crimson;
                 PivotHighColor = Brushes.Crimson;
-                PivotLowColor = Brushes.SeaGreen;
-                BuyAbsorptionColor = Brushes.SeaGreen;
+                PivotLowColor = Brushes.DodgerBlue;
+                BuyAbsorptionColor = Brushes.DodgerBlue;
                 SellAbsorptionColor = Brushes.Crimson;
 
                 AddPlot(new Stroke(Brushes.Transparent, 1), PlotStyle.Line, "CVD");
@@ -79,6 +86,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 cvdHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                shownOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                shownHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                shownLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                shownClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 absorption = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
@@ -104,7 +115,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (CurrentBar != activeBar)
             {
                 activeBar = CurrentBar;
-                if (IsResetBar(CurrentBar))
+                activeBarIsReset = IsResetBar(CurrentBar);
+                if (activeBarIsReset)
                 {
                     cumulativeDelta = 0;
                     lock (pivots)
@@ -126,6 +138,33 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             cvdLow[0] = Math.Min(cvdLow[0], cumulativeDelta);
             cvdClose[0] = cumulativeDelta;
             Value[0] = cumulativeDelta;
+            UpdateShownCandle();
+        }
+
+        private void UpdateShownCandle()
+        {
+            double open = cvdOpen[0];
+            double high = cvdHigh[0];
+            double low = cvdLow[0];
+            double close = cvdClose[0];
+            if (!HeikinAshi)
+            {
+                shownOpen[0] = open;
+                shownHigh[0] = high;
+                shownLow[0] = low;
+                shownClose[0] = close;
+                return;
+            }
+
+            bool continuesPrevious = !activeBarIsReset && HasCvd(CurrentBar - 1);
+            double haOpen = continuesPrevious
+                ? (shownOpen.GetValueAt(CurrentBar - 1) + shownClose.GetValueAt(CurrentBar - 1)) / 2
+                : (open + close) / 2;
+            double haClose = (open + high + low + close) / 4;
+            shownOpen[0] = haOpen;
+            shownClose[0] = haClose;
+            shownHigh[0] = Math.Max(high, Math.Max(haOpen, haClose));
+            shownLow[0] = Math.Min(low, Math.Min(haOpen, haClose));
         }
 
         protected override void OnBarUpdate()
@@ -139,7 +178,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (pivots)
             {
-                double close = cvdClose.GetValueAt(closedBar);
+                double close = shownClose.GetValueAt(closedBar);
                 foreach (PivotLevel level in pivots)
                     if (level.BrokenAt < 0 && (level.IsHigh ? close > level.Value : close < level.Value))
                         level.BrokenAt = closedBar;
@@ -152,7 +191,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private bool HasCvd(int barIndex)
         {
-            return barIndex >= 0 && cvdOpen.IsValidDataPointAt(barIndex) && cvdClose.IsValidDataPointAt(barIndex);
+            return barIndex >= 0 && shownOpen.IsValidDataPointAt(barIndex) && shownClose.IsValidDataPointAt(barIndex);
         }
 
         private double BarDelta(int barIndex)
@@ -193,17 +232,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!HasCvd(pivotBar) || SpansReset(pivotBar))
                 return;
 
-            double high = cvdHigh.GetValueAt(pivotBar);
-            double low = cvdLow.GetValueAt(pivotBar);
+            double high = shownHigh.GetValueAt(pivotBar);
+            double low = shownLow.GetValueAt(pivotBar);
             bool isHigh = true;
             bool isLow = true;
             for (int offset = 1; offset <= PivotStrength; offset++)
             {
                 if (!HasCvd(pivotBar - offset) || !HasCvd(pivotBar + offset))
                     return;
-                if (high <= cvdHigh.GetValueAt(pivotBar - offset) || high < cvdHigh.GetValueAt(pivotBar + offset))
+                if (high <= shownHigh.GetValueAt(pivotBar - offset) || high < shownHigh.GetValueAt(pivotBar + offset))
                     isHigh = false;
-                if (low >= cvdLow.GetValueAt(pivotBar - offset) || low > cvdLow.GetValueAt(pivotBar + offset))
+                if (low >= shownLow.GetValueAt(pivotBar - offset) || low > shownLow.GetValueAt(pivotBar + offset))
                     isLow = false;
             }
 
@@ -255,8 +294,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 if (!HasCvd(barIndex))
                     continue;
-                MinValue = Math.Min(MinValue, cvdLow.GetValueAt(barIndex));
-                MaxValue = Math.Max(MaxValue, cvdHigh.GetValueAt(barIndex));
+                MinValue = Math.Min(MinValue, shownLow.GetValueAt(barIndex));
+                MaxValue = Math.Max(MaxValue, shownHigh.GetValueAt(barIndex));
             }
         }
 
@@ -299,12 +338,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         continue;
 
                     float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
-                    double open = cvdOpen.GetValueAt(barIndex);
-                    double close = cvdClose.GetValueAt(barIndex);
+                    double open = shownOpen.GetValueAt(barIndex);
+                    double close = shownClose.GetValueAt(barIndex);
                     SharpDX.Direct2D1.Brush brush = close >= open ? upBrush : downBrush;
 
-                    RenderTarget.DrawLine(new SharpDX.Vector2(x, chartScale.GetYByValue(cvdHigh.GetValueAt(barIndex))),
-                        new SharpDX.Vector2(x, chartScale.GetYByValue(cvdLow.GetValueAt(barIndex))), brush, 1f);
+                    RenderTarget.DrawLine(new SharpDX.Vector2(x, chartScale.GetYByValue(shownHigh.GetValueAt(barIndex))),
+                        new SharpDX.Vector2(x, chartScale.GetYByValue(shownLow.GetValueAt(barIndex))), brush, 1f);
 
                     float bodyTop = chartScale.GetYByValue(Math.Max(open, close));
                     float bodyBottom = chartScale.GetYByValue(Math.Min(open, close));
@@ -321,7 +360,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         float x2 = level.BrokenAt >= 0 ? chartControl.GetXByBarIndex(ChartBars, level.BrokenAt) : panelRight;
                         float y = chartScale.GetYByValue(level.Value);
                         SharpDX.Direct2D1.Brush lineBrush = level.IsHigh ? highBrush : lowBrush;
-                        RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y), lineBrush, 1.5f);
+                        if (level.BrokenAt < 0 || ShowBrokenLevels)
+                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y), lineBrush, 1.5f);
 
                         SharpDX.Direct2D1.Ellipse circle = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x1, y), pivotRadius, pivotRadius);
                         RenderTarget.FillEllipse(circle, level.IsHigh ? highFill : lowFill);
@@ -355,20 +395,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
         public string ResetTime { get; set; }
 
+        [NinjaScriptProperty]
+        [Display(Name = "Heikin-Ashi candles", Description = "Draw the cumulative delta as Heikin-Ashi candles: smoother runs, fewer pivots. Pivots and their breaks follow the candles drawn.", Order = 4, GroupName = "1. CVD")]
+        public bool HeikinAshi { get; set; }
+
         [Range(1, 20), NinjaScriptProperty]
-        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 5, GroupName = "1. CVD")]
         public int PivotStrength { get; set; }
 
+        [Display(Name = "Show broken levels", Description = "Keep each pivot's line up to the candle that closed through it. Off: only levels the CVD has not crossed yet are drawn.", Order = 6, GroupName = "1. CVD")]
+        public bool ShowBrokenLevels { get; set; }
+
         [Range(5, 500), NinjaScriptProperty]
-        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 5, GroupName = "1. CVD")]
+        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 7, GroupName = "1. CVD")]
         public int AbsorptionLookback { get; set; }
 
         [Range(0.5, 10), NinjaScriptProperty]
-        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 6, GroupName = "1. CVD")]
+        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 8, GroupName = "1. CVD")]
         public double AbsorptionZScore { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Band opacity (%)", Order = 7, GroupName = "1. CVD")]
+        [Display(Name = "Band opacity (%)", Order = 9, GroupName = "1. CVD")]
         public int BandOpacity { get; set; }
 
         [XmlIgnore]

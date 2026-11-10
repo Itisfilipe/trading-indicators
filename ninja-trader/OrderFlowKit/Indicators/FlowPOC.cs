@@ -106,7 +106,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 FillOpacity = 40;
                 ShowBarStats = true;
 
-                BuyColor = Brushes.SeaGreen;
+                BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;
                 NeutralColor = Rgb(0x5F, 0x67, 0x73);
                 AbsorptionColor = Rgb(0xB8, 0x86, 0x2B);

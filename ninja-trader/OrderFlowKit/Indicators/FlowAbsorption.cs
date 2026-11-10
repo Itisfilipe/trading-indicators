@@ -72,7 +72,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MinimumBandHeight = 8;
                 ShowConsumed = true;
 
-                BuyersAbsorbingColor = Rgb(0x3B, 0x82, 0xF6);
+                BuyersAbsorbingColor = Brushes.DodgerBlue;
                 SellersAbsorbingColor = Brushes.Crimson;
                 TextColor = Brushes.White;
                 LabelFont = new SimpleFont("Arial", 9) { Bold = true };

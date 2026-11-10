@@ -25,6 +25,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double windowMean;
         private double windowDeviation;
         private Series<double> rawDelta;
+        private Series<double> smoothedSize;
+        private double previousSmoothedSize = double.NaN;
 
         private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
         {
@@ -47,7 +49,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 AbsoluteBars = true;
                 ShowZScore = false;
                 ZScoreLookback = 60;
-                BuyColor = Brushes.SeaGreen;
+                SmoothingPeriod = 4;
+                BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;
 
                 AddPlot(new Stroke(BuyColor, 2), PlotStyle.Bar, "Delta");
@@ -58,6 +61,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 sessionIterator = new SessionIterator(Bars);
                 rawDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                smoothedSize = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
             {
@@ -88,6 +92,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 activeBar = CurrentBar;
                 delta = 0;
+                previousSmoothedSize = CurrentBar > 0 && smoothedSize.IsValidDataPointAt(CurrentBar - 1)
+                    ? smoothedSize.GetValueAt(CurrentBar - 1)
+                    : double.NaN;
                 if (ShowZScore)
                     MeasurePreviousDeltas();
             }
@@ -102,7 +109,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (ShowZScore)
                 shown = windowDeviation > 0 ? (delta - windowMean) / windowDeviation : 0;
 
-            Value[0] = AbsoluteBars ? Math.Abs(shown) : shown;
+            double size = Math.Abs(shown);
+            if (SmoothingPeriod > 0 && !double.IsNaN(previousSmoothedSize))
+                size = previousSmoothedSize + 2.0 / (SmoothingPeriod + 1) * (size - previousSmoothedSize);
+            smoothedSize[0] = size;
+
+            Value[0] = AbsoluteBars ? size : Math.Sign(shown) * size;
             PlotBrushes[0][0] = shown >= 0 ? BuyColor : SellColor;
         }
 
@@ -141,6 +153,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(5, 250), NinjaScriptProperty]
         [Display(Name = "Z-score lookback", Description = "Previous candles the z-score is measured against.", Order = 3, GroupName = "1. Display")]
         public int ZScoreLookback { get; set; }
+
+        [Range(0, 50), NinjaScriptProperty]
+        [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
+        public int SmoothingPeriod { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Buyer color", Order = 1, GroupName = "2. Colors")]

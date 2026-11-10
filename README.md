@@ -451,7 +451,7 @@ buys at the ask or above and as sells at the bid or below; trades between
 the two count toward volume only.
 
 - **Flow POC** (price panel): a marker at each candle's most traded price,
-  green when buyers dominated that price, red when sellers did, gray when
+  blue when buyers dominated that price, red when sellers did, gray when
   neither did. A POC whose volume beats the average of the previous 30
   candles' POCs (times the multiplier) gets a square (or circle) that grows
   with volume and shows the lots left over at that price (buys minus
@@ -478,9 +478,16 @@ the two count toward volume only.
   with "Bars from zero up" off. "Show as z-score" plots how many deviations
   the delta sits from the average of the previous "Z-score lookback"
   candles, so a 1-minute and a 5-minute panel read on the same scale.
-- **Flow CVD** (own panel): cumulative delta drawn as candles. Swing highs
-  and lows get a circle and a level line that stops where a CVD close
-  crosses it. A shaded band marks absorption: a candle whose delta is
+  "Smoothing period" (4 by default) makes each bar's height an EMA of the
+  recent candles' delta size while its color stays the candle's own side,
+  so a burst fades over a few bars instead of dropping to zero; 0 shows
+  the raw delta, which is what to use on the chart where you read the
+  exact lot balance.
+- **Flow CVD** (own panel): cumulative delta drawn as Heikin-Ashi candles
+  ("Heikin-Ashi candles" off draws the raw CVD candles). Swing highs
+  and lows ("Pivot strength" candles on each side, 3 by default) get a
+  circle and a level line while no CVD close has crossed it; "Show broken
+  levels" keeps crossed lines up to the crossing candle. A shaded band marks absorption: a candle whose delta is
   "Absorption z-score" deviations out (against the last "Absorption
   lookback" candles) but closes the other way, blue when selling failed,
   red when buying failed. "Reset each session" starts the CVD at zero on
@@ -510,7 +517,37 @@ the two count toward volume only.
   box the range of each Heikin-Ashi candle whose body is at most "Body (%
   of range)" of its range (7% by default), colored while open and gray
   once a candle closes outside the box.
-- Flow POC, VD, CVD and Absorption need **Tick Replay** on the data series to show past
+- **Flow Alignment** (price panel, on the 1-minute chart): a small table in
+  the top-right corner with the Heikin-Ashi, CVD and VD direction on the
+  chart's timeframe and on two larger ones built from its own candles
+  (5 and 15 minutes by default), the slow candle's lot balance (buys minus
+  sells) and the overall state. Each cell is blue, red or gray:
+  Heikin-Ashi broke the previous candle's high and not its low (or the
+  reverse); CVD is above the previous candle's CVD high (or below its
+  low); the candle's delta is positive (or negative). When every cell
+  agrees and the slow candle has at least "Minimum slow balance" lots on
+  that side (500 by default; 0 turns it off), the state reads BUY or SELL
+  aligned and the candles are shaded. "Slow timeframe must align" off
+  drops the slow row from the agreement but keeps its balance. The state
+  is also a plot (+1, -1, 0) for Market Analyzer columns and strategies.
+- Flow Alignment's **replay journal** trades every new alignment inside a
+  New York time window (09:30-11:00 by default) by fixed rules, so a
+  Market Replay session tells you whether the signal has an edge:
+  market entry at the close of the candle that aligned, stop one tick past
+  the previous middle-timeframe Heikin-Ashi candle (signals whose stop is
+  outside "Minimum/Maximum stop" are skipped), a fixed target (60 ticks,
+  US$300 per NQ contract), an optional move to breakeven, and exits when
+  the chart's or middle VD turns against the trade, after "Maximum hold"
+  minutes or at the session end. When stop and target fall inside the
+  same candle it counts the stop. Each trade draws a dashed line from
+  entry to exit with its result in R, the corner shows trades, win rate,
+  total and average R and profit factor, and the trades are written to
+  `Documents\NinjaTrader 8\FlowAlignment\<instrument> <minutes>min.csv`
+  (New York times, stop size, slow balance, exit reason, R, MFE and MAE
+  in ticks), rewritten after each trade in replay or live and when the
+  chart closes. The larger timeframes must divide the day (5, 15, 30, 60
+  minutes...) so their candles sit on the clock.
+- Flow POC, VD, CVD, Absorption and Alignment need **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
   in the chart's Data Series). Without it they start counting when the
   chart loads and say so in the corner. Tick Replay makes loading slow:
@@ -521,7 +558,13 @@ the two count toward volume only.
 - Calculate must be On each tick or On price change; On bar close is
   refused with a note in the corner.
 - Use: Flow POC and Flow Absorption on a 5-minute chart, Flow VD and Flow
-  CVD under a 1-minute chart, Flow HA on a second 5-minute chart.
+  CVD under a 1-minute chart with Flow Alignment on it, Flow HA on a
+  second 5-minute chart.
+- Pre-open levels come from the repo's other indicators: ICT Killzones
+  with a slot for the overnight session (18:00-09:30) boxes its range and
+  draws its high and low until price takes them, a slot for 00:00-00:05
+  boxes the 5-minute midnight candle; Time-Based Price Levels marks the
+  09:30 open; Custom VWAP anchors a VWAP at an overnight extreme.
 
 ## Profit Chart (`profit-chart/`)
 
