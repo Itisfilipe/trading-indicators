@@ -46,6 +46,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   net) and keeps a level until its lots are eaten, even after price closes
   beyond it, as on the reference chart.
 - Flow Absorption hides eaten levels by default ("Show consumed levels").
+- Flow Absorption eats a level only with each later candle's net
+  aggression into it, so levels survive price passing through, as his do.
 - Flow Absorption finds many more levels: it reads net aggression over
   4-tick zones instead of gross volume at one tick, with lower defaults
   (50 lots, 2x the candle average, bottom/top half of the candle). Bands

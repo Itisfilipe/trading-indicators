@@ -508,9 +508,11 @@ the two count toward volume only.
   selling into a zone in the bottom "Edge" share of a candle that closed
   above it (blue, buyers absorbing), or buying into the top of one that
   closed below it (red). The band runs right with the lots still defending
-  it in a colored box on the right edge; later aggression into the
-  defenders at that zone eats the count, and the level ends only when the
-  count reaches zero, even if price trades or closes beyond it (ended
+  it in a colored box on the right edge; each later candle's net
+  aggression into the defenders at that zone (sells minus buys for a blue
+  level) eats the count, so a quick pass with both sides trading barely
+  dents it, and the level ends only when the count reaches zero, even if
+  price trades or closes beyond it (ended
   levels stay faded with "Show consumed levels").
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous

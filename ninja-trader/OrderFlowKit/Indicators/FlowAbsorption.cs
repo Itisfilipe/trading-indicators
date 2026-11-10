@@ -18,8 +18,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// <summary>
     /// Absorption levels: a price inside a closed candle that took heavy
     /// one-sided aggression and held, drawn as a band to the right with the
-    /// lots still defending it, until later aggression at that price eats
-    /// them.
+    /// lots still defending it, until the later candles' net aggression into
+    /// that price eats them.
     /// </summary>
     public class FlowAbsorption : Indicator
     {
@@ -131,31 +131,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 level.Buys += e.Volume;
             else if (isSell)
                 level.Sells += e.Volume;
-
-            if (isBuy || isSell)
-                ConsumeLevels(key, isSell, e.Volume);
         }
 
         private double LevelKey(double price)
         {
             double bucketSize = TickSize * PriceGrouping;
             return Instrument.MasterInstrument.RoundToTickSize(Math.Floor(price / bucketSize + 1e-9) * bucketSize);
-        }
-
-        private void ConsumeLevels(double key, bool sellAggression, double volume)
-        {
-            lock (absorptionLevels)
-                foreach (AbsorptionLevel level in absorptionLevels)
-                {
-                    if (level.EndBar >= 0 || level.StartBar >= CurrentBar || level.Price != key || level.BuyersAbsorbing != sellAggression)
-                        continue;
-                    level.RemainingLots -= volume;
-                    if (level.RemainingLots <= 0)
-                    {
-                        level.RemainingLots = 0;
-                        level.EndBar = CurrentBar;
-                    }
-                }
         }
 
         private void CloseBar(int closedBar)
@@ -167,6 +148,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (absorptionLevels)
             {
+                foreach (AbsorptionLevel level in absorptionLevels)
+                {
+                    LevelVolume traded;
+                    if (level.EndBar >= 0 || level.StartBar >= closedBar || !barLevels.TryGetValue(level.Price, out traded))
+                        continue;
+                    double netAgainst = level.BuyersAbsorbing ? traded.Sells - traded.Buys : traded.Buys - traded.Sells;
+                    if (netAgainst <= 0)
+                        continue;
+                    level.RemainingLots -= netAgainst;
+                    if (level.RemainingLots <= 0)
+                    {
+                        level.RemainingLots = 0;
+                        level.EndBar = closedBar;
+                    }
+                }
+
                 double range = high - low;
                 if (range <= 0 || barLevels.Count == 0)
                     return;
