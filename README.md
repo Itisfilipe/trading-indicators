@@ -479,7 +479,10 @@ the two count toward volume only.
   "Absorption z-score" deviations out (against the last "Absorption
   lookback" candles) but closes the other way, blue when selling failed,
   red when buying failed. "Reset each session" starts the CVD at zero on
-  each session's first candle.
+  each session's first candle. On an ETH series sessions open in the
+  evening, so use "Reset at time" instead: the CVD restarts on the candle
+  holding "Reset time" (New York time, default 09:30). After a weekend or
+  holiday gap it also restarts at the first candle back.
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
   high nor low is gray; a triangle marks a color change after a run of

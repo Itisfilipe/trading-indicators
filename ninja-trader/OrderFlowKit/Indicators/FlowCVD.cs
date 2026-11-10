@@ -1,6 +1,7 @@
 #region Using declarations
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Media;
@@ -32,6 +33,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private readonly List<PivotLevel> pivots = new List<PivotLevel>();
         private int activeBar = -1;
         private double cumulativeDelta;
+        private TimeSpan resetTimeOfDay;
+        private bool hasResetTime;
+        private TimeZoneInfo newYorkZone;
 
         private Series<double> cvdOpen;
         private Series<double> cvdHigh;
@@ -51,6 +55,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 BarsRequiredToPlot = 0;
 
                 ResetEachSession = false;
+                ResetAtTime = false;
+                ResetTime = "09:30";
                 PivotStrength = 2;
                 AbsorptionLookback = 60;
                 AbsorptionZScore = 1.5;
@@ -75,6 +81,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Historical)
             {
+                newYorkZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                hasResetTime = ResetAtTime && TimeSpan.TryParse(ResetTime, CultureInfo.InvariantCulture, out resetTimeOfDay);
+                if (ResetAtTime && !hasResetTime)
+                    Draw.TextFixed(this, "FlowCvdResetTime", "Flow CVD: reset time must be HH:MM", TextPosition.TopLeft);
                 if (Calculate == Calculate.OnBarClose)
                     Draw.TextFixed(this, "FlowCvdCalculate", "Flow CVD: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
                 if (!Bars.IsTickReplay)
@@ -90,7 +100,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (CurrentBar != activeBar)
             {
                 activeBar = CurrentBar;
-                if (ResetEachSession && Bars.IsFirstBarOfSessionByIndex(CurrentBar))
+                if (IsResetBar(CurrentBar))
                 {
                     cumulativeDelta = 0;
                     lock (pivots)
@@ -146,19 +156,37 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return cvdClose.GetValueAt(barIndex) - cvdOpen.GetValueAt(barIndex);
         }
 
-        private bool SpansSessionReset(int pivotBar)
+        private DateTime NewYorkTime(int barIndex)
         {
-            if (!ResetEachSession)
+            return TimeZoneInfo.ConvertTime(Bars.GetTime(barIndex), Core.Globals.GeneralOptions.TimeZoneInfo, newYorkZone);
+        }
+
+        private bool IsResetBar(int barIndex)
+        {
+            if (barIndex <= 0)
                 return false;
+            if (ResetEachSession && Bars.IsFirstBarOfSessionByIndex(barIndex))
+                return true;
+            if (!hasResetTime)
+                return false;
+
+            DateTime previousEnd = NewYorkTime(barIndex - 1);
+            DateTime currentEnd = NewYorkTime(barIndex);
+            DateTime resetMoment = currentEnd.Date + resetTimeOfDay;
+            return previousEnd <= resetMoment && currentEnd > resetMoment;
+        }
+
+        private bool SpansReset(int pivotBar)
+        {
             for (int barIndex = pivotBar - PivotStrength + 1; barIndex <= pivotBar + PivotStrength; barIndex++)
-                if (barIndex >= 0 && Bars.IsFirstBarOfSessionByIndex(barIndex))
+                if (IsResetBar(barIndex))
                     return true;
             return false;
         }
 
         private void AddPivotsAt(int pivotBar)
         {
-            if (!HasCvd(pivotBar) || SpansSessionReset(pivotBar))
+            if (!HasCvd(pivotBar) || SpansReset(pivotBar))
                 return;
 
             double high = cvdHigh.GetValueAt(pivotBar);
@@ -315,20 +343,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Reset each session", Description = "Start the cumulative delta from zero on the first candle of each session.", Order = 1, GroupName = "1. CVD")]
         public bool ResetEachSession { get; set; }
 
+        [NinjaScriptProperty]
+        [Display(Name = "Reset at time", Description = "Start the cumulative delta from zero on the first candle after Reset time each day. Use this on an ETH series, where sessions start in the evening.", Order = 2, GroupName = "1. CVD")]
+        public bool ResetAtTime { get; set; }
+
+        [NinjaScriptProperty]
+        [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
+        public string ResetTime { get; set; }
+
         [Range(1, 20), NinjaScriptProperty]
-        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 2, GroupName = "1. CVD")]
+        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 4, GroupName = "1. CVD")]
         public int PivotStrength { get; set; }
 
         [Range(5, 500), NinjaScriptProperty]
-        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 3, GroupName = "1. CVD")]
+        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 5, GroupName = "1. CVD")]
         public int AbsorptionLookback { get; set; }
 
         [Range(0.5, 10), NinjaScriptProperty]
-        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 6, GroupName = "1. CVD")]
         public double AbsorptionZScore { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Band opacity (%)", Order = 5, GroupName = "1. CVD")]
+        [Display(Name = "Band opacity (%)", Order = 7, GroupName = "1. CVD")]
         public int BandOpacity { get; set; }
 
         [XmlIgnore]
