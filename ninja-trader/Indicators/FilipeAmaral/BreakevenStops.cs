@@ -84,7 +84,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     Content = "Stops to BE",
                     Padding = new Thickness(8, 3, 8, 3),
-                    Margin = new Thickness(2, 6, 2, 2),
+                    Margin = new Thickness(2, 6, 2, 6),
                     Cursor = Cursors.Hand,
                     Foreground = Brushes.White,
                     Background = Brushes.SteelBlue,

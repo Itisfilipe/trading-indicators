@@ -582,7 +582,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 toggleButton = new System.Windows.Controls.Button
                 {
                     Padding = new Thickness(8, 3, 8, 3),
-                    Margin = new Thickness(0, 0, 0, 2),
+                    Margin = new Thickness(0),
                     Cursor = Cursors.Hand,
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(0),
@@ -597,7 +597,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
                 if (chartTraderGrid != null)
                 {
-                    buttonPanel.Margin = new Thickness(2, 6, 2, 2);
+                    buttonPanel.Margin = new Thickness(2, 6, 2, 6);
                     toggleButtonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
                     chartTraderGrid.RowDefinitions.Add(toggleButtonRow);
                     System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
