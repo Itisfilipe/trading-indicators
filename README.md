@@ -381,22 +381,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pick the font.
 - Use: add to the chart you trade; each slot's name is what its labels show.
 
-### Better Trading Panel — big buttons for fast orders
+### Better Trading Panel — Stops to BE in the ChartTrader sidebar
 
-- Four large buttons in the ChartTrader sidebar, below its own buttons:
-  BUY MKT (blue) and SELL MKT (red) on top, Stops to BE (green), and
-  FLATTEN (orange) at the bottom. ChartTrader must be showing when the
-  indicator loads; otherwise nothing is drawn and the log says so.
-- A button dims when it has nothing to do: no ChartTrader account, no
-  position or working order to flatten, no stop short of breakeven. With a
-  position open, or for 3 seconds after a market entry, only the
-  same-direction market button stays lit: an opposite order would leave
-  the position's bracket working, so close with FLATTEN.
-- BUY/SELL MKT send a market order for ChartTrader's quantity on its
-  account, with the ATM strategy selected in ChartTrader; with none
-  selected the order goes in without a stop.
-- FLATTEN closes the position and cancels every working order on the
-  instrument for the ChartTrader account, with no confirmation.
+- A "Stops to BE" button in the ChartTrader sidebar, styled like the
+  ChartTrading toggle. ChartTrader must be showing when the indicator
+  loads; otherwise nothing is drawn and the log says so. The button dims
+  while no stop is short of breakeven.
 - Stops to BE moves every working exit-side stop on the instrument to the
   position's average price plus an offset — whatever placed it: an ATM,
   an OCO bracket, a manual order. Stop orders named "Entry" or "CT Entry"

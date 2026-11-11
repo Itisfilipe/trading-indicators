@@ -49,9 +49,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   of breakeven.
 
 ### Better Trading Panel (new, replaces Breakeven Stops)
-- Large BUY MKT, SELL MKT, FLATTEN and Stops to BE buttons in the
-  ChartTrader sidebar; buttons dim when they have nothing to act on.
-- Market buttons use ChartTrader's account, quantity and ATM strategy.
+- A Stops to BE button in the ChartTrader sidebar, styled like the
+  ChartTrading toggle; it dims when no stop is short of breakeven.
 - Stops to BE rounds toward profit when several fills average between
   ticks, and moves nothing until the bid (long) or ask (short) is a tick
   past breakeven, instead of parking stops short of it.

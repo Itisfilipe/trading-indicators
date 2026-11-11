@@ -14,29 +14,22 @@ using NinjaTrader.NinjaScript;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// Large market-order, flatten and stops-to-breakeven buttons in the
-    /// ChartTrader sidebar. Buttons dim when they have nothing to act on.
+    /// A Stops to BE button in the ChartTrader sidebar, styled like ChartTrading's
+    /// toggle. It dims when no stop is short of breakeven.
     /// </summary>
     public class BetterTradingPanel : Indicator
     {
-        private System.Windows.Controls.Grid buttonPanel;
-        private System.Windows.Controls.Button buyButton;
-        private System.Windows.Controls.Button sellButton;
-        private System.Windows.Controls.Button flattenButton;
         private System.Windows.Controls.Button breakevenButton;
-        private System.Windows.Threading.DispatcherTimer refreshTimer;
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition buttonRow;
+        private System.Windows.Threading.DispatcherTimer refreshTimer;
         private bool handlersAttached;
-        private Order lastEntry;
-        private bool lastEntryIsBuy;
-        private DateTime lastEntryTime;
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = "Large BUY MKT, SELL MKT, FLATTEN and Stops to BE buttons in the ChartTrader sidebar.";
+                Description = "A Stops to BE button in the ChartTrader sidebar.";
                 Name = "Better Trading Panel";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
@@ -44,7 +37,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DisplayInDataBox = false;
                 PaintPriceMarkers = false;
 
-                ButtonFontSize = 12;
                 BreakevenOffsetTicks = 0;
             }
             else if (State == State.Historical)
@@ -72,32 +64,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnBarUpdate() { }
 
         #region UI wiring
-        private System.Windows.Controls.Button MakeButton(string text, System.Windows.Media.Brush color, RoutedEventHandler onClick)
-        {
-            System.Windows.Controls.Button button = new System.Windows.Controls.Button
-            {
-                Content = text,
-                FontSize = ButtonFontSize,
-                FontWeight = FontWeights.Bold,
-                Padding = new Thickness(ButtonFontSize, ButtonFontSize / 2.0, ButtonFontSize, ButtonFontSize / 2.0),
-                Margin = new Thickness(3),
-                Cursor = Cursors.Hand,
-                Focusable = false,
-                Foreground = Brushes.White,
-                Background = color,
-                BorderThickness = new Thickness(0),
-            };
-            button.Click += onClick;
-            return button;
-        }
-
-        private static void Place(System.Windows.Controls.Button button, int row, int column, int columnSpan)
-        {
-            System.Windows.Controls.Grid.SetRow(button, row);
-            System.Windows.Controls.Grid.SetColumn(button, column);
-            System.Windows.Controls.Grid.SetColumnSpan(button, columnSpan);
-        }
-
         private void AttachHandlers()
         {
             if (handlersAttached || ChartControl == null)
@@ -114,35 +80,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     return;
                 }
 
-                buyButton = MakeButton("BUY MKT", Brushes.DodgerBlue, OnBuyClicked);
-                sellButton = MakeButton("SELL MKT", Brushes.Crimson, OnSellClicked);
-                flattenButton = MakeButton("FLATTEN", Brushes.DarkOrange, OnFlattenClicked);
-                breakevenButton = MakeButton("Stops to BE", Brushes.SeaGreen, OnBreakevenClicked);
-
-                buttonPanel = new System.Windows.Controls.Grid { Margin = new Thickness(2, 6, 2, 2) };
-                buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
-                buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
-                for (int row = 0; row < 3; row++)
-                    buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-                Place(buyButton, 0, 0, 1);
-                Place(sellButton, 0, 1, 1);
-                Place(breakevenButton, 1, 0, 2);
-                Place(flattenButton, 2, 0, 2);
-                buttonPanel.Children.Add(buyButton);
-                buttonPanel.Children.Add(sellButton);
-                buttonPanel.Children.Add(flattenButton);
-                buttonPanel.Children.Add(breakevenButton);
+                breakevenButton = new System.Windows.Controls.Button
+                {
+                    Content = "Stops to BE",
+                    Padding = new Thickness(8, 3, 8, 3),
+                    Margin = new Thickness(2, 6, 2, 2),
+                    Cursor = Cursors.Hand,
+                    Foreground = Brushes.White,
+                    Background = Brushes.SteelBlue,
+                    BorderThickness = new Thickness(0),
+                };
+                breakevenButton.Click += OnBreakevenClicked;
 
                 buttonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
                 chartTraderGrid.RowDefinitions.Add(buttonRow);
-                System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
-                System.Windows.Controls.Grid.SetColumnSpan(buttonPanel, Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
-                chartTraderGrid.Children.Add(buttonPanel);
+                System.Windows.Controls.Grid.SetRow(breakevenButton, chartTraderGrid.RowDefinitions.Count - 1);
+                System.Windows.Controls.Grid.SetColumnSpan(breakevenButton, Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
+                chartTraderGrid.Children.Add(breakevenButton);
 
                 refreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
                 refreshTimer.Tick += OnRefreshTick;
                 refreshTimer.Start();
-                RefreshButtons();
+                RefreshButton();
 
                 handlersAttached = true;
             }
@@ -163,16 +122,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     refreshTimer.Tick -= OnRefreshTick;
                     refreshTimer = null;
                 }
-                if (buttonPanel != null)
+                if (breakevenButton != null)
                 {
-                    buyButton.Click -= OnBuyClicked;
-                    sellButton.Click -= OnSellClicked;
-                    flattenButton.Click -= OnFlattenClicked;
                     breakevenButton.Click -= OnBreakevenClicked;
-                    chartTraderGrid.Children.Remove(buttonPanel);
+                    chartTraderGrid.Children.Remove(breakevenButton);
                     if (buttonRow != null)
                         chartTraderGrid.RowDefinitions.Remove(buttonRow);
-                    buttonPanel = null;
+                    breakevenButton = null;
                     buttonRow = null;
                     chartTraderGrid = null;
                 }
@@ -188,43 +144,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Button state
         private void OnRefreshTick(object sender, EventArgs e)
         {
-            RefreshButtons();
+            RefreshButton();
         }
 
-        private void RefreshButtons()
+        private void RefreshButton()
         {
-            if (buttonPanel == null)
+            if (breakevenButton == null)
                 return;
 
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             Position position = account != null ? OpenPosition(account) : null;
             double breakeven;
-            SetEnabled(buyButton, account != null && !IsPosition(position, MarketPosition.Short) && !OppositeEntryInFlight(true));
-            SetEnabled(sellButton, account != null && !IsPosition(position, MarketPosition.Long) && !OppositeEntryInFlight(false));
-            SetEnabled(flattenButton, account != null && (position != null || HasWorkingOrders(account)));
-            SetEnabled(breakevenButton, position != null && StopsToMove(account, position, out breakeven).Count > 0);
-        }
-
-        // Until a market entry's fill shows up in the position, an opposite click would see a flat
-        // account and start a second bracket on the other side.
-        private bool OppositeEntryInFlight(bool isBuy)
-        {
-            if (lastEntry == null || lastEntryIsBuy == isBuy)
-                return false;
-            if (lastEntry.OrderState == OrderState.Cancelled || lastEntry.OrderState == OrderState.Rejected)
-                return false;
-            return DateTime.UtcNow - lastEntryTime < TimeSpan.FromSeconds(3);
-        }
-
-        private static bool IsPosition(Position position, MarketPosition side)
-        {
-            return position != null && position.MarketPosition == side;
-        }
-
-        private static void SetEnabled(System.Windows.Controls.Button button, bool enabled)
-        {
-            button.IsEnabled = enabled;
-            button.Opacity = enabled ? 1.0 : 0.35;
+            bool enabled = position != null && StopsToMove(account, position, out breakeven).Count > 0;
+            breakevenButton.IsEnabled = enabled;
+            breakevenButton.Opacity = enabled ? 1.0 : 0.35;
         }
 
         private Position OpenPosition(Account account)
@@ -242,103 +175,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return null;
         }
 
-        private static bool IsWorking(Order order)
-        {
-            return order.OrderState == OrderState.Working
-                || order.OrderState == OrderState.Accepted
-                || order.OrderState == OrderState.Submitted
-                || order.OrderState == OrderState.ChangePending
-                || order.OrderState == OrderState.ChangeSubmitted;
-        }
-
-        private bool HasWorkingOrders(Account account)
-        {
-            lock (account.Orders)
-            {
-                foreach (Order order in account.Orders)
-                {
-                    if (order.Instrument != null && order.Instrument.FullName == Instrument.FullName && IsWorking(order))
-                        return true;
-                }
-            }
-            return false;
-        }
         #endregion
 
         #region Actions
-        private void OnBuyClicked(object sender, RoutedEventArgs e)
-        {
-            SubmitMarket(true);
-            RefreshButtons();
-        }
-
-        private void OnSellClicked(object sender, RoutedEventArgs e)
-        {
-            SubmitMarket(false);
-            RefreshButtons();
-        }
-
-        private void OnFlattenClicked(object sender, RoutedEventArgs e)
-        {
-            Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
-            if (account != null)
-            {
-                account.Flatten(new[] { Instrument });
-                Log("Better Trading Panel: flattened " + Instrument.FullName + " on " + account.Name + ".", NinjaTrader.Cbi.LogLevel.Information);
-            }
-            RefreshButtons();
-        }
-
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
         {
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             if (account != null)
                 MoveStopsToBreakeven(account);
-            RefreshButtons();
-        }
-
-        private void SubmitMarket(bool isBuy)
-        {
-            ChartTrader chartTrader = ChartControl?.OwnerChart?.ChartTrader;
-            Account account = chartTrader?.Account;
-            if (account == null)
-            {
-                Log("Better Trading Panel: no ChartTrader account selected; order not placed.", NinjaTrader.Cbi.LogLevel.Warning);
-                return;
-            }
-
-            // An opposite order would leave the open position's bracket working; FLATTEN closes instead.
-            Position position = OpenPosition(account);
-            if (IsPosition(position, isBuy ? MarketPosition.Short : MarketPosition.Long) || OppositeEntryInFlight(isBuy))
-            {
-                Log("Better Trading Panel: a position or an entry is open the other way; use FLATTEN to close it.", NinjaTrader.Cbi.LogLevel.Warning);
-                return;
-            }
-
-            try
-            {
-                int quantity = Math.Max(1, chartTrader.Quantity);
-                string atmTemplate = chartTrader.AtmStrategy != null ? chartTrader.AtmStrategy.Template : null;
-                if (chartTrader.AtmStrategy != null && string.IsNullOrEmpty(atmTemplate))
-                {
-                    Log("Better Trading Panel: ChartTrader shows an ATM without a template name; order not placed, so it cannot go in without a stop.", NinjaTrader.Cbi.LogLevel.Warning);
-                    return;
-                }
-                // StartAtmStrategy only attaches the template to an entry named exactly "Entry".
-                Order entry = account.CreateOrder(Instrument, isBuy ? OrderAction.Buy : OrderAction.SellShort, OrderType.Market,
-                    OrderEntry.Manual, TimeInForce.Day, quantity, 0, 0, string.Empty, "Entry", Core.Globals.MaxDate, null);
-                lastEntry = entry;
-                lastEntryIsBuy = isBuy;
-                lastEntryTime = DateTime.UtcNow;
-                if (string.IsNullOrEmpty(atmTemplate))
-                    account.Submit(new[] { entry });
-                else
-                    NinjaTrader.NinjaScript.AtmStrategy.StartAtmStrategy(atmTemplate, entry);
-            }
-            catch (Exception ex)
-            {
-                Log("Better Trading Panel: market order failed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
-            }
+            RefreshButton();
         }
 
         /// <summary>
@@ -427,12 +272,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #endregion
 
         #region Properties
-        [Range(8, 40)]
-        [Display(Name = "Button font size", Order = 4, GroupName = "1. Panel")]
-        public int ButtonFontSize { get; set; }
-
         [Range(-100, 1000)]
-        [Display(Name = "Breakeven offset (ticks)", Description = "Where breakeven lands relative to the position's average price, in the profit direction: 2 locks two ticks of profit, 0 is exact breakeven.", Order = 1, GroupName = "2. Stops to BE")]
+        [Display(Name = "Breakeven offset (ticks)", Description = "Where breakeven lands relative to the position's average price, in the profit direction: 2 locks two ticks of profit, 0 is exact breakeven.", Order = 1, GroupName = "1. Stops to BE")]
         public int BreakevenOffsetTicks { get; set; }
         #endregion
     }
