@@ -13,16 +13,9 @@ using NinjaTrader.NinjaScript;
 
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
-    public enum TradingPanelPlacement { Fixed, AtMouse }
-
-    public enum TradingPanelCorner { TopLeft, TopRight, BottomLeft, BottomRight }
-
-    public enum TradingPanelTrigger { MiddleClick, HoldSpace }
-
     /// <summary>
-    /// Large market-order, flatten and stops-to-breakeven buttons, fixed in a
-    /// chart corner or popped up under the mouse. Buttons dim when they have
-    /// nothing to act on.
+    /// Large market-order, flatten and stops-to-breakeven buttons in the
+    /// ChartTrader sidebar. Buttons dim when they have nothing to act on.
     /// </summary>
     public class BetterTradingPanel : Indicator
     {
@@ -32,7 +25,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Controls.Button flattenButton;
         private System.Windows.Controls.Button breakevenButton;
         private System.Windows.Threading.DispatcherTimer refreshTimer;
-        private Window chartWindow;
+        private System.Windows.Controls.Grid chartTraderGrid;
+        private System.Windows.Controls.RowDefinition buttonRow;
         private bool handlersAttached;
         private Order lastEntry;
         private bool lastEntryIsBuy;
@@ -42,7 +36,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Large BUY MKT, SELL MKT, FLATTEN and Stops to BE buttons, fixed on the chart or under the mouse.";
+                Description = "Large BUY MKT, SELL MKT, FLATTEN and Stops to BE buttons in the ChartTrader sidebar.";
                 Name = "Better Trading Panel";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
@@ -50,10 +44,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DisplayInDataBox = false;
                 PaintPriceMarkers = false;
 
-                Placement = TradingPanelPlacement.Fixed;
-                Corner = TradingPanelCorner.BottomLeft;
-                MouseTrigger = TradingPanelTrigger.MiddleClick;
-                ButtonFontSize = 14;
+                ButtonFontSize = 12;
                 BreakevenOffsetTicks = 0;
             }
             else if (State == State.Historical)
@@ -72,9 +63,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 ChartControl owner = ChartControl;
                 if (owner != null)
-                    owner.Dispatcher.InvokeAsync(() => DetachHandlers(owner));
+                    owner.Dispatcher.InvokeAsync(DetachHandlers);
                 else
-                    DetachHandlers(null);
+                    DetachHandlers();
             }
         }
 
@@ -114,13 +105,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             try
             {
+                // Mounted the way ChartTrading mounts its toggle: one auto-height row appended to the ChartTrader grid.
+                ChartTrader chartTrader = (Window.GetWindow(ChartControl) as Chart)?.FindFirst("ChartWindowChartTraderControl") as ChartTrader;
+                chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
+                if (chartTraderGrid == null)
+                {
+                    Log("Better Trading Panel: show Chart Trader on this chart, then re-add the indicator.", NinjaTrader.Cbi.LogLevel.Warning);
+                    return;
+                }
+
                 buyButton = MakeButton("BUY MKT", Brushes.DodgerBlue, OnBuyClicked);
                 sellButton = MakeButton("SELL MKT", Brushes.Crimson, OnSellClicked);
                 flattenButton = MakeButton("FLATTEN", Brushes.DarkOrange, OnFlattenClicked);
                 breakevenButton = MakeButton("Stops to BE", Brushes.SeaGreen, OnBreakevenClicked);
 
-                // A transparent background keeps the gaps between buttons inside the panel for MouseLeave.
-                buttonPanel = new System.Windows.Controls.Grid { Background = Brushes.Transparent };
+                buttonPanel = new System.Windows.Controls.Grid { Margin = new Thickness(2, 6, 2, 2) };
                 buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
                 buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
                 for (int row = 0; row < 3; row++)
@@ -134,37 +133,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 buttonPanel.Children.Add(flattenButton);
                 buttonPanel.Children.Add(breakevenButton);
 
-                if (Placement == TradingPanelPlacement.Fixed)
-                {
-                    bool top = Corner == TradingPanelCorner.TopLeft || Corner == TradingPanelCorner.TopRight;
-                    bool left = Corner == TradingPanelCorner.TopLeft || Corner == TradingPanelCorner.BottomLeft;
-                    buttonPanel.HorizontalAlignment = left ? HorizontalAlignment.Left : HorizontalAlignment.Right;
-                    buttonPanel.VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Bottom;
-                    buttonPanel.Margin = new Thickness(8);
-                }
-                else
-                {
-                    buttonPanel.HorizontalAlignment = HorizontalAlignment.Left;
-                    buttonPanel.VerticalAlignment = VerticalAlignment.Top;
-                    buttonPanel.Visibility = Visibility.Hidden;
-                    if (MouseTrigger == TradingPanelTrigger.MiddleClick)
-                    {
-                        ChartControl.PreviewMouseDown += OnChartMouseDown;
-                        buttonPanel.MouseLeave += OnPanelMouseLeave;
-                    }
-                    else
-                    {
-                        chartWindow = Window.GetWindow(ChartControl);
-                        if (chartWindow != null)
-                        {
-                            chartWindow.PreviewKeyDown += OnKeyDown;
-                            chartWindow.PreviewKeyUp += OnKeyUp;
-                            chartWindow.Deactivated += OnWindowDeactivated;
-                        }
-                    }
-                }
-
-                UserControlCollection.Add(buttonPanel);
+                buttonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
+                chartTraderGrid.RowDefinitions.Add(buttonRow);
+                System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
+                System.Windows.Controls.Grid.SetColumnSpan(buttonPanel, Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
+                chartTraderGrid.Children.Add(buttonPanel);
 
                 refreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
                 refreshTimer.Tick += OnRefreshTick;
@@ -175,12 +148,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                DetachHandlers(ChartControl);
+                DetachHandlers();
                 Log("Better Trading Panel: failed to attach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
 
-        private void DetachHandlers(ChartControl owner)
+        private void DetachHandlers()
         {
             try
             {
@@ -190,24 +163,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     refreshTimer.Tick -= OnRefreshTick;
                     refreshTimer = null;
                 }
-                if (owner != null)
-                    owner.PreviewMouseDown -= OnChartMouseDown;
-                if (chartWindow != null)
-                {
-                    chartWindow.PreviewKeyDown -= OnKeyDown;
-                    chartWindow.PreviewKeyUp -= OnKeyUp;
-                    chartWindow.Deactivated -= OnWindowDeactivated;
-                    chartWindow = null;
-                }
                 if (buttonPanel != null)
                 {
-                    buttonPanel.MouseLeave -= OnPanelMouseLeave;
                     buyButton.Click -= OnBuyClicked;
                     sellButton.Click -= OnSellClicked;
                     flattenButton.Click -= OnFlattenClicked;
                     breakevenButton.Click -= OnBreakevenClicked;
-                    UserControlCollection.Remove(buttonPanel);
+                    chartTraderGrid.Children.Remove(buttonPanel);
+                    if (buttonRow != null)
+                        chartTraderGrid.RowDefinitions.Remove(buttonRow);
                     buttonPanel = null;
+                    buttonRow = null;
+                    chartTraderGrid = null;
                 }
             }
             catch (Exception ex)
@@ -215,69 +182,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Log("Better Trading Panel: failed to detach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
             handlersAttached = false;
-        }
-
-        private void ShowAtMouse()
-        {
-            FrameworkElement host = buttonPanel.Parent as FrameworkElement ?? ChartControl;
-            System.Windows.Point mouse = Mouse.GetPosition(host);
-            double left = Math.Max(0, Math.Min(mouse.X - buttonPanel.ActualWidth / 2, host.ActualWidth - buttonPanel.ActualWidth));
-            // Opens just below the cursor, or just above it near the bottom edge, so a reflex
-            // click lands on the chart, never on a button.
-            bool fitsBelow = mouse.Y + 12 + buttonPanel.ActualHeight <= host.ActualHeight;
-            bool fitsAbove = mouse.Y - 12 - buttonPanel.ActualHeight >= 0;
-            double top = fitsBelow ? mouse.Y + 12 : Math.Max(0, mouse.Y - 12 - buttonPanel.ActualHeight);
-            if (!fitsBelow && !fitsAbove)
-                left = mouse.X + 12 + buttonPanel.ActualWidth <= host.ActualWidth
-                    ? mouse.X + 12
-                    : Math.Max(0, mouse.X - 12 - buttonPanel.ActualWidth);
-            buttonPanel.Margin = new Thickness(left, top, 0, 0);
-            RefreshButtons();
-            buttonPanel.Visibility = Visibility.Visible;
-        }
-
-        private void HideIfAtMouse()
-        {
-            if (buttonPanel != null && Placement == TradingPanelPlacement.AtMouse)
-                buttonPanel.Visibility = Visibility.Hidden;
-        }
-
-        private void OnChartMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton != MouseButton.Middle || buttonPanel == null)
-                return;
-            if (buttonPanel.Visibility == Visibility.Visible)
-                HideIfAtMouse();
-            else
-                ShowAtMouse();
-            e.Handled = true;
-        }
-
-        private void OnPanelMouseLeave(object sender, MouseEventArgs e)
-        {
-            HideIfAtMouse();
-        }
-
-        private void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Space || buttonPanel == null || !ChartControl.IsVisible || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
-                return;
-            if (!e.IsRepeat)
-                ShowAtMouse();
-            e.Handled = true;
-        }
-
-        private void OnKeyUp(object sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Space || buttonPanel == null || buttonPanel.Visibility != Visibility.Visible)
-                return;
-            HideIfAtMouse();
-            e.Handled = true;
-        }
-
-        private void OnWindowDeactivated(object sender, EventArgs e)
-        {
-            HideIfAtMouse();
         }
         #endregion
 
@@ -365,13 +269,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private void OnBuyClicked(object sender, RoutedEventArgs e)
         {
             SubmitMarket(true);
-            HideAfterClick();
+            RefreshButtons();
         }
 
         private void OnSellClicked(object sender, RoutedEventArgs e)
         {
             SubmitMarket(false);
-            HideAfterClick();
+            RefreshButtons();
         }
 
         private void OnFlattenClicked(object sender, RoutedEventArgs e)
@@ -382,7 +286,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 account.Flatten(new[] { Instrument });
                 Log("Better Trading Panel: flattened " + Instrument.FullName + " on " + account.Name + ".", NinjaTrader.Cbi.LogLevel.Information);
             }
-            HideAfterClick();
+            RefreshButtons();
         }
 
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
@@ -390,13 +294,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             if (account != null)
                 MoveStopsToBreakeven(account);
-            HideAfterClick();
-        }
-
-        private void HideAfterClick()
-        {
-            if (MouseTrigger == TradingPanelTrigger.MiddleClick)
-                HideIfAtMouse();
             RefreshButtons();
         }
 
@@ -530,15 +427,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #endregion
 
         #region Properties
-        [Display(Name = "Placement", Description = "Fixed: always in a chart corner. AtMouse: pops up centered under the mouse.", Order = 1, GroupName = "1. Panel")]
-        public TradingPanelPlacement Placement { get; set; }
-
-        [Display(Name = "Corner", Description = "Where the fixed panel sits.", Order = 2, GroupName = "1. Panel")]
-        public TradingPanelCorner Corner { get; set; }
-
-        [Display(Name = "Mouse trigger", Description = "AtMouse only. MiddleClick: click the wheel to show or hide; it hides after a button is clicked or the mouse leaves it. HoldSpace: shown while Space is held.", Order = 3, GroupName = "1. Panel")]
-        public TradingPanelTrigger MouseTrigger { get; set; }
-
         [Range(8, 40)]
         [Display(Name = "Button font size", Order = 4, GroupName = "1. Panel")]
         public int ButtonFontSize { get; set; }

@@ -383,12 +383,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 ### Better Trading Panel — big buttons for fast orders
 
-- Four large buttons: BUY MKT (blue) and SELL MKT (red) on top, Stops to
-  BE (green), and FLATTEN (orange) at the bottom. Placement "Fixed" keeps
-  them in a chart corner; "AtMouse" opens them just below the mouse —
-  middle-click to show or hide (it also hides after a click or when the
-  mouse leaves it; NinjaTrader no longer sees that middle-click), or hold
-  Space while the key is held (Space typed in a text box is left alone).
+- Four large buttons in the ChartTrader sidebar, below its own buttons:
+  BUY MKT (blue) and SELL MKT (red) on top, Stops to BE (green), and
+  FLATTEN (orange) at the bottom. ChartTrader must be showing when the
+  indicator loads; otherwise nothing is drawn and the log says so.
 - A button dims when it has nothing to do: no ChartTrader account, no
   position or working order to flatten, no stop short of breakeven. With a
   position open, or for 3 seconds after a market entry, only the
