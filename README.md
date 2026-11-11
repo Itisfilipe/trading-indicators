@@ -472,7 +472,11 @@ the two count toward volume only.
   outlier — at least "Outlier multiplier" times the average (3 by
   default; 0 turns it off) — is drawn larger, solid and with a thick border
   ("Outlier size" 130%, "Outlier solid fill" on, "Outlier border width" 3) so the
-  rare very large POCs stand out.
+  rare very large POCs stand out. "Extend outliers" (off by default)
+  draws a line from each outlier to the right until a later candle trades
+  through its price, checked at each candle close; "Show touched lines"
+  keeps the ended ones up to the touching candle, and the buyers' and
+  sellers' lines each take their own color, dash, width and opacity.
   Each candle's volume and delta print at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
   candles in a trend. "Price grouping"

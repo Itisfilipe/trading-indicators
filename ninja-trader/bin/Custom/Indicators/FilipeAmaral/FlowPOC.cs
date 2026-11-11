@@ -68,6 +68,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> barDelta;
         private Series<double> slotBaseline;
 
+        private class OutlierLine
+        {
+            public int StartBar;
+            public double Price;
+            public bool BuyersDominated;
+            public int EndBar = -1;
+        }
+
+        private readonly List<OutlierLine> outlierLines = new List<OutlierLine>();
+
         private const int MinimumSessions = 3;
         private bool useTimeOfDay;
         private readonly Dictionary<TimeSpan, List<double>> slotHistory = new Dictionary<TimeSpan, List<double>>();
@@ -105,6 +115,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 OutlierSizePercent = 130;
                 OutlierSolidFill = true;
                 OutlierBorderWidth = 3;
+                ExtendOutliers = false;
+                ShowTouchedOutlierLines = false;
+                BuyOutlierLine = new Stroke(Brushes.DodgerBlue, DashStyleHelper.Solid, 2f);
+                SellOutlierLine = new Stroke(Brushes.Crimson, DashStyleHelper.Solid, 2f);
                 Marker = FlowPocMarker.Square;
                 MarkerSize = 18;
                 FillOpacity = 40;
@@ -142,6 +156,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
+            if (ExtendOutliers && IsFirstTickOfBar && CurrentBar > 0)
+                UpdateOutlierLines(CurrentBar - 1);
+
             if (!useTimeOfDay || !IsFirstTickOfBar)
                 return;
 
@@ -252,6 +269,51 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return sum / AverageBars;
         }
 
+        private void UpdateOutlierLines(int closedBar)
+        {
+            double groupTop = (PriceGrouping - 1) * TickSize;
+            double high = Bars.GetHigh(closedBar);
+            double low = Bars.GetLow(closedBar);
+            lock (outlierLines)
+            {
+                foreach (OutlierLine line in outlierLines)
+                    if (line.EndBar < 0 && low <= line.Price + groupTop && high >= line.Price)
+                        line.EndBar = closedBar;
+
+                if (!pocVolume.IsValidDataPointAt(closedBar) || OutlierMultiplier <= 0)
+                    return;
+                double baseline = StrengthBaseline(closedBar);
+                double strength = PocStrength(closedBar);
+                int aggressorSide = AggressorSide(pocBuys.GetValueAt(closedBar), pocSells.GetValueAt(closedBar));
+                bool isOutlier = baseline > 0 && strength > baseline * AverageMultiplier && strength >= baseline * OutlierMultiplier;
+                if (isOutlier && aggressorSide != 0)
+                    outlierLines.Add(new OutlierLine { StartBar = closedBar, Price = pocPrice.GetValueAt(closedBar), BuyersDominated = aggressorSide > 0 });
+            }
+        }
+
+        private void DrawOutlierLines(ChartControl chartControl, ChartScale chartScale, double groupOffset)
+        {
+            BuyOutlierLine.RenderTarget = RenderTarget;
+            SellOutlierLine.RenderTarget = RenderTarget;
+            float panelRight = ChartPanel.X + ChartPanel.W;
+            lock (outlierLines)
+            {
+                foreach (OutlierLine line in outlierLines)
+                {
+                    bool touched = line.EndBar >= 0;
+                    if (touched && !ShowTouchedOutlierLines)
+                        continue;
+                    if (line.StartBar > ChartBars.ToIndex || (touched && line.EndBar < ChartBars.FromIndex))
+                        continue;
+                    float x1 = chartControl.GetXByBarIndex(ChartBars, line.StartBar);
+                    float x2 = touched ? chartControl.GetXByBarIndex(ChartBars, line.EndBar) : panelRight;
+                    float y = chartScale.GetYByValue(line.Price + groupOffset);
+                    Stroke stroke = line.BuyersDominated ? BuyOutlierLine : SellOutlierLine;
+                    RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y), stroke.BrushDX, stroke.Width, stroke.StrokeStyle);
+                }
+            }
+        }
+
         private double StrengthBaseline(int barIndex)
         {
             if (!useTimeOfDay)
@@ -351,6 +413,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 float barWidth = (float)chartControl.GetBarPaintWidth(ChartBars);
                 float rowHeight = (float)LabelFont.Size * 1.4f;
                 double groupOffset = (PriceGrouping - 1) * TickSize / 2;
+                if (ExtendOutliers)
+                    DrawOutlierLines(chartControl, chartScale, groupOffset);
 
                 for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
                 {
@@ -498,6 +562,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 10)]
         [Display(Name = "Outlier border width", Description = "Border of outlier markers, in the text color. 0 hides it.", Order = 8, GroupName = "2. Appearance")]
         public int OutlierBorderWidth { get; set; }
+
+        [Display(Name = "Extend outliers", Description = "Draw a line from each outlier POC to the right until a later candle trades through its price.", Order = 1, GroupName = "4. Outlier lines")]
+        public bool ExtendOutliers { get; set; }
+
+        [Display(Name = "Show touched lines", Description = "Keep a line drawn up to the candle that traded through it, instead of removing it.", Order = 2, GroupName = "4. Outlier lines")]
+        public bool ShowTouchedOutlierLines { get; set; }
+
+        [Display(Name = "Buyers line", Description = "Color, dash, width and opacity for outliers where buyers dominated.", Order = 3, GroupName = "4. Outlier lines")]
+        public Stroke BuyOutlierLine { get; set; }
+
+        [Display(Name = "Sellers line", Description = "Color, dash, width and opacity for outliers where sellers dominated.", Order = 4, GroupName = "4. Outlier lines")]
+        public Stroke SellOutlierLine { get; set; }
 
         [Display(Name = "Font", Order = 5, GroupName = "2. Appearance")]
         public SimpleFont LabelFont { get; set; }

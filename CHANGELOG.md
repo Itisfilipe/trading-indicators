@@ -59,6 +59,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Flow POC outliers: a POC at least 3 times the average ("Outlier
   multiplier", 0 = off) is drawn 30% larger, solid, with a thick border;
   size, fill and border are settings.
+- Flow POC "Extend outliers" (off by default): a line from each outlier POC
+  to the right until price trades back through it, with its own color,
+  dash, width and opacity for buyers and sellers.
 - Flow VD, CVD, POC and Absorption keep updating in Market Replay outside
   real trading hours (the session check used the computer's clock).
 - Flow VD's z-score no longer counts candles without Tick Replay data as
