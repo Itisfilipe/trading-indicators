@@ -47,7 +47,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private bool hasOrder;
         private bool orderIsBuy;
         private int orderBar;
-        private DateTime orderLastTime;
+        private DateTime orderStartTime;
         private double orderLots;
         private double orderNotional;
 
@@ -75,8 +75,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MaximumLots = 0;
                 Intensity = FlowBigTradesIntensity.Medium;
                 AggregationMilliseconds = 5;
-                MinimumSize = 10;
-                MaximumSize = 40;
+                MinimumSize = 18;
+                MaximumSize = 50;
                 FillOpacity = 50;
                 HollowFill = false;
                 ShowValue = true;
@@ -109,13 +109,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnMarketData(MarketDataEventArgs e)
         {
-            if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+            if (CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+                return;
+            // Bid and ask updates arrive constantly, so a finished order shows without waiting for the next trade.
+            if (hasOrder && (e.Time - orderStartTime).TotalMilliseconds > AggregationMilliseconds)
+                FlushOrder();
+            if (e.MarketDataType != MarketDataType.Last)
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
-
-            if (hasOrder && (e.Time - orderLastTime).TotalMilliseconds > AggregationMilliseconds)
-                FlushOrder();
 
             bool isBuy = e.Price >= e.Ask;
             bool isSell = !isBuy && e.Price <= e.Bid;
@@ -124,17 +126,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             bool continuesOrder = hasOrder
                 && orderIsBuy == isBuy
-                && (e.Time - orderLastTime).TotalMilliseconds <= AggregationMilliseconds;
+                && (e.Time - orderStartTime).TotalMilliseconds <= AggregationMilliseconds;
             if (!continuesOrder)
             {
                 FlushOrder();
                 hasOrder = true;
                 orderIsBuy = isBuy;
                 orderBar = CurrentBar;
+                orderStartTime = e.Time;
                 orderLots = 0;
                 orderNotional = 0;
             }
-            orderLastTime = e.Time;
             orderLots += e.Volume;
             orderNotional += e.Price * e.Volume;
         }
@@ -149,7 +151,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 sizeHistogram[(int)Math.Min(HistogramCap, orderLots)]++;
                 orderCount++;
-                if (orderLots < Math.Min(StoredFloor, MinimumLots))
+                // Manual never draws below Minimum lots; Automatic may lower its threshold to the floor.
+                int storedFloor = FilterMode == FlowBigTradesFilter.Manual ? MinimumLots : Math.Min(StoredFloor, MinimumLots);
+                if (orderLots < storedFloor)
                     return;
                 trades.Add(new BigTrade
                 {
@@ -268,7 +272,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public FlowBigTradesIntensity Intensity { get; set; }
 
         [Range(0, 1000), NinjaScriptProperty]
-        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side arriving within this many milliseconds of the previous one count as one order. 0 joins only fills with the same timestamp.", Order = 5, GroupName = "1. Big trades")]
+        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side arriving within this many milliseconds of the order's first fill count as one order. 0 joins only fills with the same timestamp.", Order = 5, GroupName = "1. Big trades")]
         public int AggregationMilliseconds { get; set; }
 
         [Range(2, 200)]

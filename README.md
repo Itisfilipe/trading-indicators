@@ -548,7 +548,7 @@ the two count toward volume only.
   bubbles, blue lifting the ask, red hitting the bid, sized by lots
   (square root, between "Minimum size" and "Maximum size") with the lots
   printed inside. The exchange reports one big order as many fills; fills
-  on the same side arriving within "Aggregation (ms)" of each other are put
+  on the same side arriving within "Aggregation (ms)" of the order's first fill are put
   back together into one order, drawn at its volume-weighted price on the
   candle where it started. "Filter mode" Manual shows orders of at least
   "Minimum lots" (30); Automatic shows the largest orders this chart has
