@@ -46,6 +46,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private Series<double> cvdOpen;
         private Series<bool> resetBars;
+        private DateTime lastResetMoment = DateTime.MinValue;
         private Series<double> cvdHigh;
         private Series<double> cvdLow;
         private Series<double> cvdClose;
@@ -265,12 +266,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!hasResetTime)
                 return false;
 
-            // Called once, on the bar's first tick: a tick, volume or range bar is stamped
-            // with that tick then, and its later stamps would move it past the reset.
-            DateTime previousEnd = NewYorkTime(barIndex - 1);
-            DateTime currentEnd = NewYorkTime(barIndex);
-            DateTime resetMoment = currentEnd.Date + resetTimeOfDay;
-            return previousEnd <= resetMoment && currentEnd > resetMoment;
+            // Called once, on the bar's first tick: a tick, volume or range bar is stamped with
+            // that tick then. The first bar stamped past today's reset resets, even when the
+            // bar before it straddled the reset time.
+            DateTime currentStamp = NewYorkTime(barIndex);
+            DateTime resetMoment = currentStamp.Date + resetTimeOfDay;
+            if (currentStamp <= resetMoment || resetMoment == lastResetMoment)
+                return false;
+            lastResetMoment = resetMoment;
+            return true;
         }
 
         private bool SpansReset(int pivotBar)
