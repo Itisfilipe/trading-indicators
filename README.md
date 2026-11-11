@@ -379,13 +379,17 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 ### Better Trading Panel — big buttons for fast orders
 
-- Four large buttons: BUY MKT (blue), SELL MKT (red), FLATTEN (orange) and
-  Stops to BE (green). Placement "Fixed" keeps them in a chart corner;
-  "AtMouse" pops them up centered under the mouse — middle-click to show
-  or hide (it also hides after a click or when the mouse leaves it), or
-  hold Space to show them while the key is held.
+- Four large buttons: BUY MKT (blue) and SELL MKT (red) on top, Stops to
+  BE (green), and FLATTEN (orange) at the bottom. Placement "Fixed" keeps
+  them in a chart corner; "AtMouse" opens them just below the mouse —
+  middle-click to show or hide (it also hides after a click or when the
+  mouse leaves it; NinjaTrader no longer sees that middle-click), or hold
+  Space while the key is held (Space typed in a text box is left alone).
 - A button dims when it has nothing to do: no ChartTrader account, no
-  position or working order to flatten, no stop short of breakeven.
+  position or working order to flatten, no stop short of breakeven. With a
+  position open only the same-direction market button stays lit: an
+  opposite order would leave the position's bracket working, so close
+  with FLATTEN.
 - BUY/SELL MKT send a market order for ChartTrader's quantity on its
   account, with the ATM strategy selected in ChartTrader; with none
   selected the order goes in without a stop.
@@ -393,7 +397,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   instrument for the ChartTrader account, with no confirmation.
 - Stops to BE moves every working exit-side stop on the instrument to the
   position's average price plus an offset — whatever placed it: an ATM,
-  an OCO bracket, a manual order. A stop already at or beyond breakeven
+  an OCO bracket, a manual order. Stop orders named "Entry" or "CT Entry"
+  are entries and stay put. A stop already at or beyond breakeven
   is never loosened; several fills averaging between ticks round toward
   profit. Until the bid (long) or ask (short) is a tick past breakeven,
   the click moves nothing and logs why. Adding contracts changes the

@@ -69,9 +69,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 ChartControl owner = ChartControl;
                 if (owner != null)
-                    owner.Dispatcher.InvokeAsync(DetachHandlers);
+                    owner.Dispatcher.InvokeAsync(() => DetachHandlers(owner));
                 else
-                    DetachHandlers();
+                    DetachHandlers(null);
             }
         }
 
@@ -123,8 +123,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
                 Place(buyButton, 0, 0, 1);
                 Place(sellButton, 0, 1, 1);
-                Place(flattenButton, 1, 0, 2);
-                Place(breakevenButton, 2, 0, 2);
+                Place(breakevenButton, 1, 0, 2);
+                Place(flattenButton, 2, 0, 2);
                 buttonPanel.Children.Add(buyButton);
                 buttonPanel.Children.Add(sellButton);
                 buttonPanel.Children.Add(flattenButton);
@@ -171,12 +171,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                DetachHandlers();
+                DetachHandlers(ChartControl);
                 Log("Better Trading Panel: failed to attach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
 
-        private void DetachHandlers()
+        private void DetachHandlers(ChartControl owner)
         {
             try
             {
@@ -186,8 +186,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     refreshTimer.Tick -= OnRefreshTick;
                     refreshTimer = null;
                 }
-                if (ChartControl != null)
-                    ChartControl.PreviewMouseDown -= OnChartMouseDown;
+                if (owner != null)
+                    owner.PreviewMouseDown -= OnChartMouseDown;
                 if (chartWindow != null)
                 {
                     chartWindow.PreviewKeyDown -= OnKeyDown;
@@ -218,7 +218,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             FrameworkElement host = buttonPanel.Parent as FrameworkElement ?? ChartControl;
             System.Windows.Point mouse = Mouse.GetPosition(host);
             double left = Math.Max(0, Math.Min(mouse.X - buttonPanel.ActualWidth / 2, host.ActualWidth - buttonPanel.ActualWidth));
-            double top = Math.Max(0, Math.Min(mouse.Y - buttonPanel.ActualHeight / 2, host.ActualHeight - buttonPanel.ActualHeight));
+            // Opens just below the cursor so a reflex click lands on the chart, never on a button.
+            double top = Math.Max(0, Math.Min(mouse.Y + 12, host.ActualHeight - buttonPanel.ActualHeight));
             buttonPanel.Margin = new Thickness(left, top, 0, 0);
             RefreshButtons();
             buttonPanel.Visibility = Visibility.Visible;
@@ -248,7 +249,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Space || buttonPanel == null)
+            if (e.Key != Key.Space || buttonPanel == null || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
                 return;
             if (!e.IsRepeat)
                 ShowAtMouse();
@@ -257,7 +258,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void OnKeyUp(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Space)
+            if (e.Key != Key.Space || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
                 return;
             HideIfAtMouse();
             e.Handled = true;
@@ -283,10 +284,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             Position position = account != null ? OpenPosition(account) : null;
             double breakeven;
-            SetEnabled(buyButton, account != null);
-            SetEnabled(sellButton, account != null);
+            SetEnabled(buyButton, account != null && !IsPosition(position, MarketPosition.Short));
+            SetEnabled(sellButton, account != null && !IsPosition(position, MarketPosition.Long));
             SetEnabled(flattenButton, account != null && (position != null || HasWorkingOrders(account)));
             SetEnabled(breakevenButton, position != null && StopsToMove(account, position, out breakeven).Count > 0);
+        }
+
+        private static bool IsPosition(Position position, MarketPosition side)
+        {
+            return position != null && position.MarketPosition == side;
         }
 
         private static void SetEnabled(System.Windows.Controls.Button button, bool enabled)
@@ -382,25 +388,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             }
 
+            // An opposite order would leave the open position's bracket working; FLATTEN closes instead.
             Position position = OpenPosition(account);
-            OrderAction action = isBuy
-                ? OrderAction.Buy
-                : position != null && position.MarketPosition == MarketPosition.Long ? OrderAction.Sell : OrderAction.SellShort;
-            int quantity = Math.Max(1, chartTrader.Quantity);
-            NinjaTrader.NinjaScript.AtmStrategy atm = chartTrader.AtmStrategy;
+            if (IsPosition(position, isBuy ? MarketPosition.Short : MarketPosition.Long))
+            {
+                Log("Better Trading Panel: position is open the other way; use FLATTEN to close it.", NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
 
-            // StartAtmStrategy only attaches the template to an entry named exactly "Entry".
-            Order entry = account.CreateOrder(Instrument, action, OrderType.Market, OrderEntry.Manual,
-                TimeInForce.Day, quantity, 0, 0, string.Empty, "Entry", Core.Globals.MaxDate, null);
-            if (atm != null)
-                NinjaTrader.NinjaScript.AtmStrategy.StartAtmStrategy(atm, entry);
-            else
-                account.Submit(new[] { entry });
+            try
+            {
+                int quantity = Math.Max(1, chartTrader.Quantity);
+                string atmTemplate = chartTrader.AtmStrategy != null ? chartTrader.AtmStrategy.Template : null;
+                // StartAtmStrategy only attaches the template to an entry named exactly "Entry".
+                Order entry = account.CreateOrder(Instrument, isBuy ? OrderAction.Buy : OrderAction.SellShort, OrderType.Market,
+                    OrderEntry.Manual, TimeInForce.Day, quantity, 0, 0, string.Empty, "Entry", Core.Globals.MaxDate, null);
+                if (string.IsNullOrEmpty(atmTemplate))
+                    account.Submit(new[] { entry });
+                else
+                    NinjaTrader.NinjaScript.AtmStrategy.StartAtmStrategy(atmTemplate, entry);
+            }
+            catch (Exception ex)
+            {
+                Log("Better Trading Panel: market order failed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
+            }
         }
 
         /// <summary>
         /// Exit-side stop orders on the instrument still short of breakeven.
-        /// Same-side stops are entries and are left alone.
+        /// Same-side stops and stops named as entries are left alone.
         /// </summary>
         private List<Order> StopsToMove(Account account, Position position, out double breakeven)
         {
@@ -422,6 +438,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (order.OrderType != OrderType.StopMarket && order.OrderType != OrderType.StopLimit)
                         continue;
                     if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
+                        continue;
+                    if (order.Name == "Entry" || order.Name == "CT Entry")
                         continue;
                     bool exitSide = isLong
                         ? order.OrderAction == OrderAction.Sell
