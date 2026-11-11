@@ -262,10 +262,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!hasResetTime)
                 return false;
 
-            DateTime previousEnd = NewYorkTime(barIndex - 1);
-            DateTime currentEnd = NewYorkTime(barIndex);
-            DateTime resetMoment = currentEnd.Date + resetTimeOfDay;
-            return previousEnd <= resetMoment && currentEnd > resetMoment;
+            BarsPeriodType periodType = BarsPeriod.BarsPeriodType;
+            if (periodType == BarsPeriodType.Second || periodType == BarsPeriodType.Minute || periodType == BarsPeriodType.Day)
+            {
+                DateTime previousEnd = NewYorkTime(barIndex - 1);
+                DateTime currentEnd = NewYorkTime(barIndex);
+                DateTime resetMoment = currentEnd.Date + resetTimeOfDay;
+                return previousEnd <= resetMoment && currentEnd > resetMoment;
+            }
+
+            // Tick, volume and range bars are stamped with their latest tick, so a forming bar's
+            // end is unknown at its first tick; decide from the two bars already closed.
+            if (barIndex < 2)
+                return false;
+            DateTime closedEnd = NewYorkTime(barIndex - 1);
+            DateTime closedResetMoment = closedEnd.Date + resetTimeOfDay;
+            return closedEnd >= closedResetMoment && NewYorkTime(barIndex - 2) < closedResetMoment;
         }
 
         private bool SpansReset(int pivotBar)

@@ -219,7 +219,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 int priorPairsQuantity = 0;
                 for (int i = 0; i < pairIndex; i++)
                     priorPairsQuantity += PairQuantities[i];
-                return Math.Max(0, Math.Min(PairQuantities[pairIndex], filled - priorPairsQuantity));
+                // The last pair takes any fill beyond the clicked size: the entry's quantity
+                // can be raised on the chart while it rests, and those lots need exits too.
+                int pairCap = pairIndex == PairQuantities.Length - 1 ? int.MaxValue : PairQuantities[pairIndex];
+                return Math.Max(0, Math.Min(pairCap, filled - priorPairsQuantity));
             }
         }
         #endregion

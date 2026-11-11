@@ -5,6 +5,19 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-11
 
+### More review fixes
+- ChartTrading: raising a resting entry's quantity on the chart now gets
+  stops and targets for the extra contracts (they go to the last bracket
+  pair) instead of leaving them unprotected.
+- RenkoWicks: after a reload or reconnect mid-session, the next brick
+  stays attached to the chain and keeps the wick already formed.
+- Flow CVD: "Reset at time" works on tick, volume and range charts.
+- Time-Based Price Levels: a weekly or longer level is no longer drawn
+  from a period the chart only partly loaded; weekend and holiday gaps no
+  longer stack every slot at the reopening price.
+- Economic Calendar: charts share the saved week instead of each one
+  downloading the feed, and only the last six weeks are read back.
+
 ### Economic Calendar, ICT Macros, Time-Based Vertical Lines
 - Future releases, macros and lines keep their real spacing right after a
   weekend or the daily break instead of piling up next to the last candle.

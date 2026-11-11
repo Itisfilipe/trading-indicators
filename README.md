@@ -296,7 +296,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - An intraday slot marks the O/H/L/C of the bar spanning that time each
   day, on any chart timeframe, with an end-of-day cutoff and a days-of-
   history control. An HTF slot tracks the developing period's O/H/L/C
-  live from the chart's own bars — no secondary series.
+  live from the chart's own bars — no secondary series — so it draws
+  only once the chart has loaded back to the period's start (a monthly
+  level needs the whole month loaded).
 - Labels are generated from the slot (D.O, W.O, ... / the time for
   intraday, with a price suffix when it is not the Open). Label font and
   how far the line and its label run past the last bar are configurable.

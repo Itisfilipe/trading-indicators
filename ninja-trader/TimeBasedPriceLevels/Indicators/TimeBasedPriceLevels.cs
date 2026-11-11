@@ -71,6 +71,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double Low;
             public double Close;
             public DateTime PeriodStartChartTime;
+            public bool PeriodStartSeen;
 
             // Intraday capture bookkeeping.
             public DateTime LastCapturedDate = DateTime.MinValue;
@@ -425,6 +426,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DateTime key = PeriodKeyFor(tradingDay, slot.Period);
             if (key != slot.PeriodKey)
             {
+                // The first period on the chart may have begun before the first loaded bar.
+                slot.PeriodStartSeen = slot.PeriodKey != DateTime.MinValue;
                 slot.PeriodKey = key;
                 slot.Open = Open[0];
                 slot.High = High[0];
@@ -472,6 +475,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             DateTime slotMoment = day.AddMinutes(slot.MinutesOfDay);
             if (slot.LastCapturedDate == day || tzTime <= slotMoment || previousTzTime > slotMoment)
+                return;
+            // A weekend or holiday gap spans every slot of the closed days; only a slot inside the
+            // reopening bar itself is real, or they would all stack on the reopening price.
+            TimeSpan barSpan = BarsPeriod.BarsPeriodType == BarsPeriodType.Minute ? TimeSpan.FromMinutes(BarsPeriod.Value) : TimeSpan.FromMinutes(1);
+            if (previousTzTime != DateTime.MaxValue && (tzTime - previousTzTime).TotalHours > 40 && tzTime - slotMoment > barSpan)
                 return;
 
             slot.LastCapturedDate = day;
@@ -530,7 +538,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         slot.Stroke.RenderTarget = RenderTarget;
                         if (slot.IsHtf)
                         {
-                            if (slot.PeriodKey == DateTime.MinValue)
+                            if (slot.PeriodKey == DateTime.MinValue || !slot.PeriodStartSeen)
                                 continue;
                             DrawLevel(chartControl, chartScale, textFormat, slot,
                                 HtfPrice(slot), slot.PeriodStartChartTime, lastBarTime, lastBarX, true);

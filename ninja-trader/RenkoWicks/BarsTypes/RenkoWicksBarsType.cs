@@ -212,8 +212,9 @@ namespace NinjaTrader.NinjaScript.BarsTypes
                     // Initialize wick tracking if it hasn't been set yet
                     if (currentWickHigh.ApproxCompare(0.0) == 0 && currentWickLow.ApproxCompare(0.0) == 0)
                     {
-                        currentWickHigh = high;
-                        currentWickLow = low;
+                        // A fresh instance continuing existing bars keeps the forming brick's wick so far.
+                        currentWickHigh = Math.Max(high, bars.GetHigh(bars.Count - 1));
+                        currentWickLow = Math.Min(low, bars.GetLow(bars.Count - 1));
                     }
                     else
                     {
@@ -377,16 +378,34 @@ namespace NinjaTrader.NinjaScript.BarsTypes
 
         /// <summary>
         /// Re-anchors the boundaries when a fresh bars-type instance continues an
-        /// existing series (reload, reconnect): symmetrically around the last close.
-        /// Guessing the grid from the second-to-last bar's direction, as this once
-        /// did, could rebuild the wrong grid right after a session roll and leave
-        /// part of a later move uncovered.
+        /// existing series (reload, reconnect). The forming brick opened on the
+        /// grid, so the grid is rebuilt from its open and the previous brick's
+        /// direction, as stock Renko does; anchoring on its mid-brick close would
+        /// detach the next brick from the chain. With Break at EOD on, the brick
+        /// that opens a session sits on a symmetric grid, and the previous brick
+        /// may be a session span, so that case stays symmetric around the open.
         /// </summary>
         private void InitializeRenkoBoundaries(Bars bars)
         {
-            double lastClose = bars.GetClose(bars.Count - 1);
-            renkoHigh = lastClose + offset;
-            renkoLow = lastClose - offset;
+            int last = bars.Count - 1;
+            double open = bars.GetOpen(last);
+            bool previousUp = last > 0 && bars.GetClose(last - 1) > bars.GetOpen(last - 1);
+            bool previousDown = last > 0 && bars.GetClose(last - 1) < bars.GetOpen(last - 1);
+            if (bars.IsResetOnNewTradingDay || (!previousUp && !previousDown))
+            {
+                renkoHigh = open + offset;
+                renkoLow = open - offset;
+            }
+            else if (previousUp)
+            {
+                renkoHigh = open + offset;
+                renkoLow = open - 2 * offset;
+            }
+            else
+            {
+                renkoHigh = open + 2 * offset;
+                renkoLow = open - offset;
+            }
         }
 
         /// <summary>

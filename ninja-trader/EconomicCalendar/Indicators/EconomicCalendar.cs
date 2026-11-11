@@ -95,6 +95,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // here; Playback and longer chart history read past weeks from this archive.
         private static readonly string ArchiveDirectory = Path.Combine(NinjaTrader.Core.Globals.UserDataDir, "EconomicCalendar");
         private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(60);
+        // The longest history setting is 30 days; older saved weeks are never shown.
+        private const int ArchiveWeeksKept = 6;
         private static readonly TimeSpan RetryInterval = TimeSpan.FromMinutes(5);
 
         private class NewsEvent
@@ -423,14 +425,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     List<NewsEvent> fresh = new List<NewsEvent>();
                     try
                     {
-                        string json;
-                        using (HttpClient client = new HttpClient())
+                        // Another chart saved the week within the refresh interval; the archive
+                        // below already has it, so the feed is not hit again.
+                        if (NewestArchiveAge() >= RefreshInterval)
                         {
-                            client.Timeout = TimeSpan.FromSeconds(20);
-                            json = client.GetStringAsync(FeedUrl).GetAwaiter().GetResult();
+                            string json;
+                            using (HttpClient client = new HttpClient())
+                            {
+                                client.Timeout = TimeSpan.FromSeconds(20);
+                                json = client.GetStringAsync(FeedUrl).GetAwaiter().GetResult();
+                            }
+                            fresh = ParseFeed(json);
+                            SaveWeekToArchive(json, fresh);
                         }
-                        fresh = ParseFeed(json);
-                        SaveWeekToArchive(json, fresh);
                         succeeded = true;
                     }
                     catch (Exception error)
@@ -512,13 +519,29 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
+        private TimeSpan NewestArchiveAge()
+        {
+            if (!Directory.Exists(ArchiveDirectory))
+                return TimeSpan.MaxValue;
+            DateTime newest = DateTime.MinValue;
+            foreach (string file in Directory.GetFiles(ArchiveDirectory, "ff_week_*.json"))
+                newest = new DateTime(Math.Max(newest.Ticks, File.GetLastWriteTimeUtc(file).Ticks), DateTimeKind.Utc);
+            return newest == DateTime.MinValue ? TimeSpan.MaxValue : DateTime.UtcNow - newest;
+        }
+
         private List<NewsEvent> LoadArchive()
         {
             List<NewsEvent> archived = new List<NewsEvent>();
             if (!Directory.Exists(ArchiveDirectory))
                 return archived;
+            DateTime oldestWanted = DateTime.UtcNow.Date.AddDays(-7 * ArchiveWeeksKept);
             foreach (string file in Directory.GetFiles(ArchiveDirectory, "ff_week_*.json"))
             {
+                DateTime weekSunday;
+                string datePart = Path.GetFileNameWithoutExtension(file).Substring("ff_week_".Length);
+                if (DateTime.TryParseExact(datePart, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out weekSunday)
+                    && weekSunday < oldestWanted)
+                    continue;
                 try
                 {
                     archived.AddRange(ParseFeed(File.ReadAllText(file)));
