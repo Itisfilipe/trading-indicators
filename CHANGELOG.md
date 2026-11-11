@@ -57,7 +57,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ### OrderFlowKit
 - Flow POC squares are a little larger by default (marker size 18).
 - Flow POC outliers: a POC at least 3 times the average ("Outlier
-  multiplier", 0 = off) is drawn solid with a thick border.
+  multiplier", 0 = off) is drawn 30% larger, solid, with a thick border.
 - Flow VD, CVD, POC and Absorption keep updating in Market Replay outside
   real trading hours (the session check used the computer's clock).
 - Flow VD's z-score no longer counts candles without Tick Replay data as

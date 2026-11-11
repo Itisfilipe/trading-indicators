@@ -365,10 +365,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (baseline > 0 && strength > baseline * AverageMultiplier)
                     {
                         float growth = (float)Math.Min(1.1, Math.Max(1.0, Math.Sqrt(strength / baseline)));
-                        float radius = MarkerSize / 2f * growth;
+                        bool isOutlier = OutlierMultiplier > 0 && strength >= baseline * OutlierMultiplier;
+                        float radius = MarkerSize / 2f * growth * (isOutlier ? 1.3f : 1f);
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
-                        bool isOutlier = OutlierMultiplier > 0 && strength >= baseline * OutlierMultiplier;
                         SharpDX.Direct2D1.Brush markerFill = isOutlier ? lines[color] : fills[color];
                         float borderWidth = isOutlier ? 3f : 1.5f;
                         if (Marker == FlowPocMarker.Circle)
