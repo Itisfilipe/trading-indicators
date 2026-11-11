@@ -545,18 +545,19 @@ the two count toward volume only.
   of range)" of its range (7% by default), colored while open and gray
   once a candle closes outside the box.
 - **Flow Big Trades** (price panel): large aggressive market orders as
-  bubbles, blue lifting the ask, red hitting the bid, sized by lots
-  (square root, between "Minimum size" and "Maximum size") with the lots
-  printed inside. The exchange reports one big order as many fills; fills
-  on the same side arriving within "Aggregation (ms)" of the order's first fill are put
-  back together into one order, drawn at its volume-weighted price on the
-  candle where it started. "Filter mode" Manual shows orders of at least
-  "Minimum lots" (30); Automatic shows the largest orders this chart has
-  seen — the top 1%, 0.5% or 0.1% by "Intensity" — once 500 orders are in.
-  "Maximum lots" caps the band so two copies can split small and huge
-  orders. Rebuilding orders depends on fill timestamps: a feed whose
-  history is stamped by the second merges separate orders, so history can
-  show more and bigger bubbles than live.
+  bubbles on the candles, blue lifting the ask, red hitting the bid, one
+  bubble per price, sized in proportion to lots (between "Minimum size"
+  and "Maximum size") with the lots printed inside. The exchange reports
+  one big order as many fills; fills on the same side at the same price
+  arriving within "Aggregation (ms)" of the first are put back together,
+  so a sweep through several prices shows a stack of bubbles, one per
+  price. "Filter mode" Manual shows orders of at least "Minimum lots"
+  (30); Automatic shows the largest orders this chart has seen — the top
+  1%, 0.5% or 0.1% by "Intensity" — once 500 orders are in. "Maximum
+  lots" caps the band so two copies can split small and huge orders.
+  Rebuilding orders depends on fill timestamps: a feed whose history is
+  stamped by the second merges separate orders, so history can show more
+  and bigger bubbles than live.
 - Flow POC, VD, CVD, Absorption and Big Trades need **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
   in the chart's Data Series). Without it they start counting when the

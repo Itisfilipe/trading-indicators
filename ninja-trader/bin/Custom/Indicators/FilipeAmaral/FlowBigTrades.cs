@@ -20,10 +20,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public enum FlowBigTradesIntensity { Low, Medium, Strong }
 
     /// <summary>
-    /// Large aggressive market orders as bubbles. The exchange reports one big
-    /// market order as many fills; consecutive fills on the same side arriving
-    /// within the aggregation window are put back together into one order, drawn
-    /// at its volume-weighted price and sized by its lots.
+    /// Large aggressive market orders as bubbles, one per price. The exchange
+    /// reports one big market order as many fills; consecutive fills on the same
+    /// side at the same price within the aggregation window are put back
+    /// together, so a sweep through several prices shows one bubble per price,
+    /// sized by its lots.
     /// </summary>
     public class FlowBigTrades : Indicator
     {
@@ -49,7 +50,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private int orderBar;
         private DateTime orderStartTime;
         private double orderLots;
-        private double orderNotional;
+        private double orderPrice;
 
         private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
         {
@@ -126,6 +127,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             bool continuesOrder = hasOrder
                 && orderIsBuy == isBuy
+                && e.Price == orderPrice
                 && (e.Time - orderStartTime).TotalMilliseconds <= AggregationMilliseconds;
             if (!continuesOrder)
             {
@@ -135,10 +137,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 orderBar = CurrentBar;
                 orderStartTime = e.Time;
                 orderLots = 0;
-                orderNotional = 0;
+                orderPrice = e.Price;
             }
             orderLots += e.Volume;
-            orderNotional += e.Price * e.Volume;
         }
 
         private void FlushOrder()
@@ -158,7 +159,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 trades.Add(new BigTrade
                 {
                     BarIndex = orderBar,
-                    Price = Instrument.MasterInstrument.RoundToTickSize(orderNotional / orderLots),
+                    Price = orderPrice,
                     Lots = orderLots,
                     IsBuy = orderIsBuy,
                 });
@@ -227,7 +228,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (trade.Lots < threshold || (MaximumLots > 0 && trade.Lots > MaximumLots))
                             continue;
 
-                        float radius = (float)Math.Min(MaximumSize, MinimumSize * Math.Sqrt(trade.Lots / threshold)) / 2f;
+                        float radius = (float)Math.Min(MaximumSize, MinimumSize * trade.Lots / threshold) / 2f;
                         float x = chartControl.GetXByBarIndex(ChartBars, trade.BarIndex);
                         float y = chartScale.GetYByValue(trade.Price);
                         SharpDX.Direct2D1.Ellipse bubble = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
@@ -272,7 +273,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public FlowBigTradesIntensity Intensity { get; set; }
 
         [Range(0, 1000), NinjaScriptProperty]
-        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side arriving within this many milliseconds of the order's first fill count as one order. 0 joins only fills with the same timestamp.", Order = 5, GroupName = "1. Big trades")]
+        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side at the same price arriving within this many milliseconds of the first one count as one order. 0 joins only fills with the same timestamp.", Order = 5, GroupName = "1. Big trades")]
         public int AggregationMilliseconds { get; set; }
 
         [Range(2, 200)]
@@ -280,7 +281,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int MinimumSize { get; set; }
 
         [Range(2, 400)]
-        [Display(Name = "Maximum size", Description = "Largest bubble diameter, in pixels; bubbles grow with the square root of lots.", Order = 2, GroupName = "2. Appearance")]
+        [Display(Name = "Maximum size", Description = "Largest bubble diameter, in pixels; bubbles grow in proportion to lots.", Order = 2, GroupName = "2. Appearance")]
         public int MaximumSize { get; set; }
 
         [Range(0, 100)]
