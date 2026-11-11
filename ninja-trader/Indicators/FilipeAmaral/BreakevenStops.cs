@@ -17,7 +17,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// A Stops to BE button in the ChartTrader sidebar, styled like ChartTrading's
     /// toggle. It dims when no stop is short of breakeven.
     /// </summary>
-    public class BetterTradingPanel : Indicator
+    public class BreakevenStops : Indicator
     {
         private System.Windows.Controls.Button breakevenButton;
         private System.Windows.Controls.Grid chartTraderGrid;
@@ -30,7 +30,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (State == State.SetDefaults)
             {
                 Description = "A Stops to BE button in the ChartTrader sidebar.";
-                Name = "Better Trading Panel";
+                Name = "Breakeven Stops";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
                 IsChartOnly = true;
@@ -76,7 +76,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
                 if (chartTraderGrid == null)
                 {
-                    Log("Better Trading Panel: show Chart Trader on this chart, then re-add the indicator.", NinjaTrader.Cbi.LogLevel.Warning);
+                    Log("Breakeven Stops: show Chart Trader on this chart, then re-add the indicator.", NinjaTrader.Cbi.LogLevel.Warning);
                     return;
                 }
 
@@ -108,7 +108,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             catch (Exception ex)
             {
                 DetachHandlers();
-                Log("Better Trading Panel: failed to attach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
+                Log("Breakeven Stops: failed to attach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
 
@@ -135,7 +135,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                Log("Better Trading Panel: failed to detach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
+                Log("Breakeven Stops: failed to detach - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
             handlersAttached = false;
         }
@@ -232,7 +232,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Position position = OpenPosition(account);
                 if (position == null)
                 {
-                    Log("Better Trading Panel: no open position on " + Instrument.FullName + "; stops not moved.", NinjaTrader.Cbi.LogLevel.Information);
+                    Log("Breakeven Stops: no open position on " + Instrument.FullName + "; stops not moved.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
@@ -240,7 +240,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 List<Order> stops = StopsToMove(account, position, out breakeven);
                 if (stops.Count == 0)
                 {
-                    Log("Better Trading Panel: no stop on " + Instrument.FullName + " is short of breakeven; nothing moved.", NinjaTrader.Cbi.LogLevel.Information);
+                    Log("Breakeven Stops: no stop on " + Instrument.FullName + " is short of breakeven; nothing moved.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
@@ -252,7 +252,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     : breakeven >= exitQuote + master.TickSize);
                 if (!roomForStop)
                 {
-                    Log("Better Trading Panel: price has not passed breakeven " + master.FormatPrice(breakeven) + " by a tick yet; stops not moved.", NinjaTrader.Cbi.LogLevel.Information);
+                    Log("Breakeven Stops: price has not passed breakeven " + master.FormatPrice(breakeven) + " by a tick yet; stops not moved.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
@@ -266,7 +266,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     order.StopPriceChanged = breakeven;
                 }
                 account.Change(stops);
-                Log("Better Trading Panel: moved " + stops.Count + " stop(s) to breakeven " + master.FormatPrice(breakeven) + ".", NinjaTrader.Cbi.LogLevel.Information);
+                Log("Breakeven Stops: moved " + stops.Count + " stop(s) to breakeven " + master.FormatPrice(breakeven) + ".", NinjaTrader.Cbi.LogLevel.Information);
             }, null);
         }
         #endregion

@@ -33,7 +33,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   panning of the chart.
 
 ### ChartTrading
-- The "Stops to BE" button is gone; Better Trading Panel has it.
+- The "Stops to BE" button is gone; Breakeven Stops has it.
 - The ON/OFF button only appears in the ChartTrader sidebar; it no longer
   floats on the chart when ChartTrader is hidden.
 - A click only places an order if the modifier is still held at the
@@ -48,7 +48,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   position built from several fills no longer gets its stop a tick short
   of breakeven.
 
-### Better Trading Panel (new, replaces Breakeven Stops)
+### Breakeven Stops
 - A Stops to BE button in the ChartTrader sidebar, styled like the
   ChartTrading toggle; it dims when no stop is short of breakeven.
 - Stops to BE rounds toward profit when several fills average between

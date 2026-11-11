@@ -388,7 +388,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Auto breakeven", Order = 1, GroupName = "5. Breakeven",
                  Description = "Once price runs the trigger distance in the position's favor, move every " +
                                "working protective stop on the instrument to breakeven automatically, " +
-                               "once per position. Better Trading Panel's Stops to BE button makes the same move by hand.")]
+                               "once per position. The Breakeven Stops indicator makes the same move by hand.")]
         public bool AutoBreakevenEnabled { get; set; }
 
         [Range(1, 10000)]

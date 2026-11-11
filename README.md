@@ -100,7 +100,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Auto breakeven (off by default): moves stops to breakeven once price runs
   a configured tick trigger in the position's favor, once per position,
   re-arms on close/flip. Several fills average between ticks; breakeven
-  rounds toward profit. For the manual move, add Better Trading Panel.
+  rounds toward profit. For the manual move, add Breakeven Stops.
 - No live-account gate — whichever account is selected in ChartTrader is
   what a click trades; the ON/OFF button (or the "Enabled" setting) is the
   only switch.
@@ -381,7 +381,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pick the font.
 - Use: add to the chart you trade; each slot's name is what its labels show.
 
-### Better Trading Panel — Stops to BE in the ChartTrader sidebar
+### Breakeven Stops — every stop to breakeven, one button
 
 - A "Stops to BE" button in the ChartTrader sidebar, styled like the
   ChartTrading toggle. ChartTrader must be showing when the indicator
