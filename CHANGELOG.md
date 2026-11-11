@@ -9,7 +9,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - `ninja-trader/` now mirrors `Documents/NinjaTrader 8/bin/Custom/`: copy its
   `Indicators`, `DrawingTools`, `BarsTypes` and `ChartStyles` folders there to
   install everything. Indicators live in `Indicators/FilipeAmaral/`; delete
-  older copies left directly in `Indicators/` first.
+  older copies left directly in `Indicators/`, and any `FilipeAmaral`
+  subfolder in `DrawingTools/`, `BarsTypes/` or `ChartStyles/`, first.
 
 ### More review fixes
 - ChartTrading: raising a resting entry's quantity on the chart now gets
@@ -64,8 +65,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   sessions in SameTimeOfDay mode (was 20). Its settings are
   regrouped: when to mark (baseline, square and outlier thresholds), POC,
   markers, absorption ring, colors.
-- Flow POC outliers: a POC at least 3 times the average ("Outlier
-  multiplier", 0 = off) is drawn 30% larger, solid, with a thick border;
+- Flow POC outliers: a POC at least 3 times the average ("Outlier at", 0 = off) is drawn 30% larger, solid, with a thick border;
   size, fill and border are settings.
 - Flow VD, CVD, POC and Absorption keep updating in Market Replay outside
   real trading hours (the session check used the computer's clock).

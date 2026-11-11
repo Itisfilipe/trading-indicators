@@ -13,8 +13,10 @@ use it is documented in the [root README](../README.md).
 2. Open the NinjaScript Editor and compile (F5).
 3. Restart NinjaTrader when a bars type or chart style is new.
 
-A copy of an indicator left directly in `Indicators/` (an older install)
-defines the same class twice and fails to compile; delete it.
+A file from an older install defines the same class twice and fails to
+compile: delete indicators left directly in `Indicators/`, and any
+`FilipeAmaral` subfolder inside `DrawingTools/`, `BarsTypes/` or
+`ChartStyles/`.
 
 The "Modern Green" chart template ([chart palette](../README.md#chart-palette))
 is in `templates/Chart/`: copy it to `Documents/NinjaTrader 8/templates/Chart/`,

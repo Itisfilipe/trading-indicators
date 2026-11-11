@@ -463,11 +463,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Sessions back", Description = "Past sessions in the same-time median. Needs that many days loaded.", Order = 3, GroupName = "1. When to mark")]
         public int SessionsBack { get; set; }
 
-        [Display(Name = "Highlight absorption POCs", Description = "Ring a strong closed POC sitting at the candle's edge with the aggressor that lost: sellers at the bottom of a candle closing above it, or buyers at the top of one closing below it.", Order = 1, GroupName = "5. Absorption ring")]
+        [Display(Name = "Highlight absorption POCs", Description = "Ring a strong closed POC sitting at the candle's edge with the aggressor that lost: sellers at the bottom of a candle closing above it, or buyers at the top of one closing below it.", Order = 1, GroupName = "4. Absorption ring")]
         public bool HighlightAbsorption { get; set; }
 
         [Range(1, 50)]
-        [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 2, GroupName = "5. Absorption ring")]
+        [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 2, GroupName = "4. Absorption ring")]
         public int AbsorptionEdgePercent { get; set; }
 
         [Range(0, 50)]
@@ -503,7 +503,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public SimpleFont LabelFont { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Buyer color", Order = 1, GroupName = "6. Colors")]
+        [Display(Name = "Buyer color", Order = 1, GroupName = "5. Colors")]
         public System.Windows.Media.Brush BuyColor { get; set; }
 
         [Browsable(false)]
@@ -514,7 +514,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Seller color", Order = 2, GroupName = "6. Colors")]
+        [Display(Name = "Seller color", Order = 2, GroupName = "5. Colors")]
         public System.Windows.Media.Brush SellColor { get; set; }
 
         [Browsable(false)]
@@ -525,7 +525,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Neutral color", Order = 3, GroupName = "6. Colors")]
+        [Display(Name = "Neutral color", Order = 3, GroupName = "5. Colors")]
         public System.Windows.Media.Brush NeutralColor { get; set; }
 
         [Browsable(false)]
@@ -536,7 +536,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Ring color", Order = 3, GroupName = "5. Absorption ring")]
+        [Display(Name = "Ring color", Order = 3, GroupName = "4. Absorption ring")]
         public System.Windows.Media.Brush AbsorptionColor { get; set; }
 
         [Browsable(false)]
@@ -547,7 +547,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Text color", Order = 4, GroupName = "6. Colors")]
+        [Display(Name = "Text color", Order = 4, GroupName = "5. Colors")]
         public System.Windows.Media.Brush TextColor { get; set; }
 
         [Browsable(false)]
