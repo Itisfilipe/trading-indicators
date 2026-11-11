@@ -102,7 +102,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
                 Marker = FlowPocMarker.Square;
-                MarkerSize = 16;
+                MarkerSize = 18;
                 FillOpacity = 40;
                 ShowBarStats = true;
 

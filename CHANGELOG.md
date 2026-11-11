@@ -36,6 +36,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   past breakeven, instead of parking stops short of it.
 
 ### OrderFlowKit
+- Flow POC squares are a little larger by default (marker size 18).
 - Flow VD, CVD, POC and Absorption keep updating in Market Replay outside
   real trading hours (the session check used the computer's clock).
 - Flow VD's z-score no longer counts candles without Tick Replay data as
