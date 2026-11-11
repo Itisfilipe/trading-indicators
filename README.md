@@ -100,7 +100,7 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Auto breakeven (off by default): moves stops to breakeven once price runs
   a configured tick trigger in the position's favor, once per position,
   re-arms on close/flip. Several fills average between ticks; breakeven
-  rounds toward profit. For the manual move, add Breakeven Stops.
+  rounds toward profit. For the manual move, add Better Trading Panel.
 - No live-account gate — whichever account is selected in ChartTrader is
   what a click trades; the ON/OFF button (or the "Enabled" setting) is the
   only switch.
@@ -377,24 +377,29 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pick the font.
 - Use: add to the chart you trade; each slot's name is what its labels show.
 
-### Breakeven Stops — every stop to breakeven, one button
+### Better Trading Panel — big buttons for fast orders
 
-- A "Stops to BE" button in the ChartTrader sidebar (floating on the
-  chart when ChartTrader is hidden) that moves every working protective
-  stop on the chart's instrument to breakeven — whatever placed the
-  stop: an ATM, an OCO bracket, a manual order, another tool. Meant for
-  hand-managed market-order trades; ChartTrading carries the
-  automatic-trigger variant of the same move.
-- Only stop-type orders on the position's exit side move; a stop already
-  at or beyond breakeven is never loosened. Several fills average between
-  ticks; breakeven rounds toward profit so it never locks a loss. Until
-  the bid (long) or ask (short) is a tick past breakeven, the click moves
-  nothing and logs why. Acts on whatever account ChartTrader has selected
-  at the click.
-- One setting: breakeven offset in ticks (profit direction; 2 locks two
-  ticks, 0 is exact breakeven).
-- Use: add to the chart you trade with ChartTrader visible; watch the NT
-  log, every outcome (moved, skipped, nothing to move) is logged.
+- Four large buttons: BUY MKT (blue), SELL MKT (red), FLATTEN (orange) and
+  Stops to BE (green). Placement "Fixed" keeps them in a chart corner;
+  "AtMouse" pops them up centered under the mouse — middle-click to show
+  or hide (it also hides after a click or when the mouse leaves it), or
+  hold Space to show them while the key is held.
+- A button dims when it has nothing to do: no ChartTrader account, no
+  position or working order to flatten, no stop short of breakeven.
+- BUY/SELL MKT send a market order for ChartTrader's quantity on its
+  account, with the ATM strategy selected in ChartTrader; with none
+  selected the order goes in without a stop.
+- FLATTEN closes the position and cancels every working order on the
+  instrument for the ChartTrader account, with no confirmation.
+- Stops to BE moves every working exit-side stop on the instrument to the
+  position's average price plus an offset — whatever placed it: an ATM,
+  an OCO bracket, a manual order. A stop already at or beyond breakeven
+  is never loosened; several fills averaging between ticks round toward
+  profit. Until the bid (long) or ask (short) is a tick past breakeven,
+  the click moves nothing and logs why. Adding contracts changes the
+  average: click again.
+- Use: add to the chart you trade with ChartTrader open; outcomes go to
+  the NT log.
 
 ### Economic Calendar — the week's releases, on the chart
 

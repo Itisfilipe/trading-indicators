@@ -6,17 +6,19 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-11-11
 
 ### ChartTrading
-- The "Stops to BE" button is gone; add Breakeven Stops for the manual
-  move. Auto breakeven stays.
+- The "Stops to BE" button is gone; Better Trading Panel has it. Auto breakeven stays.
 - Auto breakeven rounds a between-ticks average price toward profit, so a
   position built from several fills no longer gets its stop a tick short
   of breakeven.
 
-### Breakeven Stops
-- Breakeven rounds toward profit when several fills average between ticks.
-- The click no longer parks stops short of breakeven when price is too
-  close; it moves nothing until the bid (long) or ask (short) is a tick
-  past breakeven, and logs why.
+### Better Trading Panel (new, replaces Breakeven Stops)
+- Large BUY MKT, SELL MKT, FLATTEN and Stops to BE buttons, fixed in a
+  chart corner or popped up under the mouse (middle-click or hold Space);
+  buttons dim when they have nothing to act on.
+- Market buttons use ChartTrader's account, quantity and ATM strategy.
+- Stops to BE rounds toward profit when several fills average between
+  ticks, and moves nothing until the bid (long) or ask (short) is a tick
+  past breakeven, instead of parking stops short of it.
 
 ### OrderFlowKit
 - Flow Alignment removed (corner table, aligned-state shading and replay
