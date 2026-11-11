@@ -133,7 +133,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // removing the indicator. Mounted in the ChartTrader sidebar when present,
         // floating on the chart otherwise.
         private System.Windows.Controls.Button toggleButton;
-        private System.Windows.Controls.Button breakevenButton;
         private System.Windows.Controls.Grid buttonPanel;
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition toggleButtonRow;
@@ -387,9 +386,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Auto breakeven", Order = 1, GroupName = "5. Breakeven",
                  Description = "Once price runs the trigger distance in the position's favor, move every " +
-                               "working protective stop on the instrument to breakeven automatically -- the same move as " +
-                               "the Stops-to-BE button, fired once per position. The button remains the " +
-                               "manual bypass.")]
+                               "working protective stop on the instrument to breakeven automatically, " +
+                               "once per position. The Breakeven Stops indicator makes the same move by hand.")]
         public bool AutoBreakevenEnabled { get; set; }
 
         [Range(1, 10000)]
@@ -406,8 +404,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(-100, 1000)]
         [Display(Name = "Breakeven offset (ticks)", Order = 4, GroupName = "5. Breakeven",
                  Description = "Where breakeven lands relative to the position's average price, in the " +
-                               "profit direction: 2 locks two ticks of profit, 0 is exact breakeven. " +
-                               "Applies to the button and to auto breakeven.")]
+                               "profit direction: 2 locks two ticks of profit, 0 is exact breakeven.")]
         public int BreakevenOffsetTicks { get; set; }
 
         [Display(Name = "Separate stacked stops", Order = 4, GroupName = "4. Trading",
@@ -577,25 +574,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 toggleButton.Click += OnToggleClicked;
                 UpdateToggleVisual();
 
-                // Moves every working protective stop to the position's average price plus the offset.
-                breakevenButton = new System.Windows.Controls.Button
-                {
-                    Content = "Stops to BE",
-                    Padding = new Thickness(8, 3, 8, 3),
-                    Cursor = Cursors.Hand,
-                    Foreground = Brushes.White,
-                    Background = Brushes.SteelBlue,
-                    BorderThickness = new Thickness(0),
-                };
-                breakevenButton.Click += OnBreakevenClicked;
-
                 buttonPanel = new System.Windows.Controls.Grid();
-                buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-                buttonPanel.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = GridLength.Auto });
-                System.Windows.Controls.Grid.SetRow(toggleButton, 0);
-                System.Windows.Controls.Grid.SetRow(breakevenButton, 1);
                 buttonPanel.Children.Add(toggleButton);
-                buttonPanel.Children.Add(breakevenButton);
 
                 var chartTrader = (chartWindow as Chart)?.FindFirst("ChartWindowChartTraderControl") as ChartTrader;
                 chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
@@ -662,8 +642,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         if (toggleButton != null)
                             toggleButton.Click -= OnToggleClicked;
-                        if (breakevenButton != null)
-                            breakevenButton.Click -= OnBreakevenClicked;
                         if (buttonInChartTrader)
                         {
                             chartTraderGrid?.Children.Remove(buttonPanel);
@@ -675,7 +653,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             UserControlCollection.Remove(buttonPanel);
                         }
                         toggleButton = null;
-                        breakevenButton = null;
                         buttonPanel = null;
                         toggleButtonRow = null;
                         chartTraderGrid = null;
@@ -1528,35 +1505,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// Moves every working protective stop on this instrument -- whatever tool
-        /// placed it -- to the position's average fill price. The manual bypass for
-        /// auto-breakeven: it makes the same move, on demand, whether or not the
-        /// automatic trigger is enabled or has fired.
-        /// </summary>
-        /// <remarks>
-        /// Deliberately reload-proof: the stops are found on the account by side and
-        /// type instead of through this instance's in-memory registry, because
-        /// recompiling or reloading the indicator wipes that memory while the orders
-        /// live on. Every outcome lands in the log, so a click is never silent.
-        /// </remarks>
-        private void OnBreakevenClicked(object sender, RoutedEventArgs e)
-        {
-            double last = Bars != null && Bars.Count > 0 ? Bars.GetClose(Bars.Count - 1) : 0;
-            Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
-            if (account == null)
-            {
-                Log("ChartTrading: no ChartTrader account selected; stops not moved.",
-                    NinjaTrader.Cbi.LogLevel.Warning);
-                return;
-            }
-
-            MoveStopsToBreakeven(account, last, "button");
-        }
-
-        /// <summary>
         /// Watches live ticks for the auto-breakeven trigger: once price has run the
-        /// configured distance in the position's favor, make the same move the button
-        /// makes, once per position.
+        /// configured distance in the position's favor, move every protective stop to
+        /// breakeven, once per position.
         /// </summary>
         protected override void OnMarketData(MarketDataEventArgs marketDataUpdate)
         {
@@ -1620,8 +1571,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             TriggerCustomEvent(o =>
             {
-                // The auto path validates its snapshot is still current before touching
-                // orders; the button (no generation) always acts on what is live now.
+                // Validate the snapshot is still current before touching orders.
                 if (expectedGeneration >= 0)
                 {
                     lock (orderLock)
@@ -1667,8 +1617,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // ABCompleteChartTrader breakeven uses: a long's stop stays at or
                 // below the last price, a short's at or above it.
                 bool isLong = position.MarketPosition == MarketPosition.Long;
-                double breakeven = position.AveragePrice
+                double target = position.AveragePrice
                     + (isLong ? 1 : -1) * BreakevenOffsetTicks * master.TickSize;
+                // Several fills average between ticks; round toward profit so the stop never locks a loss.
+                double breakeven = isLong
+                    ? Math.Ceiling(target / master.TickSize - 1e-9) * master.TickSize
+                    : Math.Floor(target / master.TickSize + 1e-9) * master.TickSize;
                 if (last > 0)
                 {
                     // One tick inside the market, not at it: a stop resting exactly at

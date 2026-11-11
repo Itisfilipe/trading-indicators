@@ -97,15 +97,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   ChartTrader is hidden): green = clicks place orders, gray = disabled.
   The state is kept across reloads and saved with the workspace; "Enabled"
   in the settings sets it too.
-- "Stops to BE" button: moves every working protective stop on the
-  instrument — whatever tool placed it — to the position's average fill
-  price plus an offset, clamped inside the market; survives
-  recompiles/reloads, leaves stop-entry orders alone, never loosens an
-  existing breakeven-or-better stop. Stop-limits keep their
-  trigger-to-limit offset.
 - Auto breakeven (off by default): moves stops to breakeven once price runs
   a configured tick trigger in the position's favor, once per position,
-  re-arms on close/flip; shares the offset setting with the button.
+  re-arms on close/flip. Several fills average between ticks; breakeven
+  rounds toward profit. For the manual move, add Breakeven Stops.
 - No live-account gate — whichever account is selected in ChartTrader is
   what a click trades; the ON/OFF button (or the "Enabled" setting) is the
   only switch.
@@ -391,9 +386,11 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   hand-managed market-order trades; ChartTrading carries the
   automatic-trigger variant of the same move.
 - Only stop-type orders on the position's exit side move; a stop already
-  at or beyond breakeven is never loosened, and the new price is clamped
-  one tick inside the market. Acts on whatever account ChartTrader has
-  selected at the click.
+  at or beyond breakeven is never loosened. Several fills average between
+  ticks; breakeven rounds toward profit so it never locks a loss. Until
+  the bid (long) or ask (short) is a tick past breakeven, the click moves
+  nothing and logs why. Acts on whatever account ChartTrader has selected
+  at the click.
 - One setting: breakeven offset in ticks (profit direction; 2 locks two
   ticks, 0 is exact breakeven).
 - Use: add to the chart you trade with ChartTrader visible; watch the NT

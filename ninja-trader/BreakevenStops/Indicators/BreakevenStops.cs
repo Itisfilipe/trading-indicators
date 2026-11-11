@@ -186,7 +186,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// </summary>
         private void OnBreakevenClicked(object sender, RoutedEventArgs e)
         {
-            double last = Bars != null && Bars.Count > 0 ? Bars.GetClose(Bars.Count - 1) : 0;
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             if (account == null)
             {
@@ -194,10 +193,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             }
 
-            MoveStopsToBreakeven(account, last);
+            MoveStopsToBreakeven(account);
         }
 
-        private void MoveStopsToBreakeven(Account account, double last)
+        private void MoveStopsToBreakeven(Account account)
         {
             TriggerCustomEvent(o =>
             {
@@ -225,20 +224,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     return;
                 }
 
-                // Clamped so the stop never crosses the market: a long's stop
-                // stays at or below the last price, a short's at or above it,
-                // one tick inside rather than at it -- a stop resting exactly
-                // at the last price gets rejected or fills instantly.
                 bool isLong = position.MarketPosition == MarketPosition.Long;
-                double breakeven = position.AveragePrice
+                double target = position.AveragePrice
                     + (isLong ? 1 : -1) * BreakevenOffsetTicks * master.TickSize;
-                if (last > 0)
+                // Several fills average between ticks; round toward profit so the stop never locks a loss.
+                double breakeven = master.RoundToTickSize(isLong
+                    ? Math.Ceiling(target / master.TickSize - 1e-9) * master.TickSize
+                    : Math.Floor(target / master.TickSize + 1e-9) * master.TickSize);
+
+                // A long's stop fills at the bid, a short's at the ask; it must rest at least one tick away.
+                double exitQuote = isLong ? GetCurrentBid() : GetCurrentAsk();
+                bool roomForStop = exitQuote <= 0 || (isLong
+                    ? breakeven <= exitQuote - master.TickSize
+                    : breakeven >= exitQuote + master.TickSize);
+                if (!roomForStop)
                 {
-                    breakeven = isLong
-                        ? Math.Min(breakeven, last - master.TickSize)
-                        : Math.Max(breakeven, last + master.TickSize);
+                    Log($"Breakeven Stops: price has not passed breakeven {master.FormatPrice(breakeven)} by a tick yet; stops not moved.",
+                        NinjaTrader.Cbi.LogLevel.Information);
+                    return;
                 }
-                breakeven = master.RoundToTickSize(breakeven);
 
                 // Every protective stop on the instrument moves, whatever
                 // placed it -- an ATM, an OCO bracket, a manual order. Only
