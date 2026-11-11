@@ -258,47 +258,47 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "Filter mode", Description = "Manual: show orders of at least Minimum lots. Automatic: show the largest orders seen on this chart, by Intensity.", Order = 1, GroupName = "1. Big trades")]
+        [Display(Name = "Filter mode", Description = "Manual: show orders of at least Minimum lots. Automatic: show the largest orders seen on this chart, by Intensity.", Order = 1, GroupName = "1. Filter")]
         public FlowBigTradesFilter FilterMode { get; set; }
 
         [Range(1, 10000), NinjaScriptProperty]
-        [Display(Name = "Minimum lots", Description = "Manual filter: smallest order shown. Also used by Automatic until enough orders have been seen.", Order = 2, GroupName = "1. Big trades")]
+        [Display(Name = "Minimum lots", Description = "Manual filter: smallest order shown. Also used by Automatic until enough orders have been seen.", Order = 2, GroupName = "1. Filter")]
         public int MinimumLots { get; set; }
 
         [Range(0, 100000), NinjaScriptProperty]
-        [Display(Name = "Maximum lots", Description = "Largest order shown, to split size bands across two copies. 0 turns it off.", Order = 3, GroupName = "1. Big trades")]
+        [Display(Name = "Maximum lots", Description = "Largest order shown, to split size bands across two copies. 0 turns it off.", Order = 4, GroupName = "1. Filter")]
         public int MaximumLots { get; set; }
 
-        [Display(Name = "Intensity", Description = "Automatic filter: Low shows the top 1% of orders by size, Medium the top 0.5%, Strong the top 0.1%.", Order = 4, GroupName = "1. Big trades")]
+        [Display(Name = "Intensity", Description = "Automatic filter: Low shows the top 1% of orders by size, Medium the top 0.5%, Strong the top 0.1%.", Order = 3, GroupName = "1. Filter")]
         public FlowBigTradesIntensity Intensity { get; set; }
 
         [Range(0, 1000), NinjaScriptProperty]
-        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side at the same price arriving within this many milliseconds of the first one count as one order. 0 joins only fills with the same timestamp.", Order = 5, GroupName = "1. Big trades")]
+        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side at the same price arriving within this many milliseconds of the first one count as one order. 0 joins only fills with the same timestamp.", Order = 1, GroupName = "2. Aggregation")]
         public int AggregationMilliseconds { get; set; }
 
         [Range(2, 200)]
-        [Display(Name = "Minimum size", Description = "Bubble diameter, in pixels, of an order at the threshold.", Order = 1, GroupName = "2. Appearance")]
+        [Display(Name = "Minimum size", Description = "Bubble diameter, in pixels, of an order at the threshold.", Order = 1, GroupName = "3. Appearance")]
         public int MinimumSize { get; set; }
 
         [Range(2, 400)]
-        [Display(Name = "Maximum size", Description = "Largest bubble diameter, in pixels; bubbles grow in proportion to lots.", Order = 2, GroupName = "2. Appearance")]
+        [Display(Name = "Maximum size", Description = "Largest bubble diameter, in pixels; bubbles grow in proportion to lots.", Order = 2, GroupName = "3. Appearance")]
         public int MaximumSize { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Fill opacity (%)", Order = 3, GroupName = "2. Appearance")]
+        [Display(Name = "Fill opacity (%)", Order = 3, GroupName = "3. Appearance")]
         public int FillOpacity { get; set; }
 
-        [Display(Name = "Hollow", Description = "Outline only, no fill.", Order = 4, GroupName = "2. Appearance")]
+        [Display(Name = "Hollow", Description = "Outline only, no fill.", Order = 4, GroupName = "3. Appearance")]
         public bool HollowFill { get; set; }
 
-        [Display(Name = "Show lots", Description = "Print the order's lots inside bubbles big enough to hold them.", Order = 5, GroupName = "2. Appearance")]
+        [Display(Name = "Show lots", Description = "Print the order's lots inside bubbles big enough to hold them.", Order = 5, GroupName = "3. Appearance")]
         public bool ShowValue { get; set; }
 
-        [Display(Name = "Font", Order = 6, GroupName = "2. Appearance")]
+        [Display(Name = "Font", Order = 6, GroupName = "3. Appearance")]
         public SimpleFont LabelFont { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Buy color", Description = "Orders lifting the ask.", Order = 1, GroupName = "3. Colors")]
+        [Display(Name = "Buy color", Description = "Orders lifting the ask.", Order = 1, GroupName = "4. Colors")]
         public System.Windows.Media.Brush BuyColor { get; set; }
 
         [Browsable(false)]
@@ -309,7 +309,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Sell color", Description = "Orders hitting the bid.", Order = 2, GroupName = "3. Colors")]
+        [Display(Name = "Sell color", Description = "Orders hitting the bid.", Order = 2, GroupName = "4. Colors")]
         public System.Windows.Media.Brush SellColor { get; set; }
 
         [Browsable(false)]
@@ -320,7 +320,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Text color", Order = 3, GroupName = "3. Colors")]
+        [Display(Name = "Text color", Order = 3, GroupName = "4. Colors")]
         public System.Windows.Media.Brush TextColor { get; set; }
 
         [Browsable(false)]

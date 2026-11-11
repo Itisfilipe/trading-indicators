@@ -544,7 +544,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int ButtonFontSize { get; set; }
 
         [Range(-100, 1000)]
-        [Display(Name = "Breakeven offset (ticks)", Description = "Where breakeven lands relative to the position's average price, in the profit direction: 2 locks two ticks of profit, 0 is exact breakeven.", Order = 5, GroupName = "1. Panel")]
+        [Display(Name = "Breakeven offset (ticks)", Description = "Where breakeven lands relative to the position's average price, in the profit direction: 2 locks two ticks of profit, 0 is exact breakeven.", Order = 1, GroupName = "2. Stops to BE")]
         public int BreakevenOffsetTicks { get; set; }
         #endregion
     }
