@@ -3,6 +3,12 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-11
+
+### OrderFlowKit
+- Flow Alignment: the replay journal is gone (no trades drawn, no corner
+  summary, no CSV); the table and the aligned-state shading stay.
+
 ## 2026-11-10
 
 ### OrderFlowKit (new)

@@ -538,22 +538,7 @@ the two count toward volume only.
   aligned and the candles are shaded. "Slow timeframe must align" off
   drops the slow row from the agreement but keeps its balance. The state
   is also a plot (+1, -1, 0) for Market Analyzer columns and strategies.
-- Flow Alignment's **replay journal** trades every new alignment inside a
-  New York time window (09:30-11:00 by default) by fixed rules, so a
-  Market Replay session tells you whether the signal has an edge:
-  market entry at the close of the candle that aligned, stop one tick past
-  the previous middle-timeframe Heikin-Ashi candle (signals whose stop is
-  outside "Minimum/Maximum stop" are skipped), a fixed target (60 ticks,
-  US$300 per NQ contract), an optional move to breakeven, and exits when
-  the chart's or middle VD turns against the trade, after "Maximum hold"
-  minutes or at the session end. When stop and target fall inside the
-  same candle it counts the stop. Each trade draws a dashed line from
-  entry to exit with its result in R, the corner shows trades, win rate,
-  total and average R and profit factor, and the trades are written to
-  `Documents\NinjaTrader 8\FlowAlignment\<instrument> <minutes>min.csv`
-  (New York times, stop size, slow balance, exit reason, R, MFE and MAE
-  in ticks), rewritten after each trade in replay or live and when the
-  chart closes. The larger timeframes must divide the day (5, 15, 30, 60
+- Flow Alignment's larger timeframes must divide the day (5, 15, 30, 60
   minutes...) so their candles sit on the clock.
 - Flow POC, VD, CVD, Absorption and Alignment need **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
