@@ -499,68 +499,68 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Properties
 
         [Range(1, 100), NinjaScriptProperty]
-        [Display(Name = "Price grouping (ticks)", Description = "Ticks merged into one price level before finding the POC.", Order = 1, GroupName = "1. POC")]
+        [Display(Name = "Price grouping (ticks)", Description = "Ticks merged into one price level before finding the POC.", Order = 1, GroupName = "2. POC")]
         public int PriceGrouping { get; set; }
 
         [Range(1, 500), NinjaScriptProperty]
-        [Display(Name = "Average candles", Description = "Candles in the moving average of POC volume.", Order = 2, GroupName = "1. POC")]
+        [Display(Name = "Average candles", Description = "Candles in the moving average of POC volume.", Order = 2, GroupName = "1. When to mark")]
         public int AverageBars { get; set; }
 
         [Range(0.1, 20), NinjaScriptProperty]
-        [Display(Name = "Average multiplier", Description = "A POC is strong when its volume beats the baseline (average or same-time median) times this.", Order = 3, GroupName = "1. POC")]
+        [Display(Name = "Square at (x baseline)", Description = "A POC gets a square when its strength beats the baseline times this; below it, a dash.", Order = 5, GroupName = "1. When to mark")]
         public double AverageMultiplier { get; set; }
 
         [Range(0, 100), NinjaScriptProperty]
-        [Display(Name = "Neutral band (%)", Description = "POCs whose buy/sell imbalance is inside this band are drawn neutral.", Order = 4, GroupName = "1. POC")]
+        [Display(Name = "Neutral band (%)", Description = "POCs whose buy/sell imbalance is inside this band are drawn neutral.", Order = 2, GroupName = "2. POC")]
         public int NeutralBandPercent { get; set; }
 
-        [Display(Name = "Strength baseline", Description = "RecentCandles: average of the previous candles' POCs. SameTimeOfDay: median POC volume at the same time in past sessions.", Order = 5, GroupName = "1. POC")]
+        [Display(Name = "Strength baseline", Description = "RecentCandles: average of the previous candles' POCs. SameTimeOfDay: median POC volume at the same time in past sessions.", Order = 1, GroupName = "1. When to mark")]
         public FlowPocStrength StrengthMode { get; set; }
 
-        [Display(Name = "Label", Description = "Delta: the lots left over at the POC price (buys minus sells, side shown by the color). Volume: all contracts traded at the POC price.", Order = 9, GroupName = "1. POC")]
+        [Display(Name = "Label", Description = "Delta: the lots left over at the POC price (buys minus sells, side shown by the color). Volume: all contracts traded at the POC price.", Order = 3, GroupName = "2. POC")]
         public FlowPocLabel PocLabel { get; set; }
 
-        [Display(Name = "Strength measure", Description = "What is compared with the baseline: the POC's volume, or its leftover lots (buys minus sells, either side).", Order = 10, GroupName = "1. POC")]
+        [Display(Name = "Strength measure", Description = "What is compared with the baseline: the POC's volume, or its leftover lots (buys minus sells, either side).", Order = 4, GroupName = "1. When to mark")]
         public FlowPocMeasure StrengthMeasure { get; set; }
 
         [Range(1, 250), NinjaScriptProperty]
-        [Display(Name = "Sessions back", Description = "Past sessions in the same-time median. Needs that many days loaded.", Order = 6, GroupName = "1. POC")]
+        [Display(Name = "Sessions back", Description = "Past sessions in the same-time median. Needs that many days loaded.", Order = 3, GroupName = "1. When to mark")]
         public int SessionsBack { get; set; }
 
-        [Display(Name = "Highlight absorption POCs", Description = "Ring a strong closed POC sitting at the candle's edge with the aggressor that lost: sellers at the bottom of a candle closing above it, or buyers at the top of one closing below it.", Order = 7, GroupName = "1. POC")]
+        [Display(Name = "Highlight absorption POCs", Description = "Ring a strong closed POC sitting at the candle's edge with the aggressor that lost: sellers at the bottom of a candle closing above it, or buyers at the top of one closing below it.", Order = 1, GroupName = "5. Absorption ring")]
         public bool HighlightAbsorption { get; set; }
 
         [Range(1, 50)]
-        [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 8, GroupName = "1. POC")]
+        [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 2, GroupName = "5. Absorption ring")]
         public int AbsorptionEdgePercent { get; set; }
 
         [Range(0, 50)]
-        [Display(Name = "Outlier multiplier", Description = "A POC at least this many times the baseline is drawn solid with a thick border. 0 turns it off.", Order = 11, GroupName = "1. POC")]
+        [Display(Name = "Outlier at (x baseline)", Description = "A POC at least this many times the baseline is an outlier: larger, solid, thick border, and optionally a line. 0 turns it off.", Order = 6, GroupName = "1. When to mark")]
         public double OutlierMultiplier { get; set; }
 
-        [Display(Name = "Marker", Order = 1, GroupName = "2. Appearance")]
+        [Display(Name = "Marker", Order = 1, GroupName = "3. Markers")]
         public FlowPocMarker Marker { get; set; }
 
         [Range(6, 60)]
-        [Display(Name = "Marker size", Order = 2, GroupName = "2. Appearance")]
+        [Display(Name = "Marker size", Order = 2, GroupName = "3. Markers")]
         public int MarkerSize { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Fill opacity (%)", Order = 3, GroupName = "2. Appearance")]
+        [Display(Name = "Fill opacity (%)", Order = 3, GroupName = "3. Markers")]
         public int FillOpacity { get; set; }
 
-        [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta at its opening end: above a falling candle, below a rising one.", Order = 4, GroupName = "2. Appearance")]
+        [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta at its opening end: above a falling candle, below a rising one.", Order = 8, GroupName = "3. Markers")]
         public bool ShowBarStats { get; set; }
 
         [Range(100, 300)]
-        [Display(Name = "Outlier size (%)", Description = "Outlier markers relative to the normal marker size.", Order = 6, GroupName = "2. Appearance")]
+        [Display(Name = "Outlier size (%)", Description = "Outlier markers relative to the normal marker size.", Order = 4, GroupName = "3. Markers")]
         public int OutlierSizePercent { get; set; }
 
-        [Display(Name = "Outlier solid fill", Description = "Fill outlier markers with the full side color instead of the fill opacity.", Order = 7, GroupName = "2. Appearance")]
+        [Display(Name = "Outlier solid fill", Description = "Fill outlier markers with the full side color instead of the fill opacity.", Order = 5, GroupName = "3. Markers")]
         public bool OutlierSolidFill { get; set; }
 
         [Range(0, 10)]
-        [Display(Name = "Outlier border width", Description = "Border of outlier markers, in the text color. 0 hides it.", Order = 8, GroupName = "2. Appearance")]
+        [Display(Name = "Outlier border width", Description = "Border of outlier markers, in the text color. 0 hides it.", Order = 6, GroupName = "3. Markers")]
         public int OutlierBorderWidth { get; set; }
 
         [Display(Name = "Extend outliers", Description = "Draw a line from each outlier POC to the right until a later candle trades through its price.", Order = 1, GroupName = "4. Outlier lines")]
@@ -575,11 +575,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Sellers line", Description = "Color, dash, width and opacity for outliers where sellers dominated.", Order = 4, GroupName = "4. Outlier lines")]
         public Stroke SellOutlierLine { get; set; }
 
-        [Display(Name = "Font", Order = 5, GroupName = "2. Appearance")]
+        [Display(Name = "Font", Order = 7, GroupName = "3. Markers")]
         public SimpleFont LabelFont { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Buyer color", Order = 1, GroupName = "3. Colors")]
+        [Display(Name = "Buyer color", Order = 1, GroupName = "6. Colors")]
         public System.Windows.Media.Brush BuyColor { get; set; }
 
         [Browsable(false)]
@@ -590,7 +590,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Seller color", Order = 2, GroupName = "3. Colors")]
+        [Display(Name = "Seller color", Order = 2, GroupName = "6. Colors")]
         public System.Windows.Media.Brush SellColor { get; set; }
 
         [Browsable(false)]
@@ -601,7 +601,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Neutral color", Order = 3, GroupName = "3. Colors")]
+        [Display(Name = "Neutral color", Order = 3, GroupName = "6. Colors")]
         public System.Windows.Media.Brush NeutralColor { get; set; }
 
         [Browsable(false)]
@@ -612,7 +612,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Absorption ring", Order = 5, GroupName = "3. Colors")]
+        [Display(Name = "Ring color", Order = 3, GroupName = "5. Absorption ring")]
         public System.Windows.Media.Brush AbsorptionColor { get; set; }
 
         [Browsable(false)]
@@ -623,7 +623,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Text color", Order = 4, GroupName = "3. Colors")]
+        [Display(Name = "Text color", Order = 4, GroupName = "6. Colors")]
         public System.Windows.Media.Brush TextColor { get; set; }
 
         [Browsable(false)]
