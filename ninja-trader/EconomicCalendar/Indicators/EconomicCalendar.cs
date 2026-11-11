@@ -427,7 +427,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         using (HttpClient client = new HttpClient())
                         {
                             client.Timeout = TimeSpan.FromSeconds(20);
-                            json = client.GetStringAsync(FeedUrl).Result;
+                            json = client.GetStringAsync(FeedUrl).GetAwaiter().GetResult();
                         }
                         fresh = ParseFeed(json);
                         SaveWeekToArchive(json, fresh);
@@ -677,6 +677,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         // X for any chart-zone time, including times past the last bar, where the
         // bar-to-pixel mapping runs out and the recent bars' own pace extends it.
+        // Median spacing of the last bars: a session gap inside the window would
+        // otherwise shrink the pace and pile future times next to the last bar.
+        private double TypicalBarMilliseconds()
+        {
+            List<double> gaps = new List<double>();
+            for (int i = Math.Max(1, Bars.Count - 20); i < Bars.Count; i++)
+                gaps.Add((Bars.GetTime(i) - Bars.GetTime(i - 1)).TotalMilliseconds);
+            if (gaps.Count == 0)
+                return 0;
+            gaps.Sort();
+            return gaps[gaps.Count / 2];
+        }
+
         private double XForTime(ChartControl chartControl, DateTime chartZoneTime, DateTime lastBarTime, double lastBarX, double pixelsPerMs)
         {
             if (chartZoneTime <= lastBarTime)
@@ -846,10 +859,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             DateTime lastBarTime = Bars.GetTime(Bars.Count - 1);
             double lastBarX = chartControl.GetXByTime(lastBarTime);
-            int paceBackIndex = Math.Max(0, Bars.Count - 1 - 20);
-            DateTime paceBackTime = Bars.GetTime(paceBackIndex);
-            double paceMs = (lastBarTime - paceBackTime).TotalMilliseconds;
-            double pixelsPerMs = paceMs > 0 ? (lastBarX - chartControl.GetXByTime(paceBackTime)) / paceMs : 0;
+            double barMs = TypicalBarMilliseconds();
+            double pixelsPerMs = barMs > 0 ? chartControl.Properties.BarDistance / barMs : 0;
 
             // Releases sharing a minute (a data drop) would print their captions
             // on top of one another; same-X captions stack away from the candle,
@@ -945,7 +956,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             const float CellPadY = 3f;
             const float Margin = 10f;
 
-            DateTime weekStart = displayToday.AddDays(-(((int)displayToday.DayOfWeek + 6) % 7));
+            // The feed's week runs Sunday to Saturday; a Monday start hides the coming week on Sunday evening.
+            DateTime weekStart = displayToday.AddDays(-(int)displayToday.DayOfWeek);
             List<NewsEvent> rows = new List<NewsEvent>();
             foreach (NewsEvent newsEvent in visible)
             {
@@ -1028,8 +1040,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     default: tableX = rightX; tableY = bottomY; break;
                 }
 
-                RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY, tableWidth, rowHeight), headerBackBrushDx);
-                RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY + rowHeight, tableWidth, tableHeight - rowHeight), rowBackBrushDx);
+                // Pixels drawn in the hit-test pass take the click and would block click-and-drag pan.
+                if (!IsInHitTest)
+                {
+                    RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY, tableWidth, rowHeight), headerBackBrushDx);
+                    RenderTarget.FillRectangle(new SharpDX.RectangleF(tableX, tableY + rowHeight, tableWidth, tableHeight - rowHeight), rowBackBrushDx);
+                }
 
                 // layouts: 4 header entries first, then 4 per row.
                 for (int rowIndex = -1; rowIndex < rows.Count; rowIndex++)

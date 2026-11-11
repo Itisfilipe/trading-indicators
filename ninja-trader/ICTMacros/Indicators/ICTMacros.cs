@@ -622,6 +622,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // bar-to-pixel mapping runs out and the recent bars' own pace extends it.
         // On non-time bars (Renko, tick) that pace is an estimate, but so is any
         // other way of placing a future time on such a chart.
+        // Median spacing of the last bars: a session gap inside the window would
+        // otherwise shrink the pace and pile future times next to the last bar.
+        private double TypicalBarMilliseconds()
+        {
+            List<double> gaps = new List<double>();
+            for (int i = Math.Max(1, Bars.Count - 20); i < Bars.Count; i++)
+                gaps.Add((Bars.GetTime(i) - Bars.GetTime(i - 1)).TotalMilliseconds);
+            if (gaps.Count == 0)
+                return 0;
+            gaps.Sort();
+            return gaps[gaps.Count / 2];
+        }
+
         private double XForTime(ChartControl chartControl, DateTime chartZoneTime, DateTime lastBarTime, double lastBarX, double pixelsPerMs)
         {
             if (chartZoneTime <= lastBarTime)
@@ -647,10 +660,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // Pixels per millisecond from the last stretch of bars, for placing
             // times that lie past the last bar.
-            int paceBackIndex = Math.Max(0, Bars.Count - 1 - 20);
-            DateTime paceBackTime = Bars.GetTime(paceBackIndex);
-            double paceMs = (lastBarTime - paceBackTime).TotalMilliseconds;
-            double pixelsPerMs = paceMs > 0 ? (lastBarX - chartControl.GetXByTime(paceBackTime)) / paceMs : 0;
+            double barMs = TypicalBarMilliseconds();
+            double pixelsPerMs = barMs > 0 ? chartControl.Properties.BarDistance / barMs : 0;
 
             DateTime now = PlatformNow();
             DateTime todayTzDate = TimeZoneInfo.ConvertTime(now, Core.Globals.GeneralOptions.TimeZoneInfo, displayZone).Date;
@@ -737,7 +748,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                 new SharpDX.Vector2((float)endX, panelBottom),
                                 MacroStroke.BrushDX, MacroStroke.Width, MacroStroke.StrokeStyle);
 
-                        if (bandHeight > 0)
+                        // Pixels drawn in the hit-test pass take the click and would block click-and-drag pan.
+                        if (bandHeight > 0 && !IsInHitTest)
                         {
                             double bandLeft = Math.Max(startX, panelLeft);
                             double bandRight = Math.Min(endX, panelRight);

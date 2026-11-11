@@ -5,6 +5,18 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-11
 
+### Economic Calendar, ICT Macros, Time-Based Vertical Lines
+- Future releases, macros and lines keep their real spacing right after a
+  weekend or the daily break instead of piling up next to the last candle.
+- Economic Calendar's week table shows the coming week on Sunday evening.
+- The calendar table and the macro bands no longer block click-and-drag
+  panning of the chart.
+
+### Time-Based Price Levels
+- No more stacked levels at the Sunday open: a weekend gap no longer
+  captures every slot on the first Sunday candle (the daily break still
+  does, on purpose).
+
 ### ChartTrading
 - The "Stops to BE" button is gone; Better Trading Panel has it.
 - A click only places an order if the modifier is still held at the
