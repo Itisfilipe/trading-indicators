@@ -59,7 +59,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   price, rebuilt from their fills, sized by lots, with a manual lot filter or an automatic
   one that keeps the largest orders the chart has seen.
 - Flow POC squares are a little larger by default (marker size 18), and
-  the per-candle volume and delta are hidden by default. Its settings are
+  the per-candle volume and delta are hidden by default. The baseline is
+  shorter for scalping: the previous 12 candles (was 30), or 4 past
+  sessions in SameTimeOfDay mode (was 20). Its settings are
   regrouped: when to mark (baseline, square and outlier thresholds), POC,
   markers, absorption ring, colors.
 - Flow POC outliers: a POC at least 3 times the average ("Outlier

@@ -92,13 +92,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 PriceGrouping = 1;
-                AverageBars = 30;
+                AverageBars = 12;
                 AverageMultiplier = 1.0;
                 NeutralBandPercent = 0;
                 StrengthMode = FlowPocStrength.RecentCandles;
                 PocLabel = FlowPocLabel.Volume;
                 StrengthMeasure = FlowPocMeasure.Volume;
-                SessionsBack = 20;
+                SessionsBack = 4;
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
                 OutlierMultiplier = 3;

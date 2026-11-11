@@ -463,7 +463,7 @@ the two count toward volume only.
 
 - **Flow POC** (price panel): a marker at each candle's most traded price,
   blue when buyers dominated that price, red when sellers did, gray when
-  buys and sells tie. A POC whose volume beats the average of the previous 30
+  buys and sells tie. A POC whose volume beats the average of the previous 12
   candles' POCs (times "Square at") gets a square (or circle) that grows
   with volume and shows the contracts traded at that price ("Label" =
   Delta shows the lots left over there, buys minus sells, instead); the
@@ -480,7 +480,7 @@ the two count toward volume only.
   merges ticks into one level before the POC is picked; "Neutral band"
   grays a POC unless one side's share beats it.
   "Strength baseline" set to SameTimeOfDay compares each POC with the
-  median POC volume at the same time of day over the last "Sessions back"
+  median POC volume at the same time of day over the last "Sessions back" (4)
   sessions instead of the recent candles, so the open is not judged
   against the overnight; it needs at least 3 past sessions loaded (and
   Tick Replay makes that slow). Times are read in the exchange's time
