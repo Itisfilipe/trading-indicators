@@ -6,8 +6,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-11-11
 
 ### OrderFlowKit
-- Flow Alignment: the replay journal is gone (no trades drawn, no corner
-  summary, no CSV); the table and the aligned-state shading stay.
+- Flow Alignment removed (corner table, aligned-state shading and replay
+  journal); read alignment from Flow HA, Flow CVD and Flow VD directly.
 
 ## 2026-11-10
 

@@ -525,22 +525,7 @@ the two count toward volume only.
   box the range of each Heikin-Ashi candle whose body is at most "Body (%
   of range)" of its range (7% by default), colored while open and gray
   once a candle closes outside the box.
-- **Flow Alignment** (price panel, on the 1-minute chart): a small table in
-  the top-right corner with the Heikin-Ashi, CVD and VD direction on the
-  chart's timeframe and on two larger ones built from its own candles
-  (5 and 15 minutes by default), the slow candle's lot balance (buys minus
-  sells) and the overall state. Each cell is blue, red or gray:
-  Heikin-Ashi broke the previous candle's high and not its low (or the
-  reverse); CVD is above the previous candle's CVD high (or below its
-  low); the candle's delta is positive (or negative). When every cell
-  agrees and the slow candle has at least "Minimum slow balance" lots on
-  that side (500 by default; 0 turns it off), the state reads BUY or SELL
-  aligned and the candles are shaded. "Slow timeframe must align" off
-  drops the slow row from the agreement but keeps its balance. The state
-  is also a plot (+1, -1, 0) for Market Analyzer columns and strategies.
-- Flow Alignment's larger timeframes must divide the day (5, 15, 30, 60
-  minutes...) so their candles sit on the clock.
-- Flow POC, VD, CVD, Absorption and Alignment need **Tick Replay** on the data series to show past
+- Flow POC, VD, CVD and Absorption need **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
   in the chart's Data Series). Without it they start counting when the
   chart loads and say so in the corner. Tick Replay makes loading slow:
@@ -551,7 +536,7 @@ the two count toward volume only.
 - Calculate must be On each tick or On price change; On bar close is
   refused with a note in the corner.
 - Use: Flow POC and Flow Absorption on a 5-minute chart, Flow VD and Flow
-  CVD under a 1-minute chart with Flow Alignment on it, Flow HA on a
+  CVD under a 1-minute chart, Flow HA on a
   second 5-minute chart.
 - Pre-open levels come from the repo's other indicators: ICT Killzones
   with a slot for the overnight session (18:00-09:30) boxes its range and
