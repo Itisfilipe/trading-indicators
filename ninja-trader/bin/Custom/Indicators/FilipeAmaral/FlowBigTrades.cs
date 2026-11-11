@@ -77,7 +77,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Intensity = FlowBigTradesIntensity.Medium;
                 AggregationMilliseconds = 5;
                 MinimumSize = 18;
-                MaximumSize = 50;
+                MaximumSize = 70;
                 FillOpacity = 50;
                 HollowFill = false;
                 ShowValue = true;

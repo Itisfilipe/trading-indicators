@@ -55,8 +55,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   past breakeven, instead of parking stops short of it.
 
 ### OrderFlowKit
-- Flow Big Trades (new): large aggressive market orders as bubbles, rebuilt
-  from their fills, sized by lots, with a manual lot filter or an automatic
+- Flow Big Trades (new): large aggressive market orders as bubbles, one per
+  price, rebuilt from their fills, sized by lots, with a manual lot filter or an automatic
   one that keeps the largest orders the chart has seen.
 - Flow POC squares are a little larger by default (marker size 18).
 - Flow POC outliers: a POC at least 3 times the average ("Outlier
