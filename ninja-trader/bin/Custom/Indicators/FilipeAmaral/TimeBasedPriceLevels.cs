@@ -93,6 +93,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private TimeZoneInfo displayZone;
         private DateTime lastSeenTzDate = DateTime.MinValue;
         private SessionIterator sessionIterator;
+        private SessionIterator reopenIterator;
+        private DateTime sessionBeginTz = DateTime.MinValue;
 
         #region Properties
 
@@ -269,6 +271,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 displayZone = ResolveDisplayZone();
                 sessionIterator = new SessionIterator(Bars);
+                reopenIterator = new SessionIterator(Bars);
                 slots.Clear();
                 AddSlot(Level1Enabled, Level1Time, Level1Price, Level1Stroke);
                 AddSlot(Level2Enabled, Level2Time, Level2Price, Level2Stroke);
@@ -395,6 +398,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // Anchoring the line there instead of at the bar's close keeps a
             // midnight-crossing capture's start before its end-of-day cutoff.
             DateTime leftEdgeChartTime = CurrentBar > 0 ? Time[1] : chartZoneTime;
+            if (CurrentBar == 0 || Bars.IsFirstBarOfSession)
+            {
+                reopenIterator.GetNextSession(Time[0], true);
+                sessionBeginTz = TimeZoneInfo.ConvertTime(reopenIterator.ActualSessionBegin, Core.Globals.GeneralOptions.TimeZoneInfo, displayZone);
+            }
 
             lock (sync)
             {
@@ -476,10 +484,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DateTime slotMoment = day.AddMinutes(slot.MinutesOfDay);
             if (slot.LastCapturedDate == day || tzTime <= slotMoment || previousTzTime > slotMoment)
                 return;
-            // A weekend or holiday gap spans every slot of the closed days; only a slot inside the
-            // reopening bar itself is real, or they would all stack on the reopening price.
-            TimeSpan barSpan = BarsPeriod.BarsPeriodType == BarsPeriodType.Minute ? TimeSpan.FromMinutes(BarsPeriod.Value) : TimeSpan.FromMinutes(1);
-            if (previousTzTime != DateTime.MaxValue && (tzTime - previousTzTime).TotalHours > 40 && tzTime - slotMoment > barSpan)
+            // A weekend or holiday gap spans every slot of the closed days; only slots from the
+            // reopening session's start on are real, or they would all stack on the reopening price.
+            if (previousTzTime != DateTime.MaxValue && (tzTime - previousTzTime).TotalHours > 40 && slotMoment < sessionBeginTz)
                 return;
 
             slot.LastCapturedDate = day;

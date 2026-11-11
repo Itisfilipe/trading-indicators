@@ -382,16 +382,28 @@ namespace NinjaTrader.NinjaScript.BarsTypes
         /// grid, so the grid is rebuilt from its open and the previous brick's
         /// direction, as stock Renko does; anchoring on its mid-brick close would
         /// detach the next brick from the chain. With Break at EOD on, the brick
-        /// that opens a session sits on a symmetric grid, and the previous brick
-        /// may be a session span, so that case stays symmetric around the open.
+        /// that opens a session sits on a symmetric grid, so that one brick is
+        /// rebuilt symmetric around its open.
         /// </summary>
+        // The session-opening doji follows zero-volume span bricks; the last real brick
+        // before it belongs to another trading day. Intra-session gap bricks do not.
+        private bool FormingBrickOpensSession(Bars bars)
+        {
+            int last = bars.Count - 1;
+            int previous = last - 1;
+            while (previous >= 0 && bars.GetVolume(previous) == 0)
+                previous--;
+            return previous >= 0
+                && cachedSessionIterator.GetTradingDay(bars.GetTime(previous)) != cachedSessionIterator.GetTradingDay(bars.GetTime(last));
+        }
+
         private void InitializeRenkoBoundaries(Bars bars)
         {
             int last = bars.Count - 1;
             double open = bars.GetOpen(last);
             bool previousUp = last > 0 && bars.GetClose(last - 1) > bars.GetOpen(last - 1);
             bool previousDown = last > 0 && bars.GetClose(last - 1) < bars.GetOpen(last - 1);
-            if (bars.IsResetOnNewTradingDay || (!previousUp && !previousDown))
+            if ((bars.IsResetOnNewTradingDay && FormingBrickOpensSession(bars)) || (!previousUp && !previousDown))
             {
                 renkoHigh = open + offset;
                 renkoLow = open - offset;

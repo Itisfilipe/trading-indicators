@@ -420,6 +420,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             System.Threading.Tasks.Task.Run(() =>
             {
                 bool succeeded = false;
+                TimeSpan untilNextFetch = RefreshInterval;
                 try
                 {
                     List<NewsEvent> fresh = new List<NewsEvent>();
@@ -427,7 +428,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         // Another chart saved the week within the refresh interval; the archive
                         // below already has it, so the feed is not hit again.
-                        if (NewestArchiveAge() >= RefreshInterval)
+                        TimeSpan archiveAge = NewestArchiveAge();
+                        if (archiveAge < RefreshInterval)
+                            untilNextFetch = RefreshInterval - archiveAge;
+                        else
                         {
                             string json;
                             using (HttpClient client = new HttpClient())
@@ -476,7 +480,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     lock (sync)
                     {
                         fetchRunning = false;
-                        nextFetchUtc = DateTime.UtcNow + (succeeded ? RefreshInterval : RetryInterval);
+                        nextFetchUtc = DateTime.UtcNow + (succeeded ? untilNextFetch : RetryInterval);
                     }
                 }
             });
@@ -534,7 +538,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<NewsEvent> archived = new List<NewsEvent>();
             if (!Directory.Exists(ArchiveDirectory))
                 return archived;
-            DateTime oldestWanted = DateTime.UtcNow.Date.AddDays(-7 * ArchiveWeeksKept);
+            // Counted back from the platform clock, so a Market Replay of an old week still finds it.
+            DateTime oldestWanted = TimeZoneInfo.ConvertTimeToUtc(PlatformNow(), Core.Globals.GeneralOptions.TimeZoneInfo).Date.AddDays(-7 * ArchiveWeeksKept);
             foreach (string file in Directory.GetFiles(ArchiveDirectory, "ff_week_*.json"))
             {
                 DateTime weekSunday;
