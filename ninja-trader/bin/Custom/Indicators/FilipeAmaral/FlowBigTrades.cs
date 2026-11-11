@@ -90,6 +90,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 sessionIterator = new SessionIterator(Bars);
             }
+            else if (State == State.Realtime)
+            {
+                FlushOrder();
+            }
             else if (State == State.Historical)
             {
                 if (Calculate == Calculate.OnBarClose)
@@ -109,6 +113,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
+
+            if (hasOrder && (e.Time - orderLastTime).TotalMilliseconds > AggregationMilliseconds)
+                FlushOrder();
 
             bool isBuy = e.Price >= e.Ask;
             bool isSell = !isBuy && e.Price <= e.Bid;
