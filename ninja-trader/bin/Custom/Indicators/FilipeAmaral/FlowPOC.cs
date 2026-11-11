@@ -102,6 +102,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
                 OutlierMultiplier = 3;
+                OutlierSizePercent = 130;
+                OutlierSolidFill = true;
+                OutlierBorderWidth = 3;
                 Marker = FlowPocMarker.Square;
                 MarkerSize = 18;
                 FillOpacity = 40;
@@ -366,17 +369,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         float growth = (float)Math.Min(1.1, Math.Max(1.0, Math.Sqrt(strength / baseline)));
                         bool isOutlier = OutlierMultiplier > 0 && strength >= baseline * OutlierMultiplier;
-                        float radius = MarkerSize / 2f * growth * (isOutlier ? 1.3f : 1f);
+                        float radius = MarkerSize / 2f * growth * (isOutlier ? OutlierSizePercent / 100f : 1f);
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
-                        SharpDX.Direct2D1.Brush markerFill = isOutlier ? lines[color] : fills[color];
-                        float borderWidth = isOutlier ? 3f : 1.5f;
+                        bool solid = isOutlier && OutlierSolidFill;
+                        SharpDX.Direct2D1.Brush markerFill = solid ? lines[color] : fills[color];
+                        float borderWidth = isOutlier ? OutlierBorderWidth : 1.5f;
                         if (Marker == FlowPocMarker.Circle)
                         {
                             SharpDX.Direct2D1.Ellipse ellipse = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
                             RenderTarget.FillEllipse(ellipse, backgroundBrush);
                             RenderTarget.FillEllipse(ellipse, markerFill);
-                            RenderTarget.DrawEllipse(ellipse, isOutlier ? textBrush : lines[color], borderWidth);
+                            if (borderWidth > 0)
+                                RenderTarget.DrawEllipse(ellipse, isOutlier ? textBrush : lines[color], borderWidth);
                             if (isAbsorption)
                                 RenderTarget.DrawEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), ringRadius, ringRadius), absorptionBrush, 2.5f);
                         }
@@ -385,14 +390,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             SharpDX.RectangleF square = new SharpDX.RectangleF(x - radius, y - radius, radius * 2, radius * 2);
                             RenderTarget.FillRectangle(square, backgroundBrush);
                             RenderTarget.FillRectangle(square, markerFill);
-                            RenderTarget.DrawRectangle(square, isOutlier ? textBrush : lines[color], borderWidth);
+                            if (borderWidth > 0)
+                                RenderTarget.DrawRectangle(square, isOutlier ? textBrush : lines[color], borderWidth);
                             if (isAbsorption)
                                 RenderTarget.DrawRectangle(new SharpDX.RectangleF(x - ringRadius, y - ringRadius, ringRadius * 2, ringRadius * 2), absorptionBrush, 2.5f);
                         }
                         double labelValue = PocLabel == FlowPocLabel.Delta
                             ? Math.Abs(pocBuys.GetValueAt(barIndex) - pocSells.GetValueAt(barIndex))
                             : volume;
-                        DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, isOutlier ? backgroundBrush : textBrush);
+                        DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, solid ? backgroundBrush : textBrush);
                     }
                     else
                     {
@@ -481,6 +487,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta at its opening end: above a falling candle, below a rising one.", Order = 4, GroupName = "2. Appearance")]
         public bool ShowBarStats { get; set; }
+
+        [Range(100, 300)]
+        [Display(Name = "Outlier size (%)", Description = "Outlier markers relative to the normal marker size.", Order = 6, GroupName = "2. Appearance")]
+        public int OutlierSizePercent { get; set; }
+
+        [Display(Name = "Outlier solid fill", Description = "Fill outlier markers with the full side color instead of the fill opacity.", Order = 7, GroupName = "2. Appearance")]
+        public bool OutlierSolidFill { get; set; }
+
+        [Range(0, 10)]
+        [Display(Name = "Outlier border width", Description = "Border of outlier markers, in the text color. 0 hides it.", Order = 8, GroupName = "2. Appearance")]
+        public int OutlierBorderWidth { get; set; }
 
         [Display(Name = "Font", Order = 5, GroupName = "2. Appearance")]
         public SimpleFont LabelFont { get; set; }

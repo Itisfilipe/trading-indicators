@@ -470,7 +470,8 @@ the two count toward volume only.
   rest get a short dash. "Strength measure" picks what is compared with
   the average: the POC's volume (default) or its leftover lots. An
   outlier — at least "Outlier multiplier" times the average (3 by
-  default; 0 turns it off) — is drawn 30% larger, solid, with a thick border so the
+  default; 0 turns it off) — is drawn larger, solid and with a thick border
+  ("Outlier size" 130%, "Outlier solid fill" on, "Outlier border width" 3) so the
   rare very large POCs stand out.
   Each candle's volume and delta print at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
