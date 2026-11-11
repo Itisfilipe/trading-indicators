@@ -709,7 +709,7 @@ crisp for spotting gaps, and zones in amber, away from both candle colors.
 
 A NinjaTrader chart template with this palette, "Modern Green" (1-minute
 candlesticks, full ETH session, this repo's indicators added and configured),
-is in [`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/) copy it to `Documents/NinjaTrader 8/templates/Chart/`.
+is in [`ninja-trader/templates/Chart/`](ninja-trader/templates/Chart/): copy it to `Documents/NinjaTrader 8/templates/Chart/`.
 
 Colors that carry meaning keep their own: stop and target red/green, news
 impact, killzone zones, macro orange, the VWAP line. The Profit Chart tools
