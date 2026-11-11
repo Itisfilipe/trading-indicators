@@ -73,6 +73,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public int StartBar;
             public double Price;
             public bool BuyersDominated;
+            public bool PriceLeft;
             public int EndBar = -1;
         }
 
@@ -276,9 +277,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double low = Bars.GetLow(closedBar);
             lock (outlierLines)
             {
+                // The next candles usually still trade the outlier's price; the line only waits for a
+                // return once price has left it, or it would end one candle after it was drawn.
                 foreach (OutlierLine line in outlierLines)
-                    if (line.EndBar < 0 && low <= line.Price + groupTop && high >= line.Price)
+                {
+                    if (line.EndBar >= 0)
+                        continue;
+                    bool traded = low <= line.Price + groupTop && high >= line.Price;
+                    if (!line.PriceLeft)
+                        line.PriceLeft = !traded;
+                    else if (traded)
                         line.EndBar = closedBar;
+                }
 
                 if (!pocVolume.IsValidDataPointAt(closedBar) || OutlierMultiplier <= 0)
                     return;

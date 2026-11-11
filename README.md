@@ -473,8 +473,8 @@ the two count toward volume only.
   default; 0 turns it off) — is drawn larger, solid and with a thick border
   ("Outlier size" 130%, "Outlier solid fill" on, "Outlier border width" 3) so the
   rare very large POCs stand out. "Extend outliers" (off by default)
-  draws a line from each outlier to the right until a later candle trades
-  through its price, checked at each candle close; "Show touched lines"
+  draws a line from each outlier to the right until price leaves its price
+  and later trades back through it, checked at each candle close; "Show touched lines"
   keeps the ended ones up to the touching candle, and the buyers' and
   sellers' lines each take their own color, dash, width and opacity.
   "Show volume and delta" (off by default) prints each candle's volume and
