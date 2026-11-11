@@ -93,8 +93,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Tag position (left/center/right + margin). Stop and target tags show any
   mix of price, ticks, points and money for the level's quantity (default:
   price, ticks, money).
-- "ChartTrading ON/OFF" button (mounted in the ChartTrader panel, floating if
-  ChartTrader is hidden): green = clicks place orders, gray = disabled.
+- "ChartTrading ON/OFF" button in the ChartTrader panel (shown only when
+  ChartTrader is visible as the indicator loads): green = clicks place orders, gray = disabled.
   The state is kept across reloads and saved with the workspace; "Enabled"
   in the settings sets it too.
 - Auto breakeven (off by default): moves stops to breakeven once price runs

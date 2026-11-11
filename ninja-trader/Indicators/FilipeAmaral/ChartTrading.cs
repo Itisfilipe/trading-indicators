@@ -130,13 +130,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private int previewQuantity = 1;
 
         // Toggle so the modifier keys can be handed back to other tools without
-        // removing the indicator. Mounted in the ChartTrader sidebar when present,
-        // floating on the chart otherwise.
+        // removing the indicator. Mounted in the ChartTrader sidebar.
         private System.Windows.Controls.Button toggleButton;
         private System.Windows.Controls.Grid buttonPanel;
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition toggleButtonRow;
-        private bool buttonInChartTrader;
 
         // Tag text picks black or white per level for contrast against the tag fill.
         private SharpDX.Direct2D1.Brush textWhiteBrushDx;
@@ -579,11 +577,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     chartWindow.Deactivated += OnWindowDeactivated;
                 }
 
-                // The toggle prefers the ChartTrader sidebar, mounted the way the
-                // ABCompleteChartTrader reference does it: one auto-height row appended
-                // to the ChartTrader grid. With ChartTrader unavailable it falls back to
-                // floating on the chart through UserControlCollection, the platform's
-                // supported spot for custom chart controls.
+                // The toggle lives in the ChartTrader sidebar: one auto-height row
+                // appended to the ChartTrader grid.
                 toggleButton = new System.Windows.Controls.Button
                 {
                     Padding = new Thickness(8, 3, 8, 3),
@@ -609,16 +604,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     System.Windows.Controls.Grid.SetColumnSpan(buttonPanel,
                         Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
                     chartTraderGrid.Children.Add(buttonPanel);
-                    buttonInChartTrader = true;
                 }
                 else
                 {
-                    buttonPanel.Margin = new Thickness(6);
-                    buttonPanel.HorizontalAlignment = HorizontalAlignment.Left;
-                    buttonPanel.VerticalAlignment = VerticalAlignment.Top;
-                    buttonPanel.Opacity = 0.85;
-                    UserControlCollection.Add(buttonPanel);
-                    buttonInChartTrader = false;
+                    Log("ChartTrading: show Chart Trader on this chart, then re-add the indicator, to get the ON/OFF button.",
+                        NinjaTrader.Cbi.LogLevel.Warning);
                 }
 
                 // Subscribe to the ChartTrader account up front, so auto-breakeven
@@ -663,21 +653,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         if (toggleButton != null)
                             toggleButton.Click -= OnToggleClicked;
-                        if (buttonInChartTrader)
-                        {
-                            chartTraderGrid?.Children.Remove(buttonPanel);
-                            if (toggleButtonRow != null)
-                                chartTraderGrid?.RowDefinitions.Remove(toggleButtonRow);
-                        }
-                        else
-                        {
-                            UserControlCollection.Remove(buttonPanel);
-                        }
+                        chartTraderGrid?.Children.Remove(buttonPanel);
+                        if (toggleButtonRow != null)
+                            chartTraderGrid?.RowDefinitions.Remove(toggleButtonRow);
                         toggleButton = null;
                         buttonPanel = null;
                         toggleButtonRow = null;
                         chartTraderGrid = null;
-                        buttonInChartTrader = false;
                     }
                 }
                 catch (Exception ex)

@@ -34,6 +34,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ### ChartTrading
 - The "Stops to BE" button is gone; Better Trading Panel has it.
+- The ON/OFF button only appears in the ChartTrader sidebar; it no longer
+  floats on the chart when ChartTrader is hidden.
 - A click only places an order if the modifier is still held at the
   click; a preview left armed after releasing the key on an unfocused
   chart no longer sends an order.
