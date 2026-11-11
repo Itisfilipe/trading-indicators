@@ -6,10 +6,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-11-11
 
 ### Repository layout
-- `ninja-trader/` now mirrors `Documents/NinjaTrader 8/`: copy its `bin` and
-  `templates` folders there to install everything. Files live in
-  `FilipeAmaral` subfolders; delete older copies left directly in
-  `Indicators/`, `DrawingTools/`, `BarsTypes/` or `ChartStyles/` first.
+- `ninja-trader/` now mirrors `Documents/NinjaTrader 8/bin/Custom/`: copy its
+  `Indicators`, `DrawingTools`, `BarsTypes` and `ChartStyles` folders there to
+  install everything. Indicators live in `Indicators/FilipeAmaral/`; delete
+  older copies left directly in `Indicators/` first.
 
 ### More review fixes
 - ChartTrading: raising a resting entry's quantity on the chart now gets

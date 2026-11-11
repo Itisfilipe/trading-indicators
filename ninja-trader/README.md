@@ -1,24 +1,24 @@
 # NinjaTrader 8
 
-C# / NinjaScript for NinjaTrader 8, laid out exactly like the
-`Documents/NinjaTrader 8/` folder; what every indicator does and how to use
-it is documented in the [root README](../README.md).
+C# / NinjaScript for NinjaTrader 8, laid out like
+`Documents/NinjaTrader 8/bin/Custom/`; what every indicator does and how to
+use it is documented in the [root README](../README.md).
 
 ## Installing
 
-1. Copy the `bin` and `templates` folders from here onto
-   `Documents/NinjaTrader 8/`, merging with what is there. Every file lands
-   in a `FilipeAmaral` subfolder of `Indicators/`, `DrawingTools/`,
-   `BarsTypes/` and `ChartStyles/`, so updating is: delete those
-   `FilipeAmaral` folders, copy again.
+1. Copy the `Indicators`, `DrawingTools`, `BarsTypes` and `ChartStyles`
+   folders from here onto `Documents/NinjaTrader 8/bin/Custom/`, merging with
+   what is there. The indicators land in `Indicators/FilipeAmaral/`, so
+   updating them is: delete that folder, copy again.
 2. Open the NinjaScript Editor and compile (F5).
 3. Restart NinjaTrader when a bars type or chart style is new.
 
-A copy of the same file left directly in `Indicators/` (an older install)
+A copy of an indicator left directly in `Indicators/` (an older install)
 defines the same class twice and fails to compile; delete it.
 
 The "Modern Green" chart template ([chart palette](../README.md#chart-palette))
-lands in `templates/Chart/`; right-click a chart > Templates > Load. It is a complete 1-minute
+is in `templates/Chart/`: copy it to `Documents/NinjaTrader 8/templates/Chart/`,
+then right-click a chart > Templates > Load. It is a complete 1-minute
 candlestick setup on the CME US Index Futures ETH (full) session, with this
 repo's indicators already added and configured. Loading it replaces the
 chart's indicators, interval and session with the template's; the
