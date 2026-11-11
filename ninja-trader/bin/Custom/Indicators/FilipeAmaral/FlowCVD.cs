@@ -45,6 +45,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private TimeZoneInfo newYorkZone;
 
         private Series<double> cvdOpen;
+        private Series<bool> resetBars;
         private Series<double> cvdHigh;
         private Series<double> cvdLow;
         private Series<double> cvdClose;
@@ -92,6 +93,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 sessionIterator = new SessionIterator(Bars);
                 cvdOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                resetBars = new Series<bool>(this, MaximumBarsLookBack.Infinite);
                 cvdHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 cvdClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
@@ -152,6 +154,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             activeBar = CurrentBar;
             activeBarIsReset = IsResetBar(CurrentBar);
+            resetBars[0] = activeBarIsReset;
             if (activeBarIsReset)
             {
                 cumulativeDelta = 0;
@@ -262,28 +265,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!hasResetTime)
                 return false;
 
-            BarsPeriodType periodType = BarsPeriod.BarsPeriodType;
-            if (periodType == BarsPeriodType.Second || periodType == BarsPeriodType.Minute || periodType == BarsPeriodType.Day)
-            {
-                DateTime previousEnd = NewYorkTime(barIndex - 1);
-                DateTime currentEnd = NewYorkTime(barIndex);
-                DateTime resetMoment = currentEnd.Date + resetTimeOfDay;
-                return previousEnd <= resetMoment && currentEnd > resetMoment;
-            }
-
-            // Tick, volume and range bars are stamped with their latest tick, so a forming bar's
-            // end is unknown at its first tick; decide from the two bars already closed.
-            if (barIndex < 2)
-                return false;
-            DateTime closedEnd = NewYorkTime(barIndex - 1);
-            DateTime closedResetMoment = closedEnd.Date + resetTimeOfDay;
-            return closedEnd >= closedResetMoment && NewYorkTime(barIndex - 2) < closedResetMoment;
+            // Called once, on the bar's first tick: a tick, volume or range bar is stamped
+            // with that tick then, and its later stamps would move it past the reset.
+            DateTime previousEnd = NewYorkTime(barIndex - 1);
+            DateTime currentEnd = NewYorkTime(barIndex);
+            DateTime resetMoment = currentEnd.Date + resetTimeOfDay;
+            return previousEnd <= resetMoment && currentEnd > resetMoment;
         }
 
         private bool SpansReset(int pivotBar)
         {
             for (int barIndex = pivotBar - PivotStrength + 1; barIndex <= pivotBar + PivotStrength; barIndex++)
-                if (IsResetBar(barIndex))
+                if (barIndex >= 0 && barIndex <= CurrentBar && resetBars.GetValueAt(barIndex))
                     return true;
             return false;
         }
