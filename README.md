@@ -106,7 +106,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   only switch.
 - Auto-breakeven only runs while the chart is open (local automation, not
   server-side).
-- Removing the indicator leaves its working orders working.
+- Removing or reloading the indicator leaves stops and targets working,
+  but cancels entries that have not filled yet: once it stops listening
+  they would fill with no bracket.
 - Don't enter the same instrument through another automated bracket/order-
   management feature at the same time — two systems will fight over the
   same position's exits.

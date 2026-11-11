@@ -90,7 +90,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Realtime)
             {
-                if (levelsBar >= 0 && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
+                if (levelsBar >= 0 && !sessionIterator.IsInSession(NinjaTrader.Cbi.Connection.PlaybackConnection != null ? NinjaTrader.Cbi.Connection.PlaybackConnection.Now : Core.Globals.Now, true, true))
                 {
                     CloseBar(levelsBar);
                     finalizedBar = levelsBar;
@@ -106,7 +106,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
                 return;
-            if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
+            if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
 
             if (CurrentBar != levelsBar)
@@ -228,6 +228,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (bottom - top < MinimumBandHeight)
                             top = (top + bottom - height) / 2;
                         if (x2 <= x1)
+                            continue;
+                        if (top > ChartPanel.Y + ChartPanel.H || top + height < ChartPanel.Y)
                             continue;
 
                         SharpDX.Direct2D1.Brush fill = level.BuyersAbsorbing

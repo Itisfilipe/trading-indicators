@@ -178,7 +178,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
                 return;
-            if (State == State.Realtime && !sessionIterator.IsInSession(Core.Globals.Now, true, true))
+            if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
 
             if (CurrentBar != levelsBar)

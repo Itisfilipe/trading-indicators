@@ -516,9 +516,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Terminated)
             {
-                // Working orders are deliberately left working; removing the indicator
-                // must not silently cancel a live bracket. Only the event subscription
-                // is dropped.
+                // Live exits stay working, but an unfilled entry would fill with no
+                // bracket once this instance stops listening, so it is cancelled.
+                List<BracketCommit> pending = new List<BracketCommit>();
+                lock (orderLock)
+                {
+                    foreach (BracketCommit commit in activeCommits)
+                    {
+                        if (commit.Entry == null)
+                            continue;
+                        OrderState entryState = commit.Entry.OrderState;
+                        if (entryState != OrderState.Filled && entryState != OrderState.Cancelled && entryState != OrderState.Rejected)
+                            pending.Add(commit);
+                    }
+                }
+                foreach (BracketCommit commit in pending)
+                {
+                    commit.Account.Cancel(new[] { commit.Entry });
+                    Log("ChartTrading: indicator removed or reloaded; cancelled unfilled entry " + commit.Entry.OrderId + " so it cannot fill without a stop.",
+                        NinjaTrader.Cbi.LogLevel.Warning);
+                }
+
                 if (subscribedAccount != null)
                 {
                     subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
@@ -813,7 +831,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Order submission
         private void OnPanelClick(object sender, MouseButtonEventArgs e)
         {
-            if (!TradingEnabled || previewSide == Side.None || !pointerOverPanel)
+            // Key-up never reaches an unfocused chart, so the armed preview can outlive the modifier.
+            Side side = ResolveSide();
+            if (side != previewSide)
+                UpdatePreview(side);
+            if (side == Side.None || !pointerOverPanel)
                 return;
 
             MasterInstrument master = Instrument?.MasterInstrument;
@@ -829,9 +851,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
+            if (subscribedAccount != null && !ReferenceEquals(account, subscribedAccount))
+            {
+                bool oldAccountBusy;
+                lock (orderLock)
+                    oldAccountBusy = currentMarketPosition != MarketPosition.Flat || HasWorkingEntryOn(subscribedAccount);
+                if (oldAccountBusy)
+                {
+                    Log("ChartTrading: " + subscribedAccount.Name + " still has a position or a pending entry; order on " + account.Name + " not placed.",
+                        NinjaTrader.Cbi.LogLevel.Warning);
+                    return;
+                }
+            }
 
             int quantity = chartTrader.Quantity > 0 ? chartTrader.Quantity : previewQuantity;
-            bool isBuy = previewSide == Side.Buy;
+            bool isBuy = side == Side.Buy;
             int profitSign = isBuy ? 1 : -1;
             double tick = master.TickSize;
 
@@ -1556,166 +1590,170 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 autoBreakevenState = AutoBreakevenState.Pending;
             }
 
-            MoveStopsToBreakeven(account, price, "auto", generation);
+            MoveStopsToBreakeven(account, price, generation);
         }
 
-        private void ReArmAutoBreakeven(int expectedGeneration)
+        private void ReArmAutoBreakeven()
         {
-            if (expectedGeneration < 0)
-                return;
             lock (orderLock)
                 autoBreakevenState = AutoBreakevenState.Armed;
         }
 
-        private void MoveStopsToBreakeven(Account account, double last, string reason, int expectedGeneration = -1)
+        private void MoveStopsToBreakeven(Account account, double last, int expectedGeneration)
         {
             TriggerCustomEvent(o =>
             {
-                // Validate the snapshot is still current before touching orders.
-                if (expectedGeneration >= 0)
+                try
                 {
-                    lock (orderLock)
-                    {
-                        if (positionCacheGeneration != expectedGeneration
-                            || !ReferenceEquals(subscribedAccount, account))
-                        {
-                            autoBreakevenState = AutoBreakevenState.Armed;
-                            return;
-                        }
-                    }
+                    MoveStopsToBreakevenNow(account, last, expectedGeneration);
                 }
-
-                MasterInstrument master = Instrument?.MasterInstrument;
-                if (master == null)
+                catch (Exception ex)
                 {
-                    ReArmAutoBreakeven(expectedGeneration);
-                    return;
+                    ReArmAutoBreakeven();
+                    Log("ChartTrading: auto breakeven failed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
                 }
-
-                Position position = null;
-                lock (account.Positions)
-                {
-                    foreach (Position candidate in account.Positions)
-                    {
-                        if (candidate.Instrument != null
-                            && candidate.Instrument.FullName == Instrument.FullName)
-                        {
-                            position = candidate;
-                            break;
-                        }
-                    }
-                }
-                if (position == null || position.MarketPosition == MarketPosition.Flat)
-                {
-                    ReArmAutoBreakeven(expectedGeneration);
-                    Log("ChartTrading: no open position on " + Instrument.FullName + "; stops not moved.",
-                        NinjaTrader.Cbi.LogLevel.Information);
-                    return;
-                }
-
-                // Clamped so the stop never crosses the market -- the same guard the
-                // ABCompleteChartTrader breakeven uses: a long's stop stays at or
-                // below the last price, a short's at or above it.
-                bool isLong = position.MarketPosition == MarketPosition.Long;
-                double target = position.AveragePrice
-                    + (isLong ? 1 : -1) * BreakevenOffsetTicks * master.TickSize;
-                // Several fills average between ticks; round toward profit so the stop never locks a loss.
-                double breakeven = isLong
-                    ? Math.Ceiling(target / master.TickSize - 1e-9) * master.TickSize
-                    : Math.Floor(target / master.TickSize + 1e-9) * master.TickSize;
-                if (last > 0)
-                {
-                    // One tick inside the market, not at it: a stop resting exactly at
-                    // the last price gets rejected or fills instantly.
-                    breakeven = isLong
-                        ? Math.Min(breakeven, last - master.TickSize)
-                        : Math.Max(breakeven, last + master.TickSize);
-                }
-                breakeven = master.RoundToTickSize(breakeven);
-
-                // Every protective stop on the instrument moves, not only this tool's:
-                // any working stop-type order on the position's EXIT side is protection,
-                // whatever placed it. Same-side stop orders stay untouched -- those are
-                // stop entries (a buy stop above the market on a long, for instance),
-                // and yanking an entry to breakeven would fire it.
-                OrderAction longExit1 = OrderAction.Sell;
-                OrderAction shortExit1 = OrderAction.Buy;
-                OrderAction shortExit2 = OrderAction.BuyToCover;
-                var candidates = new List<Order>();
-                lock (account.Orders)
-                {
-                    foreach (Order order in account.Orders)
-                    {
-                        if (order.Instrument == null
-                            || order.Instrument.FullName != Instrument.FullName)
-                            continue;
-                        if (order.OrderType != OrderType.StopMarket && order.OrderType != OrderType.StopLimit)
-                            continue;
-                        if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
-                            continue;
-                        // This tool's own stop-side entries are exits by action but
-                        // entries by intent; while short, a resting CT buy-stop entry
-                        // would otherwise match the exit side and get yanked to BE.
-                        if (order.Name == "CT Entry")
-                            continue;
-                        bool exitSide = isLong
-                            ? order.OrderAction == longExit1
-                            : order.OrderAction == shortExit1 || order.OrderAction == shortExit2;
-                        if (!exitSide)
-                            continue;
-                        candidates.Add(order);
-                    }
-                }
-
-                var changes = new List<Order>();
-                int alreadySafer = 0;
-                foreach (Order order in candidates)
-                {
-                    // Never loosen protection: a stop already at or beyond breakeven
-                    // (say, manually trailed past it) stays where it is.
-                    if (isLong ? order.StopPrice >= breakeven : order.StopPrice <= breakeven)
-                    {
-                        alreadySafer++;
-                        continue;
-                    }
-
-                    // Stage every changeable field. A stop-limit's limit price shifts
-                    // by the same distance as its stop, keeping the configured
-                    // trigger-to-limit offset -- leaving the limit behind would make
-                    // the order unfillable once triggered.
-                    order.QuantityChanged = order.Quantity;
-                    order.LimitPriceChanged = order.OrderType == OrderType.StopLimit
-                        ? master.RoundToTickSize(order.LimitPrice + (breakeven - order.StopPrice))
-                        : order.LimitPrice;
-                    order.StopPriceChanged = breakeven;
-                    changes.Add(order);
-                }
-
-                if (changes.Count == 0)
-                {
-                    // Stops already at or beyond BE count as done; no stops at all means
-                    // the exits are not live yet -- wait for one to be accepted instead
-                    // of burning the latch (or polling every tick).
-                    if (expectedGeneration >= 0)
-                        lock (orderLock)
-                            autoBreakevenState = alreadySafer > 0
-                                ? AutoBreakevenState.Fired
-                                : AutoBreakevenState.WaitingForStops;
-                    Log(alreadySafer > 0
-                            ? $"ChartTrading: all {alreadySafer} stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved ({reason})."
-                            : $"ChartTrading: no working protective stops on {Instrument.FullName} to move ({reason}).",
-                        NinjaTrader.Cbi.LogLevel.Information);
-                    return;
-                }
-
-                account.Change(changes);
-                if (expectedGeneration >= 0)
-                    lock (orderLock)
-                        autoBreakevenState = AutoBreakevenState.Fired;
-                string skippedNote = alreadySafer > 0 ? $", {alreadySafer} already safer left alone" : string.Empty;
-                Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}{skippedNote} ({reason}).",
-                    NinjaTrader.Cbi.LogLevel.Information);
             }, null);
+        }
+
+        private void MoveStopsToBreakevenNow(Account account, double last, int expectedGeneration)
+        {
+            lock (orderLock)
+            {
+                if (positionCacheGeneration != expectedGeneration
+                    || !ReferenceEquals(subscribedAccount, account))
+                {
+                    autoBreakevenState = AutoBreakevenState.Armed;
+                    return;
+                }
+            }
+
+            MasterInstrument master = Instrument?.MasterInstrument;
+            if (master == null)
+            {
+                ReArmAutoBreakeven();
+                return;
+            }
+
+            Position position = null;
+            lock (account.Positions)
+            {
+                foreach (Position candidate in account.Positions)
+                {
+                    if (candidate.Instrument != null
+                        && candidate.Instrument.FullName == Instrument.FullName)
+                    {
+                        position = candidate;
+                        break;
+                    }
+                }
+            }
+            if (position == null || position.MarketPosition == MarketPosition.Flat)
+            {
+                ReArmAutoBreakeven();
+                Log("ChartTrading: no open position on " + Instrument.FullName + "; stops not moved.",
+                    NinjaTrader.Cbi.LogLevel.Information);
+                return;
+            }
+
+            // Clamped so the stop never crosses the market -- the same guard as a manual move: a long's stop stays at or
+            // below the last price, a short's at or above it.
+            bool isLong = position.MarketPosition == MarketPosition.Long;
+            double target = position.AveragePrice
+                + (isLong ? 1 : -1) * BreakevenOffsetTicks * master.TickSize;
+            // Several fills average between ticks; round toward profit so the stop never locks a loss.
+            double breakeven = isLong
+                ? Math.Ceiling(target / master.TickSize - 1e-9) * master.TickSize
+                : Math.Floor(target / master.TickSize + 1e-9) * master.TickSize;
+            if (last > 0)
+            {
+                // One tick inside the market, not at it: a stop resting exactly at
+                // the last price gets rejected or fills instantly.
+                breakeven = isLong
+                    ? Math.Min(breakeven, last - master.TickSize)
+                    : Math.Max(breakeven, last + master.TickSize);
+            }
+            breakeven = master.RoundToTickSize(breakeven);
+
+            // Every protective stop on the instrument moves, not only this tool's:
+            // any working stop-type order on the position's EXIT side is protection,
+            // whatever placed it. Same-side stop orders stay untouched -- those are
+            // stop entries (a buy stop above the market on a long, for instance),
+            // and yanking an entry to breakeven would fire it.
+            OrderAction longExit1 = OrderAction.Sell;
+            OrderAction shortExit1 = OrderAction.Buy;
+            OrderAction shortExit2 = OrderAction.BuyToCover;
+            var candidates = new List<Order>();
+            lock (account.Orders)
+            {
+                foreach (Order order in account.Orders)
+                {
+                    if (order.Instrument == null
+                        || order.Instrument.FullName != Instrument.FullName)
+                        continue;
+                    if (order.OrderType != OrderType.StopMarket && order.OrderType != OrderType.StopLimit)
+                        continue;
+                    if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
+                        continue;
+                    // This tool's own stop-side entries are exits by action but
+                    // entries by intent; while short, a resting CT buy-stop entry
+                    // would otherwise match the exit side and get yanked to BE.
+                    if (order.Name == "CT Entry")
+                        continue;
+                    bool exitSide = isLong
+                        ? order.OrderAction == longExit1
+                        : order.OrderAction == shortExit1 || order.OrderAction == shortExit2;
+                    if (!exitSide)
+                        continue;
+                    candidates.Add(order);
+                }
+            }
+
+            var changes = new List<Order>();
+            int alreadySafer = 0;
+            foreach (Order order in candidates)
+            {
+                // Never loosen protection: a stop already at or beyond breakeven
+                // (say, manually trailed past it) stays where it is.
+                if (isLong ? order.StopPrice >= breakeven : order.StopPrice <= breakeven)
+                {
+                    alreadySafer++;
+                    continue;
+                }
+
+                // Stage every changeable field. A stop-limit's limit price shifts
+                // by the same distance as its stop, keeping the configured
+                // trigger-to-limit offset -- leaving the limit behind would make
+                // the order unfillable once triggered.
+                order.QuantityChanged = order.Quantity;
+                order.LimitPriceChanged = order.OrderType == OrderType.StopLimit
+                    ? master.RoundToTickSize(order.LimitPrice + (breakeven - order.StopPrice))
+                    : order.LimitPrice;
+                order.StopPriceChanged = breakeven;
+                changes.Add(order);
+            }
+
+            if (changes.Count == 0)
+            {
+                // Stops already at or beyond BE count as done; no stops at all means
+                // the exits are not live yet -- wait for one to be accepted instead
+                // of burning the latch (or polling every tick).
+                lock (orderLock)
+                    autoBreakevenState = alreadySafer > 0
+                        ? AutoBreakevenState.Fired
+                        : AutoBreakevenState.WaitingForStops;
+                Log(alreadySafer > 0
+                        ? $"ChartTrading: all {alreadySafer} stop(s) on {Instrument.FullName} already at or beyond breakeven; nothing moved (auto)."
+                        : $"ChartTrading: no working protective stops on {Instrument.FullName} to move (auto).",
+                    NinjaTrader.Cbi.LogLevel.Information);
+                return;
+            }
+
+            account.Change(changes);
+            lock (orderLock)
+                autoBreakevenState = AutoBreakevenState.Fired;
+            string skippedNote = alreadySafer > 0 ? $", {alreadySafer} already safer left alone" : string.Empty;
+            Log($"ChartTrading: moved {changes.Count} stop(s) to breakeven {master.FormatPrice(breakeven)}{skippedNote} (auto).",
+                NinjaTrader.Cbi.LogLevel.Information);
         }
         #endregion
 

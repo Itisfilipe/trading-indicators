@@ -6,7 +6,15 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-11-11
 
 ### ChartTrading
-- The "Stops to BE" button is gone; Better Trading Panel has it. Auto breakeven stays.
+- The "Stops to BE" button is gone; Better Trading Panel has it.
+- A click only places an order if the modifier is still held at the
+  click; a preview left armed after releasing the key on an unfocused
+  chart no longer sends an order.
+- Removing or reloading the indicator cancels its unfilled entries, which
+  would otherwise fill with no stop or target.
+- A click on a newly selected ChartTrader account is refused while the
+  previous account still has a position or pending entry, so that
+  account keeps getting its exits. Auto breakeven stays.
 - Auto breakeven rounds a between-ticks average price toward profit, so a
   position built from several fills no longer gets its stop a tick short
   of breakeven.
@@ -21,6 +29,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   past breakeven, instead of parking stops short of it.
 
 ### OrderFlowKit
+- Flow VD, CVD, POC and Absorption keep updating in Market Replay outside
+  real trading hours (the session check used the computer's clock).
+- Flow VD's z-score no longer counts candles without Tick Replay data as
+  zero-delta candles.
 - Flow Alignment removed (corner table, aligned-state shading and replay
   journal); read alignment from Flow HA, Flow CVD and Flow VD directly.
 
