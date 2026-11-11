@@ -468,7 +468,10 @@ the two count toward volume only.
   with volume and shows the contracts traded at that price ("Label" =
   Delta shows the lots left over there, buys minus sells, instead); the
   rest get a short dash. "Strength measure" picks what is compared with
-  the average: the POC's volume (default) or its leftover lots.
+  the average: the POC's volume (default) or its leftover lots. An
+  outlier — at least "Outlier multiplier" times the average (3 by
+  default; 0 turns it off) — is drawn solid with a thick border so the
+  rare very large POCs stand out.
   Each candle's volume and delta print at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
   candles in a trend. "Price grouping"

@@ -101,6 +101,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 SessionsBack = 20;
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
+                OutlierMultiplier = 3;
                 Marker = FlowPocMarker.Square;
                 MarkerSize = 18;
                 FillOpacity = 40;
@@ -367,12 +368,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         float radius = MarkerSize / 2f * growth;
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
+                        bool isOutlier = OutlierMultiplier > 0 && strength >= baseline * OutlierMultiplier;
+                        SharpDX.Direct2D1.Brush markerFill = isOutlier ? lines[color] : fills[color];
+                        float borderWidth = isOutlier ? 3f : 1.5f;
                         if (Marker == FlowPocMarker.Circle)
                         {
                             SharpDX.Direct2D1.Ellipse ellipse = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
                             RenderTarget.FillEllipse(ellipse, backgroundBrush);
-                            RenderTarget.FillEllipse(ellipse, fills[color]);
-                            RenderTarget.DrawEllipse(ellipse, lines[color], 1.5f);
+                            RenderTarget.FillEllipse(ellipse, markerFill);
+                            RenderTarget.DrawEllipse(ellipse, isOutlier ? textBrush : lines[color], borderWidth);
                             if (isAbsorption)
                                 RenderTarget.DrawEllipse(new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), ringRadius, ringRadius), absorptionBrush, 2.5f);
                         }
@@ -380,15 +384,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         {
                             SharpDX.RectangleF square = new SharpDX.RectangleF(x - radius, y - radius, radius * 2, radius * 2);
                             RenderTarget.FillRectangle(square, backgroundBrush);
-                            RenderTarget.FillRectangle(square, fills[color]);
-                            RenderTarget.DrawRectangle(square, lines[color], 1.5f);
+                            RenderTarget.FillRectangle(square, markerFill);
+                            RenderTarget.DrawRectangle(square, isOutlier ? textBrush : lines[color], borderWidth);
                             if (isAbsorption)
                                 RenderTarget.DrawRectangle(new SharpDX.RectangleF(x - ringRadius, y - ringRadius, ringRadius * 2, ringRadius * 2), absorptionBrush, 2.5f);
                         }
                         double labelValue = PocLabel == FlowPocLabel.Delta
                             ? Math.Abs(pocBuys.GetValueAt(barIndex) - pocSells.GetValueAt(barIndex))
                             : volume;
-                        DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, textBrush);
+                        DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, isOutlier ? backgroundBrush : textBrush);
                     }
                     else
                     {
@@ -459,6 +463,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(1, 50)]
         [Display(Name = "Absorption edge (%)", Description = "How close to the candle's low (or high) the POC must sit, as a share of the candle's range.", Order = 8, GroupName = "1. POC")]
         public int AbsorptionEdgePercent { get; set; }
+
+        [Range(0, 50)]
+        [Display(Name = "Outlier multiplier", Description = "A POC at least this many times the baseline is drawn solid with a thick border. 0 turns it off.", Order = 11, GroupName = "1. POC")]
+        public double OutlierMultiplier { get; set; }
 
         [Display(Name = "Marker", Order = 1, GroupName = "2. Appearance")]
         public FlowPocMarker Marker { get; set; }
