@@ -224,9 +224,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double left = Math.Max(0, Math.Min(mouse.X - buttonPanel.ActualWidth / 2, host.ActualWidth - buttonPanel.ActualWidth));
             // Opens just below the cursor, or just above it near the bottom edge, so a reflex
             // click lands on the chart, never on a button.
-            double top = mouse.Y + 12 + buttonPanel.ActualHeight <= host.ActualHeight
-                ? mouse.Y + 12
-                : Math.Max(0, mouse.Y - 12 - buttonPanel.ActualHeight);
+            bool fitsBelow = mouse.Y + 12 + buttonPanel.ActualHeight <= host.ActualHeight;
+            bool fitsAbove = mouse.Y - 12 - buttonPanel.ActualHeight >= 0;
+            double top = fitsBelow ? mouse.Y + 12 : Math.Max(0, mouse.Y - 12 - buttonPanel.ActualHeight);
+            if (!fitsBelow && !fitsAbove)
+                left = mouse.X + 12 + buttonPanel.ActualWidth <= host.ActualWidth
+                    ? mouse.X + 12
+                    : Math.Max(0, mouse.X - 12 - buttonPanel.ActualWidth);
             buttonPanel.Margin = new Thickness(left, top, 0, 0);
             RefreshButtons();
             buttonPanel.Visibility = Visibility.Visible;
@@ -418,6 +422,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 int quantity = Math.Max(1, chartTrader.Quantity);
                 string atmTemplate = chartTrader.AtmStrategy != null ? chartTrader.AtmStrategy.Template : null;
+                if (chartTrader.AtmStrategy != null && string.IsNullOrEmpty(atmTemplate))
+                {
+                    Log("Better Trading Panel: ChartTrader shows an ATM without a template name; order not placed, so it cannot go in without a stop.", NinjaTrader.Cbi.LogLevel.Warning);
+                    return;
+                }
                 // StartAtmStrategy only attaches the template to an entry named exactly "Entry".
                 Order entry = account.CreateOrder(Instrument, isBuy ? OrderAction.Buy : OrderAction.SellShort, OrderType.Market,
                     OrderEntry.Manual, TimeInForce.Day, quantity, 0, 0, string.Empty, "Entry", Core.Globals.MaxDate, null);
