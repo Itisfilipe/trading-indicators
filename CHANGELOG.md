@@ -12,11 +12,6 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - The calendar table and the macro bands no longer block click-and-drag
   panning of the chart.
 
-### Time-Based Price Levels
-- No more stacked levels at the Sunday open: a weekend gap no longer
-  captures every slot on the first Sunday candle (the daily break still
-  does, on purpose).
-
 ### ChartTrading
 - The "Stops to BE" button is gone; Better Trading Panel has it.
 - A click only places an order if the modifier is still held at the

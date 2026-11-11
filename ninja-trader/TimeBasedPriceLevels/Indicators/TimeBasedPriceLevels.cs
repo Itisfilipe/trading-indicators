@@ -473,9 +473,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             DateTime slotMoment = day.AddMinutes(slot.MinutesOfDay);
             if (slot.LastCapturedDate == day || tzTime <= slotMoment || previousTzTime > slotMoment)
                 return;
-            // The daily break is captured on purpose; a weekend gap would put every slot on the Sunday open.
-            if (previousTzTime != DateTime.MaxValue && (tzTime - previousTzTime).TotalHours > 12)
-                return;
 
             slot.LastCapturedDate = day;
             slot.Records.Add(new LevelRecord

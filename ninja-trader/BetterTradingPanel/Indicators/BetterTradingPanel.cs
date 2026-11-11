@@ -34,6 +34,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Threading.DispatcherTimer refreshTimer;
         private Window chartWindow;
         private bool handlersAttached;
+        private Order lastEntry;
+        private bool lastEntryIsBuy;
+        private DateTime lastEntryTime;
 
         protected override void OnStateChange()
         {
@@ -116,7 +119,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 flattenButton = MakeButton("FLATTEN", Brushes.DarkOrange, OnFlattenClicked);
                 breakevenButton = MakeButton("Stops to BE", Brushes.SeaGreen, OnBreakevenClicked);
 
-                buttonPanel = new System.Windows.Controls.Grid();
+                // A transparent background keeps the gaps between buttons inside the panel for MouseLeave.
+                buttonPanel = new System.Windows.Controls.Grid { Background = Brushes.Transparent };
                 buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
                 buttonPanel.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
                 for (int row = 0; row < 3; row++)
@@ -218,8 +222,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             FrameworkElement host = buttonPanel.Parent as FrameworkElement ?? ChartControl;
             System.Windows.Point mouse = Mouse.GetPosition(host);
             double left = Math.Max(0, Math.Min(mouse.X - buttonPanel.ActualWidth / 2, host.ActualWidth - buttonPanel.ActualWidth));
-            // Opens just below the cursor so a reflex click lands on the chart, never on a button.
-            double top = Math.Max(0, Math.Min(mouse.Y + 12, host.ActualHeight - buttonPanel.ActualHeight));
+            // Opens just below the cursor, or just above it near the bottom edge, so a reflex
+            // click lands on the chart, never on a button.
+            double top = mouse.Y + 12 + buttonPanel.ActualHeight <= host.ActualHeight
+                ? mouse.Y + 12
+                : Math.Max(0, mouse.Y - 12 - buttonPanel.ActualHeight);
             buttonPanel.Margin = new Thickness(left, top, 0, 0);
             RefreshButtons();
             buttonPanel.Visibility = Visibility.Visible;
@@ -249,7 +256,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Space || buttonPanel == null || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
+            if (e.Key != Key.Space || buttonPanel == null || !ChartControl.IsVisible || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
                 return;
             if (!e.IsRepeat)
                 ShowAtMouse();
@@ -258,7 +265,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void OnKeyUp(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Space || Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
+            if (e.Key != Key.Space || buttonPanel == null || buttonPanel.Visibility != Visibility.Visible)
                 return;
             HideIfAtMouse();
             e.Handled = true;
@@ -284,10 +291,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             Position position = account != null ? OpenPosition(account) : null;
             double breakeven;
-            SetEnabled(buyButton, account != null && !IsPosition(position, MarketPosition.Short));
-            SetEnabled(sellButton, account != null && !IsPosition(position, MarketPosition.Long));
+            SetEnabled(buyButton, account != null && !IsPosition(position, MarketPosition.Short) && !OppositeEntryInFlight(true));
+            SetEnabled(sellButton, account != null && !IsPosition(position, MarketPosition.Long) && !OppositeEntryInFlight(false));
             SetEnabled(flattenButton, account != null && (position != null || HasWorkingOrders(account)));
             SetEnabled(breakevenButton, position != null && StopsToMove(account, position, out breakeven).Count > 0);
+        }
+
+        // Until a market entry's fill shows up in the position, an opposite click would see a flat
+        // account and start a second bracket on the other side.
+        private bool OppositeEntryInFlight(bool isBuy)
+        {
+            if (lastEntry == null || lastEntryIsBuy == isBuy)
+                return false;
+            if (lastEntry.OrderState == OrderState.Cancelled || lastEntry.OrderState == OrderState.Rejected)
+                return false;
+            return DateTime.UtcNow - lastEntryTime < TimeSpan.FromSeconds(3);
         }
 
         private static bool IsPosition(Position position, MarketPosition side)
@@ -390,9 +408,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // An opposite order would leave the open position's bracket working; FLATTEN closes instead.
             Position position = OpenPosition(account);
-            if (IsPosition(position, isBuy ? MarketPosition.Short : MarketPosition.Long))
+            if (IsPosition(position, isBuy ? MarketPosition.Short : MarketPosition.Long) || OppositeEntryInFlight(isBuy))
             {
-                Log("Better Trading Panel: position is open the other way; use FLATTEN to close it.", NinjaTrader.Cbi.LogLevel.Warning);
+                Log("Better Trading Panel: a position or an entry is open the other way; use FLATTEN to close it.", NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
 
@@ -403,6 +421,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // StartAtmStrategy only attaches the template to an entry named exactly "Entry".
                 Order entry = account.CreateOrder(Instrument, isBuy ? OrderAction.Buy : OrderAction.SellShort, OrderType.Market,
                     OrderEntry.Manual, TimeInForce.Day, quantity, 0, 0, string.Empty, "Entry", Core.Globals.MaxDate, null);
+                lastEntry = entry;
+                lastEntryIsBuy = isBuy;
+                lastEntryTime = DateTime.UtcNow;
                 if (string.IsNullOrEmpty(atmTemplate))
                     account.Submit(new[] { entry });
                 else

@@ -389,9 +389,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   Space while the key is held (Space typed in a text box is left alone).
 - A button dims when it has nothing to do: no ChartTrader account, no
   position or working order to flatten, no stop short of breakeven. With a
-  position open only the same-direction market button stays lit: an
-  opposite order would leave the position's bracket working, so close
-  with FLATTEN.
+  position open, or for 3 seconds after a market entry, only the
+  same-direction market button stays lit: an opposite order would leave
+  the position's bracket working, so close with FLATTEN.
 - BUY/SELL MKT send a market order for ChartTrader's quantity on its
   account, with the ATM strategy selected in ChartTrader; with none
   selected the order goes in without a stop.

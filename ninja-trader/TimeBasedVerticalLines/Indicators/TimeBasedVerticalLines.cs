@@ -394,7 +394,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (gaps.Count == 0)
                 return 0;
             gaps.Sort();
-            return gaps[gaps.Count / 2];
+            double median = gaps[gaps.Count / 2];
+            if (median > 0)
+                return median;
+            // Renko and tick bars can share timestamps; fall back to the average spacing.
+            return (Bars.GetTime(Bars.Count - 1) - Bars.GetTime(Bars.Count - 1 - gaps.Count)).TotalMilliseconds / gaps.Count;
         }
 
         private double XForTime(ChartControl chartControl, DateTime chartZoneTime, DateTime lastBarTime, double lastBarX, double pixelsPerMs)
