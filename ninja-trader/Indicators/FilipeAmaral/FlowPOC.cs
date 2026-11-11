@@ -122,7 +122,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Marker = FlowPocMarker.Square;
                 MarkerSize = 18;
                 FillOpacity = 40;
-                ShowBarStats = true;
+                ShowBarStats = false;
 
                 BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;

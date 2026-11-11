@@ -477,7 +477,8 @@ the two count toward volume only.
   through its price, checked at each candle close; "Show touched lines"
   keeps the ended ones up to the touching candle, and the buyers' and
   sellers' lines each take their own color, dash, width and opacity.
-  Each candle's volume and delta print at its opening end: above a
+  "Show volume and delta" (off by default) prints each candle's volume and
+  delta at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
   candles in a trend. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"

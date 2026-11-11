@@ -58,7 +58,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 - Flow Big Trades (new): large aggressive market orders as bubbles, one per
   price, rebuilt from their fills, sized by lots, with a manual lot filter or an automatic
   one that keeps the largest orders the chart has seen.
-- Flow POC squares are a little larger by default (marker size 18).
+- Flow POC squares are a little larger by default (marker size 18), and
+  the per-candle volume and delta are hidden by default.
 - Flow POC outliers: a POC at least 3 times the average ("Outlier
   multiplier", 0 = off) is drawn 30% larger, solid, with a thick border;
   size, fill and border are settings.
