@@ -271,7 +271,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // bar before it straddled the reset time.
             DateTime currentStamp = NewYorkTime(barIndex);
             DateTime resetMoment = currentStamp.Date + resetTimeOfDay;
-            if (currentStamp <= resetMoment || resetMoment == lastResetMoment)
+            // A time bar's stamp is its end, so one ending exactly at the reset is still before it.
+            bool pastReset = Bars.BarsType.IsTimeBased ? currentStamp > resetMoment : currentStamp >= resetMoment;
+            if (!pastReset || resetMoment == lastResetMoment)
                 return false;
             lastResetMoment = resetMoment;
             return true;
