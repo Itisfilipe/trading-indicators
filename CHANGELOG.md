@@ -5,6 +5,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-11
 
+### Repository layout
+- `ninja-trader/` now mirrors `Documents/NinjaTrader 8/`: copy its `bin` and
+  `templates` folders there to install everything. Files live in
+  `FilipeAmaral` subfolders; delete older copies left directly in
+  `Indicators/`, `DrawingTools/`, `BarsTypes/` or `ChartStyles/` first.
+
 ### More review fixes
 - ChartTrading: raising a resting entry's quantity on the chart now gets
   stops and targets for the extra contracts (they go to the last bracket

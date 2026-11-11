@@ -9,7 +9,10 @@ Trading indicators for three platforms, one folder each:
 - `ninja-trader/` — NinjaTrader 8, C# (NinjaScript). Indicators, a custom bars
   type + chart style (RenkoWicks), and the ChartTrading click-to-trade tool.
   Design decisions live in commit messages and code comments; features and
-  usage for every indicator live in the root `README.md`.
+  usage for every indicator live in the root `README.md`. The folder mirrors
+  `Documents/NinjaTrader 8/` so the owner installs by copying `bin/` and
+  `templates/` over: every `.cs` file lives in
+  `ninja-trader/bin/Custom/<Indicators|DrawingTools|BarsTypes|ChartStyles>/FilipeAmaral/`.
 - `profit-chart/` — Nelogica Profit Chart, NTSL. Has its own `CLAUDE.md` scoped
   to NTSL development.
 - `tradingview/` — Pine Script files, self-contained.
