@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- ChartTrading: when the position is closed or reversed by an order from
+  elsewhere (a market order, Close all), its leftover stops and targets are
+  cancelled instead of staying on the chart where they could open a new
+  trade.
 - Breakeven Stops: large Close half and Close all buttons under Stops to
   BE. Close half exits half the position (one contract closes outright)
   and shrinks stops and targets to the size left.

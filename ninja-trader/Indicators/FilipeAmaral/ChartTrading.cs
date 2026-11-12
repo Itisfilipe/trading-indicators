@@ -211,6 +211,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public int[] PairAppliedQuantity;
             public Order[] StopOrders;
             public Order[] TargetOrders;
+            // Set once the position these exits close is gone; EnsureExits then
+            // places nothing more for this commit.
+            public bool Orphaned;
 
             public int PairDesiredQuantity(int pairIndex, int filled)
             {
@@ -1049,6 +1052,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // still on it -- the shipped market-analyzer columns key off Operation for
             // exactly this reason. MarketPosition alone would read as still open.
             bool nowFlat = e.Operation == Operation.Remove || e.MarketPosition == MarketPosition.Flat;
+            List<Order> orphanedExits = new List<Order>();
 
             lock (orderLock)
             {
@@ -1063,9 +1067,51 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 bool flipped = currentMarketPosition != MarketPosition.Flat && e.MarketPosition != currentMarketPosition;
                 if (nowFlat || flipped)
                     openingAtrStopTicks = 0;
+                if (nowFlat || flipped)
+                    CollectOrphanedExits(nowFlat ? MarketPosition.Flat : e.MarketPosition, orphanedExits);
                 currentMarketPosition = nowFlat ? MarketPosition.Flat : e.MarketPosition;
                 currentAvgPrice = nowFlat ? 0 : e.AveragePrice;
                 positionCacheGeneration++;
+            }
+
+            if (orphanedExits.Count > 0)
+            {
+                ((Account)sender).Cancel(orphanedExits);
+                Log("ChartTrading: position on " + Instrument.FullName + " closed or reversed outside its brackets; cancelled "
+                    + orphanedExits.Count + " leftover stop/target order(s).", NinjaTrader.Cbi.LogLevel.Information);
+            }
+        }
+
+        /// <summary>
+        /// Exits of finished entries that no longer close anything: all of them
+        /// once flat, and after a reversal the ones on the new position's side,
+        /// which would add to it instead of closing it. Their commits are retired.
+        /// Caller holds orderLock.
+        /// </summary>
+        private void CollectOrphanedExits(MarketPosition newPosition, List<Order> orphanedExits)
+        {
+            for (int i = activeCommits.Count - 1; i >= 0; i--)
+            {
+                BracketCommit commit = activeCommits[i];
+                if (!Order.IsTerminalState(commit.Entry.OrderState))
+                    continue;
+                bool exitBuys = commit.ExitAction == OrderAction.Buy || commit.ExitAction == OrderAction.BuyToCover;
+                bool exitAddsToPosition = exitBuys ? newPosition == MarketPosition.Long : newPosition == MarketPosition.Short;
+                if (newPosition != MarketPosition.Flat && !exitAddsToPosition)
+                    continue;
+
+                commit.Orphaned = true;
+                activeCommits.RemoveAt(i);
+                if (commit.StopOrders == null)
+                    continue;
+                for (int p = 0; p < commit.StopOrders.Length; p++)
+                {
+                    foreach (Order exit in new[] { commit.StopOrders[p], commit.TargetOrders[p] })
+                    {
+                        if (exit != null && !Order.IsTerminalState(exit.OrderState))
+                            orphanedExits.Add(exit);
+                    }
+                }
             }
         }
 
@@ -1222,6 +1268,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 int filled;
                 lock (orderLock)
                 {
+                    if (commit.Orphaned)
+                        return;
                     filled = commit.CoveredQuantity;
 
                     // Resolve the exit prices from the actual fill, once, before any
