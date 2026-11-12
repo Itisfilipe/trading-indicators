@@ -474,10 +474,9 @@ the two count toward volume only.
   window, drawn across that window's candles. Windows align to the
   exchange's clock (:00, :05, ...; 2h, 4h and 12h from exchange midnight)
   and never span two sessions; Session gives one POC per trading session.
-  Average and outlier comparisons then run window against window. Minute
-  periods need a minute chart whose candle divides the period evenly
-  (1-minute always works); otherwise, and on tick, volume or renko charts,
-  the indicator behaves as Chart. Add it twice to see both.
+  Average and outlier comparisons then run window against window. The
+  chart's candle must divide the period evenly (a 1-minute chart takes any
+  period); otherwise it behaves as Chart. Add it twice to see both.
   "Show volume and delta" (off by default) prints each candle's volume and
   delta at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
