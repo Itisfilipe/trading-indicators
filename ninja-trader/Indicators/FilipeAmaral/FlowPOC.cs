@@ -48,9 +48,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Minutes10,
         Minutes15,
         Minutes30,
-        Minutes60,
-        Minutes120,
-        Minutes240,
+        Hours1,
+        Hours2,
+        Hours4,
         Hours12,
         Session
     }
@@ -206,9 +206,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 case FlowPocPeriod.Minutes10: return 10;
                 case FlowPocPeriod.Minutes15: return 15;
                 case FlowPocPeriod.Minutes30: return 30;
-                case FlowPocPeriod.Minutes60: return 60;
-                case FlowPocPeriod.Minutes120: return 120;
-                case FlowPocPeriod.Minutes240: return 240;
+                case FlowPocPeriod.Hours1: return 60;
+                case FlowPocPeriod.Hours2: return 120;
+                case FlowPocPeriod.Hours4: return 240;
                 case FlowPocPeriod.Hours12: return 720;
                 case FlowPocPeriod.Session: return 1440;
                 default: return 0;
