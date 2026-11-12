@@ -5,6 +5,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- Flow POC: new "POC period" setting shows a longer timeframe's POC on a
+  faster chart (2 minutes up to 12 hours, or one per session), drawn
+  across the candles of each window.
 - ChartTrading: when the position is closed or reversed by an order from
   elsewhere (a market order, Close all), its leftover stops and targets are
   cancelled instead of staying on the chart where they could open a new

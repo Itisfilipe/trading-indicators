@@ -39,10 +39,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         SameTimeOfDay
     }
 
+    public enum FlowPocPeriod
+    {
+        Chart,
+        Minutes2,
+        Minutes3,
+        Minutes5,
+        Minutes10,
+        Minutes15,
+        Minutes30,
+        Minutes60,
+        Minutes120,
+        Minutes240,
+        Hours12,
+        Session
+    }
+
     /// <summary>
     /// Marks each candle's point of control (the most traded price) colored by
     /// the aggressor that dominated it, labels the strong ones with their
-    /// contract count, and prints each candle's volume and delta.
+    /// contract count, and prints each candle's volume and delta. With a POC
+    /// period set, the candles are grouped into clock-aligned windows of that
+    /// many minutes and each window gets one POC spanning its candles.
     /// </summary>
     public class FlowPOC : Indicator
     {
@@ -54,7 +72,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         private readonly Dictionary<double, LevelVolume> levels = new Dictionary<double, LevelVolume>();
-        private int levelsBar = -1;
+        private long levelsKey = -1;
+        private int periodMinutes;
         private double pocKey;
         private double runningVolume;
         private double runningDelta;
@@ -67,6 +86,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> barVolume;
         private Series<double> barDelta;
         private Series<double> slotBaseline;
+        private Series<int> groupKeys;
 
         private const int MinimumSessions = 3;
         private bool useTimeOfDay;
@@ -109,6 +129,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MarkerSize = 18;
                 FillOpacity = 40;
                 ShowBarStats = false;
+                PocPeriod = FlowPocPeriod.Chart;
 
                 BuyColor = Brushes.DodgerBlue;
                 SellColor = Brushes.Crimson;
@@ -127,9 +148,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 barVolume = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 barDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 slotBaseline = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                groupKeys = new Series<int>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
             {
+                periodMinutes = PeriodMinutes(PocPeriod);
+                bool chartIsMinutes = Bars.BarsPeriod.BarsPeriodType == BarsPeriodType.Minute;
+                if (!Bars.BarsType.IsIntraday || (chartIsMinutes && Bars.BarsPeriod.Value >= periodMinutes))
+                    periodMinutes = 0;
                 useTimeOfDay = StrengthMode == FlowPocStrength.SameTimeOfDay && Bars.BarsType.IsTimeBased;
                 if (StrengthMode == FlowPocStrength.SameTimeOfDay && !useTimeOfDay)
                     Draw.TextFixed(this, "FlowPocStrength", "Flow POC: same time of day needs time-based bars; using recent candles", TextPosition.TopLeft);
@@ -142,20 +168,100 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnBarUpdate()
         {
-            if (!useTimeOfDay || !IsFirstTickOfBar)
+            if (!IsFirstTickOfBar)
                 return;
 
-            if (CurrentBar > 0 && pocVolume.IsValidDataPoint(1))
-                SlotVolumes(ExchangeTimeOfDay(1)).Add(PocStrength(CurrentBar - 1));
+            groupKeys[0] = NewGroupKey();
 
-            List<double> history = SlotVolumes(ExchangeTimeOfDay(0));
+            // A candle with no trades yet still belongs to its window's POC.
+            bool continuesGroup = CurrentBar > 0 && !IsGroupEnd(CurrentBar - 1);
+            if (continuesGroup && pocVolume.IsValidDataPoint(1) && !pocVolume.IsValidDataPoint(0))
+            {
+                pocPrice[0] = pocPrice[1];
+                pocVolume[0] = pocVolume[1];
+                pocBuys[0] = pocBuys[1];
+                pocSells[0] = pocSells[1];
+                barVolume[0] = barVolume[1];
+                barDelta[0] = barDelta[1];
+            }
+
+            if (!useTimeOfDay)
+                return;
+
+            if (CurrentBar > 0 && !continuesGroup && pocVolume.IsValidDataPoint(1))
+                SlotVolumes(GroupTimeOfDay(CurrentBar - 1)).Add(PocStrength(CurrentBar - 1));
+
+            List<double> history = SlotVolumes(GroupTimeOfDay(CurrentBar));
             if (history.Count >= MinimumSessions)
                 slotBaseline[0] = MedianOfLast(history, SessionsBack);
         }
 
-        private TimeSpan ExchangeTimeOfDay(int barsAgo)
+        private static int PeriodMinutes(FlowPocPeriod period)
         {
-            return TimeZoneInfo.ConvertTime(Time[barsAgo], Core.Globals.GeneralOptions.TimeZoneInfo, Bars.TradingHours.TimeZoneInfo).TimeOfDay;
+            switch (period)
+            {
+                case FlowPocPeriod.Minutes2: return 2;
+                case FlowPocPeriod.Minutes3: return 3;
+                case FlowPocPeriod.Minutes5: return 5;
+                case FlowPocPeriod.Minutes10: return 10;
+                case FlowPocPeriod.Minutes15: return 15;
+                case FlowPocPeriod.Minutes30: return 30;
+                case FlowPocPeriod.Minutes60: return 60;
+                case FlowPocPeriod.Minutes120: return 120;
+                case FlowPocPeriod.Minutes240: return 240;
+                case FlowPocPeriod.Hours12: return 720;
+                case FlowPocPeriod.Session: return 1440;
+                default: return 0;
+            }
+        }
+
+        // Bars are stamped with their close time, so the tick before it places
+        // a candle closing on the boundary in the window it actually traded in.
+        private DateTime WindowStart(int barIndex)
+        {
+            long barTicks = Bars.GetTime(barIndex).AddTicks(-1).Ticks;
+            long periodTicks = TimeSpan.FromMinutes(periodMinutes).Ticks;
+            return new DateTime(barTicks - barTicks % periodTicks);
+        }
+
+        /// <summary>
+        /// The current candle's group: its own index on Chart, its window's start
+        /// in minutes for a minute period, the session's first candle for Session.
+        /// </summary>
+        private int NewGroupKey()
+        {
+            if (periodMinutes == 0)
+                return CurrentBar;
+            if (PocPeriod == FlowPocPeriod.Session)
+                return CurrentBar == 0 || Bars.IsFirstBarOfSession ? CurrentBar : groupKeys[1];
+            return (int)(WindowStart(CurrentBar).Ticks / TimeSpan.TicksPerMinute);
+        }
+
+        private int GroupKey(int barIndex)
+        {
+            return groupKeys.GetValueAt(barIndex);
+        }
+
+        private bool IsGroupEnd(int barIndex)
+        {
+            return periodMinutes == 0 || barIndex + 1 >= Bars.Count || GroupKey(barIndex + 1) != GroupKey(barIndex);
+        }
+
+        private int GroupStart(int barIndex)
+        {
+            int start = barIndex;
+            long key = GroupKey(barIndex);
+            while (start > 0 && GroupKey(start - 1) == key)
+                start--;
+            return start;
+        }
+
+        private TimeSpan GroupTimeOfDay(int barIndex)
+        {
+            if (PocPeriod == FlowPocPeriod.Session && periodMinutes > 0)
+                return TimeSpan.Zero;
+            DateTime groupTime = periodMinutes == 0 ? Bars.GetTime(barIndex) : WindowStart(barIndex);
+            return TimeZoneInfo.ConvertTime(groupTime, Core.Globals.GeneralOptions.TimeZoneInfo, Bars.TradingHours.TimeZoneInfo).TimeOfDay;
         }
 
         private List<double> SlotVolumes(TimeSpan timeOfDay)
@@ -185,10 +291,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
 
-            if (CurrentBar != levelsBar)
+            if (!groupKeys.IsValidDataPoint(0))
+                groupKeys[0] = NewGroupKey();
+            long groupKey = GroupKey(CurrentBar);
+            if (groupKey != levelsKey)
             {
                 levels.Clear();
-                levelsBar = CurrentBar;
+                levelsKey = groupKey;
                 pocKey = double.NaN;
                 runningVolume = 0;
                 runningDelta = 0;
@@ -239,15 +348,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private double AveragePocStrength(int barIndex)
         {
-            if (barIndex < AverageBars)
-                return 0;
-
             double sum = 0;
-            for (int index = barIndex - AverageBars; index < barIndex; index++)
+            int previousGroupEnd = GroupStart(barIndex) - 1;
+            for (int counted = 0; counted < AverageBars; counted++)
             {
-                if (!pocVolume.IsValidDataPointAt(index))
+                if (previousGroupEnd < 0 || !pocVolume.IsValidDataPointAt(previousGroupEnd))
                     return 0;
-                sum += PocStrength(index);
+                sum += PocStrength(previousGroupEnd);
+                previousGroupEnd = GroupStart(previousGroupEnd) - 1;
             }
             return sum / AverageBars;
         }
@@ -259,11 +367,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return slotBaseline.IsValidDataPointAt(barIndex) ? slotBaseline.GetValueAt(barIndex) : 0;
         }
 
-        private bool IsAbsorptionPoc(int barIndex, int aggressorSide)
+        private double GroupHigh(int startIndex, int endIndex)
+        {
+            double high = Bars.GetHigh(startIndex);
+            for (int index = startIndex + 1; index <= endIndex; index++)
+                high = Math.Max(high, Bars.GetHigh(index));
+            return high;
+        }
+
+        private double GroupLow(int startIndex, int endIndex)
+        {
+            double low = Bars.GetLow(startIndex);
+            for (int index = startIndex + 1; index <= endIndex; index++)
+                low = Math.Min(low, Bars.GetLow(index));
+            return low;
+        }
+
+        private bool IsAbsorptionPoc(int startIndex, int barIndex, int aggressorSide)
         {
             bool isClosed = barIndex < Bars.Count - 1 || State != State.Realtime;
-            double high = Bars.GetHigh(barIndex);
-            double low = Bars.GetLow(barIndex);
+            double high = GroupHigh(startIndex, barIndex);
+            double low = GroupLow(startIndex, barIndex);
             if (!isClosed || high <= low)
                 return false;
 
@@ -352,12 +476,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 float rowHeight = (float)LabelFont.Size * 1.4f;
                 double groupOffset = (PriceGrouping - 1) * TickSize / 2;
 
-                for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
+                int lastIndex = ChartBars.ToIndex;
+                while (!IsGroupEnd(lastIndex))
+                    lastIndex++;
+
+                for (int barIndex = ChartBars.FromIndex; barIndex <= lastIndex; barIndex++)
                 {
-                    if (!pocVolume.IsValidDataPointAt(barIndex))
+                    if (!pocVolume.IsValidDataPointAt(barIndex) || !IsGroupEnd(barIndex))
                         continue;
 
-                    float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
+                    int startIndex = GroupStart(barIndex);
+                    float left = chartControl.GetXByBarIndex(ChartBars, startIndex) - barWidth / 2;
+                    float right = chartControl.GetXByBarIndex(ChartBars, barIndex) + barWidth / 2;
+                    float x = (left + right) / 2;
                     float y = chartScale.GetYByValue(pocPrice.GetValueAt(barIndex) + groupOffset);
                     double volume = pocVolume.GetValueAt(barIndex);
                     double strength = PocStrength(barIndex);
@@ -371,7 +502,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         bool isOutlier = OutlierMultiplier > 0 && strength >= baseline * OutlierMultiplier;
                         float radius = MarkerSize / 2f * growth * (isOutlier ? OutlierSizePercent / 100f : 1f);
                         float ringRadius = radius + 4;
-                        bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(barIndex, aggressorSide);
+                        bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(startIndex, barIndex, aggressorSide);
                         bool solid = isOutlier && OutlierSolidFill;
                         SharpDX.Direct2D1.Brush markerFill = solid ? lines[color] : fills[color];
                         float borderWidth = isOutlier ? OutlierBorderWidth : 1.5f;
@@ -402,16 +533,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     }
                     else
                     {
-                        RenderTarget.DrawLine(new SharpDX.Vector2(x - barWidth / 2 - 2, y), new SharpDX.Vector2(x + barWidth / 2 + 2, y), lines[color], 3f);
+                        RenderTarget.DrawLine(new SharpDX.Vector2(left - 2, y), new SharpDX.Vector2(right + 2, y), lines[color], 3f);
                     }
 
                     if (ShowBarStats)
                     {
                         double delta = barDelta.GetValueAt(barIndex);
-                        bool closedDown = Bars.GetClose(barIndex) < Bars.GetOpen(barIndex);
+                        bool closedDown = Bars.GetClose(barIndex) < Bars.GetOpen(startIndex);
                         float volumeY = closedDown
-                            ? chartScale.GetYByValue(Bars.GetHigh(barIndex)) - 4 - rowHeight / 2
-                            : chartScale.GetYByValue(Bars.GetLow(barIndex)) + 4 + rowHeight / 2;
+                            ? chartScale.GetYByValue(GroupHigh(startIndex, barIndex)) - 4 - rowHeight / 2
+                            : chartScale.GetYByValue(GroupLow(startIndex, barIndex)) + 4 + rowHeight / 2;
                         float deltaY = closedDown ? volumeY - rowHeight : volumeY + rowHeight;
                         DrawCenteredText(FormatVolume(barVolume.GetValueAt(barIndex)), textFormat, x, volumeY, textBrush);
                         DrawCenteredText((delta > 0 ? "+" : "") + delta.ToString("0"), textFormat, x, deltaY,
@@ -433,6 +564,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         #region Properties
+
+        [Display(Name = "POC period", Description = "Chart: one POC per candle. A longer period: one POC per clock-aligned window of that length, spanning its candles (a 5-minute POC on a 1-minute chart). Session: one POC per trading session. A period at or below the chart's candle falls back to Chart.", Order = 0, GroupName = "2. POC")]
+        public FlowPocPeriod PocPeriod { get; set; }
 
         [Range(1, 100), NinjaScriptProperty]
         [Display(Name = "Price grouping (ticks)", Description = "Ticks merged into one price level before finding the POC.", Order = 1, GroupName = "2. POC")]

@@ -469,6 +469,13 @@ the two count toward volume only.
   default; 0 turns it off) — is drawn larger, solid and with a thick border
   ("Outlier size" 130%, "Outlier solid fill" on, "Outlier border width" 3) so the
   rare very large POCs stand out.
+  "POC period" (Chart by default) shows a longer timeframe's POC on a
+  faster chart: at 5 minutes, a 1-minute chart gets one POC per 5-minute
+  window, drawn across that window's candles. Windows align to the clock
+  (:00, :05, ...); 2h, 4h and 12h windows count from midnight, and Session
+  gives one POC per trading session. Average and outlier comparisons then
+  run window against window. A period not longer than the chart's candles
+  behaves as Chart. Add the indicator twice to see both.
   "Show volume and delta" (off by default) prints each candle's volume and
   delta at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
