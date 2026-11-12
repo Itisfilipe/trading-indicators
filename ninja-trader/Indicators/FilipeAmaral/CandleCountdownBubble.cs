@@ -21,13 +21,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     {
         private System.Windows.Threading.DispatcherTimer refreshTimer;
 
-        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
-        {
-            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
-            brush.Freeze();
-            return brush;
-        }
-
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -40,7 +33,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
                 IsSuspendedWhileInactive = true;
 
-                BoxColor = Rgb(0x6B, 0x6B, 0x6B);
+                BoxColor = System.Windows.Media.Brushes.DimGray;
                 BoxOpacity = 90;
                 TextColor = System.Windows.Media.Brushes.White;
                 LabelFont = new SimpleFont("Arial", 22);
@@ -48,7 +41,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.Historical)
             {
-                if (refreshTimer == null && ChartControl != null)
+                if (refreshTimer == null && ChartControl != null && Bars.BarsPeriod.BarsPeriodType == BarsPeriodType.Minute)
                 {
                     ChartControl.Dispatcher.InvokeAsync(() =>
                     {
@@ -126,7 +119,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RadiusX = height / 5,
                     RadiusY = height / 5
                 };
-                RenderTarget.FillRoundedRectangle(box, boxBrush);
+                RenderTarget.FillRoundedRectangle(ref box, boxBrush);
                 RenderTarget.DrawTextLayout(new SharpDX.Vector2(left + paddingX, top + paddingY), layout, textBrush,
                     SharpDX.Direct2D1.DrawTextOptions.NoSnap);
             }
