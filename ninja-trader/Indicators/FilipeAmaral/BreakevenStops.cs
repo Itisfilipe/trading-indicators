@@ -396,7 +396,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position position = OpenPosition(account);
             if (position != null)
             {
-                List<Order> exits = ExitOrders(account, position);
+                // ChartTrading resizes its own brackets to the position; cutting them here too could cut twice.
+                List<Order> exits = ExitOrders(account, position).Where(o => o.Name != "CT Stop" && o.Name != "CT Target").ToList();
                 List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
                 List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
                 bool oversized = stops.Sum(o => OpenQuantity(o)) > position.Quantity || targets.Sum(o => OpenQuantity(o)) > position.Quantity;
