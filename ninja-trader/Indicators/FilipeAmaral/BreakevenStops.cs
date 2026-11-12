@@ -29,8 +29,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Threading.DispatcherTimer refreshTimer;
         private bool handlersAttached;
         private static readonly TimeSpan CloseHalfWindow = TimeSpan.FromSeconds(3);
-        private int closeHalfFromQuantity;
-        private DateTime closeHalfTime;
+        private Order closeHalfExit;
+        private DateTime closeHalfEndTime;
         private bool verifyingCloseHalf;
 
         protected override void OnStateChange()
@@ -200,7 +200,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position position = account != null ? OpenPosition(account) : null;
             double breakeven;
             SetEnabled(breakevenButton, position != null && StopsToMove(account, position, out breakeven).Count > 0);
-            SetEnabled(closeHalfButton, position != null && !CloseHalfInFlight(position));
+            SetEnabled(closeHalfButton, position != null && !CloseHalfInFlight());
             SetEnabled(closeAllButton, position != null || (account != null && HasWorkingOrders(account)));
         }
 
@@ -284,13 +284,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// Until the market exit's fill shows up in the position, a second click
-        /// would halve the same size again and could close past flat.
+        /// Until the last Close half exit has ended, a second click would halve a
+        /// size it is still closing and could close past flat.
         /// </summary>
-        private bool CloseHalfInFlight(Position position)
+        private bool CloseHalfInFlight()
         {
-            return position.Quantity == closeHalfFromQuantity
-                && DateTime.UtcNow - closeHalfTime < CloseHalfWindow;
+            return closeHalfExit != null && !Order.IsTerminalState(closeHalfExit.OrderState);
         }
 
         private static int OpenQuantity(Order order)
@@ -339,7 +338,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Log("Breakeven Stops: no position on " + Instrument.FullName + " to halve.", NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
-            if (CloseHalfInFlight(position))
+            if (CloseHalfInFlight())
                 return;
             if (position.Quantity == 1)
             {
@@ -368,8 +367,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Order exit = account.CreateOrder(Instrument, isLong ? OrderAction.Sell : OrderAction.BuyToCover, OrderType.Market,
                     OrderEntry.Manual, TimeInForce.Day, closeQuantity, 0, 0, string.Empty, "Close half", Core.Globals.MaxDate, null);
                 account.Submit(new[] { exit });
-                closeHalfFromQuantity = position.Quantity;
-                closeHalfTime = DateTime.UtcNow;
+                closeHalfExit = exit;
+                closeHalfEndTime = DateTime.MinValue;
                 verifyingCloseHalf = true;
                 Log("Breakeven Stops: closing " + closeQuantity + " of " + position.Quantity + " on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
             }
@@ -380,10 +379,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// For a few seconds after Close half: a resize the broker rejected, or an
-        /// exit that was mid-change when the button was clicked, can leave stops
-        /// larger than the position, so they are cut again. An exit that never
-        /// filled leaves the stops already reduced, which is reported.
+        /// While the Close half exit works and a few seconds after it ends: a
+        /// resize the broker rejected, or an exit that was mid-change when the
+        /// button was clicked, can leave stops larger than the position, so they
+        /// are cut again. An exit that ended short of its quantity leaves the
+        /// stops already reduced, which is reported.
         /// </summary>
         private void VerifyCloseHalf()
         {
@@ -418,11 +418,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
             }
 
-            if (DateTime.UtcNow - closeHalfTime < CloseHalfWindow)
+            if (CloseHalfInFlight())
                 return;
-            verifyingCloseHalf = false;
-            if (position != null && position.Quantity == closeHalfFromQuantity)
-                Log("Breakeven Stops: the Close half exit on " + Instrument.FullName + " has not filled; its stops and targets were already reduced, check them.", NinjaTrader.Cbi.LogLevel.Error);
+            if (closeHalfEndTime == DateTime.MinValue)
+            {
+                closeHalfEndTime = DateTime.UtcNow;
+                if (closeHalfExit.Filled < closeHalfExit.Quantity)
+                    Log("Breakeven Stops: the Close half exit on " + Instrument.FullName + " ended with " + closeHalfExit.Filled + " of " + closeHalfExit.Quantity
+                        + " filled; its stops and targets were already reduced, check them.", NinjaTrader.Cbi.LogLevel.Error);
+            }
+            if (DateTime.UtcNow - closeHalfEndTime >= CloseHalfWindow)
+                verifyingCloseHalf = false;
         }
 
         /// <summary>
