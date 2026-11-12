@@ -5,6 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- ChartTrading: a click that nets an open position and fills in several
+  pieces keeps a stop on the part beyond flat, whatever order NinjaTrader
+  reports the fills and position changes in; exits placed for a fill that
+  only flattened the position are cancelled within about a second, even
+  when no trades print.
 - ChartTrading: a stop the broker refuses (or a stop it refuses to
   enlarge) is placed again once; refused a second time, the contracts it
   should have covered are closed at market and the log says so.

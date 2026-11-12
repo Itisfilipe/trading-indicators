@@ -167,6 +167,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // fill's own position update follows; if that update came first, the fill
         // was flattening, and its exits close nothing or outsize the position.
         private DateTime flatCoverageSince = DateTime.MinValue;
+        private System.Threading.Timer flatCoverageTimer;
         private AutoBreakevenState autoBreakevenState = AutoBreakevenState.Armed;
         private int positionCacheGeneration;
         private bool positionSeedPending;
@@ -562,6 +563,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     subscribedAccount.OrderUpdate -= OnAccountOrderUpdate;
                     subscribedAccount.PositionUpdate -= OnAccountPositionUpdate;
                     subscribedAccount = null;
+                }
+                lock (orderLock)
+                {
+                    if (flatCoverageTimer != null)
+                    {
+                        flatCoverageTimer.Dispose();
+                        flatCoverageTimer = null;
+                    }
                 }
 
                 ChartControl owner = ChartControl;
@@ -1090,6 +1099,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private void ApplyPositionUpdate(Account account, bool nowFlat, MarketPosition marketPosition, int quantity, double averagePrice)
         {
             List<Order> orphanedExits = new List<Order>();
+            List<BracketCommit> slotsToClear = new List<BracketCommit>();
             List<BracketCommit> toGrow = new List<BracketCommit>();
             bool trimNeeded;
 
@@ -1107,7 +1117,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (nowFlat || flipped)
                 {
                     openingAtrStopTicks = 0;
-                    CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits);
+                    CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits, slotsToClear);
                 }
                 // Only a shrinking or reversed position trims exits: a scale-in fill can
                 // reach the exits before its own position update does.
@@ -1128,6 +1138,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             if (nowFlat)
                 SweepLeftoverExits(account, orphanedExits);
+            foreach (BracketCommit commit in slotsToClear)
+                ClearSlots(commit, account);
             if (trimNeeded)
                 ReconcileExits(account);
             foreach (BracketCommit commit in toGrow)
@@ -1144,10 +1156,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// <summary>
         /// Exits that no longer close anything: all of them once flat, and after a
         /// reversal the ones on the new position's side, which would add to it
-        /// instead of closing it. Commits of finished entries are retired.
-        /// Caller holds orderLock.
+        /// instead of closing it. Commits of finished entries are retired; a
+        /// resting entry's commit is kept, its filled lots written off and its
+        /// slots queued for clearing so later fills get fresh pairs. Caller holds
+        /// orderLock and has not yet moved the position cache.
         /// </summary>
-        private void CollectOrphanedExits(MarketPosition newPosition, List<Order> orphanedExits)
+        private void CollectOrphanedExits(MarketPosition newPosition, List<Order> orphanedExits, List<BracketCommit> slotsToClear)
         {
             for (int i = activeCommits.Count - 1; i >= 0; i--)
             {
@@ -1157,9 +1171,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (newPosition != MarketPosition.Flat && !exitAddsToPosition)
                     continue;
 
-                // An entry still resting keeps its commit: the lots filled so far are
-                // written off, and later fills get fresh pairs.
-                bool entryDone = Order.IsTerminalState(commit.Entry.OrderState);
+                // A flat that arrives after this netting entry's later fills were
+                // counted is stale: the lots past the old position opened the new one.
+                bool netting = currentMarketPosition != MarketPosition.Flat && CommitSide(commit) != currentMarketPosition;
+                if (newPosition == MarketPosition.Flat && netting && UncoveredFill(commit) > 0)
+                    continue;
+
+                // A fill not yet counted still needs its bracket, so its commit stays.
+                bool entryDone = Order.IsTerminalState(commit.Entry.OrderState) && commit.CoveredQuantity == commit.Entry.Filled;
                 if (entryDone)
                 {
                     commit.Orphaned = true;
@@ -1168,6 +1187,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 else
                 {
                     commit.OffsetQuantity = commit.CoveredQuantity;
+                    slotsToClear.Add(commit);
                 }
                 if (commit.StopOrders == null)
                     continue;
@@ -1178,15 +1198,41 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (exit != null && !Order.IsTerminalState(exit.OrderState))
                             orphanedExits.Add(exit);
                     }
-                    if (!entryDone)
+                }
+            }
+        }
+
+        /// <summary>
+        /// Empties a kept commit's pair slots as a custom event, serialized with
+        /// EnsureExits, which reads them outside orderLock. Anything an EnsureExits
+        /// queued earlier placed in the meantime is cancelled with them.
+        /// </summary>
+        private void ClearSlots(BracketCommit commit, Account account)
+        {
+            TriggerCustomEvent(o =>
+            {
+                var leftovers = new List<Order>();
+                lock (orderLock)
+                {
+                    if (commit.StopOrders == null)
+                        return;
+                    for (int p = 0; p < commit.StopOrders.Length; p++)
                     {
+                        foreach (Order exit in new[] { commit.StopOrders[p], commit.TargetOrders[p] })
+                        {
+                            if (exit != null && !Order.IsTerminalState(exit.OrderState)
+                                && exit.OrderState != OrderState.CancelPending && exit.OrderState != OrderState.CancelSubmitted)
+                                leftovers.Add(exit);
+                        }
                         commit.StopOrders[p] = null;
                         commit.TargetOrders[p] = null;
                         commit.PairAppliedQuantity[p] = 0;
                         commit.RequestedStopQuantity[p] = 0;
                     }
                 }
-            }
+                if (leftovers.Count > 0)
+                    account.Cancel(leftovers);
+            }, null);
         }
 
         /// <summary>
@@ -1506,8 +1552,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         RecordOpeningAtrStop(commit);
                         RecordNettedLots(commit);
-                        if (currentMarketPosition == MarketPosition.Flat && flatCoverageSince == DateTime.MinValue)
-                            flatCoverageSince = DateTime.UtcNow;
+                        StartFlatCoverageCheck();
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         submitNow = true;
@@ -1530,8 +1575,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         RecordOpeningAtrStop(commit);
                         RecordNettedLots(commit);
-                        if (currentMarketPosition == MarketPosition.Flat && flatCoverageSince == DateTime.MinValue)
-                            flatCoverageSince = DateTime.UtcNow;
+                        StartFlatCoverageCheck();
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         coverNow = true;
@@ -1556,6 +1600,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (account == null)
                 return;
+            TriggerCustomEvent(o => ResolveStopOutcome(stop, state, account), null);
+        }
+
+        // Runs as a custom event: it rewrites the pair plan EnsureExits reads.
+        private void ResolveStopOutcome(Order stop, OrderState state, Account account)
+        {
             BracketCommit owner = null;
             int pairIndex = -1;
             int unprotected = 0;
@@ -1643,6 +1693,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             TriggerCustomEvent(o =>
             {
                 int filled;
+                int growthRoom;
                 lock (orderLock)
                 {
                     if (commit.Orphaned)
@@ -1689,6 +1740,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         commit.PairAppliedQuantity = new int[commit.StopPrices.Length];
                         commit.RequestedStopQuantity = new int[commit.StopPrices.Length];
                     }
+
+                    // The per-pair plan assumes earlier pairs fill first; after cuts and
+                    // retries a later pair can hold lots the plan gives an earlier one.
+                    growthRoom = filled;
+                    foreach (int appliedLots in commit.PairAppliedQuantity)
+                        growthRoom -= appliedLots;
                 }
 
                 TimeInForce tif = OrderTimeInForce == ChartTradingTimeInForce.Gtc
@@ -1697,13 +1754,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 var changes = new List<Order>();
                 for (int i = 0; i < commit.StopPrices.Length; i++)
                 {
-                    int desired = commit.PairDesiredQuantity(i, filled);
                     int applied = commit.PairAppliedQuantity[i];
+                    int desired = Math.Min(commit.PairDesiredQuantity(i, filled), applied + Math.Max(growthRoom, 0));
                     // Exits only grow here; shrinking is ReconcileExits' job, driven by
                     // the position. Comparing against what was applied, not the live
                     // quantity, leaves a trader's or Close half's own resize alone.
                     if (desired <= applied)
                         continue;
+                    growthRoom -= desired - applied;
 
                     Order stop = commit.StopOrders[i];
                     Order pairTarget = commit.TargetOrders[i];
@@ -1986,7 +2044,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (marketDataUpdate.MarketDataType != MarketDataType.Last)
                 return;
-            CheckFlatCoverage();
             if (!AutoBreakevenEnabled)
                 return;
 
@@ -2524,7 +2581,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// it has landed: re-read the account's position, apply it and trim to it.
         /// That cancels exits placed for a fill that only flattened the position,
         /// whichever order its fill and position updates arrived in.
-        /// shortcut: runs on trade ticks, so a market with no trades delays it; fine for liquid futures.
         /// </summary>
         private void CheckFlatCoverage()
         {
@@ -2547,6 +2603,31 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             ApplyPositionUpdate(account, false, open.MarketPosition, open.Quantity, open.AveragePrice);
             ReconcileExits(account);
+        }
+
+        // Called under orderLock as a fill is counted. Applying the live position
+        // right away is unsafe: an older position update may still be queued.
+        private void StartFlatCoverageCheck()
+        {
+            if (currentMarketPosition != MarketPosition.Flat || flatCoverageSince != DateTime.MinValue)
+                return;
+            flatCoverageSince = DateTime.UtcNow;
+            if (flatCoverageTimer == null)
+                flatCoverageTimer = new System.Threading.Timer(o => OnFlatCoverageTimer(), null,
+                    System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            flatCoverageTimer.Change(1100, System.Threading.Timeout.Infinite);
+        }
+
+        private void OnFlatCoverageTimer()
+        {
+            try
+            {
+                CheckFlatCoverage();
+            }
+            catch (Exception ex)
+            {
+                Log("ChartTrading: flat coverage check failed - " + ex, NinjaTrader.Cbi.LogLevel.Error);
+            }
         }
 
         // Called under orderLock before an entry's fill is counted. A first fill
