@@ -5,9 +5,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
-- ChartTrading: two opposite-side clicks closing the same position no
-  longer both count the contracts they closed, so the new position gets a
-  stop on every contract. A position that shrinks because a target filled
+- ChartTrading: clicks against the open position (or a working entry on
+  the other side) are refused; close the position first with Close half /
+  Close all. A position that shrinks because a target filled
   waits half a second before trimming, so the trim comes out of the bracket
   that filled rather than another one. A trim the broker refuses is sent
   again once, then that bracket is closed at market; a target left larger
@@ -16,19 +16,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   its actual fill even when the position changes while it rests.
 - Close half stays greyed out until its market exit has finished filling,
   so quick repeat clicks can no longer close past flat.
-- ChartTrading: a click that nets an open position and fills in several
-  pieces keeps a stop on the part beyond flat, whatever order NinjaTrader
-  reports the fills and position changes in; exits placed for a fill that
-  only flattened the position are cancelled within about a second, even
-  when no trades print.
+- ChartTrading: exits placed for a resting entry whose fill only
+  flattened a position opened elsewhere are cancelled within about a
+  second, even when no trades print.
 - ChartTrading: a stop the broker refuses (or a stop it refuses to
   enlarge) is placed again once; refused a second time, the contracts it
   should have covered are closed at market and the log says so.
 - ChartTrading: when one target fills, the trim after it comes out of
   that same bracket instead of cancelling another bracket's stop.
-- ChartTrading: a click on the opposite side of an open position nets
-  with it. It reduces or closes the position first, and only the part
-  beyond flat gets a new bracket, so its stop can no longer reverse you.
 - ChartTrading: when the position shrinks from outside (a market order, a
   manual exit, Close half), stops and targets shrink to match; a target
   hit while the entry is still filling no longer leaves later lots without

@@ -106,11 +106,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   only switch.
 - Auto-breakeven only runs while the chart is open (local automation, not
   server-side).
-- A click against an open position nets with it: it first reduces or
-  closes that position, and only the part beyond flat opens a new one with
-  its own stops and targets. Short 2 then a 1-lot buy leaves short 1 with
-  1 lot of stops; short 1 then a 2-lot buy leaves long 1 with 1 lot of
-  stops.
+- One side at a time: a click against the open position, or against an
+  entry still working on the other side, is refused (the preview does not
+  show it). Close the position first with Close half / Close all.
 - Whenever the position shrinks, closes or reverses — through a click, a
   market order, Close half or anything else — stops and targets are cut to
   what is left, and ones that would no longer close anything are

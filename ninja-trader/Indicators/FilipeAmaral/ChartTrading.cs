@@ -230,13 +230,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public bool Orphaned;
             // Filled lots whose exits were filled, cancelled or trimmed away.
             public int OffsetQuantity;
-            // Filled lots that closed an opposite position, so they bring no exits.
-            // Counted against a position cache that can lag the fills; a position
-            // update on this side releases any that were counted twice.
-            public int NettedQuantity;
-            // Kept through a flat its netted count may have mis-read; the next
-            // position update keeps it (its side) or retires it.
+            // Kept through a flat that may be the stale close of the position
+            // before its fill; the next position update keeps it (its side) or
+            // retires it.
             public bool KeptAtFlat;
+            // When this commit's last fill was counted.
+            public DateTime FillCountedAt = DateTime.MinValue;
             // The stop quantity the last grow asked for, 0 once acknowledged; a
             // stop coming back alive below it means the grow was rejected.
             public int[] RequestedStopQuantity;
@@ -820,7 +819,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (chartTrader != null && chartTrader.Quantity > 0)
                 previewQuantity = chartTrader.Quantity;
 
-            UpdatePreview(ResolveSide());
+            UpdatePreview(ShownSide(ResolveSide()));
         }
 
         private void OnMouseLeave(object sender, MouseEventArgs e)
@@ -833,7 +832,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // the chart window, so it fires regardless of which control has keyboard focus.
         private void OnKeyChanged(object sender, KeyEventArgs e)
         {
-            UpdatePreview(pointerOverPanel ? ResolveSide() : Side.None);
+            UpdatePreview(pointerOverPanel ? ShownSide(ResolveSide()) : Side.None);
         }
 
         // A drag or alt-tab away from the window never delivers the key-up; treat
@@ -865,8 +864,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             // Key-up never reaches an unfocused chart, so the armed preview can outlive the modifier.
             Side side = ResolveSide();
-            if (side != previewSide)
-                UpdatePreview(side);
+            if (ShownSide(side) != previewSide)
+                UpdatePreview(ShownSide(side));
             if (side == Side.None || !pointerOverPanel)
                 return;
 
@@ -896,8 +895,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
             }
 
-            int quantity = chartTrader.Quantity > 0 ? chartTrader.Quantity : previewQuantity;
             bool isBuy = side == Side.Buy;
+            Position livePosition = LivePosition(account);
+            bool liveOpposite = livePosition != null && livePosition.MarketPosition == (isBuy ? MarketPosition.Short : MarketPosition.Long);
+            if (liveOpposite || OppositeSideOpen(isBuy))
+            {
+                Log("ChartTrading: close the " + (isBuy ? "short" : "long") + " position first (Close half / Close all); opposite orders are disabled.",
+                    NinjaTrader.Cbi.LogLevel.Warning);
+                e.Handled = true;
+                return;
+            }
+
+            int quantity = chartTrader.Quantity > 0 ? chartTrader.Quantity : previewQuantity;
             int profitSign = isBuy ? 1 : -1;
             double tick = master.TickSize;
 
@@ -1003,6 +1012,32 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // The click belongs to the commit; the chart must not also act on it.
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// Orders against the open position or a working entry are refused: one
+        /// side at a time keeps every bracket closing the position it was placed
+        /// for. Closing goes through Close half / Close all.
+        /// </summary>
+        private bool OppositeSideOpen(bool isBuy)
+        {
+            MarketPosition opposite = isBuy ? MarketPosition.Short : MarketPosition.Long;
+            lock (orderLock)
+            {
+                if (currentMarketPosition == opposite)
+                    return true;
+                foreach (BracketCommit commit in activeCommits)
+                {
+                    if (CommitSide(commit) == opposite && commit.Entry != null && !Order.IsTerminalState(commit.Entry.OrderState))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private Side ShownSide(Side side)
+        {
+            return side != Side.None && OppositeSideOpen(side == Side.Buy) ? Side.None : side;
         }
 
         private bool HasWorkingEntryOn(Account account)
@@ -1157,7 +1192,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     StartFlatCoverageCheck();
                 if (!nowFlat)
                 {
-                    ReleaseOvercountedNetting();
                     foreach (BracketCommit commit in activeCommits)
                     {
                         if (CommitSide(commit) == currentMarketPosition && commit.CoveredQuantity > 0)
@@ -1201,11 +1235,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (newPosition != MarketPosition.Flat && !exitAddsToPosition)
                     continue;
 
-                // A flat can arrive before this netting entry's later fills reach the
-                // position, and its netted count can be stale: lots past the old
-                // position may have opened a new one. The next update decides.
-                bool netting = currentMarketPosition != MarketPosition.Flat && CommitSide(commit) != currentMarketPosition;
-                if (newPosition == MarketPosition.Flat && netting && !commit.KeptAtFlat)
+                // A flat right after this commit's fill can be the stale close of the
+                // position before it (a stop filling as a new entry fills, their
+                // position updates late). The next update decides.
+                bool justFilled = DateTime.UtcNow - commit.FillCountedAt < TimeSpan.FromSeconds(1);
+                if (newPosition == MarketPosition.Flat && justFilled && !commit.KeptAtFlat)
                 {
                     commit.KeptAtFlat = true;
                     continue;
@@ -1221,7 +1255,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 else
                 {
                     commit.OffsetQuantity = commit.CoveredQuantity;
-                    commit.NettedQuantity = 0;
                     slotsToClear.Add(commit);
                 }
                 if (commit.StopOrders == null)
@@ -1297,7 +1330,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private static int UncoveredFill(BracketCommit commit)
         {
-            return Math.Max(0, commit.CoveredQuantity - commit.OffsetQuantity - commit.NettedQuantity);
+            return Math.Max(0, commit.CoveredQuantity - commit.OffsetQuantity);
         }
 
         private static int OpenQuantity(Order order)
@@ -1370,31 +1403,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (pairIndex < commit.PairQuantities.Length - 1)
                 commit.PairQuantities[pairIndex] += lots;
             commit.OffsetQuantity = Math.Max(0, commit.OffsetQuantity - lots);
-        }
-
-        /// <summary>
-        /// Two entries closing the same opposite lots can both count them when
-        /// the position cache lags their fills. Whatever the position on this
-        /// side holds beyond what its commits cover is released from their
-        /// netted lots, newest commit first. Caller holds orderLock.
-        /// </summary>
-        private void ReleaseOvercountedNetting()
-        {
-            int shortfall = currentQuantity;
-            foreach (BracketCommit commit in activeCommits)
-            {
-                if (CommitSide(commit) == currentMarketPosition)
-                    shortfall -= UncoveredFill(commit);
-            }
-            for (int i = activeCommits.Count - 1; i >= 0 && shortfall > 0; i--)
-            {
-                BracketCommit commit = activeCommits[i];
-                if (CommitSide(commit) != currentMarketPosition)
-                    continue;
-                int released = Math.Min(shortfall, commit.NettedQuantity);
-                commit.NettedQuantity -= released;
-                shortfall -= released;
-            }
         }
 
         /// <summary>
@@ -1670,8 +1678,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
                         RecordOpeningAtrStop(commit);
-                        RecordNettedLots(commit, e.Order.Filled);
                         StartFlatCoverageCheck();
+                        commit.FillCountedAt = DateTime.UtcNow;
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         submitNow = true;
@@ -1693,8 +1701,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
                         RecordOpeningAtrStop(commit);
-                        RecordNettedLots(commit, e.Order.Filled);
                         StartFlatCoverageCheck();
+                        commit.FillCountedAt = DateTime.UtcNow;
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
                         coverNow = true;
@@ -2818,14 +2826,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 Log("ChartTrading: flat coverage check failed - " + ex, NinjaTrader.Cbi.LogLevel.Error);
             }
-        }
-
-        // Called under orderLock before an entry's fill is counted. Lots filled
-        // into an opposite position first close it: those get no exits.
-        private void RecordNettedLots(BracketCommit commit, int filled)
-        {
-            if (currentMarketPosition != MarketPosition.Flat && currentMarketPosition != CommitSide(commit))
-                commit.NettedQuantity += Math.Min(filled - commit.CoveredQuantity, currentQuantity);
         }
 
         // Called under orderLock on an entry's first covered fill, whichever order
