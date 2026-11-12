@@ -89,9 +89,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 breakevenButton = new System.Windows.Controls.Button
                 {
                     Content = "Stops to BE",
-                    Padding = new Thickness(8, 3, 8, 3),
+                    FontSize = 14,
+                    FontWeight = FontWeights.Bold,
+                    Padding = new Thickness(8, 10, 8, 10),
                     Margin = new Thickness(2, 6, 2, 6),
                     Cursor = Cursors.Hand,
+                    Focusable = false,
                     Foreground = Brushes.White,
                     Background = Brushes.SteelBlue,
                     BorderThickness = new Thickness(0),

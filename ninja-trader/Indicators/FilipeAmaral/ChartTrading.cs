@@ -584,9 +584,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // appended to the ChartTrader grid.
                 toggleButton = new System.Windows.Controls.Button
                 {
-                    Padding = new Thickness(8, 3, 8, 3),
-                    Margin = new Thickness(0),
+                    FontSize = 14,
+                    FontWeight = FontWeights.Bold,
+                    Padding = new Thickness(8, 10, 8, 10),
+                    Margin = new Thickness(2, 6, 2, 6),
                     Cursor = Cursors.Hand,
+                    Focusable = false,
                     Foreground = Brushes.White,
                     BorderThickness = new Thickness(0),
                 };
