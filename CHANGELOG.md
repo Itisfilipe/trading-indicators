@@ -5,6 +5,17 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- ChartTrading: a click on the opposite side of an open position nets
+  with it. It reduces or closes the position first, and only the part
+  beyond flat gets a new bracket, so its stop can no longer reverse you.
+- ChartTrading: when the position shrinks from outside (a market order, a
+  manual exit, Close half), stops and targets shrink to match; a target
+  hit while the entry is still filling no longer leaves later lots without
+  a stop; stops left over from before a reload are cancelled once flat.
+- Close half waits if a stop or target is still being changed, and for a
+  few seconds afterwards cuts any stop left larger than the position
+  (for example after a rejected resize), logging an error if the exit
+  never filled.
 - Flow POC: new "POC period" setting shows a longer timeframe's POC on a
   faster chart (2 minutes up to 12 hours, or one per session), drawn
   across the candles of each window.

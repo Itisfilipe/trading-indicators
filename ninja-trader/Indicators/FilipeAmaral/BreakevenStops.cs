@@ -30,6 +30,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private bool handlersAttached;
         private int closeHalfFromQuantity;
         private DateTime closeHalfTime;
+        private bool verifyingCloseHalf;
 
         protected override void OnStateChange()
         {
@@ -184,6 +185,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         #region Button state
         private void OnRefreshTick(object sender, EventArgs e)
         {
+            if (verifyingCloseHalf)
+                VerifyCloseHalf();
             RefreshButton();
         }
 
@@ -255,6 +258,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         private static bool IsWorking(Order order)
+        {
+            return !Order.IsTerminalState(order.OrderState);
+        }
+
+        private static bool IsSettled(Order order)
         {
             return order.OrderState == OrderState.Working
                 || order.OrderState == OrderState.Accepted
@@ -343,6 +351,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             int remaining = position.Quantity - closeQuantity;
 
             List<Order> exits = ExitOrders(account, position);
+            if (!exits.All(IsSettled))
+            {
+                Log("Breakeven Stops: a stop or target on " + Instrument.FullName + " is still being changed; Close half not sent, click again.", NinjaTrader.Cbi.LogLevel.Warning);
+                return;
+            }
             List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
             List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
             try
@@ -356,12 +369,58 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 account.Submit(new[] { exit });
                 closeHalfFromQuantity = position.Quantity;
                 closeHalfTime = DateTime.UtcNow;
+                verifyingCloseHalf = true;
                 Log("Breakeven Stops: closing " + closeQuantity + " of " + position.Quantity + " on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
             }
             catch (Exception ex)
             {
                 Log("Breakeven Stops: close half failed; stops and targets may already be reduced, check them - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
             }
+        }
+
+        /// <summary>
+        /// For a few seconds after Close half: a resize the broker rejected, or an
+        /// exit that was mid-change when the button was clicked, can leave stops
+        /// larger than the position, so they are cut again. An exit that never
+        /// filled leaves the stops already reduced, which is reported.
+        /// </summary>
+        private void VerifyCloseHalf()
+        {
+            Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
+            if (account == null)
+            {
+                verifyingCloseHalf = false;
+                return;
+            }
+
+            Position position = OpenPosition(account);
+            if (position != null)
+            {
+                List<Order> exits = ExitOrders(account, position);
+                List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
+                List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
+                bool oversized = stops.Sum(o => OpenQuantity(o)) > position.Quantity || targets.Sum(o => OpenQuantity(o)) > position.Quantity;
+                if (oversized && exits.All(IsSettled))
+                {
+                    try
+                    {
+                        Dictionary<string, int> ocoQuantities = new Dictionary<string, int>();
+                        TrimToQuantity(account, stops, targets, position.Quantity, ocoQuantities);
+                        TrimToQuantity(account, targets, stops, position.Quantity, ocoQuantities);
+                        Log("Breakeven Stops: stops or targets on " + Instrument.FullName + " were still larger than the position; cut them to " + position.Quantity + ".", NinjaTrader.Cbi.LogLevel.Warning);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log("Breakeven Stops: could not cut stops and targets to the position - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
+                    }
+                }
+            }
+
+            if (DateTime.UtcNow - closeHalfTime < TimeSpan.FromSeconds(3))
+                return;
+            verifyingCloseHalf = false;
+            if (position != null && position.Quantity == closeHalfFromQuantity)
+                Log("Breakeven Stops: the Close half exit on " + Instrument.FullName + " has not filled; its stops and targets were already reduced, check them.", NinjaTrader.Cbi.LogLevel.Error);
         }
 
         /// <summary>
