@@ -5,6 +5,17 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- ChartTrading: two opposite-side clicks closing the same position no
+  longer both count the contracts they closed, so the new position gets a
+  stop on every contract. A position that shrinks because a target filled
+  waits half a second before trimming, so the trim comes out of the bracket
+  that filled rather than another one. A trim the broker refuses is sent
+  again once, then that bracket is closed at market; a target left larger
+  than its stop is cancelled.
+- ChartTrading: a resting entry keeps its stops and targets measured from
+  its actual fill even when the position changes while it rests.
+- Close half stays greyed out until its market exit has finished filling,
+  so quick repeat clicks can no longer close past flat.
 - ChartTrading: a click that nets an open position and fills in several
   pieces keeps a stop on the part beyond flat, whatever order NinjaTrader
   reports the fills and position changes in; exits placed for a fill that

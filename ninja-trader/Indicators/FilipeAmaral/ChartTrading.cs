@@ -168,6 +168,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // was flattening, and its exits close nothing or outsize the position.
         private DateTime flatCoverageSince = DateTime.MinValue;
         private System.Threading.Timer flatCoverageTimer;
+        // When exits were first seen larger than the position. An exit fill can
+        // shrink the position before its own fill state lands; cutting at once
+        // could cut the bracket the fill did not touch, so the cut waits this long.
+        private DateTime excessSince = DateTime.MinValue;
+        private System.Threading.Timer trimTimer;
+        private static readonly TimeSpan TrimDelay = TimeSpan.FromMilliseconds(500);
         private AutoBreakevenState autoBreakevenState = AutoBreakevenState.Armed;
         private int positionCacheGeneration;
         private bool positionSeedPending;
@@ -222,10 +228,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // Set once the position these exits close is gone; EnsureExits then
             // places nothing more for this commit.
             public bool Orphaned;
-            // Filled lots that bring no exits: the part of the fill that closed an
-            // opposite position, plus lots whose exits were filled, cancelled or
-            // trimmed away. The commit's exits cover CoveredQuantity minus this.
+            // Filled lots whose exits were filled, cancelled or trimmed away.
             public int OffsetQuantity;
+            // Filled lots that closed an opposite position, so they bring no exits.
+            // Counted against a position cache that can lag the fills; a position
+            // update on this side releases any that were counted twice.
+            public int NettedQuantity;
+            // Kept through a flat its netted count may have mis-read; the next
+            // position update keeps it (its side) or retires it.
+            public bool KeptAtFlat;
             // The stop quantity the last grow asked for, 0 once acknowledged; a
             // stop coming back alive below it means the grow was rejected.
             public int[] RequestedStopQuantity;
@@ -570,6 +581,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         flatCoverageTimer.Dispose();
                         flatCoverageTimer = null;
+                    }
+                    if (trimTimer != null)
+                    {
+                        trimTimer.Dispose();
+                        trimTimer = null;
                     }
                 }
 
@@ -1114,23 +1130,37 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (nowFlat || marketPosition != currentMarketPosition)
                     autoBreakevenState = AutoBreakevenState.Armed;
                 bool flipped = currentMarketPosition != MarketPosition.Flat && marketPosition != currentMarketPosition;
-                if (nowFlat || flipped)
+                bool settleKept = false;
+                foreach (BracketCommit commit in activeCommits)
                 {
-                    openingAtrStopTicks = 0;
-                    CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits, slotsToClear);
+                    if (!commit.KeptAtFlat)
+                        continue;
+                    if (!nowFlat && marketPosition == CommitSide(commit))
+                        commit.KeptAtFlat = false;
+                    else
+                        settleKept = true;
                 }
+                if (nowFlat || flipped)
+                    openingAtrStopTicks = 0;
+                if (nowFlat || flipped || settleKept)
+                    CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits, slotsToClear);
                 // Only a shrinking or reversed position trims exits: a scale-in fill can
                 // reach the exits before its own position update does.
                 trimNeeded = !nowFlat && (flipped || quantity < currentQuantity);
+                // Every position change restarts the wait before a cut.
+                excessSince = DateTime.MinValue;
                 currentMarketPosition = nowFlat ? MarketPosition.Flat : marketPosition;
                 currentQuantity = nowFlat ? 0 : quantity;
                 currentAvgPrice = nowFlat ? 0 : averagePrice;
                 positionCacheGeneration++;
+                if (nowFlat && activeCommits.Exists(kept => kept.KeptAtFlat))
+                    StartFlatCoverageCheck();
                 if (!nowFlat)
                 {
+                    ReleaseOvercountedNetting();
                     foreach (BracketCommit commit in activeCommits)
                     {
-                        if (CommitSide(commit) == currentMarketPosition)
+                        if (CommitSide(commit) == currentMarketPosition && commit.CoveredQuantity > 0)
                             toGrow.Add(commit);
                     }
                 }
@@ -1171,11 +1201,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (newPosition != MarketPosition.Flat && !exitAddsToPosition)
                     continue;
 
-                // A flat that arrives after this netting entry's later fills were
-                // counted is stale: the lots past the old position opened the new one.
+                // A flat can arrive before this netting entry's later fills reach the
+                // position, and its netted count can be stale: lots past the old
+                // position may have opened a new one. The next update decides.
                 bool netting = currentMarketPosition != MarketPosition.Flat && CommitSide(commit) != currentMarketPosition;
-                if (newPosition == MarketPosition.Flat && netting && UncoveredFill(commit) > 0)
+                if (newPosition == MarketPosition.Flat && netting && !commit.KeptAtFlat)
+                {
+                    commit.KeptAtFlat = true;
                     continue;
+                }
 
                 // A fill not yet counted still needs its bracket, so its commit stays.
                 bool entryDone = Order.IsTerminalState(commit.Entry.OrderState) && commit.CoveredQuantity == commit.Entry.Filled;
@@ -1187,6 +1221,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 else
                 {
                     commit.OffsetQuantity = commit.CoveredQuantity;
+                    commit.NettedQuantity = 0;
                     slotsToClear.Add(commit);
                 }
                 if (commit.StopOrders == null)
@@ -1262,7 +1297,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private static int UncoveredFill(BracketCommit commit)
         {
-            return Math.Max(0, commit.CoveredQuantity - commit.OffsetQuantity);
+            return Math.Max(0, commit.CoveredQuantity - commit.OffsetQuantity - commit.NettedQuantity);
         }
 
         private static int OpenQuantity(Order order)
@@ -1327,12 +1362,48 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             commit.OffsetQuantity += lots;
         }
 
+        // A cut the broker refused leaves a pair holding more than the plan says;
+        // the plan takes those lots back so the next cut is not counted twice.
+        private static void TakeBack(BracketCommit commit, int pairIndex, int lots)
+        {
+            commit.PairAppliedQuantity[pairIndex] += lots;
+            if (pairIndex < commit.PairQuantities.Length - 1)
+                commit.PairQuantities[pairIndex] += lots;
+            commit.OffsetQuantity = Math.Max(0, commit.OffsetQuantity - lots);
+        }
+
+        /// <summary>
+        /// Two entries closing the same opposite lots can both count them when
+        /// the position cache lags their fills. Whatever the position on this
+        /// side holds beyond what its commits cover is released from their
+        /// netted lots, newest commit first. Caller holds orderLock.
+        /// </summary>
+        private void ReleaseOvercountedNetting()
+        {
+            int shortfall = currentQuantity;
+            foreach (BracketCommit commit in activeCommits)
+            {
+                if (CommitSide(commit) == currentMarketPosition)
+                    shortfall -= UncoveredFill(commit);
+            }
+            for (int i = activeCommits.Count - 1; i >= 0 && shortfall > 0; i--)
+            {
+                BracketCommit commit = activeCommits[i];
+                if (CommitSide(commit) != currentMarketPosition)
+                    continue;
+                int released = Math.Min(shortfall, commit.NettedQuantity);
+                commit.NettedQuantity -= released;
+                shortfall -= released;
+            }
+        }
+
         /// <summary>
         /// After the position shrank or reversed, cuts this tool's exits on the
         /// closing side down to the position, newest commit first, so no stop can
         /// fill past flat. Deferred while any of them is mid-change, since its
-        /// quantity is not final yet. Runs as a custom event so it never
-        /// interleaves with EnsureExits on the same commit.
+        /// quantity is not final yet, and for TrimDelay before any cut. Runs as
+        /// a custom event so it never interleaves with EnsureExits on the same
+        /// commit.
         /// </summary>
         private void ReconcileExits(Account account)
         {
@@ -1340,12 +1411,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 var changes = new List<Order>();
                 var cancels = new List<Order>();
+                TimeSpan cutWait = TimeSpan.Zero;
                 lock (orderLock)
                 {
                     reconcilePending = false;
                     MarketPosition side = currentMarketPosition;
                     if (side == MarketPosition.Flat)
+                    {
+                        excessSince = DateTime.MinValue;
                         return;
+                    }
                     var sameSide = new List<BracketCommit>();
                     foreach (BracketCommit commit in activeCommits)
                     {
@@ -1376,13 +1451,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             int gone = commit.PairAppliedQuantity[p] - live;
                             if (gone > 0)
                                 WriteOff(commit, p, gone);
+                            else if (gone < 0)
+                                TakeBack(commit, p, -gone);
                             liveLots += live;
                         }
                     }
 
+                    int excess = liveLots - currentQuantity;
+                    if (excess <= 0)
+                        excessSince = DateTime.MinValue;
+                    else if (excessSince == DateTime.MinValue)
+                        excessSince = DateTime.UtcNow;
+                    if (excess > 0 && DateTime.UtcNow - excessSince < TrimDelay)
+                    {
+                        cutWait = TrimDelay - (DateTime.UtcNow - excessSince);
+                        excess = 0;
+                    }
+
                     // Every pair is visited, even with nothing to cut, so a stop left
                     // larger than its partly filled target is brought down to it.
-                    int excess = liveLots - currentQuantity;
                     for (int c = sameSide.Count - 1; c >= 0; c--)
                     {
                         BracketCommit commit = sameSide[c];
@@ -1416,6 +1503,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                     stop.LimitPriceChanged = stop.LimitPrice;
                                     stop.StopPriceChanged = stop.StopPrice;
                                     changes.Add(stop);
+                                    commit.RequestedStopQuantity[p] = stop.QuantityChanged;
                                 }
                                 // A target larger than its stop would cancel the stop on fill.
                                 if (OpenQuantity(target) > kept)
@@ -1437,7 +1525,33 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (changes.Count + cancels.Count > 0)
                     Log("ChartTrading: position on " + Instrument.FullName + " shrank outside its brackets; trimmed stops and targets to "
                         + currentQuantity + ".", NinjaTrader.Cbi.LogLevel.Information);
+                if (cutWait > TimeSpan.Zero)
+                    StartTrimTimer(cutWait, account);
             }, null);
+        }
+
+        private void StartTrimTimer(TimeSpan wait, Account account)
+        {
+            lock (orderLock)
+            {
+                if (trimTimer == null)
+                    trimTimer = new System.Threading.Timer(o => OnTrimTimer((Account)o), account,
+                        System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+                trimTimer.Change((int)wait.TotalMilliseconds + 20, System.Threading.Timeout.Infinite);
+            }
+        }
+
+        private void OnTrimTimer(Account account)
+        {
+            try
+            {
+                if (ReferenceEquals(account, subscribedAccount))
+                    ReconcileExits(account);
+            }
+            catch (Exception ex)
+            {
+                Log("ChartTrading: deferred trim failed - " + ex, NinjaTrader.Cbi.LogLevel.Error);
+            }
         }
 
         // Arrives off the UI thread. Exits go live only against filled entry quantity;
@@ -1489,38 +1603,43 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // published ahead of the acceptance events.
             bool isPairOrder = e.Order.Name == "CT Stop" || e.Order.Name == "CT Target";
             bool pairOrderAlive = e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted;
-            if (e.Order.Name == "CT Stop" && (pairOrderAlive || e.OrderState == OrderState.Rejected))
+            if (isPairOrder && (pairOrderAlive || (e.Order.Name == "CT Stop" && e.OrderState == OrderState.Rejected)))
                 CheckStopOutcome(e.Order, e.OrderState, sender as Account);
 
-            // A pair order ending is a retry point too: a rejected stop's target
-            // finishing its cancel lets the pair be placed again.
-            if (isPairOrder && (pairOrderAlive || Order.IsTerminalState(e.OrderState)))
+            // A pair order ending or filling is a retry point too: a rejected
+            // stop's target finishing its cancel lets the pair be placed again,
+            // and a fill explains a position shrink a deferred trim waits on.
+            if (isPairOrder && (pairOrderAlive || e.OrderState == OrderState.PartFilled || Order.IsTerminalState(e.OrderState)))
             {
-                BracketCommit ownerCommit = null;
+                // Any commit, not just this order's: one losing its lots frees
+                // position room another commit was held back from.
+                var toGrow = new List<BracketCommit>();
                 lock (orderLock)
                 {
-                    for (int i = 0; i < activeCommits.Count && ownerCommit == null; i++)
+                    foreach (BracketCommit candidate in activeCommits)
                     {
-                        BracketCommit candidate = activeCommits[i];
                         if (candidate.StopOrders == null)
                             continue;
+                        int coverage = ExitCoverage(candidate);
                         for (int p = 0; p < candidate.StopOrders.Length; p++)
                         {
-                            if (!ReferenceEquals(candidate.StopOrders[p], e.Order)
-                                && !ReferenceEquals(candidate.TargetOrders[p], e.Order))
-                                continue;
-                            if (candidate.PairDesiredQuantity(p, ExitCoverage(candidate))
-                                > candidate.PairAppliedQuantity[p])
-                                ownerCommit = candidate;
-                            break;
+                            if (candidate.PairDesiredQuantity(p, coverage) > candidate.PairAppliedQuantity[p])
+                            {
+                                toGrow.Add(candidate);
+                                break;
+                            }
                         }
                     }
                 }
-                if (ownerCommit != null)
-                    EnsureExits(ownerCommit, sender as Account);
+                foreach (BracketCommit candidate in toGrow)
+                    EnsureExits(candidate, sender as Account);
                 bool retryTrim;
                 lock (orderLock)
-                    retryTrim = reconcilePending && ReferenceEquals(sender, subscribedAccount);
+                {
+                    bool exitFilled = e.OrderState == OrderState.PartFilled || e.OrderState == OrderState.Filled;
+                    retryTrim = (reconcilePending || excessSince != DateTime.MinValue || exitFilled)
+                        && ReferenceEquals(sender, subscribedAccount);
+                }
                 if (retryTrim)
                     ReconcileExits((Account)sender);
             }
@@ -1551,7 +1670,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
                         RecordOpeningAtrStop(commit);
-                        RecordNettedLots(commit);
+                        RecordNettedLots(commit, e.Order.Filled);
                         StartFlatCoverageCheck();
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
@@ -1574,7 +1693,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (e.Order.Filled > commit.CoveredQuantity)
                     {
                         RecordOpeningAtrStop(commit);
-                        RecordNettedLots(commit);
+                        RecordNettedLots(commit, e.Order.Filled);
                         StartFlatCoverageCheck();
                         commit.CoveredQuantity = e.Order.Filled;
                         commit.EntryFillPrice = e.AverageFillPrice;
@@ -1591,33 +1710,39 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// A rejected stop leaves its pair's lots unprotected, and a grow the
-        /// broker refused comes back alive at the old size. Either is retried once
-        /// (the pair placed or grown again); a second refusal closes those lots at
-        /// market rather than leave them without a stop.
+        /// A rejected stop leaves its pair's lots unprotected, a grow the broker
+        /// refused comes back alive at the old size, and so does a refused cut.
+        /// Each is retried once (the pair placed, grown or cut again); a second
+        /// refusal closes the lots the pair should cover at market rather than
+        /// leave them without a stop, or a stop larger than the position.
         /// </summary>
-        private void CheckStopOutcome(Order stop, OrderState state, Account account)
+        private void CheckStopOutcome(Order leg, OrderState state, Account account)
         {
             if (account == null)
                 return;
-            TriggerCustomEvent(o => ResolveStopOutcome(stop, state, account), null);
+            TriggerCustomEvent(o => ResolveStopOutcome(leg, state, account), null);
         }
 
         // Runs as a custom event: it rewrites the pair plan EnsureExits reads.
-        private void ResolveStopOutcome(Order stop, OrderState state, Account account)
+        private void ResolveStopOutcome(Order leg, OrderState state, Account account)
         {
             BracketCommit owner = null;
             int pairIndex = -1;
             int unprotected = 0;
+            int refusedCutKeeps = 0;
             bool retry = false;
-            Order target = null;
+            bool stopRequestPending;
+            Order stop;
+            Order target;
             lock (orderLock)
             {
                 foreach (BracketCommit candidate in activeCommits)
                 {
                     if (candidate.StopOrders == null)
                         continue;
-                    pairIndex = Array.IndexOf(candidate.StopOrders, stop);
+                    pairIndex = Array.IndexOf(candidate.StopOrders, leg);
+                    if (pairIndex < 0)
+                        pairIndex = Array.IndexOf(candidate.TargetOrders, leg);
                     if (pairIndex >= 0)
                     {
                         owner = candidate;
@@ -1627,32 +1752,76 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (owner == null)
                     return;
 
-                int requested = owner.RequestedStopQuantity[pairIndex];
+                stop = owner.StopOrders[pairIndex];
                 target = owner.TargetOrders[pairIndex];
-                if (state == OrderState.Rejected)
+                if (ReferenceEquals(leg, stop))
                 {
-                    unprotected = owner.PairAppliedQuantity[pairIndex];
-                }
-                else if (requested > 0 && stop.Quantity < requested)
-                {
-                    unprotected = requested - stop.Quantity;
-                }
-                owner.RequestedStopQuantity[pairIndex] = 0;
-                if (unprotected == 0)
-                    return;
+                    int requested = owner.RequestedStopQuantity[pairIndex];
+                    if (state == OrderState.Rejected)
+                        unprotected = owner.PairAppliedQuantity[pairIndex];
+                    else if (requested > 0 && stop.Quantity < requested)
+                        unprotected = requested - stop.Quantity;
+                    else if (requested > 0 && stop.Quantity > requested)
+                        refusedCutKeeps = requested - stop.Filled;
+                    owner.RequestedStopQuantity[pairIndex] = 0;
 
-                retry = !owner.ExitRetried;
-                owner.ExitRetried = true;
-                if (retry)
-                    owner.PairAppliedQuantity[pairIndex] -= unprotected;
-                else
-                    WriteOff(owner, pairIndex, unprotected);
+                    if (unprotected > 0 || refusedCutKeeps > 0)
+                    {
+                        retry = !owner.ExitRetried;
+                        owner.ExitRetried = true;
+                    }
+                    if (unprotected > 0)
+                    {
+                        if (retry)
+                            owner.PairAppliedQuantity[pairIndex] -= unprotected;
+                        else
+                            WriteOff(owner, pairIndex, unprotected);
+                    }
+                    else if (refusedCutKeeps > 0 && !retry)
+                    {
+                        WriteOff(owner, pairIndex, owner.PairAppliedQuantity[pairIndex]);
+                        unprotected = refusedCutKeeps;
+                    }
+                }
+                stopRequestPending = owner.RequestedStopQuantity[pairIndex] > 0;
             }
 
             if (state == OrderState.Rejected && target != null && !Order.IsTerminalState(target.OrderState))
                 account.Cancel(new[] { target });
 
-            if (retry)
+            if (refusedCutKeeps > 0)
+            {
+                if (retry)
+                {
+                    Log("ChartTrading: a stop cut on " + Instrument.FullName + " was refused; cutting it again.",
+                        NinjaTrader.Cbi.LogLevel.Error);
+                    ReconcileExits(account);
+                    return;
+                }
+                var refusedPair = new List<Order>();
+                foreach (Order exit in new[] { stop, target })
+                {
+                    if (exit != null && !Order.IsTerminalState(exit.OrderState))
+                        refusedPair.Add(exit);
+                }
+                if (refusedPair.Count > 0)
+                    account.Cancel(refusedPair);
+            }
+            else if (unprotected == 0)
+            {
+                // A target left larger than its settled stop (a refused cut) would
+                // fill past the position; dropping it keeps the stop's protection.
+                if (stop != null && target != null && !stopRequestPending && IsSettled(stop) && IsSettled(target)
+                    && !Order.IsTerminalState(stop.OrderState) && !Order.IsTerminalState(target.OrderState)
+                    && OpenQuantity(target) > OpenQuantity(stop))
+                {
+                    account.Cancel(new[] { target });
+                    Log("ChartTrading: a target on " + Instrument.FullName + " stayed larger than its stop; cancelled it.",
+                        NinjaTrader.Cbi.LogLevel.Error);
+                }
+                return;
+            }
+            else if (retry)
             {
                 Log("ChartTrading: a stop for " + unprotected + " lot(s) on " + Instrument.FullName + " was refused; placing it again.",
                     NinjaTrader.Cbi.LogLevel.Error);
@@ -1664,7 +1833,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position open = LivePosition(account);
             int closable = open != null && open.MarketPosition == CommitSide(owner) ? Math.Min(unprotected, open.Quantity) : 0;
             // A grown target the stop could not follow would cancel the stop on fill.
-            if (state != OrderState.Rejected && target != null && OpenQuantity(target) > OpenQuantity(stop))
+            if (state != OrderState.Rejected && refusedCutKeeps == 0 && target != null && OpenQuantity(target) > OpenQuantity(stop))
             {
                 target.QuantityChanged = target.Filled + OpenQuantity(stop);
                 target.LimitPriceChanged = target.LimitPrice;
@@ -1720,6 +1889,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                 resolvedTargets[k] = exitMaster.RoundToTickSize(
                                     commit.EntryFillPrice + commit.ProfitSign * commit.TargetTicks[k] * exitMaster.TickSize);
                             commit.TargetPrices = resolvedTargets;
+                            commit.PricesResolved = true;
                         }
                         else if (commit.CoveredQuantity > 0 && commit.EntryFillPrice <= 0)
                         {
@@ -1729,8 +1899,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             // reproduces the bug this resolution fixes.
                             Log("ChartTrading: entry filled without an average fill price; exits placed at their click-relative estimate.",
                                 NinjaTrader.Cbi.LogLevel.Warning);
+                            commit.PricesResolved = true;
                         }
-                        commit.PricesResolved = true;
                     }
 
                     if (commit.StopOrders == null)
@@ -1746,6 +1916,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     growthRoom = filled;
                     foreach (int appliedLots in commit.PairAppliedQuantity)
                         growthRoom -= appliedLots;
+                    // Coverage is shared out oldest commit first, but a newer commit
+                    // may already hold lots an older one's late fill now claims.
+                    if (currentMarketPosition == CommitSide(commit))
+                    {
+                        int positionRoom = currentQuantity;
+                        foreach (BracketCommit candidate in activeCommits)
+                        {
+                            if (CommitSide(candidate) != currentMarketPosition || candidate.PairAppliedQuantity == null)
+                                continue;
+                            foreach (int appliedLots in candidate.PairAppliedQuantity)
+                                positionRoom -= appliedLots;
+                        }
+                        growthRoom = Math.Min(growthRoom, positionRoom);
+                    }
                 }
 
                 TimeInForce tif = OrderTimeInForce == ChartTradingTimeInForce.Gtc
@@ -1798,7 +1982,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     bool stopAlive = stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted;
                     bool targetAlive = pairTarget != null
                         && (pairTarget.OrderState == OrderState.Working || pairTarget.OrderState == OrderState.Accepted);
-                    if (stopAlive && targetAlive)
+                    // A target dropped for outgrowing its stop leaves a stop-only pair, which still grows.
+                    bool targetDropped = pairTarget == null
+                        || pairTarget.OrderState == OrderState.Cancelled || pairTarget.OrderState == OrderState.Rejected;
+                    if (stopAlive && (targetAlive || targetDropped))
                     {
                         int grownLots = OpenQuantity(stop) + (desired - applied);
                         stop.QuantityChanged = stop.Filled + grownLots;
@@ -1806,10 +1993,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         stop.StopPriceChanged = stop.StopPrice;
                         changes.Add(stop);
                         // Sized from the stop, so a target a refused grow left larger is evened out.
-                        pairTarget.QuantityChanged = pairTarget.Filled + grownLots;
-                        pairTarget.LimitPriceChanged = pairTarget.LimitPrice;
-                        pairTarget.StopPriceChanged = pairTarget.StopPrice;
-                        changes.Add(pairTarget);
+                        if (targetAlive)
+                        {
+                            pairTarget.QuantityChanged = pairTarget.Filled + grownLots;
+                            pairTarget.LimitPriceChanged = pairTarget.LimitPrice;
+                            pairTarget.StopPriceChanged = pairTarget.StopPrice;
+                            changes.Add(pairTarget);
+                        }
                         lock (orderLock)
                         {
                             commit.PairAppliedQuantity[i] = desired;
@@ -2630,13 +2820,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        // Called under orderLock before an entry's fill is counted. A first fill
-        // into an opposite position first closes it: those lots get no exits.
-        private void RecordNettedLots(BracketCommit commit)
+        // Called under orderLock before an entry's fill is counted. Lots filled
+        // into an opposite position first close it: those get no exits.
+        private void RecordNettedLots(BracketCommit commit, int filled)
         {
-            if (commit.CoveredQuantity == 0 && commit.OffsetQuantity == 0
-                && currentMarketPosition != MarketPosition.Flat && currentMarketPosition != CommitSide(commit))
-                commit.OffsetQuantity = currentQuantity;
+            if (currentMarketPosition != MarketPosition.Flat && currentMarketPosition != CommitSide(commit))
+                commit.NettedQuantity += Math.Min(filled - commit.CoveredQuantity, currentQuantity);
         }
 
         // Called under orderLock on an entry's first covered fill, whichever order
