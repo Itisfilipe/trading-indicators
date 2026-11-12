@@ -212,6 +212,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   they stay put when the box spans an odd number of ticks.
 - Use: Draw menu → "Rectangle Midline", click the two corners of the zone,
   then drag the right-edge grip to extend.
+- Rectangle Blue, Rectangle Gray and Rectangle Amber are the same tool in
+  three colors, each its own Draw menu entry with a matching icon. Each
+  keeps its own templates: to make one always global, tick Global, then
+  Template → Save as Default in its properties.
 
 ### RenkoSizeTable — Renko box sizes across timeframes at once
 
@@ -381,12 +385,12 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   pick the font.
 - Use: add to the chart you trade; each slot's name is what its labels show.
 
-### Breakeven Stops — every stop to breakeven, one button
+### Breakeven Stops — stops to breakeven, close half, close all
 
-- A "Stops to BE" button in the ChartTrader sidebar, styled like the
-  ChartTrading toggle. ChartTrader must be showing when the indicator
-  loads; otherwise nothing is drawn and the log says so. The button dims
-  while no stop is short of breakeven.
+- "Stops to BE", "Close half" and "Close all" buttons in the ChartTrader
+  sidebar. ChartTrader must be showing when the indicator
+  loads; otherwise nothing is drawn and the log says so. Each button dims
+  while it has nothing to act on.
 - Stops to BE moves every working exit-side stop on the instrument to the
   position's average price plus an offset — whatever placed it: an ATM,
   an OCO bracket, a manual order. Stop orders named "Entry" or "CT Entry"
@@ -395,6 +399,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   profit. Until the bid (long) or ask (short) is a tick past breakeven,
   the click moves nothing and logs why. Adding contracts changes the
   average: click again.
+- Close half exits half the position at market, rounded down; one
+  contract closes outright. Stops and targets shrink to the size left, so
+  none can fill past flat and reverse.
+- Close all flattens the instrument and cancels its working orders.
 - Use: add to the chart you trade with ChartTrader open; outcomes go to
   the NT log.
 

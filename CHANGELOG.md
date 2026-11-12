@@ -3,6 +3,14 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-12
+
+- Breakeven Stops: large Close half and Close all buttons under Stops to
+  BE. Close half exits half the position (one contract closes outright)
+  and shrinks stops and targets to the size left.
+- Rectangle Blue, Rectangle Gray and Rectangle Amber: Rectangle Midline in
+  three colors, one Draw menu click each, with colored icons.
+
 ## 2026-11-11
 
 ### Repository layout

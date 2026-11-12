@@ -1,6 +1,7 @@
 #region Using declarations
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.ComponentModel.DataAnnotations;
 using System.Windows;
 using System.Windows.Input;
@@ -14,12 +15,15 @@ using NinjaTrader.NinjaScript;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// A Stops to BE button in the ChartTrader sidebar, styled like ChartTrading's
-    /// toggle. It dims when no stop is short of breakeven.
+    /// Stops to BE, Close half and Close all buttons in the ChartTrader sidebar.
+    /// Each dims when it has nothing to act on.
     /// </summary>
     public class BreakevenStops : Indicator
     {
         private System.Windows.Controls.Button breakevenButton;
+        private System.Windows.Controls.Button closeHalfButton;
+        private System.Windows.Controls.Button closeAllButton;
+        private System.Windows.Controls.StackPanel buttonPanel;
         private System.Windows.Controls.Grid chartTraderGrid;
         private System.Windows.Controls.RowDefinition buttonRow;
         private System.Windows.Threading.DispatcherTimer refreshTimer;
@@ -29,7 +33,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "A Stops to BE button in the ChartTrader sidebar.";
+                Description = "Stops to BE, Close half and Close all buttons in the ChartTrader sidebar.";
                 Name = "Breakeven Stops";
                 Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
@@ -91,12 +95,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     BorderThickness = new Thickness(0),
                 };
                 breakevenButton.Click += OnBreakevenClicked;
+                closeHalfButton = MakeCloseButton("Close half", Brushes.DarkOrange, OnCloseHalfClicked);
+                closeAllButton = MakeCloseButton("Close all", Brushes.Crimson, OnCloseAllClicked);
+
+                buttonPanel = new System.Windows.Controls.StackPanel();
+                buttonPanel.Children.Add(breakevenButton);
+                buttonPanel.Children.Add(closeHalfButton);
+                buttonPanel.Children.Add(closeAllButton);
 
                 buttonRow = new System.Windows.Controls.RowDefinition { Height = GridLength.Auto };
                 chartTraderGrid.RowDefinitions.Add(buttonRow);
-                System.Windows.Controls.Grid.SetRow(breakevenButton, chartTraderGrid.RowDefinitions.Count - 1);
-                System.Windows.Controls.Grid.SetColumnSpan(breakevenButton, Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
-                chartTraderGrid.Children.Add(breakevenButton);
+                System.Windows.Controls.Grid.SetRow(buttonPanel, chartTraderGrid.RowDefinitions.Count - 1);
+                System.Windows.Controls.Grid.SetColumnSpan(buttonPanel, Math.Max(1, chartTraderGrid.ColumnDefinitions.Count));
+                chartTraderGrid.Children.Add(buttonPanel);
 
                 refreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
                 refreshTimer.Tick += OnRefreshTick;
@@ -112,6 +123,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
+        private static System.Windows.Controls.Button MakeCloseButton(string text, System.Windows.Media.Brush color, RoutedEventHandler onClick)
+        {
+            System.Windows.Controls.Button button = new System.Windows.Controls.Button
+            {
+                Content = text,
+                FontSize = 14,
+                FontWeight = FontWeights.Bold,
+                Padding = new Thickness(8, 10, 8, 10),
+                Margin = new Thickness(2, 6, 2, 6),
+                Cursor = Cursors.Hand,
+                Focusable = false,
+                Foreground = Brushes.White,
+                Background = color,
+                BorderThickness = new Thickness(0),
+            };
+            button.Click += onClick;
+            return button;
+        }
+
         private void DetachHandlers()
         {
             try
@@ -122,13 +152,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     refreshTimer.Tick -= OnRefreshTick;
                     refreshTimer = null;
                 }
-                if (breakevenButton != null)
+                if (buttonPanel != null)
                 {
                     breakevenButton.Click -= OnBreakevenClicked;
-                    chartTraderGrid.Children.Remove(breakevenButton);
+                    closeHalfButton.Click -= OnCloseHalfClicked;
+                    closeAllButton.Click -= OnCloseAllClicked;
+                    chartTraderGrid.Children.Remove(buttonPanel);
                     if (buttonRow != null)
                         chartTraderGrid.RowDefinitions.Remove(buttonRow);
                     breakevenButton = null;
+                    closeHalfButton = null;
+                    closeAllButton = null;
+                    buttonPanel = null;
                     buttonRow = null;
                     chartTraderGrid = null;
                 }
@@ -155,9 +190,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
             Position position = account != null ? OpenPosition(account) : null;
             double breakeven;
-            bool enabled = position != null && StopsToMove(account, position, out breakeven).Count > 0;
-            breakevenButton.IsEnabled = enabled;
-            breakevenButton.Opacity = enabled ? 1.0 : 0.35;
+            SetEnabled(breakevenButton, position != null && StopsToMove(account, position, out breakeven).Count > 0);
+            SetEnabled(closeHalfButton, position != null);
+            SetEnabled(closeAllButton, position != null || (account != null && ExitOrders(account, null).Count > 0));
+        }
+
+        private static void SetEnabled(System.Windows.Controls.Button button, bool enabled)
+        {
+            button.IsEnabled = enabled;
+            button.Opacity = enabled ? 1.0 : 0.35;
         }
 
         private Position OpenPosition(Account account)
@@ -184,6 +225,144 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (account != null)
                 MoveStopsToBreakeven(account);
             RefreshButton();
+        }
+
+        private void OnCloseHalfClicked(object sender, RoutedEventArgs e)
+        {
+            Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
+            if (account != null)
+                CloseHalf(account);
+            RefreshButton();
+        }
+
+        private void OnCloseAllClicked(object sender, RoutedEventArgs e)
+        {
+            Account account = ChartControl?.OwnerChart?.ChartTrader?.Account;
+            if (account != null)
+                CloseAll(account);
+            RefreshButton();
+        }
+
+        private void CloseAll(Account account)
+        {
+            account.Flatten(new[] { Instrument });
+            Log("Breakeven Stops: closed all on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
+        }
+
+        /// <summary>
+        /// Working orders on the instrument other than entries. With a position,
+        /// only those on its exit side; without one (position null), all of them.
+        /// </summary>
+        private List<Order> ExitOrders(Account account, Position position)
+        {
+            List<Order> exits = new List<Order>();
+            lock (account.Orders)
+            {
+                foreach (Order order in account.Orders)
+                {
+                    if (order.Instrument == null || order.Instrument.FullName != Instrument.FullName)
+                        continue;
+                    if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
+                        continue;
+                    if (order.Name == "Entry" || order.Name == "CT Entry")
+                        continue;
+                    if (position != null)
+                    {
+                        bool isSell = order.OrderAction == OrderAction.Sell || order.OrderAction == OrderAction.SellShort;
+                        if (isSell != (position.MarketPosition == MarketPosition.Long))
+                            continue;
+                    }
+                    exits.Add(order);
+                }
+            }
+            return exits;
+        }
+
+        /// <summary>
+        /// Exits half the position at market (rounded down, so the larger half
+        /// keeps running); a single contract is closed outright. Stops and targets
+        /// are cut down to the remaining size first, or a full-size stop or target
+        /// could fill past flat and reverse.
+        /// </summary>
+        private void CloseHalf(Account account)
+        {
+            Position position = OpenPosition(account);
+            if (position == null)
+            {
+                Log("Breakeven Stops: no position on " + Instrument.FullName + " to halve.", NinjaTrader.Cbi.LogLevel.Information);
+                return;
+            }
+            if (position.Quantity == 1)
+            {
+                CloseAll(account);
+                return;
+            }
+
+            bool isLong = position.MarketPosition == MarketPosition.Long;
+            int closeQuantity = position.Quantity / 2;
+            int remaining = position.Quantity - closeQuantity;
+
+            List<Order> exits = ExitOrders(account, position);
+            List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
+            List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
+            HashSet<string> cancelledOcos = new HashSet<string>();
+            TrimToQuantity(account, stops, remaining, cancelledOcos);
+            TrimToQuantity(account, targets, remaining, cancelledOcos);
+
+            try
+            {
+                Order exit = account.CreateOrder(Instrument, isLong ? OrderAction.Sell : OrderAction.BuyToCover, OrderType.Market,
+                    OrderEntry.Manual, TimeInForce.Day, closeQuantity, 0, 0, string.Empty, "Close half", Core.Globals.MaxDate, null);
+                account.Submit(new[] { exit });
+                Log("Breakeven Stops: closing " + closeQuantity + " of " + position.Quantity + " on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
+            }
+            catch (Exception ex)
+            {
+                Log("Breakeven Stops: close half failed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
+            }
+        }
+
+        /// <summary>
+        /// Shrinks the orders' total quantity to keepQuantity, cutting from the
+        /// first OCO group onward. Sorting by OCO id lines each stop up with its
+        /// target, so both passes cut the same brackets; an order whose OCO
+        /// partner was cancelled is cancelled by the platform and counts as gone.
+        /// </summary>
+        private static void TrimToQuantity(Account account, List<Order> orders, int keepQuantity, HashSet<string> cancelledOcos)
+        {
+            List<Order> live = orders
+                .Where(o => string.IsNullOrEmpty(o.Oco) || !cancelledOcos.Contains(o.Oco))
+                .OrderBy(o => o.Oco ?? string.Empty, StringComparer.Ordinal)
+                .ThenBy(o => o.Name ?? string.Empty, StringComparer.Ordinal)
+                .ToList();
+            int excess = live.Sum(o => o.Quantity) - keepQuantity;
+
+            List<Order> toChange = new List<Order>();
+            List<Order> toCancel = new List<Order>();
+            foreach (Order order in live)
+            {
+                if (excess <= 0)
+                    break;
+                int cut = Math.Min(excess, order.Quantity);
+                excess -= cut;
+                if (cut == order.Quantity)
+                {
+                    toCancel.Add(order);
+                    if (!string.IsNullOrEmpty(order.Oco))
+                        cancelledOcos.Add(order.Oco);
+                }
+                else
+                {
+                    order.QuantityChanged = order.Quantity - cut;
+                    order.LimitPriceChanged = order.LimitPrice;
+                    order.StopPriceChanged = order.StopPrice;
+                    toChange.Add(order);
+                }
+            }
+            if (toChange.Count > 0)
+                account.Change(toChange);
+            if (toCancel.Count > 0)
+                account.Cancel(toCancel);
         }
 
         /// <summary>
