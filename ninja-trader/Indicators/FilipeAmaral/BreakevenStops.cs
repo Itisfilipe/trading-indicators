@@ -28,6 +28,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Controls.RowDefinition buttonRow;
         private System.Windows.Threading.DispatcherTimer refreshTimer;
         private bool handlersAttached;
+        private int closeHalfFromQuantity;
+        private DateTime closeHalfTime;
 
         protected override void OnStateChange()
         {
@@ -191,8 +193,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position position = account != null ? OpenPosition(account) : null;
             double breakeven;
             SetEnabled(breakevenButton, position != null && StopsToMove(account, position, out breakeven).Count > 0);
-            SetEnabled(closeHalfButton, position != null);
-            SetEnabled(closeAllButton, position != null || (account != null && ExitOrders(account, null).Count > 0));
+            SetEnabled(closeHalfButton, position != null && !CloseHalfInFlight(position));
+            SetEnabled(closeAllButton, position != null || (account != null && HasWorkingOrders(account)));
         }
 
         private static void SetEnabled(System.Windows.Controls.Button button, bool enabled)
@@ -249,12 +251,48 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Log("Breakeven Stops: closed all on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
         }
 
+        private static bool IsWorking(Order order)
+        {
+            return order.OrderState == OrderState.Working
+                || order.OrderState == OrderState.Accepted
+                || order.OrderState == OrderState.PartFilled;
+        }
+
+        private bool HasWorkingOrders(Account account)
+        {
+            lock (account.Orders)
+            {
+                foreach (Order order in account.Orders)
+                {
+                    if (order.Instrument != null && order.Instrument.FullName == Instrument.FullName && IsWorking(order))
+                        return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>
-        /// Working orders on the instrument other than entries. With a position,
-        /// only those on its exit side; without one (position null), all of them.
+        /// Until the market exit's fill shows up in the position, a second click
+        /// would halve the same size again and could close past flat.
+        /// </summary>
+        private bool CloseHalfInFlight(Position position)
+        {
+            return position.Quantity == closeHalfFromQuantity
+                && DateTime.UtcNow - closeHalfTime < TimeSpan.FromSeconds(3);
+        }
+
+        private static int OpenQuantity(Order order)
+        {
+            return order.Quantity - order.Filled;
+        }
+
+        /// <summary>
+        /// Working orders on the instrument's exit side of the position, other
+        /// than entries.
         /// </summary>
         private List<Order> ExitOrders(Account account, Position position)
         {
+            bool isLong = position.MarketPosition == MarketPosition.Long;
             List<Order> exits = new List<Order>();
             lock (account.Orders)
             {
@@ -262,17 +300,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     if (order.Instrument == null || order.Instrument.FullName != Instrument.FullName)
                         continue;
-                    if (order.OrderState != OrderState.Working && order.OrderState != OrderState.Accepted)
+                    if (!IsWorking(order))
                         continue;
                     if (order.Name == "Entry" || order.Name == "CT Entry")
                         continue;
-                    if (position != null)
-                    {
-                        bool isLong = position.MarketPosition == MarketPosition.Long;
-                        bool isSell = order.OrderAction == OrderAction.Sell || order.OrderAction == OrderAction.SellShort;
-                        if (isSell != isLong)
-                            continue;
-                    }
+                    bool isSell = order.OrderAction == OrderAction.Sell || order.OrderAction == OrderAction.SellShort;
+                    if (isSell != isLong)
+                        continue;
                     exits.Add(order);
                 }
             }
@@ -293,6 +327,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Log("Breakeven Stops: no position on " + Instrument.FullName + " to halve.", NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
+            if (CloseHalfInFlight(position))
+                return;
             if (position.Quantity == 1)
             {
                 CloseAll(account);
@@ -315,6 +351,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Order exit = account.CreateOrder(Instrument, isLong ? OrderAction.Sell : OrderAction.BuyToCover, OrderType.Market,
                     OrderEntry.Manual, TimeInForce.Day, closeQuantity, 0, 0, string.Empty, "Close half", Core.Globals.MaxDate, null);
                 account.Submit(new[] { exit });
+                closeHalfFromQuantity = position.Quantity;
+                closeHalfTime = DateTime.UtcNow;
                 Log("Breakeven Stops: closing " + closeQuantity + " of " + position.Quantity + " on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
             }
             catch (Exception ex)
@@ -324,7 +362,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// Shrinks the orders' total quantity to keepQuantity, cutting the
+        /// Shrinks the orders' total open quantity to keepQuantity, cutting the
         /// orders without an OCO partner first, so paired brackets stay whole. An order
         /// is first capped at the size its OCO partner was trimmed to (zero: the
         /// platform cancels it with the partner), so a stop and its target stay
@@ -347,7 +385,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (hasTrimmedPartner && partnerQuantity == 0)
                     continue;
                 live.Add(order);
-                newQuantities[order] = hasTrimmedPartner ? Math.Min(order.Quantity, partnerQuantity) : order.Quantity;
+                newQuantities[order] = hasTrimmedPartner ? Math.Min(OpenQuantity(order), partnerQuantity) : OpenQuantity(order);
             }
 
             int excess = live.Sum(o => newQuantities[o]) - keepQuantity;
@@ -365,7 +403,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             foreach (Order order in live)
             {
                 int newQuantity = newQuantities[order];
-                if (newQuantity == order.Quantity)
+                if (newQuantity == OpenQuantity(order))
                     continue;
                 if (!string.IsNullOrEmpty(order.Oco))
                     ocoQuantities[order.Oco] = newQuantity;
@@ -375,7 +413,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
                 else
                 {
-                    order.QuantityChanged = newQuantity;
+                    order.QuantityChanged = newQuantity + order.Filled;
                     order.LimitPriceChanged = order.LimitPrice;
                     order.StopPriceChanged = order.StopPrice;
                     toChange.Add(order);
