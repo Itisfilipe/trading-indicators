@@ -72,7 +72,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         private readonly Dictionary<double, LevelVolume> levels = new Dictionary<double, LevelVolume>();
-        private long levelsKey = -1;
+        private int levelsKey = -1;
         private int periodMinutes;
         private double pocKey;
         private double runningVolume;
@@ -292,7 +292,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             if (!groupStarts.IsValidDataPoint(0))
                 groupStarts[0] = NewGroupStart();
-            long groupKey = GroupStart(CurrentBar);
+            int groupKey = GroupStart(CurrentBar);
             if (groupKey != levelsKey)
             {
                 levels.Clear();

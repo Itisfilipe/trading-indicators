@@ -28,6 +28,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private System.Windows.Controls.RowDefinition buttonRow;
         private System.Windows.Threading.DispatcherTimer refreshTimer;
         private bool handlersAttached;
+        private static readonly TimeSpan CloseHalfWindow = TimeSpan.FromSeconds(3);
         private int closeHalfFromQuantity;
         private DateTime closeHalfTime;
         private bool verifyingCloseHalf;
@@ -289,7 +290,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private bool CloseHalfInFlight(Position position)
         {
             return position.Quantity == closeHalfFromQuantity
-                && DateTime.UtcNow - closeHalfTime < TimeSpan.FromSeconds(3);
+                && DateTime.UtcNow - closeHalfTime < CloseHalfWindow;
         }
 
         private static int OpenQuantity(Order order)
@@ -417,7 +418,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
             }
 
-            if (DateTime.UtcNow - closeHalfTime < TimeSpan.FromSeconds(3))
+            if (DateTime.UtcNow - closeHalfTime < CloseHalfWindow)
                 return;
             verifyingCloseHalf = false;
             if (position != null && position.Quantity == closeHalfFromQuantity)

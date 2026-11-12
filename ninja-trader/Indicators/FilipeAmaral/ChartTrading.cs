@@ -1105,9 +1105,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     autoBreakevenState = AutoBreakevenState.Armed;
                 bool flipped = currentMarketPosition != MarketPosition.Flat && marketPosition != currentMarketPosition;
                 if (nowFlat || flipped)
+                {
                     openingAtrStopTicks = 0;
-                if (nowFlat || flipped)
                     CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits);
+                }
                 // Only a shrinking or reversed position trims exits: a scale-in fill can
                 // reach the exits before its own position update does.
                 trimNeeded = !nowFlat && (flipped || quantity < currentQuantity);
@@ -1339,15 +1340,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     for (int c = sameSide.Count - 1; c >= 0; c--)
                     {
                         BracketCommit commit = sameSide[c];
-                        // Pairs a target fill already ate into are cut first.
-                        for (int pass = 0; pass < 2; pass++)
+                        foreach (bool cutPartlyTakenPairs in new[] { true, false })
                         {
                             for (int p = 0; p < commit.StopOrders.Length; p++)
                             {
                                 Order stop = commit.StopOrders[p];
                                 Order target = commit.TargetOrders[p];
                                 bool partlyTaken = target != null && target.Filled > 0;
-                                if (partlyTaken != (pass == 0))
+                                if (partlyTaken != cutPartlyTakenPairs)
                                     continue;
                                 int live = PairLiveLots(stop, target);
                                 if (live == 0)
@@ -1437,14 +1437,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // Working/Accepted states, and a fast entry fill can outrun the exits' own
             // acceptance. Without this retry the missed quantity was never applied --
             // a 4-lot entry could end up covered by 3 lots of exits for good. The
-            // retry fires only when THIS pair's desired quantity differs from what
+            // retry fires only when THIS pair's desired quantity exceeds what
             // EnsureExits last staged for it, so a trader's own quantity change
-            // (which also emits these updates, and leaves desired == applied) never
-            // regrows what they shrank on purpose, and no flag needs to be published
-            // ahead of the acceptance events.
+            // never regrows what they shrank on purpose, and no flag needs to be
+            // published ahead of the acceptance events.
             bool isPairOrder = e.Order.Name == "CT Stop" || e.Order.Name == "CT Target";
             bool pairOrderAlive = e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted;
-            if (isPairOrder && e.Order.Name == "CT Stop" && (pairOrderAlive || e.OrderState == OrderState.Rejected))
+            if (e.Order.Name == "CT Stop" && (pairOrderAlive || e.OrderState == OrderState.Rejected))
                 CheckStopOutcome(e.Order, e.OrderState, sender as Account);
 
             // A pair order ending is a retry point too: a rejected stop's target
@@ -1564,23 +1563,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Order target = null;
             lock (orderLock)
             {
-                for (int i = 0; i < activeCommits.Count && owner == null; i++)
+                foreach (BracketCommit candidate in activeCommits)
                 {
-                    BracketCommit candidate = activeCommits[i];
                     if (candidate.StopOrders == null)
                         continue;
                     pairIndex = Array.IndexOf(candidate.StopOrders, stop);
                     if (pairIndex >= 0)
+                    {
                         owner = candidate;
+                        break;
+                    }
                 }
                 if (owner == null)
                     return;
 
                 int requested = owner.RequestedStopQuantity[pairIndex];
+                target = owner.TargetOrders[pairIndex];
                 if (state == OrderState.Rejected)
                 {
                     unprotected = owner.PairAppliedQuantity[pairIndex];
-                    target = owner.TargetOrders[pairIndex];
                 }
                 else if (requested > 0 && stop.Quantity < requested)
                 {
@@ -1598,7 +1599,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     WriteOff(owner, pairIndex, unprotected);
             }
 
-            if (target != null && !Order.IsTerminalState(target.OrderState))
+            if (state == OrderState.Rejected && target != null && !Order.IsTerminalState(target.OrderState))
                 account.Cancel(new[] { target });
 
             if (retry)
@@ -1613,13 +1614,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position open = LivePosition(account);
             int closable = open != null && open.MarketPosition == CommitSide(owner) ? Math.Min(unprotected, open.Quantity) : 0;
             // A grown target the stop could not follow would cancel the stop on fill.
-            Order pairTarget = owner.TargetOrders[pairIndex];
-            if (state != OrderState.Rejected && pairTarget != null && OpenQuantity(pairTarget) > OpenQuantity(stop))
+            if (state != OrderState.Rejected && target != null && OpenQuantity(target) > OpenQuantity(stop))
             {
-                pairTarget.QuantityChanged = pairTarget.Filled + OpenQuantity(stop);
-                pairTarget.LimitPriceChanged = pairTarget.LimitPrice;
-                pairTarget.StopPriceChanged = pairTarget.StopPrice;
-                account.Change(new[] { pairTarget });
+                target.QuantityChanged = target.Filled + OpenQuantity(stop);
+                target.LimitPriceChanged = target.LimitPrice;
+                target.StopPriceChanged = target.StopPrice;
+                account.Change(new[] { target });
             }
             if (closable > 0)
                 account.Submit(new[] { account.CreateOrder(Instrument, owner.ExitAction, OrderType.Market, OrderEntry.Manual, TimeInForce.Day,
@@ -1711,8 +1711,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         && (pairTarget == null || Order.IsTerminalState(pairTarget.OrderState));
                     if (stop == null || pairDead)
                     {
-                        // A pair the market already took out gets a fresh pair for the
-                        // lots that arrived after it closed.
                         int lots = desired - applied;
                         // Each pair's stop and target cancel each other.
                         string oco = "CT-" + Guid.NewGuid().ToString("N");
