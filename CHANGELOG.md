@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- New Candle Countdown Bubble: the time left in the chart's candle in a box
+  beside the last candle, updated every second.
 - ChartTrading and Breakeven Stops: messages that need attention (a
   refused click, an order the tools placed or cancelled on their own, a
   failure that can leave the position unprotected) now pop up instead of

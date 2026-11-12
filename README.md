@@ -269,6 +269,15 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart you trade; set the anchor, toggle the RTH window
   to taste, and size the bands with the deviation multipliers.
 
+### Candle Countdown Bubble — time left in the candle, beside price
+
+- A rounded box with the time left in the chart's current candle (mm:ss,
+  h:mm:ss past an hour), drawn just right of the last candle at its price
+  and repainted every second, quiet tape included.
+- Minute charts only; on other bar types it draws nothing. Hidden while the
+  last candle is scrolled off screen.
+- Box color, opacity, text color, font and gap from the candle are settings.
+
 ### Candle Countdown & Position Sizer — clock, candle countdowns, lot size
 
 - NinjaTrader port of the TradingView tool of the same name: an on-chart
