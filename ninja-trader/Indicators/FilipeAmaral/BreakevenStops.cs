@@ -305,9 +305,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<Order> exits = ExitOrders(account, position);
             List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
             List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
-            HashSet<string> cancelledOcos = new HashSet<string>();
-            TrimToQuantity(account, stops, remaining, cancelledOcos);
-            TrimToQuantity(account, targets, remaining, cancelledOcos);
+            Dictionary<string, int> ocoQuantities = new Dictionary<string, int>();
+            TrimToQuantity(account, stops, remaining, ocoQuantities);
+            TrimToQuantity(account, targets, remaining, ocoQuantities);
 
             try
             {
@@ -324,36 +324,52 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         /// <summary>
         /// Shrinks the orders' total quantity to keepQuantity, cutting from the
-        /// first OCO group onward. Sorting by OCO id lines each stop up with its
-        /// target, so both passes cut the same brackets; an order whose OCO
-        /// partner was cancelled is cancelled by the platform and counts as gone.
+        /// first OCO group onward. An order is first capped at the size its OCO
+        /// partner was trimmed to (zero: the platform cancels it with the
+        /// partner), so a stop and its target stay the same size; a target
+        /// larger than its stop would cancel the stop on fill and leave the
+        /// rest of the position unprotected.
         /// </summary>
-        private static void TrimToQuantity(Account account, List<Order> orders, int keepQuantity, HashSet<string> cancelledOcos)
+        private static void TrimToQuantity(Account account, List<Order> orders, int keepQuantity, Dictionary<string, int> ocoQuantities)
         {
-            List<Order> live = orders
-                .Where(o => string.IsNullOrEmpty(o.Oco) || !cancelledOcos.Contains(o.Oco))
-                .OrderBy(o => o.Oco ?? string.Empty, StringComparer.Ordinal)
-                .ThenBy(o => o.Name ?? string.Empty, StringComparer.Ordinal)
-                .ToList();
-            int excess = live.Sum(o => o.Quantity) - keepQuantity;
+            List<Order> live = new List<Order>();
+            Dictionary<Order, int> newQuantities = new Dictionary<Order, int>();
+            foreach (Order order in orders.OrderBy(o => o.Oco ?? string.Empty, StringComparer.Ordinal).ThenBy(o => o.Name ?? string.Empty, StringComparer.Ordinal))
+            {
+                int partnerQuantity;
+                bool hasTrimmedPartner = !string.IsNullOrEmpty(order.Oco) && ocoQuantities.TryGetValue(order.Oco, out partnerQuantity);
+                if (hasTrimmedPartner && partnerQuantity == 0)
+                    continue;
+                live.Add(order);
+                newQuantities[order] = hasTrimmedPartner ? Math.Min(order.Quantity, partnerQuantity) : order.Quantity;
+            }
+
+            int excess = live.Sum(o => newQuantities[o]) - keepQuantity;
+            foreach (Order order in live)
+            {
+                if (excess <= 0)
+                    break;
+                int cut = Math.Min(excess, newQuantities[order]);
+                excess -= cut;
+                newQuantities[order] -= cut;
+            }
 
             List<Order> toChange = new List<Order>();
             List<Order> toCancel = new List<Order>();
             foreach (Order order in live)
             {
-                if (excess <= 0)
-                    break;
-                int cut = Math.Min(excess, order.Quantity);
-                excess -= cut;
-                if (cut == order.Quantity)
+                int newQuantity = newQuantities[order];
+                if (newQuantity == order.Quantity)
+                    continue;
+                if (!string.IsNullOrEmpty(order.Oco))
+                    ocoQuantities[order.Oco] = newQuantity;
+                if (newQuantity == 0)
                 {
                     toCancel.Add(order);
-                    if (!string.IsNullOrEmpty(order.Oco))
-                        cancelledOcos.Add(order.Oco);
                 }
                 else
                 {
-                    order.QuantityChanged = order.Quantity - cut;
+                    order.QuantityChanged = newQuantity;
                     order.LimitPriceChanged = order.LimitPrice;
                     order.StopPriceChanged = order.StopPrice;
                     toChange.Add(order);
