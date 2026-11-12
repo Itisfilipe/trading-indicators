@@ -1484,7 +1484,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         {
                             Order stop = commit.StopOrders[p];
                             Order target = commit.TargetOrders[p];
-                            if (abandonedExits.ContainsKey(stop) || (IsSettled(stop) && IsSettled(target)))
+                            if (stop == null || abandonedExits.ContainsKey(stop) || (IsSettled(stop) && IsSettled(target)))
                                 continue;
                             anyUnsettled = true;
                             if (unsettledSince == DateTime.MinValue)
@@ -1558,7 +1558,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             {
                                 Order stop = commit.StopOrders[p];
                                 Order target = commit.TargetOrders[p];
-                                if (abandonedExits.ContainsKey(stop))
+                                if (stop == null || abandonedExits.ContainsKey(stop))
                                     continue;
                                 bool partlyTaken = target != null && target.Filled > 0;
                                 if (partlyTaken != cutPartlyTakenPairs)
