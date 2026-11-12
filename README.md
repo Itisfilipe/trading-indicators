@@ -487,7 +487,7 @@ the two count toward volume only.
   chart's candle must divide the period evenly (a 1-minute chart takes any
   period); otherwise it behaves as Chart. Add it twice to see both.
   "Show volume and delta" (off by default) prints each candle's volume and
-  delta at its opening end: above a
+  delta (each window's, with a POC period) at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next
   candles in a trend. "Price grouping"
   merges ticks into one level before the POC is picked; "Neutral band"

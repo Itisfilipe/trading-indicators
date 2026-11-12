@@ -60,7 +60,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// the aggressor that dominated it, labels the strong ones with their
     /// contract count, and prints each candle's volume and delta. With a POC
     /// period set, the candles are grouped into clock-aligned windows of that
-    /// many minutes and each window gets one POC spanning its candles.
+    /// many minutes and each window gets one POC spanning its candles, and one
+    /// volume and delta.
     /// </summary>
     public class FlowPOC : Indicator
     {
@@ -618,7 +619,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Fill opacity (%)", Order = 3, GroupName = "3. Markers")]
         public int FillOpacity { get; set; }
 
-        [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta at its opening end: above a falling candle, below a rising one.", Order = 8, GroupName = "3. Markers")]
+        [Display(Name = "Show volume and delta", Description = "Print each candle's volume and delta (each window's, with a POC period) at its opening end: above a falling candle, below a rising one.", Order = 8, GroupName = "3. Markers")]
         public bool ShowBarStats { get; set; }
 
         [Range(100, 300)]

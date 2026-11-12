@@ -31,6 +31,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private static readonly TimeSpan CloseHalfWindow = TimeSpan.FromSeconds(3);
         private Order closeHalfExit;
         private DateTime closeHalfEndTime;
+        private DateTime exitsUnsettledSince = DateTime.MinValue;
         private bool verifyingCloseHalf;
 
         protected override void OnStateChange()
@@ -353,9 +354,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<Order> exits = ExitOrders(account, position);
             if (!exits.All(IsSettled))
             {
-                Log("Breakeven Stops: a stop or target on " + Instrument.FullName + " is still being changed; Close half not sent, click again.", NinjaTrader.Cbi.LogLevel.Warning);
+                if (DateTime.UtcNow - exitsUnsettledSince > TimeSpan.FromSeconds(30))
+                    exitsUnsettledSince = DateTime.UtcNow;
+                // A change can freeze mid-flight (a Sim risk limit leaves it ChangePending for good).
+                bool stuck = DateTime.UtcNow - exitsUnsettledSince > TimeSpan.FromSeconds(5);
+                Log("Breakeven Stops: a stop or target on " + Instrument.FullName + (stuck
+                        ? " has been stuck mid-change for over 5 s; Close half not sent. Check the order in the Orders tab."
+                        : " is still being changed; Close half not sent, click again."),
+                    stuck ? NinjaTrader.Cbi.LogLevel.Error : NinjaTrader.Cbi.LogLevel.Warning);
                 return;
             }
+            exitsUnsettledSince = DateTime.MinValue;
             List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
             List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
             try
@@ -439,6 +448,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// the same size; a target smaller than its stop would cancel the stop
         /// on fill and leave the rest of the position unprotected.
         /// </summary>
+        private static bool IsCancellable(Order order)
+        {
+            return !Order.IsTerminalState(order.OrderState)
+                && order.OrderState != OrderState.CancelPending && order.OrderState != OrderState.CancelSubmitted;
+        }
+
         private static void TrimToQuantity(Account account, List<Order> orders, List<Order> partners, int keepQuantity, Dictionary<string, int> ocoQuantities)
         {
             HashSet<string> partnerOcos = new HashSet<string>(partners.Where(o => !string.IsNullOrEmpty(o.Oco)).Select(o => o.Oco));
@@ -480,6 +495,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (newQuantity == 0)
                 {
                     toCancel.Add(order);
+                    // Cancelling one OCO leg is not trusted to cancel the other; a
+                    // stop's target goes too. A target's stop never does: it may still protect.
+                    bool isStop = order.OrderType == OrderType.StopMarket || order.OrderType == OrderType.StopLimit;
+                    foreach (Order partner in partners)
+                    {
+                        if (isStop && !string.IsNullOrEmpty(order.Oco) && partner.Oco == order.Oco && IsCancellable(partner) && !toCancel.Contains(partner))
+                            toCancel.Add(partner);
+                    }
                 }
                 else
                 {
