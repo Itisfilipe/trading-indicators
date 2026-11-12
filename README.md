@@ -471,11 +471,13 @@ the two count toward volume only.
   rare very large POCs stand out.
   "POC period" (Chart by default) shows a longer timeframe's POC on a
   faster chart: at 5 minutes, a 1-minute chart gets one POC per 5-minute
-  window, drawn across that window's candles. Windows align to the clock
-  (:00, :05, ...); 2h, 4h and 12h windows count from midnight, and Session
-  gives one POC per trading session. Average and outlier comparisons then
-  run window against window. A period not longer than the chart's candles
-  behaves as Chart. Add the indicator twice to see both.
+  window, drawn across that window's candles. Windows align to the
+  exchange's clock (:00, :05, ...; 2h, 4h and 12h from exchange midnight)
+  and never span two sessions; Session gives one POC per trading session.
+  Average and outlier comparisons then run window against window. Minute
+  periods need a minute chart whose candle divides the period evenly
+  (1-minute always works); otherwise, and on tick, volume or renko charts,
+  the indicator behaves as Chart. Add it twice to see both.
   "Show volume and delta" (off by default) prints each candle's volume and
   delta at its opening end: above a
   falling candle, below a rising one, so they stay clear of the next

@@ -86,7 +86,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> barVolume;
         private Series<double> barDelta;
         private Series<double> slotBaseline;
-        private Series<int> groupKeys;
+        private Series<int> groupStarts;
 
         private const int MinimumSessions = 3;
         private bool useTimeOfDay;
@@ -148,13 +148,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 barVolume = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 barDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 slotBaseline = new Series<double>(this, MaximumBarsLookBack.Infinite);
-                groupKeys = new Series<int>(this, MaximumBarsLookBack.Infinite);
+                groupStarts = new Series<int>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
             {
                 periodMinutes = PeriodMinutes(PocPeriod);
+                // Clock windows need candles with fixed time stamps that tile the window evenly.
                 bool chartIsMinutes = Bars.BarsPeriod.BarsPeriodType == BarsPeriodType.Minute;
-                if (!Bars.BarsType.IsIntraday || (chartIsMinutes && Bars.BarsPeriod.Value >= periodMinutes))
+                bool tilesWindow = chartIsMinutes && Bars.BarsPeriod.Value < periodMinutes && periodMinutes % Bars.BarsPeriod.Value == 0;
+                bool isSession = PocPeriod == FlowPocPeriod.Session;
+                if (!Bars.BarsType.IsIntraday || (!isSession && !tilesWindow))
                     periodMinutes = 0;
                 useTimeOfDay = StrengthMode == FlowPocStrength.SameTimeOfDay && Bars.BarsType.IsTimeBased;
                 if (StrengthMode == FlowPocStrength.SameTimeOfDay && !useTimeOfDay)
@@ -171,7 +174,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!IsFirstTickOfBar)
                 return;
 
-            groupKeys[0] = NewGroupKey();
+            groupStarts[0] = NewGroupStart();
 
             // A candle with no trades yet still belongs to its window's POC.
             bool continuesGroup = CurrentBar > 0 && !IsGroupEnd(CurrentBar - 1);
@@ -217,51 +220,47 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         // Bars are stamped with their close time, so the tick before it places
         // a candle closing on the boundary in the window it actually traded in.
+        // Windows count from exchange midnight so they hold still across the
+        // user's and the exchange's daylight-saving changes.
         private DateTime WindowStart(int barIndex)
         {
-            long barTicks = Bars.GetTime(barIndex).AddTicks(-1).Ticks;
+            DateTime exchangeTime = TimeZoneInfo.ConvertTime(Bars.GetTime(barIndex), Core.Globals.GeneralOptions.TimeZoneInfo, Bars.TradingHours.TimeZoneInfo);
+            long barTicks = exchangeTime.AddTicks(-1).Ticks;
             long periodTicks = TimeSpan.FromMinutes(periodMinutes).Ticks;
             return new DateTime(barTicks - barTicks % periodTicks);
         }
 
         /// <summary>
-        /// The current candle's group: its own index on Chart, its window's start
-        /// in minutes for a minute period, the session's first candle for Session.
+        /// Index of the first candle of the current candle's group. A group is
+        /// the candle itself on Chart; otherwise a new one starts with each
+        /// session and, for a minute period, with each new window.
         /// </summary>
-        private int NewGroupKey()
+        private int NewGroupStart()
         {
-            if (periodMinutes == 0)
+            if (periodMinutes == 0 || CurrentBar == 0 || Bars.IsFirstBarOfSession)
                 return CurrentBar;
-            if (PocPeriod == FlowPocPeriod.Session)
-                return CurrentBar == 0 || Bars.IsFirstBarOfSession ? CurrentBar : groupKeys[1];
-            return (int)(WindowStart(CurrentBar).Ticks / TimeSpan.TicksPerMinute);
-        }
-
-        private int GroupKey(int barIndex)
-        {
-            return groupKeys.GetValueAt(barIndex);
-        }
-
-        private bool IsGroupEnd(int barIndex)
-        {
-            return periodMinutes == 0 || barIndex + 1 >= Bars.Count || GroupKey(barIndex + 1) != GroupKey(barIndex);
+            if (PocPeriod != FlowPocPeriod.Session && WindowStart(CurrentBar) != WindowStart(CurrentBar - 1))
+                return CurrentBar;
+            return groupStarts[1];
         }
 
         private int GroupStart(int barIndex)
         {
-            int start = barIndex;
-            long key = GroupKey(barIndex);
-            while (start > 0 && GroupKey(start - 1) == key)
-                start--;
-            return start;
+            return groupStarts.GetValueAt(barIndex);
+        }
+
+        private bool IsGroupEnd(int barIndex)
+        {
+            return periodMinutes == 0 || barIndex + 1 >= Bars.Count || GroupStart(barIndex + 1) != GroupStart(barIndex);
         }
 
         private TimeSpan GroupTimeOfDay(int barIndex)
         {
-            if (PocPeriod == FlowPocPeriod.Session && periodMinutes > 0)
+            if (periodMinutes == 0)
+                return TimeZoneInfo.ConvertTime(Bars.GetTime(barIndex), Core.Globals.GeneralOptions.TimeZoneInfo, Bars.TradingHours.TimeZoneInfo).TimeOfDay;
+            if (PocPeriod == FlowPocPeriod.Session)
                 return TimeSpan.Zero;
-            DateTime groupTime = periodMinutes == 0 ? Bars.GetTime(barIndex) : WindowStart(barIndex);
-            return TimeZoneInfo.ConvertTime(groupTime, Core.Globals.GeneralOptions.TimeZoneInfo, Bars.TradingHours.TimeZoneInfo).TimeOfDay;
+            return WindowStart(barIndex).TimeOfDay;
         }
 
         private List<double> SlotVolumes(TimeSpan timeOfDay)
@@ -291,9 +290,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
 
-            if (!groupKeys.IsValidDataPoint(0))
-                groupKeys[0] = NewGroupKey();
-            long groupKey = GroupKey(CurrentBar);
+            if (!groupStarts.IsValidDataPoint(0))
+                groupStarts[0] = NewGroupStart();
+            long groupKey = GroupStart(CurrentBar);
             if (groupKey != levelsKey)
             {
                 levels.Clear();
@@ -565,7 +564,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         #region Properties
 
-        [Display(Name = "POC period", Description = "Chart: one POC per candle. A longer period: one POC per clock-aligned window of that length, spanning its candles (a 5-minute POC on a 1-minute chart). Session: one POC per trading session. A period at or below the chart's candle falls back to Chart.", Order = 0, GroupName = "2. POC")]
+        [Display(Name = "POC period", Description = "Chart: one POC per candle. A longer period: one POC per window of that length on the exchange clock, spanning its candles (a 5-minute POC on a 1-minute chart). Session: one POC per trading session. Minute periods need a minute chart whose candle divides the period; otherwise it behaves as Chart.", Order = 0, GroupName = "2. POC")]
         public FlowPocPeriod PocPeriod { get; set; }
 
         [Range(1, 100), NinjaScriptProperty]
