@@ -268,8 +268,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         continue;
                     if (position != null)
                     {
+                        bool isLong = position.MarketPosition == MarketPosition.Long;
                         bool isSell = order.OrderAction == OrderAction.Sell || order.OrderAction == OrderAction.SellShort;
-                        if (isSell != (position.MarketPosition == MarketPosition.Long))
+                        if (isSell != isLong)
                             continue;
                     }
                     exits.Add(order);
@@ -336,7 +337,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<Order> live = new List<Order>();
             Dictionary<Order, int> newQuantities = new Dictionary<Order, int>();
             IEnumerable<Order> unpairedFirst = orders
-                .OrderBy(o => !string.IsNullOrEmpty(o.Oco) && partnerOcos.Contains(o.Oco))
+                .OrderBy(o => partnerOcos.Contains(o.Oco))
                 .ThenBy(o => o.Oco ?? string.Empty, StringComparer.Ordinal)
                 .ThenBy(o => o.Name ?? string.Empty, StringComparer.Ordinal);
             foreach (Order order in unpairedFirst)

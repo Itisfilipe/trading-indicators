@@ -13,7 +13,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
     /// </summary>
     internal static class RectanglePreset
     {
-        public static System.Windows.Media.Brush Rgb(byte r, byte g, byte b)
+        public static System.Windows.Media.SolidColorBrush Rgb(byte r, byte g, byte b)
         {
             System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
             brush.Freeze();
@@ -28,9 +28,9 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             tool.QuarterStroke = new Stroke(color, DashStyleHelper.Dot, 1f);
         }
 
-        public static object Icon(System.Windows.Media.Brush color)
+        public static object Icon(System.Windows.Media.SolidColorBrush color)
         {
-            System.Windows.Media.SolidColorBrush fill = new System.Windows.Media.SolidColorBrush(((System.Windows.Media.SolidColorBrush)color).Color) { Opacity = 0.35 };
+            System.Windows.Media.SolidColorBrush fill = new System.Windows.Media.SolidColorBrush(color.Color) { Opacity = 0.35 };
             return new System.Windows.Shapes.Rectangle
             {
                 Width = 14,
@@ -44,7 +44,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 
     public class RectangleBlue : RectangleMidline
     {
-        private static readonly System.Windows.Media.Brush PresetColor = RectanglePreset.Rgb(0x29, 0x62, 0xFF);
+        private static readonly System.Windows.Media.SolidColorBrush PresetColor = RectanglePreset.Rgb(0x29, 0x62, 0xFF);
 
         public override object Icon => RectanglePreset.Icon(PresetColor);
 
@@ -61,7 +61,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 
     public class RectangleGray : RectangleMidline
     {
-        private static readonly System.Windows.Media.Brush PresetColor = RectanglePreset.Rgb(0x78, 0x7B, 0x86);
+        private static readonly System.Windows.Media.SolidColorBrush PresetColor = RectanglePreset.Rgb(0x78, 0x7B, 0x86);
 
         public override object Icon => RectanglePreset.Icon(PresetColor);
 
@@ -78,7 +78,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
 
     public class RectangleAmber : RectangleMidline
     {
-        private static readonly System.Windows.Media.Brush PresetColor = RectanglePreset.Rgb(0xB8, 0x86, 0x2B);
+        private static readonly System.Windows.Media.SolidColorBrush PresetColor = RectanglePreset.Rgb(0xB8, 0x86, 0x2B);
 
         public override object Icon => RectanglePreset.Icon(PresetColor);
 
