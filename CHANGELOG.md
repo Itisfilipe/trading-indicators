@@ -11,6 +11,14 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   refused click, an order the tools placed or cancelled on their own, a
   failure that can leave the position unprotected) now pop up instead of
   only reaching the Log tab.
+- ChartTrading: a bracket replaced after being stuck mid-change keeps the
+  stop and target prices it last held (moved to breakeven, dragged), and a
+  stuck order whose cancel is refused is managed again instead of being
+  doubled. A stop whose target you cancelled still grows to cover later
+  fills, and a target left working after its stop is gone is cancelled.
+  Two quick opposite clicks can no longer both get through.
+- Close half: when its exit fills in pieces, stops and targets are cut
+  again at each new position size, not only once.
 - ChartTrading: a stop or target stuck mid-change for 5 s (a Sim risk
   limit can freeze one) is cancelled and placed again; a target change the
   broker refuses is sent once more, then that bracket is closed at market.
