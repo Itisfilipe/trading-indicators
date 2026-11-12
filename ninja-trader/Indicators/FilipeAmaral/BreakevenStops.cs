@@ -305,12 +305,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<Order> exits = ExitOrders(account, position);
             List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
             List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
-            Dictionary<string, int> ocoQuantities = new Dictionary<string, int>();
-            TrimToQuantity(account, stops, remaining, ocoQuantities);
-            TrimToQuantity(account, targets, remaining, ocoQuantities);
-
             try
             {
+                Dictionary<string, int> ocoQuantities = new Dictionary<string, int>();
+                TrimToQuantity(account, stops, targets, remaining, ocoQuantities);
+                TrimToQuantity(account, targets, stops, remaining, ocoQuantities);
+
                 Order exit = account.CreateOrder(Instrument, isLong ? OrderAction.Sell : OrderAction.BuyToCover, OrderType.Market,
                     OrderEntry.Manual, TimeInForce.Day, closeQuantity, 0, 0, string.Empty, "Close half", Core.Globals.MaxDate, null);
                 account.Submit(new[] { exit });
@@ -318,25 +318,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                Log("Breakeven Stops: close half failed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
+                Log("Breakeven Stops: close half failed; stops and targets may already be reduced, check them - " + ex.Message, NinjaTrader.Cbi.LogLevel.Error);
             }
         }
 
         /// <summary>
-        /// Shrinks the orders' total quantity to keepQuantity, cutting from the
-        /// first OCO group onward. An order is first capped at the size its OCO
-        /// partner was trimmed to (zero: the platform cancels it with the
-        /// partner), so a stop and its target stay the same size; a target
-        /// larger than its stop would cancel the stop on fill and leave the
-        /// rest of the position unprotected.
+        /// Shrinks the orders' total quantity to keepQuantity, cutting the
+        /// orders without an OCO partner first, so paired brackets stay whole. An order
+        /// is first capped at the size its OCO partner was trimmed to (zero: the
+        /// platform cancels it with the partner), so a stop and its target stay
+        /// the same size; a target smaller than its stop would cancel the stop
+        /// on fill and leave the rest of the position unprotected.
         /// </summary>
-        private static void TrimToQuantity(Account account, List<Order> orders, int keepQuantity, Dictionary<string, int> ocoQuantities)
+        private static void TrimToQuantity(Account account, List<Order> orders, List<Order> partners, int keepQuantity, Dictionary<string, int> ocoQuantities)
         {
+            HashSet<string> partnerOcos = new HashSet<string>(partners.Where(o => !string.IsNullOrEmpty(o.Oco)).Select(o => o.Oco));
             List<Order> live = new List<Order>();
             Dictionary<Order, int> newQuantities = new Dictionary<Order, int>();
-            foreach (Order order in orders.OrderBy(o => o.Oco ?? string.Empty, StringComparer.Ordinal).ThenBy(o => o.Name ?? string.Empty, StringComparer.Ordinal))
+            IEnumerable<Order> unpairedFirst = orders
+                .OrderBy(o => !string.IsNullOrEmpty(o.Oco) && partnerOcos.Contains(o.Oco))
+                .ThenBy(o => o.Oco ?? string.Empty, StringComparer.Ordinal)
+                .ThenBy(o => o.Name ?? string.Empty, StringComparer.Ordinal);
+            foreach (Order order in unpairedFirst)
             {
-                int partnerQuantity;
+                int partnerQuantity = 0;
                 bool hasTrimmedPartner = !string.IsNullOrEmpty(order.Oco) && ocoQuantities.TryGetValue(order.Oco, out partnerQuantity);
                 if (hasTrimmedPartner && partnerQuantity == 0)
                     continue;
