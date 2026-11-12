@@ -251,6 +251,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // acknowledged, and when it was asked.
             public int[] RequestedStopQuantity;
             public DateTime[] RequestedStopAt;
+            // Per pair: the lots it held when abandoned as stuck, put back if its cancel is refused.
+            public int[] AbandonedAppliedQuantity;
             // One rejected stop or grow is retried; a second closes those lots.
             public bool ExitRetried;
             // Per pair: one refused target change is re-issued; a second closes the pair.
@@ -1463,6 +1465,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (Order.IsTerminalState(order.OrderState) || cancelRefused)
                             abandonedExits.Remove(order);
                     }
+                    // Without its old plan a rejoining pair is counted as a refused cut and its share grows.
+                    foreach (BracketCommit commit in activeCommits)
+                    {
+                        if (commit.StopOrders == null)
+                            continue;
+                        for (int p = 0; p < commit.StopOrders.Length; p++)
+                        {
+                            Order stop = commit.StopOrders[p];
+                            Order target = commit.TargetOrders[p];
+                            if (commit.AbandonedAppliedQuantity[p] == 0 || stop == null || abandonedExits.ContainsKey(stop)
+                                || (target != null && abandonedExits.ContainsKey(target)))
+                                continue;
+                            if (!Order.IsTerminalState(stop.OrderState))
+                                commit.PairAppliedQuantity[p] = commit.AbandonedAppliedQuantity[p];
+                            commit.AbandonedAppliedQuantity[p] = 0;
+                        }
+                    }
                     MarketPosition side = currentMarketPosition;
                     if (side == MarketPosition.Flat)
                     {
@@ -1506,6 +1525,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                 if (!Order.IsTerminalState(exit.OrderState))
                                     cancels.Add(exit);
                             }
+                            commit.AbandonedAppliedQuantity[p] = Math.Min(commit.PairAppliedQuantity[p], PairLiveLots(stop, target));
                             commit.PairAppliedQuantity[p] = 0;
                             commit.RequestedStopQuantity[p] = 0;
                             abandoned++;
@@ -2076,6 +2096,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         commit.PairAppliedQuantity = new int[commit.StopPrices.Length];
                         commit.RequestedStopQuantity = new int[commit.StopPrices.Length];
                         commit.RequestedStopAt = new DateTime[commit.StopPrices.Length];
+                        commit.AbandonedAppliedQuantity = new int[commit.StopPrices.Length];
                         commit.TargetRetried = new bool[commit.StopPrices.Length];
                         commit.TargetChangeRefused = new bool[commit.StopPrices.Length];
                     }
@@ -2134,6 +2155,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             commit.StopOrders[i] = null;
                             commit.TargetOrders[i] = null;
                             commit.PairAppliedQuantity[i] = desired;
+                            commit.AbandonedAppliedQuantity[i] = 0;
                             commit.RequestedStopQuantity[i] = desired - applied;
                             commit.RequestedStopAt[i] = DateTime.UtcNow;
                             newPairs.Add(i);
@@ -2155,7 +2177,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             || pairTarget.OrderState == OrderState.Cancelled || pairTarget.OrderState == OrderState.Rejected;
                         if (stopAlive && (targetAlive || targetCancelled))
                         {
-                            int grownLots = OpenQuantity(stop) + (desired - applied);
+                            // A stop holding more than the plan (a refused cut) is not grown on top of.
+                            int grownLots = Math.Min(OpenQuantity(stop), applied) + (desired - applied);
                             stop.QuantityChanged = stop.Filled + grownLots;
                             stop.LimitPriceChanged = stop.LimitPrice;
                             stop.StopPriceChanged = stop.StopPrice;
