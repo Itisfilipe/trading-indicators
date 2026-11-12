@@ -32,8 +32,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Order closeHalfExit;
         private DateTime closeHalfEndTime;
         private DateTime exitsUnsettledSince = DateTime.MinValue;
-        // One re-cut per Close half: a broker refusing it would otherwise pop up every tick.
-        private bool closeHalfRecut;
+        // One re-cut per position size: a broker refusing it would otherwise pop up every
+        // tick, while a Close half filling in pieces needs a cut at each new size.
+        private int closeHalfRecutAt;
         private bool verifyingCloseHalf;
 
         protected override void OnStateChange()
@@ -381,7 +382,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 closeHalfExit = exit;
                 closeHalfEndTime = DateTime.MinValue;
                 verifyingCloseHalf = true;
-                closeHalfRecut = false;
+                closeHalfRecutAt = 0;
                 Log("Breakeven Stops: closing " + closeQuantity + " of " + position.Quantity + " on " + Instrument.FullName + ".", NinjaTrader.Cbi.LogLevel.Information);
             }
             catch (Exception ex)
@@ -414,9 +415,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 List<Order> stops = exits.Where(o => o.OrderType == OrderType.StopMarket || o.OrderType == OrderType.StopLimit).ToList();
                 List<Order> targets = exits.Where(o => o.OrderType == OrderType.Limit || o.OrderType == OrderType.MIT).ToList();
                 bool oversized = stops.Sum(o => OpenQuantity(o)) > position.Quantity || targets.Sum(o => OpenQuantity(o)) > position.Quantity;
-                if (oversized && !closeHalfRecut && exits.All(IsSettled))
+                if (oversized && position.Quantity != closeHalfRecutAt && exits.All(IsSettled))
                 {
-                    closeHalfRecut = true;
+                    closeHalfRecutAt = position.Quantity;
                     try
                     {
                         Dictionary<string, int> ocoQuantities = new Dictionary<string, int>();
