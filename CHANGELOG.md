@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- ChartTrading and Breakeven Stops: messages that need attention (a
+  refused click, an order the tools placed or cancelled on their own, a
+  failure that can leave the position unprotected) now pop up instead of
+  only reaching the Log tab.
 - ChartTrading: a stop or target stuck mid-change for 5 s (a Sim risk
   limit can freeze one) is cancelled and placed again; a target change the
   broker refuses is sent once more, then that bracket is closed at market.
