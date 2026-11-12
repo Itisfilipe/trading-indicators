@@ -173,7 +173,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // could cut the bracket the fill did not touch, so the cut waits this long.
         private DateTime excessSince = DateTime.MinValue;
         private System.Threading.Timer trimTimer;
+        private DateTime trimDueAt = DateTime.MinValue;
         private static readonly TimeSpan TrimDelay = TimeSpan.FromMilliseconds(500);
+        // A change can freeze mid-flight (a Sim risk limit leaves it ChangePending
+        // for good); a pair unsettled this long is cancelled and placed again.
+        private DateTime unsettledSince = DateTime.MinValue;
+        private static readonly TimeSpan StuckChangeLimit = TimeSpan.FromSeconds(5);
+        private readonly HashSet<Order> abandonedExits = new HashSet<Order>();
+        // The flat-coverage check acts only on two equal reads of the account's
+        // position, which can lag its fills.
+        private int flatCheckReads;
+        private MarketPosition flatCheckSide;
+        private int flatCheckQuantity;
         private AutoBreakevenState autoBreakevenState = AutoBreakevenState.Armed;
         private int positionCacheGeneration;
         private bool positionSeedPending;
@@ -236,11 +247,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public bool KeptAtFlat;
             // When this commit's last fill was counted.
             public DateTime FillCountedAt = DateTime.MinValue;
-            // The stop quantity the last grow asked for, 0 once acknowledged; a
-            // stop coming back alive below it means the grow was rejected.
+            // The stop quantity the last create, grow or cut asked for, 0 once
+            // acknowledged, and when it was asked.
             public int[] RequestedStopQuantity;
+            public DateTime[] RequestedStopAt;
             // One rejected stop or grow is retried; a second closes those lots.
             public bool ExitRetried;
+            // Per pair: one refused target change is re-issued; a second closes the pair.
+            public bool[] TargetRetried;
+            public bool[] TargetChangeRefused;
 
             public int PairDesiredQuantity(int pairIndex, int filled)
             {
@@ -1152,6 +1167,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<Order> orphanedExits = new List<Order>();
             List<BracketCommit> slotsToClear = new List<BracketCommit>();
             List<BracketCommit> toGrow = new List<BracketCommit>();
+            List<Order> keptExits = new List<Order>();
             bool trimNeeded;
 
             lock (orderLock)
@@ -1177,7 +1193,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
                 if (nowFlat || flipped)
                     openingAtrStopTicks = 0;
-                if (nowFlat || flipped || settleKept)
+                // Any side change, from flat too: a fill counted against a flat cache
+                // may have placed exits for a side the position never took.
+                if (nowFlat || marketPosition != currentMarketPosition || settleKept)
                     CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits, slotsToClear);
                 // Only a shrinking or reversed position trims exits: a scale-in fill can
                 // reach the exits before its own position update does.
@@ -1190,6 +1208,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 positionCacheGeneration++;
                 if (nowFlat && activeCommits.Exists(kept => kept.KeptAtFlat))
                     StartFlatCoverageCheck();
+                foreach (BracketCommit commit in activeCommits)
+                {
+                    if (!commit.KeptAtFlat || commit.StopOrders == null)
+                        continue;
+                    keptExits.AddRange(commit.StopOrders);
+                    keptExits.AddRange(commit.TargetOrders);
+                }
                 if (!nowFlat)
                 {
                     foreach (BracketCommit commit in activeCommits)
@@ -1201,7 +1226,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
 
             if (nowFlat)
-                SweepLeftoverExits(account, orphanedExits);
+                SweepLeftoverExits(account, orphanedExits, keptExits);
             foreach (BracketCommit commit in slotsToClear)
                 ClearSlots(commit, account);
             if (trimNeeded)
@@ -1307,7 +1332,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// Once flat, any CT exit still working closes nothing -- including ones a
         /// previous instance of this indicator placed before a reload.
         /// </summary>
-        private void SweepLeftoverExits(Account account, List<Order> orphanedExits)
+        private void SweepLeftoverExits(Account account, List<Order> orphanedExits, List<Order> keptExits)
         {
             lock (account.Orders)
             {
@@ -1317,7 +1342,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         continue;
                     if (order.Name != "CT Stop" && order.Name != "CT Target")
                         continue;
-                    if (!Order.IsTerminalState(order.OrderState) && !orphanedExits.Contains(order))
+                    if (!Order.IsTerminalState(order.OrderState) && !orphanedExits.Contains(order) && !keptExits.Contains(order))
                         orphanedExits.Add(order);
                 }
             }
@@ -1420,9 +1445,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 var changes = new List<Order>();
                 var cancels = new List<Order>();
                 TimeSpan cutWait = TimeSpan.Zero;
+                int abandoned = 0;
                 lock (orderLock)
                 {
                     reconcilePending = false;
+                    abandonedExits.RemoveWhere(order => Order.IsTerminalState(order.OrderState));
                     MarketPosition side = currentMarketPosition;
                     if (side == MarketPosition.Flat)
                     {
@@ -1436,24 +1463,50 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             sameSide.Add(commit);
                     }
 
+                    bool waiting = false;
+                    bool anyUnsettled = false;
                     foreach (BracketCommit commit in sameSide)
                     {
-                        for (int p = 0; p < commit.StopOrders.Length; p++)
+                        for (int p = 0; p < commit.StopOrders.Length && !waiting; p++)
                         {
-                            if (!IsSettled(commit.StopOrders[p]) || !IsSettled(commit.TargetOrders[p]))
+                            Order stop = commit.StopOrders[p];
+                            Order target = commit.TargetOrders[p];
+                            if (abandonedExits.Contains(stop) || (IsSettled(stop) && IsSettled(target)))
+                                continue;
+                            anyUnsettled = true;
+                            if (unsettledSince == DateTime.MinValue)
+                                unsettledSince = DateTime.UtcNow;
+                            TimeSpan stuckFor = DateTime.UtcNow - unsettledSince;
+                            if (stuckFor < StuckChangeLimit)
                             {
                                 reconcilePending = true;
-                                return;
+                                cutWait = StuckChangeLimit - stuckFor;
+                                waiting = true;
+                                continue;
                             }
+                            // Its lots are placed again once the cancel lands (applied 0, not written off).
+                            foreach (Order exit in new[] { stop, target })
+                            {
+                                if (exit == null)
+                                    continue;
+                                abandonedExits.Add(exit);
+                                if (!Order.IsTerminalState(exit.OrderState))
+                                    cancels.Add(exit);
+                            }
+                            commit.PairAppliedQuantity[p] = 0;
+                            commit.RequestedStopQuantity[p] = 0;
+                            abandoned++;
                         }
                     }
+                    if (!anyUnsettled)
+                        unsettledSince = DateTime.MinValue;
 
                     int liveLots = 0;
                     foreach (BracketCommit commit in sameSide)
                     {
-                        for (int p = 0; p < commit.StopOrders.Length; p++)
+                        for (int p = 0; p < commit.StopOrders.Length && !waiting; p++)
                         {
-                            if (commit.StopOrders[p] == null)
+                            if (commit.StopOrders[p] == null || abandonedExits.Contains(commit.StopOrders[p]))
                                 continue;
                             int live = PairLiveLots(commit.StopOrders[p], commit.TargetOrders[p]);
                             int gone = commit.PairAppliedQuantity[p] - live;
@@ -1465,12 +1518,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         }
                     }
 
-                    int excess = liveLots - currentQuantity;
-                    if (excess <= 0)
+                    int excess = waiting ? 0 : liveLots - currentQuantity;
+                    if (waiting)
+                        sameSide.Clear();
+                    else if (excess <= 0)
                         excessSince = DateTime.MinValue;
                     else if (excessSince == DateTime.MinValue)
                         excessSince = DateTime.UtcNow;
-                    if (excess > 0 && DateTime.UtcNow - excessSince < TrimDelay)
+                    if (!waiting && excess > 0 && DateTime.UtcNow - excessSince < TrimDelay)
                     {
                         cutWait = TrimDelay - (DateTime.UtcNow - excessSince);
                         excess = 0;
@@ -1487,6 +1542,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             {
                                 Order stop = commit.StopOrders[p];
                                 Order target = commit.TargetOrders[p];
+                                if (abandonedExits.Contains(stop))
+                                    continue;
                                 bool partlyTaken = target != null && target.Filled > 0;
                                 if (partlyTaken != cutPartlyTakenPairs)
                                     continue;
@@ -1512,6 +1569,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                                     stop.StopPriceChanged = stop.StopPrice;
                                     changes.Add(stop);
                                     commit.RequestedStopQuantity[p] = stop.QuantityChanged;
+                                    commit.RequestedStopAt[p] = DateTime.UtcNow;
                                 }
                                 // A target larger than its stop would cancel the stop on fill.
                                 if (OpenQuantity(target) > kept)
@@ -1530,7 +1588,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     account.Change(changes);
                 if (cancels.Count > 0)
                     account.Cancel(cancels);
-                if (changes.Count + cancels.Count > 0)
+                if (abandoned > 0)
+                    Log("ChartTrading: " + abandoned + " stop/target pair(s) on " + Instrument.FullName + " stayed mid-change for "
+                        + StuckChangeLimit.TotalSeconds + " s; cancelled them to place them again.", NinjaTrader.Cbi.LogLevel.Error);
+                else if (changes.Count + cancels.Count > 0)
                     Log("ChartTrading: position on " + Instrument.FullName + " shrank outside its brackets; trimmed stops and targets to "
                         + currentQuantity + ".", NinjaTrader.Cbi.LogLevel.Information);
                 if (cutWait > TimeSpan.Zero)
@@ -1542,6 +1603,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             lock (orderLock)
             {
+                DateTime due = DateTime.UtcNow + wait;
+                if (trimDueAt > DateTime.UtcNow && trimDueAt <= due)
+                    return;
+                trimDueAt = due;
                 if (trimTimer == null)
                     trimTimer = new System.Threading.Timer(o => OnTrimTimer((Account)o), account,
                         System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
@@ -1551,6 +1616,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void OnTrimTimer(Account account)
         {
+            lock (orderLock)
+                trimDueAt = DateTime.MinValue;
             try
             {
                 if (ReferenceEquals(account, subscribedAccount))
@@ -1612,7 +1679,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             bool isPairOrder = e.Order.Name == "CT Stop" || e.Order.Name == "CT Target";
             bool pairOrderAlive = e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted;
             if (isPairOrder && (pairOrderAlive || (e.Order.Name == "CT Stop" && e.OrderState == OrderState.Rejected)))
-                CheckStopOutcome(e.Order, e.OrderState, sender as Account);
+                CheckStopOutcome(e.Order, e.OrderState, e.Error == ErrorCode.UnableToChangeOrder, sender as Account);
+            // A trim is due once a submit, change or cancel in flight would be overdue,
+            // so a frozen one is found even when nothing else happens.
+            bool pairOrderInFlight = e.OrderState == OrderState.Submitted || e.OrderState == OrderState.ChangePending
+                || e.OrderState == OrderState.ChangeSubmitted || e.OrderState == OrderState.CancelPending;
+            if (isPairOrder && pairOrderInFlight && ReferenceEquals(sender, subscribedAccount))
+                StartTrimTimer(StuckChangeLimit + StuckChangeLimit, (Account)sender);
 
             // A pair order ending or filling is a retry point too: a rejected
             // stop's target finishing its cancel lets the pair be placed again,
@@ -1718,28 +1791,30 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         /// <summary>
-        /// A rejected stop leaves its pair's lots unprotected, a grow the broker
-        /// refused comes back alive at the old size, and so does a refused cut.
-        /// Each is retried once (the pair placed, grown or cut again); a second
-        /// refusal closes the lots the pair should cover at market rather than
-        /// leave them without a stop, or a stop larger than the position.
+        /// A rejected stop leaves its pair's lots unprotected; a refused grow or cut
+        /// keeps the stop at its old size (the broker reports UnableToChangeOrder,
+        /// not Rejected), and a refused target change leaves the target off its
+        /// stop's size. Each is retried once; a second refusal closes the lots the
+        /// pair should cover at market rather than leave them without a stop, or a
+        /// stop or target larger than the position.
         /// </summary>
-        private void CheckStopOutcome(Order leg, OrderState state, Account account)
+        private void CheckStopOutcome(Order leg, OrderState state, bool changeRefused, Account account)
         {
             if (account == null)
                 return;
-            TriggerCustomEvent(o => ResolveStopOutcome(leg, state, account), null);
+            TriggerCustomEvent(o => ResolveStopOutcome(leg, state, changeRefused, account), null);
         }
 
         // Runs as a custom event: it rewrites the pair plan EnsureExits reads.
-        private void ResolveStopOutcome(Order leg, OrderState state, Account account)
+        private void ResolveStopOutcome(Order leg, OrderState state, bool changeRefused, Account account)
         {
             BracketCommit owner = null;
             int pairIndex = -1;
             int unprotected = 0;
             int refusedCutKeeps = 0;
             bool retry = false;
-            bool stopRequestPending;
+            bool closePair = false;
+            bool resizeTarget = false;
             Order stop;
             Order target;
             lock (orderLock)
@@ -1765,12 +1840,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (ReferenceEquals(leg, stop))
                 {
                     int requested = owner.RequestedStopQuantity[pairIndex];
+                    // An alive update queued before the change carries the old size,
+                    // so the size alone judges a change only once it is long overdue.
+                    bool overdue = DateTime.UtcNow - owner.RequestedStopAt[pairIndex] > TimeSpan.FromSeconds(2) && IsSettled(stop);
+                    bool judged = state == OrderState.Rejected || changeRefused || overdue;
+                    if (requested > 0 && stop.Quantity != requested && !judged)
+                        return;
+
                     if (state == OrderState.Rejected)
                         unprotected = owner.PairAppliedQuantity[pairIndex];
                     else if (requested > 0 && stop.Quantity < requested)
                         unprotected = requested - stop.Quantity;
                     else if (requested > 0 && stop.Quantity > requested)
                         refusedCutKeeps = requested - stop.Filled;
+                    else if (requested > 0)
+                        owner.ExitRetried = false;
                     owner.RequestedStopQuantity[pairIndex] = 0;
 
                     if (unprotected > 0 || refusedCutKeeps > 0)
@@ -1791,15 +1875,56 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         unprotected = refusedCutKeeps;
                     }
                 }
-                stopRequestPending = owner.RequestedStopQuantity[pairIndex] > 0;
+
+                // A target off its settled stop's size: larger would fill past the
+                // position; smaller from a refused change (or unfilled) would cancel
+                // the stop on fill. One smaller only from its own partial fill is
+                // ReconcileExits' to even. Resized once; a second miss closes the pair.
+                if (changeRefused && ReferenceEquals(leg, target))
+                    owner.TargetChangeRefused[pairIndex] = true;
+                bool pairSettled = unprotected == 0 && refusedCutKeeps == 0 && stop != null && target != null
+                    && owner.RequestedStopQuantity[pairIndex] == 0 && IsSettled(stop) && IsSettled(target)
+                    && !Order.IsTerminalState(stop.OrderState) && !Order.IsTerminalState(target.OrderState);
+                bool mismatched = pairSettled
+                    && (OpenQuantity(target) > OpenQuantity(stop)
+                        || ((target.Filled == 0 || owner.TargetChangeRefused[pairIndex]) && OpenQuantity(target) < OpenQuantity(stop)));
+                if (pairSettled && !mismatched && OpenQuantity(target) == OpenQuantity(stop))
+                {
+                    owner.TargetRetried[pairIndex] = false;
+                    owner.TargetChangeRefused[pairIndex] = false;
+                }
+                if (mismatched && !owner.TargetRetried[pairIndex])
+                {
+                    owner.TargetRetried[pairIndex] = true;
+                    owner.TargetChangeRefused[pairIndex] = false;
+                    resizeTarget = true;
+                }
+                else if (mismatched)
+                {
+                    closePair = true;
+                    unprotected = OpenQuantity(stop);
+                    WriteOff(owner, pairIndex, owner.PairAppliedQuantity[pairIndex]);
+                }
             }
 
+            if (resizeTarget)
+            {
+                target.QuantityChanged = target.Filled + OpenQuantity(stop);
+                target.LimitPriceChanged = target.LimitPrice;
+                target.StopPriceChanged = target.StopPrice;
+                account.Change(new[] { target });
+                Log("ChartTrading: a target on " + Instrument.FullName + " did not match its stop; resizing it.",
+                    NinjaTrader.Cbi.LogLevel.Error);
+                return;
+            }
+
+            // Cancelling one leg is not trusted to cancel the other: both go explicitly.
             if (state == OrderState.Rejected && target != null && !Order.IsTerminalState(target.OrderState))
                 account.Cancel(new[] { target });
 
-            if (refusedCutKeeps > 0)
+            if (refusedCutKeeps > 0 || closePair)
             {
-                if (retry)
+                if (refusedCutKeeps > 0 && retry)
                 {
                     Log("ChartTrading: a stop cut on " + Instrument.FullName + " was refused; cutting it again.",
                         NinjaTrader.Cbi.LogLevel.Error);
@@ -1817,16 +1942,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (unprotected == 0)
             {
-                // A target left larger than its settled stop (a refused cut) would
-                // fill past the position; dropping it keeps the stop's protection.
-                if (stop != null && target != null && !stopRequestPending && IsSettled(stop) && IsSettled(target)
-                    && !Order.IsTerminalState(stop.OrderState) && !Order.IsTerminalState(target.OrderState)
-                    && OpenQuantity(target) > OpenQuantity(stop))
-                {
-                    account.Cancel(new[] { target });
-                    Log("ChartTrading: a target on " + Instrument.FullName + " stayed larger than its stop; cancelled it.",
-                        NinjaTrader.Cbi.LogLevel.Error);
-                }
                 return;
             }
             else if (retry)
@@ -1840,18 +1955,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             // Never more than the position really holds on that side, or the exit would open a trade.
             Position open = LivePosition(account);
             int closable = open != null && open.MarketPosition == CommitSide(owner) ? Math.Min(unprotected, open.Quantity) : 0;
-            // A grown target the stop could not follow would cancel the stop on fill.
-            if (state != OrderState.Rejected && refusedCutKeeps == 0 && target != null && OpenQuantity(target) > OpenQuantity(stop))
-            {
-                target.QuantityChanged = target.Filled + OpenQuantity(stop);
-                target.LimitPriceChanged = target.LimitPrice;
-                target.StopPriceChanged = target.StopPrice;
-                account.Change(new[] { target });
-            }
             if (closable > 0)
                 account.Submit(new[] { account.CreateOrder(Instrument, owner.ExitAction, OrderType.Market, OrderEntry.Manual, TimeInForce.Day,
                     closable, 0, 0, string.Empty, "CT Exit", Core.Globals.MaxDate, null) });
-            Log("ChartTrading: a stop on " + Instrument.FullName + " was refused twice; closed " + closable + " lot(s) at market.",
+            Log("ChartTrading: a stop or target on " + Instrument.FullName + " was refused twice; closed " + closable + " lot(s) at market.",
                 NinjaTrader.Cbi.LogLevel.Error);
         }
 
@@ -1871,6 +1978,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 int filled;
                 int growthRoom;
+                var submissions = new List<Order>();
+                var changes = new List<Order>();
+                var newPairs = new List<int>();
+                var newPairLots = new List<int>();
                 lock (orderLock)
                 {
                     if (commit.Orphaned)
@@ -1917,6 +2028,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         commit.TargetOrders = new Order[commit.StopPrices.Length];
                         commit.PairAppliedQuantity = new int[commit.StopPrices.Length];
                         commit.RequestedStopQuantity = new int[commit.StopPrices.Length];
+                        commit.RequestedStopAt = new DateTime[commit.StopPrices.Length];
+                        commit.TargetRetried = new bool[commit.StopPrices.Length];
+                        commit.TargetChangeRefused = new bool[commit.StopPrices.Length];
                     }
 
                     // The per-pair plan assumes earlier pairs fill first; after cuts and
@@ -1938,82 +2052,90 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         }
                         growthRoom = Math.Min(growthRoom, positionRoom);
                     }
-                }
 
-                TimeInForce tif = OrderTimeInForce == ChartTradingTimeInForce.Gtc
-                    ? TimeInForce.Gtc : TimeInForce.Day;
-                var submissions = new List<Order>();
-                var changes = new List<Order>();
-                for (int i = 0; i < commit.StopPrices.Length; i++)
-                {
-                    int applied = commit.PairAppliedQuantity[i];
-                    int desired = Math.Min(commit.PairDesiredQuantity(i, filled), applied + Math.Max(growthRoom, 0));
-                    // Exits only grow here; shrinking is ReconcileExits' job, driven by
-                    // the position. Comparing against what was applied, not the live
-                    // quantity, leaves a trader's or Close half's own resize alone.
-                    if (desired <= applied)
-                        continue;
-                    growthRoom -= desired - applied;
-
-                    Order stop = commit.StopOrders[i];
-                    Order pairTarget = commit.TargetOrders[i];
-                    bool pairDead = stop != null && Order.IsTerminalState(stop.OrderState)
-                        && (pairTarget == null || Order.IsTerminalState(pairTarget.OrderState));
-                    if (stop == null || pairDead)
+                    // Planned under the lock with the bookkeeping written as it goes, so a
+                    // concurrent run sees this plan and never places a pair twice. A new
+                    // pair's slot is reserved (applied set, orders not yet created).
+                    for (int i = 0; i < commit.StopPrices.Length; i++)
                     {
-                        int lots = desired - applied;
-                        // Each pair's stop and target cancel each other.
-                        string oco = "CT-" + Guid.NewGuid().ToString("N");
-                        stop = account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
-                            OrderEntry.Manual, tif, lots, 0, commit.StopPrices[i],
-                            oco, "CT Stop", Core.Globals.MaxDate, null);
-                        Order target = account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
-                            OrderEntry.Manual, tif, lots, commit.TargetPrices[i], 0,
-                            oco, "CT Target", Core.Globals.MaxDate, null);
-                        lock (orderLock)
+                        int applied = commit.PairAppliedQuantity[i];
+                        int desired = Math.Min(commit.PairDesiredQuantity(i, filled), applied + Math.Max(growthRoom, 0));
+                        // Exits only grow here; shrinking is ReconcileExits' job, driven by
+                        // the position. Comparing against what was applied, not the live
+                        // quantity, leaves a trader's or Close half's own resize alone.
+                        if (desired <= applied)
+                            continue;
+                        growthRoom -= desired - applied;
+
+                        Order stop = commit.StopOrders[i];
+                        Order pairTarget = commit.TargetOrders[i];
+                        bool pairDead = stop != null && Order.IsTerminalState(stop.OrderState)
+                            && (pairTarget == null || Order.IsTerminalState(pairTarget.OrderState));
+                        if (stop == null || pairDead)
                         {
-                            commit.StopOrders[i] = stop;
-                            commit.TargetOrders[i] = target;
+                            commit.StopOrders[i] = null;
+                            commit.TargetOrders[i] = null;
                             commit.PairAppliedQuantity[i] = desired;
+                            commit.RequestedStopQuantity[i] = desired - applied;
+                            commit.RequestedStopAt[i] = DateTime.UtcNow;
+                            newPairs.Add(i);
+                            newPairLots.Add(desired - applied);
+                            continue;
                         }
-                        submissions.Add(stop);
-                        submissions.Add(target);
-                        continue;
-                    }
 
-                    // The pair exists from an earlier partial fill; grow it if it is
-                    // still alive. A pair whose orders are mid-flight (submitted, or a
-                    // change in progress) cannot take a Change yet -- its
-                    // PairAppliedQuantity keeps the old value, and the retry hook
-                    // re-runs when the pair's orders come alive and sees desired >
-                    // applied.
-                    bool stopAlive = stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted;
-                    bool targetAlive = pairTarget != null
-                        && (pairTarget.OrderState == OrderState.Working || pairTarget.OrderState == OrderState.Accepted);
-                    // A target dropped for outgrowing its stop leaves a stop-only pair, which still grows.
-                    bool targetDropped = pairTarget == null
-                        || pairTarget.OrderState == OrderState.Cancelled || pairTarget.OrderState == OrderState.Rejected;
-                    if (stopAlive && (targetAlive || targetDropped))
-                    {
-                        int grownLots = OpenQuantity(stop) + (desired - applied);
-                        stop.QuantityChanged = stop.Filled + grownLots;
-                        stop.LimitPriceChanged = stop.LimitPrice;
-                        stop.StopPriceChanged = stop.StopPrice;
-                        changes.Add(stop);
-                        // Sized from the stop, so a target a refused grow left larger is evened out.
-                        if (targetAlive)
+                        // The pair exists from an earlier partial fill; grow it if it is
+                        // still alive. A pair whose orders are mid-flight (submitted, or a
+                        // change in progress) cannot take a Change yet -- its
+                        // PairAppliedQuantity keeps the old value, and the retry hook
+                        // re-runs when the pair's orders come alive and sees desired >
+                        // applied.
+                        bool stopAlive = stop.OrderState == OrderState.Working || stop.OrderState == OrderState.Accepted;
+                        bool targetAlive = pairTarget != null
+                            && (pairTarget.OrderState == OrderState.Working || pairTarget.OrderState == OrderState.Accepted);
+                        if (stopAlive && targetAlive)
                         {
+                            int grownLots = OpenQuantity(stop) + (desired - applied);
+                            stop.QuantityChanged = stop.Filled + grownLots;
+                            stop.LimitPriceChanged = stop.LimitPrice;
+                            stop.StopPriceChanged = stop.StopPrice;
+                            changes.Add(stop);
+                            // Sized from the stop, so a target a refused grow left larger is evened out.
                             pairTarget.QuantityChanged = pairTarget.Filled + grownLots;
                             pairTarget.LimitPriceChanged = pairTarget.LimitPrice;
                             pairTarget.StopPriceChanged = pairTarget.StopPrice;
                             changes.Add(pairTarget);
-                        }
-                        lock (orderLock)
-                        {
                             commit.PairAppliedQuantity[i] = desired;
                             commit.RequestedStopQuantity[i] = stop.QuantityChanged;
+                            commit.RequestedStopAt[i] = DateTime.UtcNow;
                         }
                     }
+                }
+
+                // CreateOrder stays outside orderLock, like every other account call.
+                TimeInForce tif = OrderTimeInForce == ChartTradingTimeInForce.Gtc
+                    ? TimeInForce.Gtc : TimeInForce.Day;
+                for (int n = 0; n < newPairs.Count; n++)
+                {
+                    int i = newPairs[n];
+                    int lots = newPairLots[n];
+                    // Each pair's stop and target cancel each other.
+                    string oco = "CT-" + Guid.NewGuid().ToString("N");
+                    Order stop = account.CreateOrder(Instrument, commit.ExitAction, OrderType.StopMarket,
+                        OrderEntry.Manual, tif, lots, 0, commit.StopPrices[i],
+                        oco, "CT Stop", Core.Globals.MaxDate, null);
+                    Order target = account.CreateOrder(Instrument, commit.ExitAction, OrderType.Limit,
+                        OrderEntry.Manual, tif, lots, commit.TargetPrices[i], 0,
+                        oco, "CT Target", Core.Globals.MaxDate, null);
+                    lock (orderLock)
+                    {
+                        // A slot cleared or re-planned meanwhile keeps its new plan; these orders are never sent.
+                        if (commit.StopOrders[i] != null || commit.RequestedStopQuantity[i] != lots)
+                            continue;
+                        commit.StopOrders[i] = stop;
+                        commit.TargetOrders[i] = target;
+                    }
+                    submissions.Add(stop);
+                    submissions.Add(target);
                 }
 
                 if (submissions.Count > 0)
@@ -2787,19 +2909,36 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 if (flatCoverageSince == DateTime.MinValue || DateTime.UtcNow - flatCoverageSince < TimeSpan.FromSeconds(1))
                     return;
-                flatCoverageSince = DateTime.MinValue;
                 account = subscribedAccount;
             }
             if (account == null)
                 return;
 
             Position open = LivePosition(account);
+            MarketPosition side = open == null ? MarketPosition.Flat : open.MarketPosition;
+            int quantity = open == null ? 0 : open.Quantity;
+            lock (orderLock)
+            {
+                bool confirmed = flatCheckReads > 0 && side == flatCheckSide && quantity == flatCheckQuantity;
+                if (!confirmed && flatCheckReads < 4)
+                {
+                    flatCheckReads++;
+                    flatCheckSide = side;
+                    flatCheckQuantity = quantity;
+                    if (flatCoverageTimer != null)
+                        flatCoverageTimer.Change(1400, System.Threading.Timeout.Infinite);
+                    return;
+                }
+                flatCoverageSince = DateTime.MinValue;
+                flatCheckReads = 0;
+            }
+
             if (open == null)
             {
                 ApplyPositionUpdate(account, true, MarketPosition.Flat, 0, 0);
                 return;
             }
-            ApplyPositionUpdate(account, false, open.MarketPosition, open.Quantity, open.AveragePrice);
+            ApplyPositionUpdate(account, false, side, quantity, open.AveragePrice);
             ReconcileExits(account);
         }
 
@@ -2810,6 +2949,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (currentMarketPosition != MarketPosition.Flat || flatCoverageSince != DateTime.MinValue)
                 return;
             flatCoverageSince = DateTime.UtcNow;
+            flatCheckReads = 0;
             if (flatCoverageTimer == null)
                 flatCoverageTimer = new System.Threading.Timer(o => OnFlatCoverageTimer(), null,
                     System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);

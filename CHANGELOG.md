@@ -5,13 +5,19 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-12
 
+- ChartTrading: a stop or target stuck mid-change for 5 s (a Sim risk
+  limit can freeze one) is cancelled and placed again; a target change the
+  broker refuses is sent once more, then that bracket is closed at market.
+  A new entry filling just as a stop closes the previous position keeps
+  its bracket, and a fill that lands as an order from elsewhere flips the
+  position no longer leaves exits that would add to it.
 - ChartTrading: clicks against the open position (or a working entry on
   the other side) are refused; close the position first with Close half /
   Close all. A position that shrinks because a target filled
   waits half a second before trimming, so the trim comes out of the bracket
   that filled rather than another one. A trim the broker refuses is sent
   again once, then that bracket is closed at market; a target left larger
-  than its stop is cancelled.
+  than its stop is resized to it.
 - ChartTrading: a resting entry keeps its stops and targets measured from
   its actual fill even when the position changes while it rests.
 - Close half stays greyed out until its market exit has finished filling,
