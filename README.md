@@ -214,8 +214,8 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
   then drag the right-edge grip to extend.
 - Rectangle Blue, Rectangle Gray and Rectangle Amber are the same tool in
   three colors, each its own Draw menu entry with a matching icon. Each
-  keeps its own templates: to make one always global, tick Global, then
-  Template → Save as Default in its properties.
+  keeps its own templates: to make one always global, set Attach to → All
+  charts, then Template → Save as Default in its properties.
 
 ### RenkoSizeTable — Renko box sizes across timeframes at once
 
