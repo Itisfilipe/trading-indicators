@@ -89,6 +89,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ShowBreakoutCircles = true;
                 CircleRadius = 12;
+                ColorLookback = 3;
                 BullFill = Rgb(0x00, 0xFF, 0x00);
                 BullFillOpacity = 0.3;
                 BullBorder = Rgb(0x00, 0x66, 0x00);
@@ -124,6 +125,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ShowPivotLevels = true;
                 PivotStrength = 1;
+                LastLevelsLength = 30;
                 PivotUp = Rgb(0x00, 0x4D, 0x00);
                 PivotDown = Rgb(0xFF, 0x00, 0x00);
                 PivotLineWidth = 2;
@@ -487,12 +489,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     lock (pivots)
                         foreach (PivotLevel level in pivots)
                         {
-                            if (level.BarIndex > ChartBars.ToIndex || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
+                            // INFERRED from his chart: a broken level disappears, and only recent pivots get a line.
+                            if (level.BrokenAt >= 0 || level.BarIndex > ChartBars.ToIndex || level.BarIndex < lastBar - LastLevelsLength + 1)
                                 continue;
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
-                            float x2 = level.BrokenAt >= 0
-                                ? chartControl.GetXByBarIndex(ChartBars, level.BrokenAt)
-                                : levelsEndX;
+                            float x2 = levelsEndX;
                             float y = chartScale.GetYByValue(level.Value);
                             RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
                                 level.IsHigh ? pivotDownBrush : pivotUpBrush, PivotLineWidth);
@@ -536,7 +537,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
 
                 if (ShowBreakoutCircles)
-                    for (int barIndex = Math.Max(1, ChartBars.FromIndex); barIndex <= ChartBars.ToIndex; barIndex++)
+                    for (int barIndex = Math.Max(Math.Max(1, ChartBars.FromIndex), lastBar - ColorLookback + 1); barIndex <= ChartBars.ToIndex; barIndex++)
                     {
                         if (!HasCvd(barIndex) || !HasCvd(barIndex - 1) || resetBars.GetValueAt(barIndex))
                             continue;
@@ -603,6 +604,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(1, 60)]
         [Display(Name = "Circle radius (px)", Order = 2, GroupName = "2. Breakout Circles")]
         public int CircleRadius { get; set; }
+
+        [Range(1, 1000)]
+        [Display(Name = "Color lookback (bars)", Description = "Circles show only on the last this many candles.", Order = 9, GroupName = "2. Breakout Circles")]
+        public int ColorLookback { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Bull fill", Order = 3, GroupName = "2. Breakout Circles")]
@@ -806,6 +811,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(1, 20), NinjaScriptProperty]
         [Display(Name = "Pivot strength (bars each side)", Order = 2, GroupName = "8. Pivot Levels")]
         public int PivotStrength { get; set; }
+
+        [Range(1, 5000)]
+        [Display(Name = "Last levels length (bars)", Description = "Only pivots from the last this many candles get a line; a broken line disappears.", Order = 9, GroupName = "8. Pivot Levels")]
+        public int LastLevelsLength { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Pivot up", Description = "Line from a CVD low.", Order = 3, GroupName = "8. Pivot Levels")]
