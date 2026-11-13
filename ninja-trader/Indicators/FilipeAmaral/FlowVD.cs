@@ -39,6 +39,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return brush;
         }
 
+        private System.Windows.Media.Brush buyBarBrush;
+        private System.Windows.Media.Brush sellBarBrush;
+
+        private System.Windows.Media.Brush WithOpacity(System.Windows.Media.Brush color)
+        {
+            System.Windows.Media.Brush brush = color.Clone();
+            brush.Opacity = BarOpacity / 100.0;
+            brush.Freeze();
+            return brush;
+        }
+
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
@@ -57,6 +68,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DeltaSource = FlowDeltaSource.HeikinAshiVolume;
                 BuyColor = Rgb(0x37, 0xF0, 0x9C);
                 SellColor = Rgb(0x1A, 0x1C, 0x26);
+                BarOpacity = 80;
 
                 AddPlot(new Stroke(BuyColor, 2), PlotStyle.Bar, "Delta");
                 Plots[0].AutoWidth = true;
@@ -64,6 +76,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             else if (State == State.DataLoaded)
             {
+                buyBarBrush = WithOpacity(BuyColor);
+                sellBarBrush = WithOpacity(SellColor);
                 sessionIterator = new SessionIterator(Bars);
                 rawDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 priceHaOpen = new Series<double>(this);
@@ -171,7 +185,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             smoothedSize[0] = size;
 
             Value[0] = AbsoluteBars ? size : Math.Sign(shown) * size;
-            PlotBrushes[0][0] = shown >= 0 ? BuyColor : SellColor;
+            PlotBrushes[0][0] = shown >= 0 ? buyBarBrush : sellBarBrush;
         }
 
         private void MeasurePreviousDeltas()
@@ -216,6 +230,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). HeikinAshiVolume: each candle's whole volume, positive while a Heikin-Ashi candle built from price is rising and negative while it falls; the reference trader's 1-minute VD and CVD are built this way. StructureVolume: the whole volume signed by the last structure break of the price candles (+ after a close above the previous candle's high, - after a close below its low, unchanged otherwise). Both follow price and need no Tick Replay.", Order = 5, GroupName = "1. Display")]
         public FlowDeltaSource DeltaSource { get; set; }
+
+        [Range(0, 100)]
+        [Display(Name = "Bar opacity (%)", Order = 3, GroupName = "2. Colors")]
+        public int BarOpacity { get; set; }
 
         [XmlIgnore]
         [Display(Name = "Buyer color", Order = 1, GroupName = "2. Colors")]

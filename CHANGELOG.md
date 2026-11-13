@@ -5,6 +5,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow VD: new "Bar opacity (%)" setting, 80 by default.
 - OrderDecorator: orders that add to the position (or wait while flat) read
   ENTRADA, neutral and unsigned, instead of reading as a stop or target. Charts saved
   earlier keep points off until "Show points" is turned on.
