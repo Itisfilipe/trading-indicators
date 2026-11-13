@@ -517,26 +517,31 @@ the two count toward volume only.
   "Smoothing period" above 0 makes each bar's height an EMA of the recent
   candles' delta size while its color stays the candle's own side, so a
   burst fades over a few bars instead of dropping to zero.
-- **Flow CVD** (own panel): cumulative delta drawn as Heikin-Ashi candles
-  ("Heikin-Ashi candles" off draws the raw CVD candles). "Delta source"
-  on Flow CVD and Flow VD picks what delta means: BidAsk (default) is real
-  aggression from each trade's bid and ask; HeikinAshiVolume counts each
-  candle's whole volume, positive while a Heikin-Ashi candle built from
-  price is rising and negative while it falls. HeikinAshiVolume is how the
-  reference trader's 1-minute VD and CVD are built (his VD settings call it
-  "Volume Delta por candle Heiken-Ashi"), so his explanations can be read
-  on your chart; it follows price, cannot show absorption and needs no
-  Tick Replay. Swing highs
-  and lows ("Pivot strength" candles on each side, 3 by default) get a
-  circle and a level line while no CVD close has crossed it; "Show broken
-  levels" keeps crossed lines up to the crossing candle. A shaded band marks absorption: a candle whose delta is
-  "Absorption z-score" deviations out (against the last "Absorption
-  lookback" candles) but closes the other way, blue when selling failed,
-  red when buying failed. "Reset each session" starts the CVD at zero on
-  each session's first candle. On an ETH series sessions open in the
-  evening, so use "Reset at time" instead: the CVD restarts on the candle
-  holding "Reset time" (New York time, default 09:30). After a weekend or
-  holiday gap it also restarts at the first candle back.
+- **Flow CVD** (own panel): cumulative delta drawn as Heikin-Ashi candles,
+  laid out like the reference trader's CVD. "Delta source" on Flow CVD and
+  Flow VD picks what delta means: HeikinAshiVolume (default) counts volume
+  positive while a Heikin-Ashi candle built from price is rising and
+  negative while it falls, which is how his 1-minute VD and CVD are built;
+  it follows price and needs no Tick Replay. BidAsk is real aggression from
+  each trade's bid and ask. On Flow CVD, "Sign each trade" gives each
+  trade the price candle's color at that moment instead of signing the
+  whole candle (needs Tick Replay). The CVD keeps accumulating across
+  sessions unless "Reset each session" or "Reset at time" is on.
+  - A circle marks the moment the CVD breaks the previous candle the other
+    way: green when it closes above a falling candle's high, red below a
+    rising candle's low. It is checked on the forming candle, so it can
+    appear and vanish before the close; in sideways flow they come in
+    pairs.
+  - Pivot lines start at each CVD high (red) and low (dark green) and stop
+    at the first candle that trades through them; the crossed part stays.
+  - Two short dashes mark the previous candle's high and low; each turns red
+    once the forming candle crosses it.
+  - A vertical stripe marks effort without result: orange when buying flow
+    did not lift price, purple when selling flow did not drop it, over
+    "Divergence lookback" candles, scaled against the largest such moves
+    in the last "Scale lookback" candles.
+  - The panel scales to the CVD range of the last "Scale lookback" candles,
+    so it does not jump as you scroll.
 - **Flow Absorption** (price panel): absorption levels. When a candle
   closes, any price zone in it ("Price grouping", 4 ticks by default) that
   took at least "Minimum lots" of one-sided aggression (and "Level

@@ -5,6 +5,13 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow CVD now draws like the reference trader's CVD: Heikin-Ashi-signed
+  volume by default, breakout circles when the CVD breaks the previous
+  candle the other way, pivot lines that stop where the CVD trades through
+  them, the previous candle's high/low dashes, and orange/purple
+  effort-without-result stripes. The absorption bands and the
+  "Heikin-Ashi candles" and "Show broken levels" settings are gone; pivot
+  strength defaults to 1 and the CVD no longer resets unless asked to.
 - Flow Absorption now behaves like Mark50's: bands change only at a candle
   close and start on the next candle, the number only grows and stays with
   the price, and a level a candle closes through comes back on the other

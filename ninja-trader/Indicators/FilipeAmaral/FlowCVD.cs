@@ -22,9 +22,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     }
 
     /// <summary>
-    /// Cumulative delta drawn as candles, with its swing pivots, the pivot
-    /// levels until the delta closes through them, and absorption bands where
-    /// an outsized delta failed to move price its way.
+    /// Cumulative delta drawn as Heikin-Ashi candles, laid out like the
+    /// reference trader's CVD: breakout circles, pivot levels, the previous
+    /// candle's high/low dashes and effort-versus-result divergence stripes.
     /// </summary>
     public class FlowCVD : Indicator
     {
@@ -57,13 +57,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> shownLow;
         private Series<double> shownClose;
         private bool activeBarIsReset;
-        private Series<double> absorption;
+        private Series<int> divergence;
+
+        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
+        {
+            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
+            brush.Freeze();
+            return brush;
+        }
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = "Cumulative delta as candles with pivot levels and absorption bands. Needs Tick Replay for history.";
+                Description = "Cumulative delta as Heikin-Ashi candles with breakout circles, pivot levels, last-candle levels and divergence stripes.";
                 Name = "Flow CVD";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = false;
@@ -73,20 +80,50 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ResetEachSession = false;
                 ResetAtTime = false;
                 ResetTime = "09:30";
-                DeltaSource = FlowDeltaSource.BidAsk;
-                HeikinAshi = true;
-                PivotStrength = 3;
-                ShowBrokenLevels = false;
-                AbsorptionLookback = 60;
-                AbsorptionZScore = 1.5;
-                BandOpacity = 25;
+                DeltaSource = FlowDeltaSource.HeikinAshiVolume;
+                SignEachTrade = false;
 
-                UpColor = Brushes.DodgerBlue;
-                DownColor = Brushes.Crimson;
-                PivotHighColor = Brushes.Crimson;
-                PivotLowColor = Brushes.DodgerBlue;
-                BuyAbsorptionColor = Brushes.DodgerBlue;
-                SellAbsorptionColor = Brushes.Crimson;
+                ShowBreakoutCircles = true;
+                CircleRadius = 12;
+                BullFill = Rgb(0x00, 0xFF, 0x00);
+                BullFillOpacity = 0.3;
+                BullBorder = Rgb(0x00, 0x66, 0x00);
+                BearFill = Rgb(0xFF, 0x00, 0x00);
+                BearFillOpacity = 0.3;
+                BearBorder = Rgb(0xFF, 0x00, 0x00);
+
+                MatchChartCandleWidth = true;
+                FixedCandleWidth = 8;
+                WidthScale = 0.7;
+
+                BodyUp = Rgb(0x37, 0xF0, 0x9C);
+                BodyDown = Rgb(0x1A, 0x1C, 0x26);
+                WickUp = Rgb(0x1A, 0x1C, 0x26);
+                WickDown = Rgb(0x1A, 0x1C, 0x26);
+
+                UseLookbackScaling = true;
+                ScaleLookback = 300;
+
+                ShowDivergence = true;
+                DivergenceLookback = 3;
+                MinEffortThreshold = 0.1;
+                MaxResultRatio = 0.3;
+                BullDivergence = Rgb(0xFF, 0xA5, 0x00);
+                BullDivergenceOpacity = 0.15;
+                BearDivergence = Rgb(0x93, 0x70, 0xDB);
+                BearDivergenceOpacity = 0.15;
+
+                LastLevelsColor = Rgb(0x00, 0x00, 0x00);
+                LevelsUpCross = Rgb(0xFF, 0x00, 0x00);
+                LevelsDownCross = Rgb(0xFF, 0x00, 0x00);
+                CurrentPad = 0.15;
+
+                ShowPivotLevels = true;
+                PivotStrength = 1;
+                PivotUp = Rgb(0x00, 0x4D, 0x00);
+                PivotDown = Rgb(0xFF, 0x00, 0x00);
+                PivotLineWidth = 2;
+                PivotLineOpacity = 0.8;
 
                 AddPlot(new Stroke(Brushes.Transparent, 1), PlotStyle.Line, "CVD");
             }
@@ -104,7 +141,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 shownHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 shownLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 shownClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
-                absorption = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                divergence = new Series<int>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
             {
@@ -129,7 +166,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             StartBarIfNew();
-            cumulativeDelta += TradeSide(e) * e.Volume;
+            int side = DeltaSource == FlowDeltaSource.BidAsk ? TradeSide(e) : PriceHeikinAshiSign();
+            cumulativeDelta += side * e.Volume;
 
             cvdHigh[0] = Math.Max(cvdHigh[0], cumulativeDelta);
             cvdLow[0] = Math.Min(cvdLow[0], cumulativeDelta);
@@ -140,7 +178,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private bool UsesTrades
         {
-            get { return DeltaSource == FlowDeltaSource.BidAsk; }
+            get { return DeltaSource == FlowDeltaSource.BidAsk || SignEachTrade; }
         }
 
         private static int TradeSide(MarketDataEventArgs e)
@@ -169,22 +207,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             cvdLow[0] = cumulativeDelta;
         }
 
-        private double HeikinAshiVolumeDelta()
+        // The price candle's Heikin-Ashi color as of now: +1 rising, -1 falling.
+        private int PriceHeikinAshiSign()
         {
             double haClose = (Open[0] + High[0] + Low[0] + Close[0]) / 4;
             double haOpen = CurrentBar > 0 ? (priceHaOpen[1] + priceHaClose[1]) / 2 : (Open[0] + Close[0]) / 2;
             priceHaOpen[0] = haOpen;
             priceHaClose[0] = haClose;
-            return haClose >= haOpen ? Volume[0] : -Volume[0];
+            return haClose >= haOpen ? 1 : -1;
         }
 
         private void UpdateFromCandle()
         {
             StartBarIfNew();
-            double barDelta = HeikinAshiVolumeDelta();
-            double close = cvdOpen[0] + barDelta;
-            cvdHigh[0] = Math.Max(cvdOpen[0], close);
-            cvdLow[0] = Math.Min(cvdOpen[0], close);
+            double close = cvdOpen[0] + PriceHeikinAshiSign() * Volume[0];
+            cvdHigh[0] = Math.Max(cvdHigh[0], close);
+            cvdLow[0] = Math.Min(cvdLow[0], close);
             cvdClose[0] = close;
             Value[0] = close;
             cumulativeDelta = close;
@@ -197,15 +235,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double high = cvdHigh[0];
             double low = cvdLow[0];
             double close = cvdClose[0];
-            if (!HeikinAshi)
-            {
-                shownOpen[0] = open;
-                shownHigh[0] = high;
-                shownLow[0] = low;
-                shownClose[0] = close;
-                return;
-            }
-
             bool continuesPrevious = !activeBarIsReset && HasCvd(CurrentBar - 1);
             double haOpen = continuesPrevious
                 ? (shownOpen.GetValueAt(CurrentBar - 1) + shownClose.GetValueAt(CurrentBar - 1)) / 2
@@ -215,12 +244,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             shownClose[0] = haClose;
             shownHigh[0] = Math.Max(high, Math.Max(haOpen, haClose));
             shownLow[0] = Math.Min(low, Math.Min(haOpen, haClose));
+
+            // A pivot line stops at the first candle that trades through it, the forming one included.
+            lock (pivots)
+                foreach (PivotLevel level in pivots)
+                    if (level.BrokenAt < 0 && level.BarIndex < CurrentBar
+                        && (level.IsHigh ? shownHigh[0] > level.Value : shownLow[0] < level.Value))
+                        level.BrokenAt = CurrentBar;
         }
 
         protected override void OnBarUpdate()
         {
-            if (!UsesTrades)
-                UpdateFromCandle();
+            if (DeltaSource == FlowDeltaSource.HeikinAshiVolume)
+            {
+                if (SignEachTrade)
+                    PriceHeikinAshiSign();
+                else
+                    UpdateFromCandle();
+            }
 
             if (!IsFirstTickOfBar || CurrentBar < 1)
                 return;
@@ -230,26 +271,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             lock (pivots)
-            {
-                double close = shownClose.GetValueAt(closedBar);
-                foreach (PivotLevel level in pivots)
-                    if (level.BrokenAt < 0 && (level.IsHigh ? close > level.Value : close < level.Value))
-                        level.BrokenAt = closedBar;
-
                 AddPivotsAt(closedBar - PivotStrength);
-            }
 
-            MarkAbsorption(closedBar);
+            MarkDivergence(closedBar);
         }
 
         private bool HasCvd(int barIndex)
         {
             return barIndex >= 0 && shownOpen.IsValidDataPointAt(barIndex) && shownClose.IsValidDataPointAt(barIndex);
-        }
-
-        private double BarDelta(int barIndex)
-        {
-            return cvdClose.GetValueAt(barIndex) - cvdOpen.GetValueAt(barIndex);
         }
 
         private DateTime NewYorkTime(int barIndex)
@@ -279,9 +308,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return true;
         }
 
-        private bool SpansReset(int pivotBar)
+        private bool SpansReset(int firstBar, int lastBar)
         {
-            for (int barIndex = pivotBar - PivotStrength + 1; barIndex <= pivotBar + PivotStrength; barIndex++)
+            for (int barIndex = firstBar; barIndex <= lastBar; barIndex++)
                 if (barIndex >= 0 && barIndex <= CurrentBar && resetBars.GetValueAt(barIndex))
                     return true;
             return false;
@@ -289,7 +318,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void AddPivotsAt(int pivotBar)
         {
-            if (!HasCvd(pivotBar) || SpansReset(pivotBar))
+            if (!HasCvd(pivotBar) || SpansReset(pivotBar - PivotStrength + 1, pivotBar + PivotStrength))
                 return;
 
             double high = shownHigh.GetValueAt(pivotBar);
@@ -300,9 +329,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 if (!HasCvd(pivotBar - offset) || !HasCvd(pivotBar + offset))
                     return;
-                if (high <= shownHigh.GetValueAt(pivotBar - offset) || high < shownHigh.GetValueAt(pivotBar + offset))
+                if (high <= shownHigh.GetValueAt(pivotBar - offset) || high <= shownHigh.GetValueAt(pivotBar + offset))
                     isHigh = false;
-                if (low >= shownLow.GetValueAt(pivotBar - offset) || low > shownLow.GetValueAt(pivotBar + offset))
+                if (low >= shownLow.GetValueAt(pivotBar - offset) || low >= shownLow.GetValueAt(pivotBar + offset))
                     isLow = false;
             }
 
@@ -312,35 +341,35 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 pivots.Add(new PivotLevel { BarIndex = pivotBar, Value = low, IsHigh = false });
         }
 
-        private void MarkAbsorption(int closedBar)
+        // Effort (the CVD's move over the lookback) that price did not follow, both scaled by
+        // their largest move of that length in the last Scale Lookback candles.
+        private void MarkDivergence(int closedBar)
         {
-            int firstBar = closedBar - AbsorptionLookback + 1;
-            if (firstBar < 0)
+            int lookback = DivergenceLookback;
+            int firstBar = closedBar - ScaleLookback - lookback + 1;
+            if (firstBar < 0 || SpansReset(firstBar + 1, closedBar))
                 return;
 
-            double sum = 0;
-            double sumOfSquares = 0;
-            for (int barIndex = firstBar; barIndex <= closedBar; barIndex++)
+            double maxEffort = 0;
+            double maxResult = 0;
+            for (int barIndex = firstBar + lookback; barIndex <= closedBar; barIndex++)
             {
-                if (!HasCvd(barIndex))
+                if (!HasCvd(barIndex) || !HasCvd(barIndex - lookback))
                     return;
-                double delta = BarDelta(barIndex);
-                sum += delta;
-                sumOfSquares += delta * delta;
+                maxEffort = Math.Max(maxEffort, Math.Abs(cvdClose.GetValueAt(barIndex) - cvdClose.GetValueAt(barIndex - lookback)));
+                maxResult = Math.Max(maxResult, Math.Abs(Bars.GetClose(barIndex) - Bars.GetClose(barIndex - lookback)));
             }
-
-            double mean = sum / AbsorptionLookback;
-            double variance = sumOfSquares / AbsorptionLookback - mean * mean;
-            if (variance <= 0)
+            if (maxEffort <= 0 || maxResult <= 0)
                 return;
 
-            double zScore = (BarDelta(closedBar) - mean) / Math.Sqrt(variance);
-            double open = Bars.GetOpen(closedBar);
-            double close = Bars.GetClose(closedBar);
-            if (zScore <= -AbsorptionZScore && close >= open)
-                absorption[1] = 1;
-            else if (zScore >= AbsorptionZScore && close <= open)
-                absorption[1] = -1;
+            double effort = cvdClose.GetValueAt(closedBar) - cvdClose.GetValueAt(closedBar - lookback);
+            double result = Bars.GetClose(closedBar) - Bars.GetClose(closedBar - lookback);
+            double effortScaled = Math.Abs(effort) / maxEffort;
+            if (effortScaled < MinEffortThreshold)
+                return;
+            double progress = Math.Sign(effort) * result / maxResult;
+            if (progress / effortScaled <= MaxResultRatio)
+                divergence[1] = effort > 0 ? 1 : -1;
         }
 
         public override void OnCalculateMinMax()
@@ -350,13 +379,19 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (ChartBars == null)
                 return;
 
-            for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
+            int firstBar = UseLookbackScaling ? Math.Max(0, ChartBars.ToIndex - ScaleLookback + 1) : ChartBars.FromIndex;
+            for (int barIndex = firstBar; barIndex <= ChartBars.ToIndex; barIndex++)
             {
                 if (!HasCvd(barIndex))
                     continue;
                 MinValue = Math.Min(MinValue, shownLow.GetValueAt(barIndex));
                 MaxValue = Math.Max(MaxValue, shownHigh.GetValueAt(barIndex));
             }
+        }
+
+        private bool IsRising(int barIndex)
+        {
+            return shownClose.GetValueAt(barIndex) >= shownOpen.GetValueAt(barIndex);
         }
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
@@ -366,31 +401,55 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (Bars == null || ChartBars == null || RenderTarget == null || IsInHitTest)
                 return;
 
-            SharpDX.Direct2D1.Brush upBrush = UpColor.ToDxBrush(RenderTarget);
-            SharpDX.Direct2D1.Brush downBrush = DownColor.ToDxBrush(RenderTarget);
-            SharpDX.Direct2D1.Brush highBrush = PivotHighColor.ToDxBrush(RenderTarget);
-            SharpDX.Direct2D1.Brush lowBrush = PivotLowColor.ToDxBrush(RenderTarget);
-            SharpDX.Direct2D1.Brush highFill = PivotHighColor.ToDxBrush(RenderTarget, 0.35f);
-            SharpDX.Direct2D1.Brush lowFill = PivotLowColor.ToDxBrush(RenderTarget, 0.35f);
-            SharpDX.Direct2D1.Brush buyBand = BuyAbsorptionColor.ToDxBrush(RenderTarget, BandOpacity / 100f);
-            SharpDX.Direct2D1.Brush sellBand = SellAbsorptionColor.ToDxBrush(RenderTarget, BandOpacity / 100f);
+            SharpDX.Direct2D1.Brush bodyUpBrush = BodyUp.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush bodyDownBrush = BodyDown.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush wickUpBrush = WickUp.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush wickDownBrush = WickDown.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush bullFillBrush = BullFill.ToDxBrush(RenderTarget, (float)BullFillOpacity);
+            SharpDX.Direct2D1.Brush bullBorderBrush = BullBorder.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush bearFillBrush = BearFill.ToDxBrush(RenderTarget, (float)BearFillOpacity);
+            SharpDX.Direct2D1.Brush bearBorderBrush = BearBorder.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush bullStripeBrush = BullDivergence.ToDxBrush(RenderTarget, (float)BullDivergenceOpacity);
+            SharpDX.Direct2D1.Brush bearStripeBrush = BearDivergence.ToDxBrush(RenderTarget, (float)BearDivergenceOpacity);
+            SharpDX.Direct2D1.Brush lastLevelBrush = LastLevelsColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush upCrossBrush = LevelsUpCross.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush downCrossBrush = LevelsDownCross.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush pivotUpBrush = PivotUp.ToDxBrush(RenderTarget, (float)PivotLineOpacity);
+            SharpDX.Direct2D1.Brush pivotDownBrush = PivotDown.ToDxBrush(RenderTarget, (float)PivotLineOpacity);
 
             try
             {
-                float barWidth = Math.Max(1f, (float)chartControl.GetBarPaintWidth(ChartBars));
-                float panelTop = ChartPanel.Y;
-                float panelRight = ChartPanel.X + ChartPanel.W;
-                float bandWidth = barWidth + 4;
-                float pivotRadius = Math.Max(5f, barWidth);
+                float barDistance = chartControl.Properties.BarDistance;
+                float bodyWidth = MatchChartCandleWidth
+                    ? Math.Max(1f, (float)(chartControl.GetBarPaintWidth(ChartBars) * WidthScale))
+                    : FixedCandleWidth;
+                int lastBar = Bars.Count - 1;
+                float lastX = chartControl.GetXByBarIndex(ChartBars, lastBar);
 
-                for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
-                {
-                    if (!absorption.IsValidDataPointAt(barIndex))
-                        continue;
-                    float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
-                    RenderTarget.FillRectangle(new SharpDX.RectangleF(x - bandWidth / 2, panelTop, bandWidth, ChartPanel.H),
-                        absorption.GetValueAt(barIndex) > 0 ? buyBand : sellBand);
-                }
+                if (ShowDivergence)
+                    for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
+                    {
+                        if (!divergence.IsValidDataPointAt(barIndex))
+                            continue;
+                        float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
+                        RenderTarget.FillRectangle(new SharpDX.RectangleF(x - barDistance / 2, ChartPanel.Y, barDistance, ChartPanel.H),
+                            divergence.GetValueAt(barIndex) > 0 ? bullStripeBrush : bearStripeBrush);
+                    }
+
+                if (ShowPivotLevels)
+                    lock (pivots)
+                        foreach (PivotLevel level in pivots)
+                        {
+                            if (level.BarIndex > ChartBars.ToIndex || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
+                                continue;
+                            float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
+                            float x2 = level.BrokenAt >= 0
+                                ? chartControl.GetXByBarIndex(ChartBars, level.BrokenAt)
+                                : lastX + (float)(CurrentPad * barDistance);
+                            float y = chartScale.GetYByValue(level.Value);
+                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
+                                level.IsHigh ? pivotDownBrush : pivotUpBrush, PivotLineWidth);
+                        }
 
                 for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
                 {
@@ -400,152 +459,332 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     float x = chartControl.GetXByBarIndex(ChartBars, barIndex);
                     double open = shownOpen.GetValueAt(barIndex);
                     double close = shownClose.GetValueAt(barIndex);
-                    SharpDX.Direct2D1.Brush brush = close >= open ? upBrush : downBrush;
+                    bool rising = close >= open;
+                    SharpDX.Direct2D1.Brush wick = rising ? wickUpBrush : wickDownBrush;
 
                     RenderTarget.DrawLine(new SharpDX.Vector2(x, chartScale.GetYByValue(shownHigh.GetValueAt(barIndex))),
-                        new SharpDX.Vector2(x, chartScale.GetYByValue(shownLow.GetValueAt(barIndex))), brush, 1f);
+                        new SharpDX.Vector2(x, chartScale.GetYByValue(shownLow.GetValueAt(barIndex))), wick, 1f);
 
                     float bodyTop = chartScale.GetYByValue(Math.Max(open, close));
                     float bodyBottom = chartScale.GetYByValue(Math.Min(open, close));
-                    RenderTarget.FillRectangle(new SharpDX.RectangleF(x - barWidth / 2, bodyTop, barWidth, Math.Max(1f, bodyBottom - bodyTop)), brush);
+                    SharpDX.RectangleF body = new SharpDX.RectangleF(x - bodyWidth / 2, bodyTop, bodyWidth, Math.Max(1f, bodyBottom - bodyTop));
+                    RenderTarget.FillRectangle(body, rising ? bodyUpBrush : bodyDownBrush);
+                    RenderTarget.DrawRectangle(body, wick, 1f);
                 }
 
-                lock (pivots)
-                    foreach (PivotLevel level in pivots)
+                if (lastBar >= 1 && lastBar <= ChartBars.ToIndex && HasCvd(lastBar) && HasCvd(lastBar - 1))
+                {
+                    double previousHigh = shownHigh.GetValueAt(lastBar - 1);
+                    double previousLow = shownLow.GetValueAt(lastBar - 1);
+                    float x1 = chartControl.GetXByBarIndex(ChartBars, lastBar - 1);
+                    float x2 = lastX + (float)(CurrentPad * barDistance);
+                    float highY = chartScale.GetYByValue(previousHigh);
+                    float lowY = chartScale.GetYByValue(previousLow);
+                    RenderTarget.DrawLine(new SharpDX.Vector2(x1, highY), new SharpDX.Vector2(x2, highY),
+                        shownHigh.GetValueAt(lastBar) > previousHigh ? upCrossBrush : lastLevelBrush, 1f);
+                    RenderTarget.DrawLine(new SharpDX.Vector2(x1, lowY), new SharpDX.Vector2(x2, lowY),
+                        shownLow.GetValueAt(lastBar) < previousLow ? downCrossBrush : lastLevelBrush, 1f);
+                }
+
+                if (ShowBreakoutCircles)
+                    for (int barIndex = Math.Max(1, ChartBars.FromIndex); barIndex <= ChartBars.ToIndex; barIndex++)
                     {
-                        if (level.BarIndex > ChartBars.ToIndex || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
+                        if (!HasCvd(barIndex) || !HasCvd(barIndex - 1))
+                            continue;
+                        double close = shownClose.GetValueAt(barIndex);
+                        bool previousRising = IsRising(barIndex - 1);
+                        bool bull = !previousRising && close > shownHigh.GetValueAt(barIndex - 1);
+                        bool bear = previousRising && close < shownLow.GetValueAt(barIndex - 1);
+                        if (!bull && !bear)
                             continue;
 
-                        float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
-                        float x2 = level.BrokenAt >= 0 ? chartControl.GetXByBarIndex(ChartBars, level.BrokenAt) : panelRight;
-                        float y = chartScale.GetYByValue(level.Value);
-                        SharpDX.Direct2D1.Brush lineBrush = level.IsHigh ? highBrush : lowBrush;
-                        if (level.BrokenAt < 0 || ShowBrokenLevels)
-                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y), lineBrush, 1.5f);
-
-                        SharpDX.Direct2D1.Ellipse circle = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x1, y), pivotRadius, pivotRadius);
-                        RenderTarget.FillEllipse(circle, level.IsHigh ? highFill : lowFill);
-                        RenderTarget.DrawEllipse(circle, lineBrush, 1f);
+                        double level = bull ? shownHigh.GetValueAt(barIndex - 1) : shownLow.GetValueAt(barIndex - 1);
+                        SharpDX.Direct2D1.Ellipse circle = new SharpDX.Direct2D1.Ellipse(
+                            new SharpDX.Vector2(chartControl.GetXByBarIndex(ChartBars, barIndex), chartScale.GetYByValue(level)),
+                            CircleRadius, CircleRadius);
+                        RenderTarget.FillEllipse(circle, bull ? bullFillBrush : bearFillBrush);
+                        RenderTarget.DrawEllipse(circle, bull ? bullBorderBrush : bearBorderBrush, 1f);
                     }
             }
             finally
             {
-                upBrush.Dispose();
-                downBrush.Dispose();
-                highBrush.Dispose();
-                lowBrush.Dispose();
-                highFill.Dispose();
-                lowFill.Dispose();
-                buyBand.Dispose();
-                sellBand.Dispose();
+                bodyUpBrush.Dispose();
+                bodyDownBrush.Dispose();
+                wickUpBrush.Dispose();
+                wickDownBrush.Dispose();
+                bullFillBrush.Dispose();
+                bullBorderBrush.Dispose();
+                bearFillBrush.Dispose();
+                bearBorderBrush.Dispose();
+                bullStripeBrush.Dispose();
+                bearStripeBrush.Dispose();
+                lastLevelBrush.Dispose();
+                upCrossBrush.Dispose();
+                downCrossBrush.Dispose();
+                pivotUpBrush.Dispose();
+                pivotDownBrush.Dispose();
             }
         }
 
         #region Properties
 
         [NinjaScriptProperty]
-        [Display(Name = "Reset each session", Description = "Start the cumulative delta from zero on the first candle of each session.", Order = 1, GroupName = "1. CVD")]
+        [Display(Name = "Reset each session", Description = "Start the cumulative delta from zero on the first candle of each session. Off by default: the reference CVD keeps accumulating.", Order = 1, GroupName = "1. CVD")]
         public bool ResetEachSession { get; set; }
 
         [NinjaScriptProperty]
-        [Display(Name = "Reset at time", Description = "Start the cumulative delta from zero on the first candle after Reset time each day. Use this on an ETH series, where sessions start in the evening.", Order = 2, GroupName = "1. CVD")]
+        [Display(Name = "Reset at time", Description = "Start the cumulative delta from zero on the first candle after Reset time each day.", Order = 2, GroupName = "1. CVD")]
         public bool ResetAtTime { get; set; }
 
         [NinjaScriptProperty]
         [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
         public string ResetTime { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). HeikinAshiVolume: each candle's whole volume, positive while a Heikin-Ashi candle built from price is rising and negative while it falls; the reference trader's 1-minute VD and CVD are built this way. It follows price and needs no Tick Replay.", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Delta source", Description = "HeikinAshiVolume: volume signed by the Heikin-Ashi color of price, as the reference CVD appears to be built; needs no Tick Replay. BidAsk: real aggression from each trade's bid and ask (needs Tick Replay).", Order = 4, GroupName = "1. CVD")]
         public FlowDeltaSource DeltaSource { get; set; }
 
-        [NinjaScriptProperty]
-        [Display(Name = "Heikin-Ashi candles", Description = "Draw the cumulative delta as Heikin-Ashi candles: smoother runs, fewer pivots. Pivots and their breaks follow the candles drawn.", Order = 5, GroupName = "1. CVD")]
-        public bool HeikinAshi { get; set; }
+        [Display(Name = "Sign each trade", Description = "HeikinAshiVolume only. On: each trade's volume takes the price Heikin-Ashi color at that moment (needs Tick Replay). Off: the candle's whole volume takes its current color.", Order = 5, GroupName = "1. CVD")]
+        public bool SignEachTrade { get; set; }
+
+        [Display(Name = "Show breakout circles", Order = 1, GroupName = "2. Breakout Circles")]
+        public bool ShowBreakoutCircles { get; set; }
+
+        [Range(1, 60)]
+        [Display(Name = "Circle radius (px)", Order = 2, GroupName = "2. Breakout Circles")]
+        public int CircleRadius { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Bull fill", Order = 3, GroupName = "2. Breakout Circles")]
+        public System.Windows.Media.Brush BullFill { get; set; }
+
+        [Browsable(false)]
+        public string BullFillSerializable
+        {
+            get { return Serialize.BrushToString(BullFill); }
+            set { BullFill = Serialize.StringToBrush(value); }
+        }
+
+        [Range(0, 1)]
+        [Display(Name = "Bull fill opacity", Order = 4, GroupName = "2. Breakout Circles")]
+        public double BullFillOpacity { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Bull border", Order = 5, GroupName = "2. Breakout Circles")]
+        public System.Windows.Media.Brush BullBorder { get; set; }
+
+        [Browsable(false)]
+        public string BullBorderSerializable
+        {
+            get { return Serialize.BrushToString(BullBorder); }
+            set { BullBorder = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Bear fill", Order = 6, GroupName = "2. Breakout Circles")]
+        public System.Windows.Media.Brush BearFill { get; set; }
+
+        [Browsable(false)]
+        public string BearFillSerializable
+        {
+            get { return Serialize.BrushToString(BearFill); }
+            set { BearFill = Serialize.StringToBrush(value); }
+        }
+
+        [Range(0, 1)]
+        [Display(Name = "Bear fill opacity", Order = 7, GroupName = "2. Breakout Circles")]
+        public double BearFillOpacity { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Bear border", Order = 8, GroupName = "2. Breakout Circles")]
+        public System.Windows.Media.Brush BearBorder { get; set; }
+
+        [Browsable(false)]
+        public string BearBorderSerializable
+        {
+            get { return Serialize.BrushToString(BearBorder); }
+            set { BearBorder = Serialize.StringToBrush(value); }
+        }
+
+        [Display(Name = "Match chart candle width", Order = 1, GroupName = "3. Candle Width")]
+        public bool MatchChartCandleWidth { get; set; }
+
+        [Range(1, 50)]
+        [Display(Name = "Fixed candle width (px)", Order = 2, GroupName = "3. Candle Width")]
+        public int FixedCandleWidth { get; set; }
+
+        [Range(0.1, 2)]
+        [Display(Name = "Width scale (match mode)", Order = 3, GroupName = "3. Candle Width")]
+        public double WidthScale { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Body up", Order = 1, GroupName = "4. Colors")]
+        public System.Windows.Media.Brush BodyUp { get; set; }
+
+        [Browsable(false)]
+        public string BodyUpSerializable
+        {
+            get { return Serialize.BrushToString(BodyUp); }
+            set { BodyUp = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Body down", Order = 2, GroupName = "4. Colors")]
+        public System.Windows.Media.Brush BodyDown { get; set; }
+
+        [Browsable(false)]
+        public string BodyDownSerializable
+        {
+            get { return Serialize.BrushToString(BodyDown); }
+            set { BodyDown = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Wick up", Order = 3, GroupName = "4. Colors")]
+        public System.Windows.Media.Brush WickUp { get; set; }
+
+        [Browsable(false)]
+        public string WickUpSerializable
+        {
+            get { return Serialize.BrushToString(WickUp); }
+            set { WickUp = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Wick down", Order = 4, GroupName = "4. Colors")]
+        public System.Windows.Media.Brush WickDown { get; set; }
+
+        [Browsable(false)]
+        public string WickDownSerializable
+        {
+            get { return Serialize.BrushToString(WickDown); }
+            set { WickDown = Serialize.StringToBrush(value); }
+        }
+
+        [Display(Name = "Use lookback scaling", Description = "Scale the panel to the CVD range of the last Scale lookback candles, not only the visible ones.", Order = 1, GroupName = "5. Display")]
+        public bool UseLookbackScaling { get; set; }
+
+        [Range(10, 5000)]
+        [Display(Name = "Scale lookback (bars)", Description = "Candles used for the panel scale and to normalize divergence effort and result.", Order = 2, GroupName = "5. Display")]
+        public int ScaleLookback { get; set; }
+
+        [Display(Name = "Show divergence", Order = 1, GroupName = "6. Divergence")]
+        public bool ShowDivergence { get; set; }
+
+        [Range(1, 50)]
+        [Display(Name = "Divergence lookback (bars)", Order = 2, GroupName = "6. Divergence")]
+        public int DivergenceLookback { get; set; }
+
+        [Range(0, 1)]
+        [Display(Name = "Min effort threshold (normalized)", Order = 3, GroupName = "6. Divergence")]
+        public double MinEffortThreshold { get; set; }
+
+        [Range(-1, 1)]
+        [Display(Name = "Max result ratio", Order = 4, GroupName = "6. Divergence")]
+        public double MaxResultRatio { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Bull divergence", Description = "Buying flow while price does not rise.", Order = 5, GroupName = "6. Divergence")]
+        public System.Windows.Media.Brush BullDivergence { get; set; }
+
+        [Browsable(false)]
+        public string BullDivergenceSerializable
+        {
+            get { return Serialize.BrushToString(BullDivergence); }
+            set { BullDivergence = Serialize.StringToBrush(value); }
+        }
+
+        [Range(0, 1)]
+        [Display(Name = "Bull divergence opacity", Order = 6, GroupName = "6. Divergence")]
+        public double BullDivergenceOpacity { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Bear divergence", Description = "Selling flow while price does not fall.", Order = 7, GroupName = "6. Divergence")]
+        public System.Windows.Media.Brush BearDivergence { get; set; }
+
+        [Browsable(false)]
+        public string BearDivergenceSerializable
+        {
+            get { return Serialize.BrushToString(BearDivergence); }
+            set { BearDivergence = Serialize.StringToBrush(value); }
+        }
+
+        [Range(0, 1)]
+        [Display(Name = "Bear divergence opacity", Order = 8, GroupName = "6. Divergence")]
+        public double BearDivergenceOpacity { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Last levels color", Description = "The previous candle's high and low, while the forming candle has not crossed them.", Order = 1, GroupName = "7. Levels")]
+        public System.Windows.Media.Brush LastLevelsColor { get; set; }
+
+        [Browsable(false)]
+        public string LastLevelsColorSerializable
+        {
+            get { return Serialize.BrushToString(LastLevelsColor); }
+            set { LastLevelsColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Levels up-cross", Order = 2, GroupName = "7. Levels")]
+        public System.Windows.Media.Brush LevelsUpCross { get; set; }
+
+        [Browsable(false)]
+        public string LevelsUpCrossSerializable
+        {
+            get { return Serialize.BrushToString(LevelsUpCross); }
+            set { LevelsUpCross = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Levels down-cross", Order = 3, GroupName = "7. Levels")]
+        public System.Windows.Media.Brush LevelsDownCross { get; set; }
+
+        [Browsable(false)]
+        public string LevelsDownCrossSerializable
+        {
+            get { return Serialize.BrushToString(LevelsDownCross); }
+            set { LevelsDownCross = Serialize.StringToBrush(value); }
+        }
+
+        [Range(0, 5)]
+        [Display(Name = "Current pad (bar fraction)", Description = "How far past the current candle the levels reach.", Order = 4, GroupName = "7. Levels")]
+        public double CurrentPad { get; set; }
+
+        [Display(Name = "Show pivot levels", Order = 1, GroupName = "8. Pivot Levels")]
+        public bool ShowPivotLevels { get; set; }
 
         [Range(1, 20), NinjaScriptProperty]
-        [Display(Name = "Pivot strength", Description = "Candles on each side a CVD high or low must beat to become a pivot.", Order = 6, GroupName = "1. CVD")]
+        [Display(Name = "Pivot strength (bars each side)", Order = 2, GroupName = "8. Pivot Levels")]
         public int PivotStrength { get; set; }
 
-        [Display(Name = "Show broken levels", Description = "Keep each pivot's line up to the candle that closed through it. Off: only levels the CVD has not crossed yet are drawn.", Order = 7, GroupName = "1. CVD")]
-        public bool ShowBrokenLevels { get; set; }
-
-        [Range(5, 500), NinjaScriptProperty]
-        [Display(Name = "Absorption lookback", Description = "Candles used to measure how large a candle's delta is.", Order = 8, GroupName = "1. CVD")]
-        public int AbsorptionLookback { get; set; }
-
-        [Range(0.5, 10), NinjaScriptProperty]
-        [Display(Name = "Absorption z-score", Description = "How many deviations a candle's delta must reach, against a candle that closes the other way, to mark absorption.", Order = 9, GroupName = "1. CVD")]
-        public double AbsorptionZScore { get; set; }
-
-        [Range(0, 100)]
-        [Display(Name = "Band opacity (%)", Order = 10, GroupName = "1. CVD")]
-        public int BandOpacity { get; set; }
-
         [XmlIgnore]
-        [Display(Name = "Rising candle", Order = 1, GroupName = "2. Colors")]
-        public System.Windows.Media.Brush UpColor { get; set; }
+        [Display(Name = "Pivot up", Description = "Line from a CVD low.", Order = 3, GroupName = "8. Pivot Levels")]
+        public System.Windows.Media.Brush PivotUp { get; set; }
 
         [Browsable(false)]
-        public string UpColorSerializable
+        public string PivotUpSerializable
         {
-            get { return Serialize.BrushToString(UpColor); }
-            set { UpColor = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(PivotUp); }
+            set { PivotUp = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "Falling candle", Order = 2, GroupName = "2. Colors")]
-        public System.Windows.Media.Brush DownColor { get; set; }
+        [Display(Name = "Pivot down", Description = "Line from a CVD high.", Order = 4, GroupName = "8. Pivot Levels")]
+        public System.Windows.Media.Brush PivotDown { get; set; }
 
         [Browsable(false)]
-        public string DownColorSerializable
+        public string PivotDownSerializable
         {
-            get { return Serialize.BrushToString(DownColor); }
-            set { DownColor = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(PivotDown); }
+            set { PivotDown = Serialize.StringToBrush(value); }
         }
 
-        [XmlIgnore]
-        [Display(Name = "Pivot high", Order = 3, GroupName = "2. Colors")]
-        public System.Windows.Media.Brush PivotHighColor { get; set; }
+        [Range(1, 10)]
+        [Display(Name = "Pivot line width", Order = 5, GroupName = "8. Pivot Levels")]
+        public int PivotLineWidth { get; set; }
 
-        [Browsable(false)]
-        public string PivotHighColorSerializable
-        {
-            get { return Serialize.BrushToString(PivotHighColor); }
-            set { PivotHighColor = Serialize.StringToBrush(value); }
-        }
-
-        [XmlIgnore]
-        [Display(Name = "Pivot low", Order = 4, GroupName = "2. Colors")]
-        public System.Windows.Media.Brush PivotLowColor { get; set; }
-
-        [Browsable(false)]
-        public string PivotLowColorSerializable
-        {
-            get { return Serialize.BrushToString(PivotLowColor); }
-            set { PivotLowColor = Serialize.StringToBrush(value); }
-        }
-
-        [XmlIgnore]
-        [Display(Name = "Buyers absorbing (selling failed)", Order = 5, GroupName = "2. Colors")]
-        public System.Windows.Media.Brush BuyAbsorptionColor { get; set; }
-
-        [Browsable(false)]
-        public string BuyAbsorptionColorSerializable
-        {
-            get { return Serialize.BrushToString(BuyAbsorptionColor); }
-            set { BuyAbsorptionColor = Serialize.StringToBrush(value); }
-        }
-
-        [XmlIgnore]
-        [Display(Name = "Sellers absorbing (buying failed)", Order = 6, GroupName = "2. Colors")]
-        public System.Windows.Media.Brush SellAbsorptionColor { get; set; }
-
-        [Browsable(false)]
-        public string SellAbsorptionColorSerializable
-        {
-            get { return Serialize.BrushToString(SellAbsorptionColor); }
-            set { SellAbsorptionColor = Serialize.StringToBrush(value); }
-        }
+        [Range(0, 1)]
+        [Display(Name = "Pivot line opacity", Order = 6, GroupName = "8. Pivot Levels")]
+        public double PivotLineOpacity { get; set; }
 
         #endregion
     }
