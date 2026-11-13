@@ -22,8 +22,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// Annotates every working order on the chart's instrument with a box centered on
     /// its line: STOP or ALVO with the quantity, points times quantity and the money
     /// value against the position's average price (or the market when flat), red for
-    /// stops and green for targets. The platform draws the orders themselves; this
-    /// only adds the numbers their markers never show.
+    /// exit stops, green for exit targets, neutral for entries. The platform draws
+    /// the orders themselves; this only adds the numbers their markers never show.
     /// </summary>
     public class OrderDecorator : Indicator
     {
@@ -399,7 +399,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         nearestStopDistance = distance;
                 }
 
-            Gui.Tools.SimpleFont boldFont = chartControl.Properties.LabelFont.Clone() as Gui.Tools.SimpleFont;
+            Gui.Tools.SimpleFont boldFont = (Gui.Tools.SimpleFont)chartControl.Properties.LabelFont.Clone();
             boldFont.Bold = true;
             SharpDX.DirectWrite.TextFormat textFormat = boldFont.ToDirectWriteTextFormat();
             List<PendingLabel> labels = new List<PendingLabel>();
@@ -458,7 +458,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     bool isProfitSide = hasPosition && (positionIsLong ? signedPoints > 0 : signedPoints < 0);
 
                     // Colored by role, not by side: a stop trailed into profit stays red.
-                    // Entries (flat, or adding to the position) have no exit role and stay neutral.
                     bool isExit = hasPosition && (positionIsLong ? !order.IsBuy : order.IsBuy);
                     SharpDX.Direct2D1.Brush brush = neutralBrushDx;
                     if (isExit)
@@ -468,7 +467,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Math.Abs(signedPoints) * order.RemainingQuantity, isExit, isExit && !isProfitSide, pointMoney);
                     if (ShowTicks)
                         label += FieldSeparator + string.Format("{0:F0}t", ticks * order.RemainingQuantity);
-                    if (ShowRMultiple && isProfitSide && nearestStopDistance > 0)
+                    if (ShowRMultiple && isExit && isProfitSide && nearestStopDistance > 0)
                         label += FieldSeparator + string.Format("{0:0.0}R", Math.Abs(signedPoints) / nearestStopDistance);
 
                     SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
@@ -559,15 +558,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// <summary>
         /// "STOP (4)  :  -230 P  :  $ -4.600,00" / "ALVO (2)  :  31 P  :  $ 620,00".
         /// Points are the distance times the quantity; stops carry a sign (+ on the
-        /// profit side), targets do not; money shows only a minus. Numbers follow the
-        /// reference trader's Brazilian format whatever the machine's culture.
+        /// profit side), targets do not; money shows only a minus.
         /// </summary>
-        private string OrderLabel(bool isStop, int quantity, double points, bool showSign, bool lossSide, double pointMoney)
+        private string OrderLabel(bool isStop, int quantity, double points, bool isExit, bool lossSide, double pointMoney)
         {
             string label = string.Format("{0} ({1})", isStop ? "STOP" : "ALVO", quantity);
             if (ShowPoints)
             {
-                string sign = !isStop || !showSign || points == 0 ? "" : (lossSide ? "-" : "+");
+                string sign = "";
+                if (isStop && isExit && points != 0)
+                    sign = lossSide ? "-" : "+";
                 label += FieldSeparator + sign + points.ToString("#,0.##", LabelCulture) + " P";
             }
             if (ShowCurrency)
