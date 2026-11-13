@@ -573,10 +573,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // Bars are stamped at their close; half a bar right of a stamp is where that bar ends and the next opens.
             float halfBar = chartControl.Properties.BarDistance / 2f;
+            float closeEdge = Bars.BarsType.IsTimeBased ? halfBar : 0f;
             float startX = Math.Max(chartControl.GetXByTime(startTime) + halfBar, ChartPanel.X);
             // A still-running line pokes past the last bar so its label clears
             // the price action; a finished day ends at its own midnight.
-            float endX = extendPastLastBar ? lastBarX + ExtensionPixels : chartControl.GetXByTime(endTime) + halfBar;
+            float endX = extendPastLastBar ? lastBarX + ExtensionPixels : chartControl.GetXByTime(endTime) + closeEdge;
             endX = Math.Min(endX, ChartPanel.X + ChartPanel.W);
             if (endX <= startX)
                 return;
