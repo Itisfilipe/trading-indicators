@@ -484,7 +484,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Layout = layout,
                         Brush = brush,
                         Top = y - BoxHeight(layout) / 2,
-                        ShiftLeft = usedWidth,
+                        ShiftLeft = AvoidOverlap ? 0 : usedWidth,
                     });
                 }
 
@@ -540,7 +540,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 float width = labels[i].Layout.Metrics.Width + 2 * BoxPaddingX;
                 float height = BoxHeight(labels[i].Layout);
-                float x = panelRight - RightMarginPixels - width - labels[i].ShiftLeft;
+                float x = Math.Max(ChartPanel.X, panelRight - RightMarginPixels - width - labels[i].ShiftLeft);
                 SharpDX.Direct2D1.RoundedRectangle box = new SharpDX.Direct2D1.RoundedRectangle
                 {
                     Rect = new SharpDX.RectangleF(x, tops[i], width, height),
