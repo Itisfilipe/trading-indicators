@@ -557,8 +557,9 @@ the two count toward volume only.
     level (sells minus buys for a blue one) is added to it, and the count
     belongs to the price, so a level that comes back keeps its number.
   - A candle that closes through a level removes it; at the next close it
-    comes back on the other side (a red level price closed above returns
-    blue) with the same number, even if that candle never traded there.
+    comes back on the side that close leaves it (a red level price stays
+    above returns blue) with the same number, even if that candle never
+    traded there.
   - A level also ends once the net aggression into it after it formed
     reaches its count at birth (ended levels stay faded with "Show
     consumed levels").

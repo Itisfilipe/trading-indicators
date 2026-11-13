@@ -218,14 +218,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 foreach (KeyValuePair<double, LevelVolume> entry in barLevels)
                 {
                     double price = entry.Key;
-                    if (HasLiveLevel(price) || flipsDue.ContainsKey(price))
-                        continue;
                     double levelTop = price + groupTop;
                     double sells = entry.Value.Sells;
                     double buys = entry.Value.Buys;
                     bool buyersAbsorbing = sells > buys && sells >= threshold && price <= low + edge && close > levelTop;
                     bool sellersAbsorbing = buys > sells && buys >= threshold && levelTop >= high - edge && close < price;
                     if (!buyersAbsorbing && !sellersAbsorbing)
+                        continue;
+                    if (flipsDue.ContainsKey(price) || HasLiveLevel(price))
                         continue;
                     AddAbsorbed(price, buyersAbsorbing ? sells : buys);
                     absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar + 1, Price = price, BuyersAbsorbing = buyersAbsorbing, RemainingLots = absorbedLots[price] });

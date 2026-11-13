@@ -12,10 +12,15 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   effort-without-result stripes. The absorption bands and the
   "Heikin-Ashi candles" and "Show broken levels" settings are gone; pivot
   strength defaults to 1 and the CVD no longer resets unless asked to.
-- Flow Absorption now behaves like Mark50's: bands change only at a candle
-  close and start on the next candle, the number only grows and stays with
-  the price, and a level a candle closes through comes back on the other
-  side one candle later with the same number.
+- Flow Absorption now behaves like the reference trader's: bands change only
+  at a candle close and start on the next candle, the number only grows and
+  stays with the price, and a level a candle closes through comes back one
+  candle later, on the side that close leaves it, with the same number.
+- Flow VD: bars are now mint (up) and near-black (down) like the chart
+  palette, and by default each candle's whole volume is signed by a
+  Heikin-Ashi candle of price, as the reference trader's VD is; real bid/ask
+  aggression stays available as "Delta source" BidAsk. Charts saved with
+  the old settings keep them.
 - ICT Killzones, ICT Macros, Time-Based Vertical Lines, Time-Based Price
   Levels and Economic Calendar: drawings now start on the candle that opens
   at their time, as on TradingView. NinjaTrader labels a candle with its

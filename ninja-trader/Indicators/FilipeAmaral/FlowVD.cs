@@ -14,8 +14,8 @@ using NinjaTrader.NinjaScript.DrawingTools;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// Volume delta per candle: contracts bought at the ask minus contracts sold
-    /// at the bid, updated tick by tick while the candle forms.
+    /// Volume delta per candle, either each candle's whole volume signed by a
+    /// Heikin-Ashi candle of price or bid/ask aggression from each trade.
     /// </summary>
     public class FlowVD : Indicator
     {
@@ -41,7 +41,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Volume delta per candle (ask aggression minus bid aggression). Needs Tick Replay for history.";
+                Description = "Volume delta per candle: whole volume signed by Heikin-Ashi (default) or bid/ask aggression (needs Tick Replay for history).";
                 Name = "Flow VD";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = false;
