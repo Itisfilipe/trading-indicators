@@ -549,8 +549,10 @@ the two count toward volume only.
     did not lift price, purple when selling flow did not drop it, over
     "Divergence lookback" candles, scaled against the largest such moves
     in the last "Scale lookback" candles.
-  - The panel scales to the CVD range of the last "Scale lookback" candles,
-    so it does not jump as you scroll.
+  - The panel scales to the visible candles. "Use lookback scaling" fits
+    the range of the last "Scale lookback" candles instead, which stops the
+    scale jumping as you scroll but flattens the candles when the CVD has
+    drifted far in that time.
 - **Flow Absorption** (price panel): absorption zones. Over the last
   "Window" of 1-minute bars
   (180, read from a 1-minute series whatever the chart's period), every

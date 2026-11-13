@@ -105,7 +105,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 WickUp = Rgb(0x1A, 0x1C, 0x26);
                 WickDown = Rgb(0x1A, 0x1C, 0x26);
 
-                UseLookbackScaling = true;
+                UseLookbackScaling = false;
                 ScaleLookback = 300;
 
                 ShowDivergence = true;

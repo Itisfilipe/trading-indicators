@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow CVD scales to the visible candles by default: scaled to the last 300
+  candles, a drifting CVD left each candle one or two pixels tall and every
+  old pivot line inside the panel. Charts already set up keep the old
+  scaling until "Use lookback scaling" is unticked.
 - Flow VD: new "Bar opacity (%)" setting, 80 by default.
 - OrderDecorator: orders that add to the position (or wait while flat) read
   ENTRADA, neutral and unsigned, instead of reading as a stop or target. Charts saved
