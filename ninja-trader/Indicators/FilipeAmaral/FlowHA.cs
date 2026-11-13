@@ -70,7 +70,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowLastLevels = true;
                 LevelPad = 0.15;
                 LevelWidth = 1;
-                ShowCczZones = true;
+                ShowCczZones = false;
                 CczBodyPercent = 7;
                 CczOpacity = 10;
                 SignalOffsetTicks = 3;
@@ -78,8 +78,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 UpColor = Rgb(0x37, 0xF0, 0x9C);
                 DownColor = Rgb(0x1A, 0x1C, 0x26);
                 InsideColor = Rgb(0xD1, 0xD5, 0xDB);
-                ActiveCczColor = Rgb(0xB8, 0x86, 0x2B);
-                FinishedCczColor = Rgb(0x5F, 0x67, 0x73);
+                ActiveCczColor = Rgb(0xFF, 0xA5, 0x00);
+                FinishedCczColor = Rgb(0x80, 0x80, 0x80);
                 WickColor = Rgb(0x1A, 0x1C, 0x26);
                 TrafficColor = Rgb(0x5F, 0x67, 0x73);
                 LastLevelColor = Brushes.Black;

@@ -113,7 +113,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 PriceGrouping = 1;
-                AverageBars = 12;
+                AverageBars = 30;
                 AverageMultiplier = 1.0;
                 NeutralBandPercent = 0;
                 StrengthMode = FlowPocStrength.RecentCandles;
@@ -122,22 +122,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 SessionsBack = 4;
                 HighlightAbsorption = false;
                 AbsorptionEdgePercent = 25;
-                OutlierMultiplier = 3;
+                OutlierMultiplier = 0;
                 OutlierSizePercent = 130;
                 OutlierSolidFill = true;
                 OutlierBorderWidth = 3;
                 Marker = FlowPocMarker.Square;
-                MarkerSize = 18;
+                MarkerSize = 20;
                 FillOpacity = 40;
                 ShowBarStats = false;
                 PocPeriod = FlowPocPeriod.Chart;
 
-                BuyColor = Brushes.DodgerBlue;
-                SellColor = Brushes.Crimson;
-                NeutralColor = Rgb(0x5F, 0x67, 0x73);
+                BuyColor = Rgb(0x00, 0x4D, 0x00);
+                SellColor = Rgb(0xFF, 0x00, 0x00);
+                NeutralColor = Rgb(0x80, 0x80, 0x80);
                 AbsorptionColor = Rgb(0xB8, 0x86, 0x2B);
-                TextColor = Rgb(0x37, 0x41, 0x51);
-                LabelFont = new SimpleFont("Arial", 9);
+                TextColor = Brushes.Black;
+                LabelFont = new SimpleFont("Arial", 10);
             }
             else if (State == State.DataLoaded)
             {
@@ -505,7 +505,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(startIndex, barIndex, aggressorSide);
                         bool solid = isOutlier && OutlierSolidFill;
                         SharpDX.Direct2D1.Brush markerFill = solid ? lines[color] : fills[color];
-                        float borderWidth = isOutlier ? OutlierBorderWidth : 1.5f;
+                        float borderWidth = isOutlier ? OutlierBorderWidth : 1f;
                         if (Marker == FlowPocMarker.Circle)
                         {
                             SharpDX.Direct2D1.Ellipse ellipse = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
@@ -533,7 +533,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     }
                     else
                     {
-                        RenderTarget.DrawLine(new SharpDX.Vector2(left - 2, y), new SharpDX.Vector2(right + 2, y), lines[color], 3f);
+                        RenderTarget.DrawLine(new SharpDX.Vector2(left - 2, y), new SharpDX.Vector2(right + 2, y), lines[color], 4f);
                     }
 
                     if (ShowBarStats)
