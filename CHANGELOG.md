@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow Absorption now behaves like Mark50's: bands change only at a candle
+  close and start on the next candle, the number only grows and stays with
+  the price, and a level a candle closes through comes back on the other
+  side one candle later with the same number.
 - ICT Killzones, ICT Macros, Time-Based Vertical Lines, Time-Based Price
   Levels and Economic Calendar: drawings now start on the candle that opens
   at their time, as on TradingView. NinjaTrader labels a candle with its

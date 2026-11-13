@@ -17,9 +17,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
     /// Absorption levels: a price inside a closed candle that took heavy
-    /// one-sided aggression and held, drawn as a band to the right with the
-    /// lots still defending it, until the later candles' net aggression into
-    /// that price eats them.
+    /// one-sided aggression and held, drawn from the next candle as a band to
+    /// the right with the lots absorbed there. Everything changes only at a
+    /// candle close; the count only grows and belongs to the price, and a level
+    /// a candle closes through comes back on the other side one candle later.
     /// </summary>
     public class FlowAbsorption : Indicator
     {
@@ -34,13 +35,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public int StartBar;
             public double Price;
             public bool BuyersAbsorbing;
-            public double InitialLots;
             public double RemainingLots;
             public int EndBar = -1;
         }
 
         private readonly Dictionary<double, LevelVolume> barLevels = new Dictionary<double, LevelVolume>();
         private readonly List<AbsorptionLevel> absorptionLevels = new List<AbsorptionLevel>();
+        private readonly Dictionary<double, double> absorbedLots = new Dictionary<double, double>();
+        // Value: the side the level had before the close went through it.
+        private readonly Dictionary<double, bool> flipsDue = new Dictionary<double, bool>();
         private SessionIterator sessionIterator;
         private int levelsBar = -1;
         private int finalizedBar = -1;
@@ -56,7 +59,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Prices that took heavy one-sided aggression and held, with the lots still defending them. Needs Tick Replay for history.";
+                Description = "Prices that took heavy one-sided aggression and held, with the lots absorbed there. Needs Tick Replay for history.";
                 Name = "Flow Absorption";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
@@ -139,6 +142,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return Instrument.MasterInstrument.RoundToTickSize(Math.Floor(price / bucketSize + 1e-9) * bucketSize);
         }
 
+        private void AddAbsorbed(double price, double lots)
+        {
+            double total;
+            absorbedLots.TryGetValue(price, out total);
+            absorbedLots[price] = total + lots;
+        }
+
+        private bool HasLiveLevel(double price)
+        {
+            foreach (AbsorptionLevel level in absorptionLevels)
+                if (level.EndBar < 0 && level.Price == price)
+                    return true;
+            return false;
+        }
+
         private void CloseBar(int closedBar)
         {
             double high = Bars.GetHigh(closedBar);
@@ -148,20 +166,42 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (absorptionLevels)
             {
+                // A level closed through last candle returns now on the side price left it, whether or not this candle traded there.
+                foreach (KeyValuePair<double, bool> flip in flipsDue)
+                {
+                    double price = flip.Key;
+                    if (HasLiveLevel(price))
+                        continue;
+                    bool closeInsideZone = close >= price && close <= price + groupTop;
+                    bool buyersAbsorbing = closeInsideZone ? !flip.Value : close > price + groupTop;
+                    absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar + 1, Price = price, BuyersAbsorbing = buyersAbsorbing, RemainingLots = absorbedLots[price] });
+                }
+                flipsDue.Clear();
+
                 foreach (AbsorptionLevel level in absorptionLevels)
                 {
+                    if (level.EndBar >= 0 || level.StartBar > closedBar)
+                        continue;
+
+                    bool closedThrough = level.BuyersAbsorbing ? close < level.Price : close > level.Price + groupTop;
+                    if (closedThrough)
+                    {
+                        level.EndBar = closedBar;
+                        flipsDue[level.Price] = level.BuyersAbsorbing;
+                        continue;
+                    }
+
                     LevelVolume traded;
-                    if (level.EndBar >= 0 || level.StartBar >= closedBar || !barLevels.TryGetValue(level.Price, out traded))
+                    if (!barLevels.TryGetValue(level.Price, out traded))
                         continue;
                     double netAgainst = level.BuyersAbsorbing ? traded.Sells - traded.Buys : traded.Buys - traded.Sells;
                     if (netAgainst <= 0)
                         continue;
+                    AddAbsorbed(level.Price, netAgainst);
+                    // Fallback until his removal rule is known: the net aggression into a level also wears it out.
                     level.RemainingLots -= netAgainst;
                     if (level.RemainingLots <= 0)
-                    {
-                        level.RemainingLots = 0;
                         level.EndBar = closedBar;
-                    }
                 }
 
                 double range = high - low;
@@ -178,13 +218,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 foreach (KeyValuePair<double, LevelVolume> entry in barLevels)
                 {
                     double price = entry.Key;
+                    if (HasLiveLevel(price) || flipsDue.ContainsKey(price))
+                        continue;
                     double levelTop = price + groupTop;
                     double sells = entry.Value.Sells;
                     double buys = entry.Value.Buys;
-                    if (sells > buys && sells >= threshold && price <= low + edge && close > levelTop)
-                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = true, InitialLots = sells, RemainingLots = sells });
-                    else if (buys > sells && buys >= threshold && levelTop >= high - edge && close < price)
-                        absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar, Price = price, BuyersAbsorbing = false, InitialLots = buys, RemainingLots = buys });
+                    bool buyersAbsorbing = sells > buys && sells >= threshold && price <= low + edge && close > levelTop;
+                    bool sellersAbsorbing = buys > sells && buys >= threshold && levelTop >= high - edge && close < price;
+                    if (!buyersAbsorbing && !sellersAbsorbing)
+                        continue;
+                    AddAbsorbed(price, buyersAbsorbing ? sells : buys);
+                    absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar + 1, Price = price, BuyersAbsorbing = buyersAbsorbing, RemainingLots = absorbedLots[price] });
                 }
             }
         }
@@ -241,7 +285,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             continue;
 
                         SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(Core.Globals.DirectWriteFactory,
-                            level.RemainingLots.ToString("0"), textFormat, 200, 40);
+                            absorbedLots[level.Price].ToString("0"), textFormat, 200, 40);
                         try
                         {
                             float labelX = panelRight - layout.Metrics.Width - 4;

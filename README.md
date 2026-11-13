@@ -543,13 +543,20 @@ the two count toward volume only.
   multiplier" times the candle's average per zone) and held becomes a band:
   selling into a zone in the bottom "Edge" share of a candle that closed
   above it (blue, buyers absorbing), or buying into the top of one that
-  closed below it (red). The band runs right with the lots still defending
-  it in a colored box on the right edge; each later candle's net
-  aggression into the defenders at that zone (sells minus buys for a blue
-  level) eats the count, so a quick pass with both sides trading barely
-  dents it, and the level ends only when the count reaches zero, even if
-  price trades or closes beyond it (ended
-  levels stay faded with "Show consumed levels").
+  closed below it (red). One candle can make both. The band starts on the
+  next candle and runs right, with the lots absorbed at that price in a
+  colored box on the right edge.
+  - Nothing changes during a candle: bands appear, grow, flip and end only
+    at a candle close.
+  - The count only grows. Each later candle's net aggression into the
+    level (sells minus buys for a blue one) is added to it, and the count
+    belongs to the price, so a level that comes back keeps its number.
+  - A candle that closes through a level removes it; at the next close it
+    comes back on the other side (a red level price closed above returns
+    blue) with the same number, even if that candle never traded there.
+  - A level also ends once the net aggression into it after it formed
+    reaches its count at birth (ended levels stay faded with "Show
+    consumed levels").
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
   high nor low, or breaks both, is gray (absorption); a triangle marks a
