@@ -416,7 +416,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 foreach (LevelSlot slot in slots)
                 {
                     if (slot.IsHtf)
-                        UpdateHtfSlot(slot, tradingDay, chartZoneTime);
+                        UpdateHtfSlot(slot, tradingDay, leftEdgeChartTime);
                     else
                         UpdateIntradaySlot(slot, tzTime, previousTzTime, tzDate, leftEdgeChartTime);
                 }
@@ -429,7 +429,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 slot.Records.RemoveAll(r => (currentTzDate - r.TzDate).TotalDays > DaysToShow);
         }
 
-        private void UpdateHtfSlot(LevelSlot slot, DateTime tradingDay, DateTime chartZoneTime)
+        private void UpdateHtfSlot(LevelSlot slot, DateTime tradingDay, DateTime leftEdgeChartTime)
         {
             DateTime key = PeriodKeyFor(tradingDay, slot.Period);
             if (key != slot.PeriodKey)
@@ -441,7 +441,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 slot.High = High[0];
                 slot.Low = Low[0];
                 slot.Close = Close[0];
-                slot.PeriodStartChartTime = chartZoneTime;
+                slot.PeriodStartChartTime = leftEdgeChartTime;
             }
             else
             {
@@ -571,10 +571,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (y < ChartPanel.Y || y > ChartPanel.Y + ChartPanel.H)
                 return;
 
-            float startX = Math.Max(chartControl.GetXByTime(startTime), ChartPanel.X);
+            // Bars are stamped at their close; half a bar right of a stamp is where that bar ends and the next opens.
+            float halfBar = chartControl.Properties.BarDistance / 2f;
+            float startX = Math.Max(chartControl.GetXByTime(startTime) + halfBar, ChartPanel.X);
             // A still-running line pokes past the last bar so its label clears
             // the price action; a finished day ends at its own midnight.
-            float endX = extendPastLastBar ? lastBarX + ExtensionPixels : chartControl.GetXByTime(endTime);
+            float endX = extendPastLastBar ? lastBarX + ExtensionPixels : chartControl.GetXByTime(endTime) + halfBar;
             endX = Math.Min(endX, ChartPanel.X + ChartPanel.W);
             if (endX <= startX)
                 return;

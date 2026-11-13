@@ -550,8 +550,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                         foreach (ZoneRecord record in slot.Records)
                         {
-                            float x1 = Math.Max(chartControl.GetXByTime(record.StartChartTime), panelLeft);
-                            float x2 = Math.Min(chartControl.GetXByTime(record.LastBarChartTime), panelRight);
+                            // Bars are stamped at their close; half a bar right of a stamp is where that bar ends and the next opens.
+                            float halfBar = chartControl.Properties.BarDistance / 2f;
+                            float x1 = Math.Max(chartControl.GetXByTime(record.StartChartTime) + halfBar, panelLeft);
+                            float x2 = Math.Min(chartControl.GetXByTime(record.LastBarChartTime) + halfBar, panelRight);
                             // The box hugs its candles: highest high to lowest low of
                             // the bars inside the window, clamped to the panel so a
                             // zoomed-in chart does not paint over its neighbors.

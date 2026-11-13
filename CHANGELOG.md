@@ -5,6 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- ICT Killzones, ICT Macros, Time-Based Vertical Lines and Time-Based Price
+  Levels: drawings now start on the candle that opens at their time, as on
+  TradingView. NinjaTrader labels a candle with its close time, so a 09:30
+  line used to sit one candle early, on the candle that closed at 09:30.
+  Killzone boxes now cover their candles edge to edge.
 - ChartTrading and Breakeven Stops: pop-up windows only when a position may
   be left without a stop or with stops of the wrong size. Refused clicks,
   Stops to BE not possible, retries and cleanups go to the log only; an

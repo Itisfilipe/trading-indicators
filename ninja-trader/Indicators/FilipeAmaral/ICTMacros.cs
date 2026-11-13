@@ -641,11 +641,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private double XForTime(ChartControl chartControl, DateTime chartZoneTime, DateTime lastBarTime, double lastBarX, double pixelsPerMs)
         {
+            // Time bars are stamped at their close: time T is the right edge of the bar stamped T, where the next bar opens.
+            double closeEdge = Bars.BarsType.IsTimeBased ? chartControl.Properties.BarDistance / 2.0 : 0;
             if (chartZoneTime <= lastBarTime)
-                return chartControl.GetXByTime(chartZoneTime);
+                return chartControl.GetXByTime(chartZoneTime) + closeEdge;
             if (pixelsPerMs <= 0)
                 return double.MaxValue; // no pace to extend with; lands off-panel and is skipped
-            return lastBarX + (chartZoneTime - lastBarTime).TotalMilliseconds * pixelsPerMs;
+            return lastBarX + closeEdge + (chartZoneTime - lastBarTime).TotalMilliseconds * pixelsPerMs;
         }
 
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
