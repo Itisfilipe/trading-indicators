@@ -20,7 +20,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// last window of 1-minute bars without a sustained break. Zones change
     /// only when a 1-minute bar closes; a zone below price is support (blue),
     /// above it resistance (red), and a broken zone that still qualifies comes
-    /// back one bar later on its new side, keeping its number.
+    /// back one bar later on its new side. A zone's number is the volume traded
+    /// at its price inside the window.
     /// </summary>
     public class FlowAbsorption : Indicator
     {
@@ -139,18 +140,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double threshold = mean + Sensitivity * deviation;
 
             Dictionary<double, int> touches = new Dictionary<double, int>();
-            Dictionary<double, double> concentrated = new Dictionary<double, double>();
+            Dictionary<double, double> traded = new Dictionary<double, double>();
             foreach (Dictionary<double, double> cells in window)
                 foreach (KeyValuePair<double, double> cell in cells)
                 {
+                    double total;
+                    traded.TryGetValue(cell.Key, out total);
+                    traded[cell.Key] = total + cell.Value;
                     if (cell.Value <= threshold)
                         continue;
                     int touched;
                     touches.TryGetValue(cell.Key, out touched);
                     touches[cell.Key] = touched + 1;
-                    double total;
-                    concentrated.TryGetValue(cell.Key, out total);
-                    concentrated[cell.Key] = total + cell.Value;
                 }
 
             double buffer = BreakBufferTicks * TickSize;
@@ -181,9 +182,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     double price = entry.Key;
                     if (entry.Value < MinimumTouches)
                         continue;
-                    double known;
-                    zoneVolume.TryGetValue(price, out known);
-                    zoneVolume[price] = Math.Max(known, concentrated[price]);
+                    zoneVolume[price] = traded[price];
                     if (brokenNow.Contains(price) || zones.Exists(z => z.Price == price) || price == close)
                         continue;
                     zones.Add(new AbsorptionZone { Price = price, IsSupport = price < close, StartBar = startBar });

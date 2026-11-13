@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow Absorption: a zone's number is now the contracts traded at its
+  price inside the window, as on the reference chart, instead of only the
+  volume of its concentrated minutes; numbers run higher and can shrink as
+  old minutes leave the window.
 - Flow CVD draws pivot lines only for pivots of the last 30 candles
   ("Last levels length"), so old levels no longer stack across the panel.
 - Flow CVD scales to the visible candles by default: scaled to the last 300

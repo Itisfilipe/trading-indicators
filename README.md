@@ -562,7 +562,8 @@ the two count toward volume only.
   "Sensitivity" standard deviations (2.5) is a touch there, and a price
   with "Minimum touches" (2) becomes a zone. The band starts after the
   1-minute bar that confirms it and runs right, with the zone's number in
-  a colored box on the right edge. A zone whose touches leave the window
+  a colored box on the right edge: the contracts traded at that price
+  inside the window. A zone whose touches leave the window
   disappears.
   - Nothing changes during a 1-minute bar: zones appear, flip and end only
     when one closes.
