@@ -7,7 +7,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 - Flow HA: candles are smoothed twice (EMA 2 on price, then EMA 2 on the
   Heikin-Ashi), the previous candle's high and low are drawn as levels, and
-  reversal triangles, gray inside candles and the traffic area start off.
+  reversal triangles, gray inside candles and the traffic area start off. Charts
+  saved earlier pick up the second smoothing and the last levels too; set
+  "Final smoothing period" to 0 and turn "Last levels" off to keep the old
+  look.
 - OrderDecorator: labels are rounded boxes (dark red on the stop side, dark
   green on the target side, white text) showing money only by default,
   105 px from the right edge.

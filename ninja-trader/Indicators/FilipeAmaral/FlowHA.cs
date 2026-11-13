@@ -136,12 +136,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private double FinalSmooth(Series<double> smoothed, double value)
+        private double FinalSmooth(Series<double> smoothed, double raw)
         {
             if (CurrentBar == 0 || FinalSmoothingPeriod <= 1)
-                return value;
+                return raw;
             double weight = 2.0 / (FinalSmoothingPeriod + 1);
-            return weight * value + (1 - weight) * smoothed[1];
+            return weight * raw + (1 - weight) * smoothed[1];
         }
 
         private void UpdateCczZones(int closedBarsAgo)
@@ -314,9 +314,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (ShowTrafficArea && Bars.Count >= 2)
                     DrawTrafficArea(chartControl, chartScale, Bars.Count - 2);
 
-                if (ShowLastLevels)
-                    DrawLastLevels(chartControl, chartScale);
-
                 if (ShowCczZones)
                 {
                     float panelRight = ChartPanel.X + ChartPanel.W;
@@ -379,6 +376,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         FillTriangle(new SharpDX.Vector2(x, tipY), triangleHalfWidth, -triangleHalfWidth * 1.5f, downBrush);
                     }
                 }
+
+                // After the candles, so the forming candle cannot paint over a level it just broke.
+                if (ShowLastLevels)
+                    DrawLastLevels(chartControl, chartScale);
             }
             finally
             {
