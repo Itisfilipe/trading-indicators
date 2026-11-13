@@ -177,6 +177,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
                 flipsDue.Clear();
 
+                HashSet<double> countedThisBar = new HashSet<double>();
+
                 foreach (AbsorptionLevel level in absorptionLevels)
                 {
                     if (level.EndBar >= 0 || level.StartBar > closedBar)
@@ -197,6 +199,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (netAgainst <= 0)
                         continue;
                     AddAbsorbed(level.Price, netAgainst);
+                    countedThisBar.Add(level.Price);
                     level.RemainingLots -= netAgainst;
                     if (level.RemainingLots <= 0)
                         level.EndBar = closedBar;
@@ -225,7 +228,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         continue;
                     if (flipsDue.ContainsKey(price) || HasLiveLevel(price))
                         continue;
-                    AddAbsorbed(price, buyersAbsorbing ? sells : buys);
+                    // A level this candle wore out already counted its aggression; a new one there must not count it twice.
+                    if (!countedThisBar.Contains(price))
+                        AddAbsorbed(price, buyersAbsorbing ? sells : buys);
                     absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar + 1, Price = price, BuyersAbsorbing = buyersAbsorbing, RemainingLots = absorbedLots[price] });
                 }
             }

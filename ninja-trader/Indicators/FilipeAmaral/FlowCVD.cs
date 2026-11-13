@@ -37,6 +37,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         private readonly List<PivotLevel> pivots = new List<PivotLevel>();
+        private readonly List<PivotLevel> unbrokenPivots = new List<PivotLevel>();
         private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double cumulativeDelta;
@@ -198,9 +199,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 cumulativeDelta = 0;
                 lock (pivots)
-                    foreach (PivotLevel level in pivots)
-                        if (level.BrokenAt < 0)
-                            level.BrokenAt = CurrentBar - 1;
+                {
+                    foreach (PivotLevel level in unbrokenPivots)
+                        level.BrokenAt = CurrentBar - 1;
+                    unbrokenPivots.Clear();
+                }
             }
             cvdOpen[0] = cumulativeDelta;
             cvdHigh[0] = cumulativeDelta;
@@ -221,8 +224,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             StartBarIfNew();
             double close = cvdOpen[0] + PriceHeikinAshiSign() * Volume[0];
-            cvdHigh[0] = Math.Max(cvdHigh[0], close);
-            cvdLow[0] = Math.Min(cvdLow[0], close);
+            // History sees only the final sign, so live must not keep extremes from earlier ones.
+            cvdHigh[0] = Math.Max(cvdOpen[0], close);
+            cvdLow[0] = Math.Min(cvdOpen[0], close);
             cvdClose[0] = close;
             Value[0] = close;
             cumulativeDelta = close;
@@ -247,14 +251,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // A pivot line stops at the first candle that trades through it, the forming one included.
             lock (pivots)
-                foreach (PivotLevel level in pivots)
-                    if (level.BrokenAt < 0 && level.BarIndex < CurrentBar
-                        && (level.IsHigh ? shownHigh[0] > level.Value : shownLow[0] < level.Value))
+                for (int i = unbrokenPivots.Count - 1; i >= 0; i--)
+                {
+                    PivotLevel level = unbrokenPivots[i];
+                    if (level.BarIndex < CurrentBar && (level.IsHigh ? shownHigh[0] > level.Value : shownLow[0] < level.Value))
+                    {
                         level.BrokenAt = CurrentBar;
+                        unbrokenPivots.RemoveAt(i);
+                    }
+                }
         }
 
         protected override void OnBarUpdate()
         {
+            // Pivots confirmed by the closed candle go in before this candle's break check.
+            if (IsFirstTickOfBar && CurrentBar >= 1 && HasCvd(CurrentBar - 1))
+            {
+                lock (pivots)
+                    AddPivotsAt(CurrentBar - 1 - PivotStrength);
+                MarkDivergence(CurrentBar - 1);
+            }
+
             if (DeltaSource == FlowDeltaSource.HeikinAshiVolume)
             {
                 if (SignEachTrade)
@@ -262,18 +279,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 else
                     UpdateFromCandle();
             }
-
-            if (!IsFirstTickOfBar || CurrentBar < 1)
-                return;
-
-            int closedBar = CurrentBar - 1;
-            if (!HasCvd(closedBar))
-                return;
-
-            lock (pivots)
-                AddPivotsAt(closedBar - PivotStrength);
-
-            MarkDivergence(closedBar);
         }
 
         private bool HasCvd(int barIndex)
@@ -329,16 +334,23 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 if (!HasCvd(pivotBar - offset) || !HasCvd(pivotBar + offset))
                     return;
-                if (high <= shownHigh.GetValueAt(pivotBar - offset) || high <= shownHigh.GetValueAt(pivotBar + offset))
+                // Adjacent candles can share an extreme, so only the left side must be beaten strictly.
+                if (high <= shownHigh.GetValueAt(pivotBar - offset) || high < shownHigh.GetValueAt(pivotBar + offset))
                     isHigh = false;
-                if (low >= shownLow.GetValueAt(pivotBar - offset) || low >= shownLow.GetValueAt(pivotBar + offset))
+                if (low >= shownLow.GetValueAt(pivotBar - offset) || low > shownLow.GetValueAt(pivotBar + offset))
                     isLow = false;
             }
 
             if (isHigh)
-                pivots.Add(new PivotLevel { BarIndex = pivotBar, Value = high, IsHigh = true });
+                AddPivot(new PivotLevel { BarIndex = pivotBar, Value = high, IsHigh = true });
             if (isLow)
-                pivots.Add(new PivotLevel { BarIndex = pivotBar, Value = low, IsHigh = false });
+                AddPivot(new PivotLevel { BarIndex = pivotBar, Value = low, IsHigh = false });
+        }
+
+        private void AddPivot(PivotLevel level)
+        {
+            pivots.Add(level);
+            unbrokenPivots.Add(level);
         }
 
         // Effort (the CVD's move over the lookback) that price did not follow, both scaled by
@@ -472,24 +484,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RenderTarget.DrawRectangle(body, wick, 1f);
                 }
 
-                if (lastBar >= 1 && lastBar <= ChartBars.ToIndex && HasCvd(lastBar) && HasCvd(lastBar - 1))
+                // On bar close the forming candle has no CVD yet; the dashes follow the last one that does.
+                int dashBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
+                if (dashBar >= 1 && dashBar <= ChartBars.ToIndex && HasCvd(dashBar) && HasCvd(dashBar - 1))
                 {
-                    double previousHigh = shownHigh.GetValueAt(lastBar - 1);
-                    double previousLow = shownLow.GetValueAt(lastBar - 1);
-                    float x1 = chartControl.GetXByBarIndex(ChartBars, lastBar - 1);
+                    double previousHigh = shownHigh.GetValueAt(dashBar - 1);
+                    double previousLow = shownLow.GetValueAt(dashBar - 1);
+                    float x1 = chartControl.GetXByBarIndex(ChartBars, dashBar - 1);
                     float x2 = lastX + (float)(CurrentPad * barDistance);
                     float highY = chartScale.GetYByValue(previousHigh);
                     float lowY = chartScale.GetYByValue(previousLow);
                     RenderTarget.DrawLine(new SharpDX.Vector2(x1, highY), new SharpDX.Vector2(x2, highY),
-                        shownHigh.GetValueAt(lastBar) > previousHigh ? upCrossBrush : lastLevelBrush, 1f);
+                        shownHigh.GetValueAt(dashBar) > previousHigh ? upCrossBrush : lastLevelBrush, 1f);
                     RenderTarget.DrawLine(new SharpDX.Vector2(x1, lowY), new SharpDX.Vector2(x2, lowY),
-                        shownLow.GetValueAt(lastBar) < previousLow ? downCrossBrush : lastLevelBrush, 1f);
+                        shownLow.GetValueAt(dashBar) < previousLow ? downCrossBrush : lastLevelBrush, 1f);
                 }
 
                 if (ShowBreakoutCircles)
                     for (int barIndex = Math.Max(1, ChartBars.FromIndex); barIndex <= ChartBars.ToIndex; barIndex++)
                     {
-                        if (!HasCvd(barIndex) || !HasCvd(barIndex - 1))
+                        if (!HasCvd(barIndex) || !HasCvd(barIndex - 1) || resetBars.GetValueAt(barIndex))
                             continue;
                         double close = shownClose.GetValueAt(barIndex);
                         bool previousRising = IsRising(barIndex - 1);

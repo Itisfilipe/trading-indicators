@@ -525,7 +525,9 @@ the two count toward volume only.
   it follows price and needs no Tick Replay. BidAsk is real aggression from
   each trade's bid and ask. On Flow CVD, "Sign each trade" gives each
   trade the price candle's color at that moment instead of signing the
-  whole candle (needs Tick Replay). The CVD keeps accumulating across
+  whole candle (needs Tick Replay). Signing the whole candle draws the same
+  candles live and after a reload: a candle does not keep extremes from a
+  color its price candle had earlier in the minute. The CVD keeps accumulating across
   sessions unless "Reset each session" or "Reset at time" is on.
   - A circle marks the moment the CVD breaks the previous candle the other
     way: green when it closes above a falling candle's high, red below a
