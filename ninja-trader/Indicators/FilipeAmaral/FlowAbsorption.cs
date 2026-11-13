@@ -166,7 +166,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             lock (absorptionLevels)
             {
-                // A level closed through last candle returns now on the side price left it, whether or not this candle traded there.
                 foreach (KeyValuePair<double, bool> flip in flipsDue)
                 {
                     double price = flip.Key;
@@ -198,7 +197,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (netAgainst <= 0)
                         continue;
                     AddAbsorbed(level.Price, netAgainst);
-                    // Fallback until his removal rule is known: the net aggression into a level also wears it out.
                     level.RemainingLots -= netAgainst;
                     if (level.RemainingLots <= 0)
                         level.EndBar = closedBar;
