@@ -52,7 +52,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowZScore = false;
                 ZScoreLookback = 60;
                 SmoothingPeriod = 0;
-                DeltaSource = FlowDeltaSource.BidAsk;
+                DeltaSource = FlowDeltaSource.HeikinAshiVolume;
                 BuyColor = Rgb(0x37, 0xF0, 0x9C);
                 SellColor = Rgb(0x1A, 0x1C, 0x26);
 
