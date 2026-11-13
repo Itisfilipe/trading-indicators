@@ -21,6 +21,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public class FlowVD : Indicator
     {
         private SessionIterator sessionIterator;
+        private System.Windows.Media.Brush buyBarBrush;
+        private System.Windows.Media.Brush sellBarBrush;
         private int activeBar = -1;
         private double delta;
         private double windowMean;
@@ -38,9 +40,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             brush.Freeze();
             return brush;
         }
-
-        private System.Windows.Media.Brush buyBarBrush;
-        private System.Windows.Media.Brush sellBarBrush;
 
         private System.Windows.Media.Brush WithOpacity(System.Windows.Media.Brush color)
         {
