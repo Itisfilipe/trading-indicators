@@ -210,7 +210,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             cvdLow[0] = cumulativeDelta;
         }
 
-        // The price candle's Heikin-Ashi color as of now: +1 rising, -1 falling.
         private int PriceHeikinAshiSign()
         {
             double haClose = (Open[0] + High[0] + Low[0] + Close[0]) / 4;
@@ -265,7 +264,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         protected override void OnBarUpdate()
         {
             // Pivots confirmed by the closed candle go in before this candle's break check.
-            if (IsFirstTickOfBar && CurrentBar >= 1 && HasCvd(CurrentBar - 1))
+            if (IsFirstTickOfBar && HasCvd(CurrentBar - 1))
             {
                 lock (pivots)
                     AddPivotsAt(CurrentBar - 1 - PivotStrength);
@@ -401,11 +400,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private bool IsRising(int barIndex)
-        {
-            return shownClose.GetValueAt(barIndex) >= shownOpen.GetValueAt(barIndex);
-        }
-
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
             base.OnRender(chartControl, chartScale);
@@ -436,7 +430,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     ? Math.Max(1f, (float)(chartControl.GetBarPaintWidth(ChartBars) * WidthScale))
                     : FixedCandleWidth;
                 int lastBar = Bars.Count - 1;
-                float lastX = chartControl.GetXByBarIndex(ChartBars, lastBar);
+                float levelsEndX = chartControl.GetXByBarIndex(ChartBars, lastBar) + (float)(CurrentPad * barDistance);
 
                 if (ShowDivergence)
                     for (int barIndex = ChartBars.FromIndex; barIndex <= ChartBars.ToIndex; barIndex++)
@@ -457,7 +451,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
                             float x2 = level.BrokenAt >= 0
                                 ? chartControl.GetXByBarIndex(ChartBars, level.BrokenAt)
-                                : lastX + (float)(CurrentPad * barDistance);
+                                : levelsEndX;
                             float y = chartScale.GetYByValue(level.Value);
                             RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
                                 level.IsHigh ? pivotDownBrush : pivotUpBrush, PivotLineWidth);
@@ -486,12 +480,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 // On bar close the forming candle has no CVD yet; the dashes follow the last one that does.
                 int dashBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
-                if (dashBar >= 1 && dashBar <= ChartBars.ToIndex && HasCvd(dashBar) && HasCvd(dashBar - 1))
+                if (dashBar <= ChartBars.ToIndex && HasCvd(dashBar) && HasCvd(dashBar - 1))
                 {
                     double previousHigh = shownHigh.GetValueAt(dashBar - 1);
                     double previousLow = shownLow.GetValueAt(dashBar - 1);
                     float x1 = chartControl.GetXByBarIndex(ChartBars, dashBar - 1);
-                    float x2 = lastX + (float)(CurrentPad * barDistance);
+                    float x2 = levelsEndX;
                     float highY = chartScale.GetYByValue(previousHigh);
                     float lowY = chartScale.GetYByValue(previousLow);
                     RenderTarget.DrawLine(new SharpDX.Vector2(x1, highY), new SharpDX.Vector2(x2, highY),
@@ -506,13 +500,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         if (!HasCvd(barIndex) || !HasCvd(barIndex - 1) || resetBars.GetValueAt(barIndex))
                             continue;
                         double close = shownClose.GetValueAt(barIndex);
-                        bool previousRising = IsRising(barIndex - 1);
-                        bool bull = !previousRising && close > shownHigh.GetValueAt(barIndex - 1);
-                        bool bear = previousRising && close < shownLow.GetValueAt(barIndex - 1);
+                        double previousHigh = shownHigh.GetValueAt(barIndex - 1);
+                        double previousLow = shownLow.GetValueAt(barIndex - 1);
+                        bool previousRising = shownClose.GetValueAt(barIndex - 1) >= shownOpen.GetValueAt(barIndex - 1);
+                        bool bull = !previousRising && close > previousHigh;
+                        bool bear = previousRising && close < previousLow;
                         if (!bull && !bear)
                             continue;
 
-                        double level = bull ? shownHigh.GetValueAt(barIndex - 1) : shownLow.GetValueAt(barIndex - 1);
+                        double level = bull ? previousHigh : previousLow;
                         SharpDX.Direct2D1.Ellipse circle = new SharpDX.Direct2D1.Ellipse(
                             new SharpDX.Vector2(chartControl.GetXByBarIndex(ChartBars, barIndex), chartScale.GetYByValue(level)),
                             CircleRadius, CircleRadius);
