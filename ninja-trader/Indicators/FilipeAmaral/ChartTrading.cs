@@ -180,6 +180,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private DateTime unsettledSince = DateTime.MinValue;
         private static readonly TimeSpan StuckChangeLimit = TimeSpan.FromSeconds(5);
         private DateTime lastFailureAlert = DateTime.MinValue;
+        // Value: the re-cancel was seen pending, so coming back alive again means it was refused.
+        private readonly Dictionary<Order, bool> recancelledLeftovers = new Dictionary<Order, bool>();
+        private readonly HashSet<Order> alertedLeftovers = new HashSet<Order>();
+        private readonly HashSet<Order> sentMarketExits = new HashSet<Order>();
         private readonly Dictionary<Order, DateTime> abandonedExits = new Dictionary<Order, DateTime>();
         // The flat-coverage check acts only on two equal reads of the account's
         // position, which can lag its fills.
@@ -1755,8 +1759,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             // A leftover whose cancel was refused comes back alive on a flat account, where a fill would open a trade.
-            bool isCtExit = e.Order.Name == "CT Stop" || e.Order.Name == "CT Target";
-            if (isCtExit && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted)
+            bool isStopOrTarget = e.Order.Name == "CT Stop" || e.Order.Name == "CT Target";
+            if (isStopOrTarget)
+            {
+                lock (orderLock)
+                {
+                    if (Order.IsTerminalState(e.OrderState))
+                    {
+                        recancelledLeftovers.Remove(e.Order);
+                        alertedLeftovers.Remove(e.Order);
+                    }
+                    else if ((e.OrderState == OrderState.CancelPending || e.OrderState == OrderState.CancelSubmitted)
+                        && recancelledLeftovers.ContainsKey(e.Order))
+                        recancelledLeftovers[e.Order] = true;
+                }
+            }
+            if (isStopOrTarget && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted)
                 && e.Order.Instrument != null && e.Order.Instrument.FullName == Instrument.FullName)
             {
                 bool unowned;
@@ -1765,11 +1783,42 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Account account = sender as Account;
                 if (unowned && account != null && LivePosition(account) == null)
                 {
-                    account.Cancel(new[] { e.Order });
-                    Log("ChartTrading: a leftover " + e.Order.Name + " on " + Instrument.FullName + " came back alive while flat; cancelled it again.",
-                        NinjaTrader.Cbi.LogLevel.Information);
+                    bool firstRetry = false;
+                    bool firstAlert = false;
+                    lock (orderLock)
+                    {
+                        bool recancelRefused;
+                        if (!recancelledLeftovers.TryGetValue(e.Order, out recancelRefused))
+                        {
+                            recancelledLeftovers[e.Order] = false;
+                            firstRetry = true;
+                        }
+                        else if (recancelRefused)
+                            firstAlert = alertedLeftovers.Add(e.Order);
+                    }
+                    if (firstRetry)
+                    {
+                        account.Cancel(new[] { e.Order });
+                        Log("ChartTrading: a leftover " + e.Order.Name + " on " + Instrument.FullName + " came back alive while flat; cancelled it again.",
+                            NinjaTrader.Cbi.LogLevel.Information);
+                    }
+                    else if (firstAlert)
+                        Log("ChartTrading: the broker keeps refusing to cancel a leftover " + e.Order.Name + " on " + Instrument.FullName
+                            + " while flat; cancel it by hand or it can open a trade.", NinjaTrader.Cbi.LogLevel.Alert);
                     return;
                 }
+            }
+
+            if (e.Order.Name == "CT Exit"
+                && (e.OrderState == OrderState.Filled || e.OrderState == OrderState.Rejected || e.OrderState == OrderState.Cancelled))
+            {
+                bool sentHere;
+                lock (orderLock)
+                    sentHere = sentMarketExits.Remove(e.Order);
+                if (sentHere && e.OrderState != OrderState.Filled)
+                    Log("ChartTrading: the market exit for " + (e.Order.Quantity - e.Order.Filled) + " lot(s) on " + Instrument.FullName
+                        + " was " + e.OrderState.ToString().ToLower() + "; those lots may have no stop. Check the position.", NinjaTrader.Cbi.LogLevel.Alert);
+                return;
             }
 
             // An auto-breakeven that fired before the exits were live re-arms as soon
@@ -2077,8 +2126,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position open = LivePosition(account);
             int closable = open != null && open.MarketPosition == CommitSide(owner) ? Math.Min(unprotected, open.Quantity) : 0;
             if (closable > 0)
-                account.Submit(new[] { account.CreateOrder(Instrument, owner.ExitAction, OrderType.Market, OrderEntry.Manual, TimeInForce.Day,
-                    closable, 0, 0, string.Empty, "CT Exit", Core.Globals.MaxDate, null) });
+            {
+                Order exitOrder = account.CreateOrder(Instrument, owner.ExitAction, OrderType.Market, OrderEntry.Manual, TimeInForce.Day,
+                    closable, 0, 0, string.Empty, "CT Exit", Core.Globals.MaxDate, null);
+                lock (orderLock)
+                    sentMarketExits.Add(exitOrder);
+                account.Submit(new[] { exitOrder });
+            }
             Log("ChartTrading: a stop or target on " + Instrument.FullName + " was refused twice; closed " + closable + " of " + unprotected + " lot(s) at market.",
                 closable < unprotected ? NinjaTrader.Cbi.LogLevel.Alert : NinjaTrader.Cbi.LogLevel.Information);
         }
