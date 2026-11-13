@@ -89,7 +89,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ShowBreakoutCircles = true;
                 CircleRadius = 12;
-                ColorLookback = 3;
                 BullFill = Rgb(0x00, 0xFF, 0x00);
                 BullFillOpacity = 0.3;
                 BullBorder = Rgb(0x00, 0x66, 0x00);
@@ -125,7 +124,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 ShowPivotLevels = true;
                 PivotStrength = 1;
-                LastLevelsLength = 30;
                 PivotUp = Rgb(0x00, 0x4D, 0x00);
                 PivotDown = Rgb(0xFF, 0x00, 0x00);
                 PivotLineWidth = 2;
@@ -473,8 +471,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     ? Math.Max(1f, (float)(chartControl.GetBarPaintWidth(ChartBars) * WidthScale))
                     : FixedCandleWidth;
                 int lastBar = Bars.Count - 1;
-                // On bar close the forming candle has no CVD yet; recent marks count from the last one that does.
-                int lastCvdBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
                 float levelsEndX = chartControl.GetXByBarIndex(ChartBars, lastBar) + (float)(CurrentPad * barDistance);
 
                 if (ShowDivergence)
@@ -491,11 +487,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     lock (pivots)
                         foreach (PivotLevel level in pivots)
                         {
-                            if (level.BrokenAt >= 0 || level.BarIndex > ChartBars.ToIndex || level.BarIndex < lastCvdBar - LastLevelsLength + 1)
+                            if (level.BarIndex > ChartBars.ToIndex || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
                                 continue;
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
+                            float x2 = level.BrokenAt >= 0
+                                ? chartControl.GetXByBarIndex(ChartBars, level.BrokenAt)
+                                : levelsEndX;
                             float y = chartScale.GetYByValue(level.Value);
-                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(levelsEndX, y),
+                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
                                 level.IsHigh ? pivotDownBrush : pivotUpBrush, PivotLineWidth);
                         }
 
@@ -520,7 +519,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RenderTarget.DrawRectangle(body, wick, 1f);
                 }
 
-                int dashBar = lastCvdBar;
+                // On bar close the forming candle has no CVD yet; the dashes follow the last one that does.
+                int dashBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
                 if (dashBar <= ChartBars.ToIndex && HasCvd(dashBar) && HasCvd(dashBar - 1))
                 {
                     double previousHigh = shownHigh.GetValueAt(dashBar - 1);
@@ -536,7 +536,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
 
                 if (ShowBreakoutCircles)
-                    for (int barIndex = Math.Max(Math.Max(1, ChartBars.FromIndex), lastCvdBar - ColorLookback + 1); barIndex <= ChartBars.ToIndex; barIndex++)
+                    for (int barIndex = Math.Max(1, ChartBars.FromIndex); barIndex <= ChartBars.ToIndex; barIndex++)
                     {
                         if (!HasCvd(barIndex) || !HasCvd(barIndex - 1) || resetBars.GetValueAt(barIndex))
                             continue;
@@ -655,10 +655,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             get { return Serialize.BrushToString(BearBorder); }
             set { BearBorder = Serialize.StringToBrush(value); }
         }
-
-        [Range(1, 1000)]
-        [Display(Name = "Color lookback (bars)", Description = "Circles show only on the last this many candles.", Order = 9, GroupName = "2. Breakout Circles")]
-        public int ColorLookback { get; set; }
 
         [Display(Name = "Match chart candle width", Order = 1, GroupName = "3. Candle Width")]
         public bool MatchChartCandleWidth { get; set; }
@@ -840,10 +836,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 1)]
         [Display(Name = "Pivot line opacity", Order = 6, GroupName = "8. Pivot Levels")]
         public double PivotLineOpacity { get; set; }
-
-        [Range(1, 5000)]
-        [Display(Name = "Last levels length (bars)", Description = "Only pivots from the last this many candles get a line; a broken line disappears.", Order = 9, GroupName = "8. Pivot Levels")]
-        public int LastLevelsLength { get; set; }
 
         #endregion
     }

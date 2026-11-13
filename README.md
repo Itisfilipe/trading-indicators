@@ -540,10 +540,9 @@ the two count toward volume only.
     way: green when it closes above a falling candle's high, red below a
     rising candle's low. It is checked on the forming candle, so it can
     appear and vanish before the close; in sideways flow they come in
-    pairs. Circles show only on the last "Color lookback" candles (3).
-  - Pivot lines start at each CVD high (red) and low (dark green) and run
-    right until a candle trades through them, then disappear. Only pivots
-    from the last "Last levels length" candles (30) get a line.
+    pairs.
+  - Pivot lines start at each CVD high (red) and low (dark green) and stop
+    at the first candle that trades through them; the crossed part stays.
   - Two short dashes mark the previous candle's high and low; each turns red
     once the forming candle crosses it.
   - A vertical stripe marks effort without result: orange when buying flow

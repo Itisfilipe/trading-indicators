@@ -5,9 +5,6 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
-- Flow CVD: breakout circles show only on the last 3 candles and pivot
-  lines only for pivots of the last 30 candles, disappearing once broken,
-  so old marks no longer pile up.
 - Flow CVD scales to the visible candles by default: scaled to the last 300
   candles, a drifting CVD left each candle one or two pixels tall and every
   old pivot line inside the panel. Charts already set up keep the old
