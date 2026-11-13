@@ -574,7 +574,8 @@ the two count toward volume only.
   candles (hidden by default). A candle that breaks neither the previous
   high nor low, or breaks both, is gray (absorption); a triangle marks a
   color change after a run of "Candles before a reversal" candles, on
-  closed candles only. "Smoothing period" above 0 smooths the candles'
+  closed candles only ("Show reversal triangles" off hides them, as the
+  reference trader runs his HA). "Smoothing period" above 0 smooths the candles'
   open, high, low and close with an EMA before the Heikin-Ashi math.
   Dotted lines at the previous candle's high, middle and low show the
   traffic area (stop on the far side, add zone in the near half). CCZ zones

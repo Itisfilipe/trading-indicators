@@ -5,6 +5,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow HA: "Show reversal triangles" turns the triangles off.
 - Flow CVD and Flow VD: new "Delta source" StructureVolume, which keeps
   each candle's volume on the side of the last price candle that closed
   past the previous candle's high or low, so the CVD keeps adding through

@@ -62,6 +62,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ShowTrafficArea = true;
                 MarkInsideCandles = true;
                 MinBarsForReversal = 2;
+                ShowReversalTriangles = true;
                 ShowCczZones = true;
                 CczBodyPercent = 7;
                 CczOpacity = 10;
@@ -306,7 +307,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RenderTarget.FillRectangle(body, bodyBrush);
                     RenderTarget.DrawRectangle(body, wickBrush, 1f);
 
-                    if (barIndex >= formingBar || !IsReversal(barIndex))
+                    if (!ShowReversalTriangles || barIndex >= formingBar || !IsReversal(barIndex))
                         continue;
 
                     float offset = (float)(SignalOffsetTicks * TickSize);
@@ -342,6 +343,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Gray absorption candles", Description = "Gray a candle that breaks neither the previous Heikin-Ashi high nor low, or breaks both.", Order = 2, GroupName = "1. Heikin-Ashi")]
         public bool MarkInsideCandles { get; set; }
+
+        [Display(Name = "Show reversal triangles", Order = 7, GroupName = "1. Heikin-Ashi")]
+        public bool ShowReversalTriangles { get; set; }
 
         [Range(1, 20), NinjaScriptProperty]
         [Display(Name = "Candles before a reversal", Description = "Same-color candles needed before a color change gets a triangle.", Order = 3, GroupName = "1. Heikin-Ashi")]
