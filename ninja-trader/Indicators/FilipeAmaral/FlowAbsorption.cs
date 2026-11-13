@@ -16,50 +16,44 @@ using NinjaTrader.NinjaScript.DrawingTools;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// Absorption levels: a price inside a closed candle that took heavy
-    /// one-sided aggression and held, drawn from the next candle as a band to
-    /// the right with the lots absorbed there. Everything changes only at a
-    /// candle close; the count only grows and belongs to the price, and a level
-    /// a candle closes through comes back on the other side one candle later.
+    /// Absorption zones: prices where aggressor volume concentrated over the
+    /// last window of 1-minute bars without a sustained break. Zones change
+    /// only when a 1-minute bar closes; a zone below price is support (blue),
+    /// above it resistance (red), and a broken zone that still qualifies comes
+    /// back one bar later on its new side, keeping its number.
     /// </summary>
     public class FlowAbsorption : Indicator
     {
-        private class LevelVolume
+        private class WindowBar
         {
-            public double Buys;
-            public double Sells;
+            public Dictionary<double, double> Cells;
+            public double Close;
         }
 
-        private class AbsorptionLevel
+        private class AbsorptionZone
         {
-            public int StartBar;
             public double Price;
-            public bool BuyersAbsorbing;
-            public double RemainingLots;
-            public int EndBar = -1;
+            public bool IsSupport;
+            public DateTime StartTime;
+            public int BarsBeyond;
         }
 
-        private readonly Dictionary<double, LevelVolume> barLevels = new Dictionary<double, LevelVolume>();
-        private readonly List<AbsorptionLevel> absorptionLevels = new List<AbsorptionLevel>();
-        private readonly Dictionary<double, double> absorbedLots = new Dictionary<double, double>();
-        // Value: the side the level had before the close went through it.
-        private readonly Dictionary<double, bool> flipsDue = new Dictionary<double, bool>();
-        private SessionIterator sessionIterator;
-        private int levelsBar = -1;
-        private int finalizedBar = -1;
+        private const int MinuteSeries = 1;
+        private const float BandHeight = 7f;
+        private const float FillOpacity = 0.4f;
 
-        private static System.Windows.Media.Brush Rgb(byte red, byte green, byte blue)
-        {
-            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(red, green, blue));
-            brush.Freeze();
-            return brush;
-        }
+        private Dictionary<double, double> formingCells = new Dictionary<double, double>();
+        private readonly List<WindowBar> window = new List<WindowBar>();
+        private readonly List<AbsorptionZone> zones = new List<AbsorptionZone>();
+        // The number belongs to the price: it never decreases and survives a zone breaking and coming back.
+        private readonly Dictionary<double, double> zoneVolume = new Dictionary<double, double>();
+        private int formingBar = -1;
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = "Prices that took heavy one-sided aggression and held, with the lots absorbed there. Needs Tick Replay for history.";
+                Description = "Prices where aggressor volume concentrated without a sustained break, with that volume. Needs Tick Replay for history.";
                 Name = "Flow Absorption";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
@@ -67,22 +61,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DisplayInDataBox = false;
                 PaintPriceMarkers = false;
 
-                PriceGrouping = 4;
-                MinimumLots = 100;
-                LevelMultiplier = 2.0;
-                EdgePercent = 50;
-                FillOpacity = 40;
-                MinimumBandHeight = 8;
-                ShowConsumed = false;
+                WindowBars = 180;
+                Sensitivity = 2.5;
+                MinimumTouches = 2;
+                BrokenBars = 3;
+                BreakBufferTicks = 4;
+                MaximumZones = 8;
 
-                BuyersAbsorbingColor = Brushes.DodgerBlue;
-                SellersAbsorbingColor = Brushes.Crimson;
-                TextColor = Brushes.White;
-                LabelFont = new SimpleFont("Arial", 9) { Bold = true };
+                SupportColor = Brushes.DodgerBlue;
+                ResistanceColor = Brushes.Red;
+                TextColor = Brushes.Black;
+                TextSize = 12;
             }
-            else if (State == State.DataLoaded)
+            else if (State == State.Configure)
             {
-                sessionIterator = new SessionIterator(Bars);
+                AddDataSeries(BarsPeriodType.Minute, 1);
             }
             else if (State == State.Historical)
             {
@@ -91,147 +84,109 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (!Bars.IsTickReplay)
                     Draw.TextFixed(this, "FlowAbsorptionTickReplay", "Flow Absorption: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
             }
-            else if (State == State.Realtime)
-            {
-                if (levelsBar >= 0 && !sessionIterator.IsInSession(NinjaTrader.Cbi.Connection.PlaybackConnection != null ? NinjaTrader.Cbi.Connection.PlaybackConnection.Now : Core.Globals.Now, true, true))
-                {
-                    CloseBar(levelsBar);
-                    finalizedBar = levelsBar;
-                }
-            }
         }
 
         protected override void OnBarUpdate()
         {
+            if (BarsInProgress != MinuteSeries || CurrentBars[MinuteSeries] < 1 || !IsFirstTickOfBar)
+                return;
+            // OnMarketData runs after OnBarUpdate, so the cells still hold the whole bar that just closed.
+            if (formingBar == CurrentBars[MinuteSeries] - 1)
+                CloseMinute(Closes[MinuteSeries][1], Times[MinuteSeries][0]);
         }
 
         protected override void OnMarketData(MarketDataEventArgs e)
         {
-            if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
-                return;
-            if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
+            if (BarsInProgress != MinuteSeries || e.MarketDataType != MarketDataType.Last || CurrentBars[MinuteSeries] < 0)
                 return;
 
-            if (CurrentBar != levelsBar)
+            if (CurrentBars[MinuteSeries] != formingBar)
             {
-                if (levelsBar >= 0 && levelsBar != finalizedBar)
-                    CloseBar(levelsBar);
-                barLevels.Clear();
-                levelsBar = CurrentBar;
+                formingCells = new Dictionary<double, double>();
+                formingBar = CurrentBars[MinuteSeries];
             }
 
-            double key = LevelKey(e.Price);
-            LevelVolume level;
-            if (!barLevels.TryGetValue(key, out level))
-            {
-                level = new LevelVolume();
-                barLevels.Add(key, level);
-            }
-
-            bool isBuy = e.Price >= e.Ask;
-            bool isSell = !isBuy && e.Price <= e.Bid;
-            if (isBuy)
-                level.Buys += e.Volume;
-            else if (isSell)
-                level.Sells += e.Volume;
+            bool aggressor = e.Price >= e.Ask || e.Price <= e.Bid;
+            if (!aggressor)
+                return;
+            double price = Instrument.MasterInstrument.RoundToTickSize(e.Price);
+            double volume;
+            formingCells.TryGetValue(price, out volume);
+            formingCells[price] = volume + e.Volume;
         }
 
-        private double LevelKey(double price)
+        private void CloseMinute(double close, DateTime nextBarTime)
         {
-            double bucketSize = TickSize * PriceGrouping;
-            return Instrument.MasterInstrument.RoundToTickSize(Math.Floor(price / bucketSize + 1e-9) * bucketSize);
-        }
+            window.Add(new WindowBar { Cells = formingCells, Close = close });
+            if (window.Count > WindowBars)
+                window.RemoveAt(0);
 
-        private void AddAbsorbed(double price, double lots)
-        {
-            double total;
-            absorbedLots.TryGetValue(price, out total);
-            absorbedLots[price] = total + lots;
-        }
-
-        private bool HasLiveLevel(double price)
-        {
-            foreach (AbsorptionLevel level in absorptionLevels)
-                if (level.EndBar < 0 && level.Price == price)
-                    return true;
-            return false;
-        }
-
-        private void CloseBar(int closedBar)
-        {
-            double high = Bars.GetHigh(closedBar);
-            double low = Bars.GetLow(closedBar);
-            double close = Bars.GetClose(closedBar);
-            double groupTop = (PriceGrouping - 1) * TickSize;
-
-            lock (absorptionLevels)
-            {
-                foreach (KeyValuePair<double, bool> flip in flipsDue)
+            double sum = 0;
+            double sumOfSquares = 0;
+            int count = 0;
+            foreach (WindowBar bar in window)
+                foreach (double volume in bar.Cells.Values)
                 {
-                    double price = flip.Key;
-                    if (HasLiveLevel(price))
-                        continue;
-                    bool closeInsideZone = close >= price && close <= price + groupTop;
-                    bool buyersAbsorbing = closeInsideZone ? !flip.Value : close > price + groupTop;
-                    absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar + 1, Price = price, BuyersAbsorbing = buyersAbsorbing, RemainingLots = absorbedLots[price] });
+                    sum += volume;
+                    sumOfSquares += volume * volume;
+                    count++;
                 }
-                flipsDue.Clear();
+            if (count == 0)
+                return;
+            double mean = sum / count;
+            double deviation = Math.Sqrt(Math.Max(0, sumOfSquares / count - mean * mean));
+            double threshold = mean + Sensitivity * deviation;
 
-                HashSet<double> countedThisBar = new HashSet<double>();
-
-                foreach (AbsorptionLevel level in absorptionLevels)
+            // INFERRED: a touch is a 1-minute bar whose volume at the price clears the threshold; the zone's number is the sum of its touches.
+            Dictionary<double, int> touches = new Dictionary<double, int>();
+            Dictionary<double, double> concentrated = new Dictionary<double, double>();
+            foreach (WindowBar bar in window)
+                foreach (KeyValuePair<double, double> cell in bar.Cells)
                 {
-                    if (level.EndBar >= 0 || level.StartBar > closedBar)
+                    if (cell.Value <= threshold)
                         continue;
+                    int touched;
+                    touches.TryGetValue(cell.Key, out touched);
+                    touches[cell.Key] = touched + 1;
+                    double total;
+                    concentrated.TryGetValue(cell.Key, out total);
+                    concentrated[cell.Key] = total + cell.Value;
+                }
 
-                    bool closedThrough = level.BuyersAbsorbing ? close < level.Price : close > level.Price + groupTop;
-                    if (closedThrough)
+            double buffer = BreakBufferTicks * TickSize;
+            lock (zones)
+            {
+                HashSet<double> brokenNow = new HashSet<double>();
+                for (int i = zones.Count - 1; i >= 0; i--)
+                {
+                    AbsorptionZone zone = zones[i];
+                    bool beyond = zone.IsSupport ? close < zone.Price - buffer : close > zone.Price + buffer;
+                    zone.BarsBeyond = beyond ? zone.BarsBeyond + 1 : 0;
+                    if (zone.BarsBeyond >= BrokenBars)
                     {
-                        level.EndBar = closedBar;
-                        flipsDue[level.Price] = level.BuyersAbsorbing;
-                        continue;
+                        brokenNow.Add(zone.Price);
+                        zones.RemoveAt(i);
                     }
-
-                    LevelVolume traded;
-                    if (!barLevels.TryGetValue(level.Price, out traded))
-                        continue;
-                    double netAgainst = level.BuyersAbsorbing ? traded.Sells - traded.Buys : traded.Buys - traded.Sells;
-                    if (netAgainst <= 0)
-                        continue;
-                    AddAbsorbed(level.Price, netAgainst);
-                    countedThisBar.Add(level.Price);
-                    level.RemainingLots -= netAgainst;
-                    if (level.RemainingLots <= 0)
-                        level.EndBar = closedBar;
                 }
 
-                double range = high - low;
-                if (range <= 0 || barLevels.Count == 0)
-                    return;
-
-                double aggression = 0;
-                foreach (LevelVolume volume in barLevels.Values)
-                    aggression += volume.Buys + volume.Sells;
-                double perLevelAverage = aggression / barLevels.Count;
-                double threshold = Math.Max(MinimumLots, perLevelAverage * LevelMultiplier);
-                double edge = range * EdgePercent / 100.0;
-
-                foreach (KeyValuePair<double, LevelVolume> entry in barLevels)
+                foreach (KeyValuePair<double, int> entry in touches)
                 {
                     double price = entry.Key;
-                    double levelTop = price + groupTop;
-                    double sells = entry.Value.Sells;
-                    double buys = entry.Value.Buys;
-                    bool buyersAbsorbing = sells > buys && sells >= threshold && price <= low + edge && close > levelTop;
-                    bool sellersAbsorbing = buys > sells && buys >= threshold && levelTop >= high - edge && close < price;
-                    if (!buyersAbsorbing && !sellersAbsorbing)
+                    if (entry.Value < MinimumTouches)
                         continue;
-                    if (flipsDue.ContainsKey(price) || HasLiveLevel(price))
+                    double known;
+                    zoneVolume.TryGetValue(price, out known);
+                    zoneVolume[price] = Math.Max(known, concentrated[price]);
+                    if (brokenNow.Contains(price) || zones.Exists(z => z.Price == price) || price == close)
                         continue;
-                    // A level this candle wore out already counted its aggression; a new one there must not count it twice.
-                    if (!countedThisBar.Contains(price))
-                        AddAbsorbed(price, buyersAbsorbing ? sells : buys);
-                    absorptionLevels.Add(new AbsorptionLevel { StartBar = closedBar + 1, Price = price, BuyersAbsorbing = buyersAbsorbing, RemainingLots = absorbedLots[price] });
+                    zones.Add(new AbsorptionZone { Price = price, IsSupport = price < close, StartTime = nextBarTime });
+                }
+
+                // INFERRED: past the cap, the zones with the largest numbers stay.
+                if (zones.Count > MaximumZones)
+                {
+                    zones.Sort((a, b) => zoneVolume[b.Price].CompareTo(zoneVolume[a.Price]));
+                    zones.RemoveRange(MaximumZones, zones.Count - MaximumZones);
                 }
             }
         }
@@ -243,58 +198,41 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (Bars == null || ChartBars == null || RenderTarget == null || IsInHitTest)
                 return;
 
-            SharpDX.Direct2D1.Brush buyersFill = BuyersAbsorbingColor.ToDxBrush(RenderTarget, FillOpacity / 100f);
-            SharpDX.Direct2D1.Brush sellersFill = SellersAbsorbingColor.ToDxBrush(RenderTarget, FillOpacity / 100f);
-            SharpDX.Direct2D1.Brush buyersConsumed = BuyersAbsorbingColor.ToDxBrush(RenderTarget, FillOpacity / 300f);
-            SharpDX.Direct2D1.Brush sellersConsumed = SellersAbsorbingColor.ToDxBrush(RenderTarget, FillOpacity / 300f);
+            SharpDX.Direct2D1.Brush supportFill = SupportColor.ToDxBrush(RenderTarget, FillOpacity);
+            SharpDX.Direct2D1.Brush resistanceFill = ResistanceColor.ToDxBrush(RenderTarget, FillOpacity);
+            SharpDX.Direct2D1.Brush supportTag = SupportColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush resistanceTag = ResistanceColor.ToDxBrush(RenderTarget);
             SharpDX.Direct2D1.Brush textBrush = TextColor.ToDxBrush(RenderTarget);
-            SharpDX.Direct2D1.Brush buyersBox = BuyersAbsorbingColor.ToDxBrush(RenderTarget);
-            SharpDX.Direct2D1.Brush sellersBox = SellersAbsorbingColor.ToDxBrush(RenderTarget);
-            SharpDX.DirectWrite.TextFormat textFormat = LabelFont.ToDirectWriteTextFormat();
+            SharpDX.DirectWrite.TextFormat textFormat = new SimpleFont("Arial", TextSize) { Bold = true }.ToDirectWriteTextFormat();
             textFormat.WordWrapping = SharpDX.DirectWrite.WordWrapping.NoWrap;
 
             try
             {
                 float panelRight = ChartPanel.X + ChartPanel.W;
-                double groupTop = (PriceGrouping - 1) * TickSize;
 
-                lock (absorptionLevels)
-                    foreach (AbsorptionLevel level in absorptionLevels)
+                lock (zones)
+                    foreach (AbsorptionZone zone in zones)
                     {
-                        bool consumed = level.EndBar >= 0;
-                        if (consumed && !ShowConsumed)
+                        int startBar = Bars.GetBar(zone.StartTime);
+                        if (startBar > ChartBars.ToIndex)
                             continue;
-                        if (level.StartBar > ChartBars.ToIndex || (consumed && level.EndBar < ChartBars.FromIndex))
-                            continue;
-
-                        float x1 = chartControl.GetXByBarIndex(ChartBars, level.StartBar);
-                        float x2 = consumed ? chartControl.GetXByBarIndex(ChartBars, level.EndBar) : panelRight;
-                        float top = chartScale.GetYByValue(level.Price + groupTop + TickSize / 2);
-                        float bottom = chartScale.GetYByValue(level.Price - TickSize / 2);
-                        float height = Math.Max(MinimumBandHeight, bottom - top);
-                        if (bottom - top < MinimumBandHeight)
-                            top = (top + bottom - height) / 2;
-                        if (x2 <= x1)
-                            continue;
-                        if (top > ChartPanel.Y + ChartPanel.H || top + height < ChartPanel.Y)
+                        float x1 = chartControl.GetXByBarIndex(ChartBars, startBar);
+                        float y = chartScale.GetYByValue(zone.Price);
+                        float top = y - BandHeight / 2;
+                        if (x1 >= panelRight || top > ChartPanel.Y + ChartPanel.H || top + BandHeight < ChartPanel.Y)
                             continue;
 
-                        SharpDX.Direct2D1.Brush fill = level.BuyersAbsorbing
-                            ? (consumed ? buyersConsumed : buyersFill)
-                            : (consumed ? sellersConsumed : sellersFill);
-                        RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, top, x2 - x1, height), fill);
-
-                        if (consumed)
-                            continue;
+                        RenderTarget.FillRectangle(new SharpDX.RectangleF(x1, top, panelRight - x1, BandHeight),
+                            zone.IsSupport ? supportFill : resistanceFill);
 
                         SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(Core.Globals.DirectWriteFactory,
-                            absorbedLots[level.Price].ToString("0"), textFormat, 200, 40);
+                            zoneVolume[zone.Price].ToString("0"), textFormat, 200, 40);
                         try
                         {
                             float labelX = panelRight - layout.Metrics.Width - 4;
-                            float labelY = top + height / 2 - layout.Metrics.Height / 2;
+                            float labelY = y - layout.Metrics.Height / 2;
                             RenderTarget.FillRectangle(new SharpDX.RectangleF(labelX - 3, labelY - 1, layout.Metrics.Width + 6, layout.Metrics.Height + 2),
-                                level.BuyersAbsorbing ? buyersBox : sellersBox);
+                                zone.IsSupport ? supportTag : resistanceTag);
                             RenderTarget.DrawTextLayout(new SharpDX.Vector2(labelX, labelY), layout, textBrush, SharpDX.Direct2D1.DrawTextOptions.NoSnap);
                         }
                         finally
@@ -305,73 +243,65 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             finally
             {
-                buyersFill.Dispose();
-                sellersFill.Dispose();
-                buyersConsumed.Dispose();
-                sellersConsumed.Dispose();
+                supportFill.Dispose();
+                resistanceFill.Dispose();
+                supportTag.Dispose();
+                resistanceTag.Dispose();
                 textBrush.Dispose();
-                buyersBox.Dispose();
-                sellersBox.Dispose();
                 textFormat.Dispose();
             }
         }
 
         #region Properties
 
-        [Range(1, 100), NinjaScriptProperty]
-        [Display(Name = "Price grouping (ticks)", Description = "Ticks merged into one price level.", Order = 1, GroupName = "1. Absorption")]
-        public int PriceGrouping { get; set; }
+        [Range(10, 5000), NinjaScriptProperty]
+        [Display(Name = "Window (1-minute bars)", Description = "1-minute bars whose aggressor volume is measured, whatever the chart's period.", Order = 1, GroupName = "1. Parameters")]
+        public int WindowBars { get; set; }
 
-        [Range(1, 100000), NinjaScriptProperty]
-        [Display(Name = "Minimum lots", Description = "One-sided aggression (sells into a low zone, or buys into a high one) a price zone needs before it can become a level.", Order = 2, GroupName = "1. Absorption")]
-        public int MinimumLots { get; set; }
+        [Range(0.5, 10), NinjaScriptProperty]
+        [Display(Name = "Sensitivity (std devs above mean)", Description = "How far above the window's average volume per price a bar's volume at a price must be to count as a touch.", Order = 2, GroupName = "1. Parameters")]
+        public double Sensitivity { get; set; }
 
         [Range(1, 50), NinjaScriptProperty]
-        [Display(Name = "Level multiplier", Description = "The zone's one-sided aggression must also reach the candle's average aggression per zone times this.", Order = 3, GroupName = "1. Absorption")]
-        public double LevelMultiplier { get; set; }
+        [Display(Name = "Minimum touches to confirm zone", Description = "1-minute bars in the window that must concentrate volume at the price.", Order = 3, GroupName = "1. Parameters")]
+        public int MinimumTouches { get; set; }
+
+        [Range(1, 50), NinjaScriptProperty]
+        [Display(Name = "Bars to consider zone broken", Description = "Consecutive 1-minute closes beyond the zone, past the buffer, that remove it.", Order = 4, GroupName = "1. Parameters")]
+        public int BrokenBars { get; set; }
+
+        [Range(0, 200), NinjaScriptProperty]
+        [Display(Name = "Break buffer (ticks)", Description = "How far beyond the zone a close must be to count toward breaking it.", Order = 5, GroupName = "1. Parameters")]
+        public int BreakBufferTicks { get; set; }
 
         [Range(1, 100), NinjaScriptProperty]
-        [Display(Name = "Edge (%)", Description = "How close to the candle's low (selling absorbed) or high (buying absorbed) the price must be, as a share of the candle's range.", Order = 4, GroupName = "1. Absorption")]
-        public int EdgePercent { get; set; }
-
-        [Display(Name = "Show consumed levels", Description = "Keep faded bands for levels whose lots were already eaten.", Order = 5, GroupName = "1. Absorption")]
-        public bool ShowConsumed { get; set; }
-
-        [Range(0, 100)]
-        [Display(Name = "Fill opacity (%)", Order = 1, GroupName = "2. Appearance")]
-        public int FillOpacity { get; set; }
-
-        [Range(1, 40)]
-        [Display(Name = "Minimum band height (px)", Description = "Bands thinner than this on screen are drawn this tall, centered on the level.", Order = 2, GroupName = "2. Appearance")]
-        public int MinimumBandHeight { get; set; }
-
-        [Display(Name = "Font", Order = 3, GroupName = "2. Appearance")]
-        public SimpleFont LabelFont { get; set; }
+        [Display(Name = "Maximum simultaneous zones", Order = 6, GroupName = "1. Parameters")]
+        public int MaximumZones { get; set; }
 
         [XmlIgnore]
-        [Display(Name = "Buyers absorbing (selling held)", Order = 1, GroupName = "3. Colors")]
-        public System.Windows.Media.Brush BuyersAbsorbingColor { get; set; }
+        [Display(Name = "Support zone color (buy)", Order = 1, GroupName = "2. Visual")]
+        public System.Windows.Media.Brush SupportColor { get; set; }
 
         [Browsable(false)]
-        public string BuyersAbsorbingColorSerializable
+        public string SupportColorSerializable
         {
-            get { return Serialize.BrushToString(BuyersAbsorbingColor); }
-            set { BuyersAbsorbingColor = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(SupportColor); }
+            set { SupportColor = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "Sellers absorbing (buying held)", Order = 2, GroupName = "3. Colors")]
-        public System.Windows.Media.Brush SellersAbsorbingColor { get; set; }
+        [Display(Name = "Resistance zone color (sell)", Order = 2, GroupName = "2. Visual")]
+        public System.Windows.Media.Brush ResistanceColor { get; set; }
 
         [Browsable(false)]
-        public string SellersAbsorbingColorSerializable
+        public string ResistanceColorSerializable
         {
-            get { return Serialize.BrushToString(SellersAbsorbingColor); }
-            set { SellersAbsorbingColor = Serialize.StringToBrush(value); }
+            get { return Serialize.BrushToString(ResistanceColor); }
+            set { ResistanceColor = Serialize.StringToBrush(value); }
         }
 
         [XmlIgnore]
-        [Display(Name = "Text color", Order = 3, GroupName = "3. Colors")]
+        [Display(Name = "Text color (volume)", Order = 3, GroupName = "2. Visual")]
         public System.Windows.Media.Brush TextColor { get; set; }
 
         [Browsable(false)]
@@ -380,6 +310,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             get { return Serialize.BrushToString(TextColor); }
             set { TextColor = Serialize.StringToBrush(value); }
         }
+
+        [Range(6, 40)]
+        [Display(Name = "Text size", Order = 4, GroupName = "2. Visual")]
+        public int TextSize { get; set; }
 
         #endregion
     }

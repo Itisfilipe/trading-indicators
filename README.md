@@ -549,27 +549,29 @@ the two count toward volume only.
     in the last "Scale lookback" candles.
   - The panel scales to the CVD range of the last "Scale lookback" candles,
     so it does not jump as you scroll.
-- **Flow Absorption** (price panel): absorption levels. When a candle
-  closes, any price zone in it ("Price grouping", 4 ticks by default) that
-  took at least "Minimum lots" of one-sided aggression (and "Level
-  multiplier" times the candle's average per zone) and held becomes a band:
-  selling into a zone in the bottom "Edge" share of a candle that closed
-  above it (blue, buyers absorbing), or buying into the top of one that
-  closed below it (red). One candle can make both. The band starts on the
-  next candle and runs right, with the lots absorbed at that price in a
-  colored box on the right edge.
-  - Nothing changes during a candle: bands appear, grow, flip and end only
-    at a candle close.
-  - The count only grows. Each later candle's net aggression into the
-    level (sells minus buys for a blue one) is added to it, and the count
-    belongs to the price, so a level that comes back keeps its number.
-  - A candle that closes through a level removes it; at the next close it
-    comes back on the side that close leaves it (a red level price stays
-    above returns blue) with the same number, even if that candle never
-    traded there.
-  - A level also ends once the net aggression into it after it formed
-    reaches its count at birth (ended levels stay faded with "Show
-    consumed levels").
+- **Flow Absorption** (price panel): absorption zones, built from the
+  reference trader's own settings. Over the last "Window" of 1-minute bars
+  (180, read from a 1-minute series whatever the chart's period), every
+  bar's aggressor volume at each price is compared with the window's
+  average: a bar whose volume at a price beats the average by
+  "Sensitivity" standard deviations (2.5) is a touch there, and a price
+  with "Minimum touches" (2) becomes a zone. The band starts on the next
+  candle and runs right, with the zone's number in a colored box on the
+  right edge.
+  - Nothing changes during a 1-minute bar: zones appear, flip and end only
+    when one closes.
+  - Below price a zone is support (blue), above it resistance (red).
+  - A zone breaks after "Bars to consider zone broken" (3) closes in a row
+    more than "Break buffer" (4 ticks) beyond it. If it still qualifies it
+    comes back at the next close on its new side, with the same number.
+  - The number is the volume of the zone's touches; it only grows and
+    stays with the price. At most "Maximum simultaneous zones" (8) show:
+    the largest numbers stay.
+  - His settings map 1:1: Janela (barras de 1m) = Window, Sensibilidade =
+    Sensitivity, Toques minimos = Minimum touches, Barras p/ considerar
+    zona rompida = Bars to consider zone broken, Buffer de rompimento =
+    Break buffer, Max. de zonas simultaneas = Maximum simultaneous zones.
+    He keeps the defaults and only sets the text black on a white chart.
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
   high nor low, or breaks both, is gray (absorption); a triangle marks a
