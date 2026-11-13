@@ -5,6 +5,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow POC and Flow HA start with the reference trader's settings: POC
+  average over 30 candles, square markers of 20 px, dark green / red / gray
+  with black 10-point labels, thinner borders and thicker dashes, outliers
+  off; Flow HA without CCZ zones (orange while open, gray once closed
+  outside when turned on). Only newly added indicators take these
+  defaults; charts saved earlier keep their own settings.
 - Flow HA: candles are smoothed twice (EMA 2 on price, then EMA 2 on the
   Heikin-Ashi), the previous candle's high and low are drawn as levels, and
   reversal triangles, gray inside candles and the traffic area start off. Charts

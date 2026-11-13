@@ -473,15 +473,15 @@ buys at the ask or above and as sells at the bid or below; trades between
 the two count toward volume only.
 
 - **Flow POC** (price panel): a marker at each candle's most traded price,
-  blue when buyers dominated that price, red when sellers did, gray when
-  buys and sells tie. A POC whose volume beats the average of the previous 12
+  green when buyers dominated that price, red when sellers did, gray when
+  buys and sells tie. A POC whose volume beats the average of the previous 30
   candles' POCs (times "Square at") gets a square (or circle) that grows
   with volume and shows the contracts traded at that price ("Label" =
   Delta shows the lots left over there, buys minus sells, instead); the
   rest get a short dash. "Strength measure" picks what is compared with
   the average: the POC's volume (default) or its leftover lots. An
-  outlier — at least "Outlier at" times the average (3 by
-  default; 0 turns it off) — is drawn larger, solid and with a thick border
+  outlier — at least "Outlier at" times the average (off by
+  default at 0; 3 is a useful value) — is drawn larger, solid and with a thick border
   ("Outlier size" 130%, "Outlier solid fill" on, "Outlier border width" 3) so the
   rare very large POCs stand out.
   "POC period" (Chart by default) shows a longer timeframe's POC on a
@@ -574,8 +574,9 @@ the two count toward volume only.
   candle trades through them. Off by default: gray candles that break
   neither or both of the previous candle's extremes ("Mark inside
   candles"), reversal triangles after a run of "Candles before a reversal"
-  candles ("Show reversal triangles"), and the traffic area, dotted lines
-  at the previous candle's high, middle and low ("Show traffic area"). CCZ zones
+  candles ("Show reversal triangles"), the traffic area, dotted lines
+  at the previous candle's high, middle and low ("Show traffic area"),
+  and CCZ zones ("Show CCZ zones"). CCZ zones
   box the range of each Heikin-Ashi candle whose body is at most "Body (%
   of range)" of its range (7% by default), colored while open and gray
   once a candle closes outside the box.
