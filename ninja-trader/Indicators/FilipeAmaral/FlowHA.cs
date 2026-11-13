@@ -13,9 +13,10 @@ using NinjaTrader.NinjaScript;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// Heikin-Ashi candles drawn over the chart's own bars, with candles that
-    /// break neither the previous high nor low grayed out and a triangle where
-    /// the color turns after a run.
+    /// Smoothed Heikin-Ashi candles drawn over the chart's own bars (EMA of price,
+    /// then EMA of the Heikin-Ashi values), the previous candle's high and low as
+    /// levels, CCZ zones, and optionally grayed inside candles and reversal
+    /// triangles.
     /// </summary>
     public class FlowHA : Indicator
     {
@@ -23,6 +24,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> haHigh;
         private Series<double> haLow;
         private Series<double> haClose;
+        private Series<double> rawOpen;
+        private Series<double> rawClose;
         private EMA smoothedOpen;
         private EMA smoothedHigh;
         private EMA smoothedLow;
@@ -50,7 +53,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Heikin-Ashi candles over the price bars, inside candles grayed, reversal triangles.";
+                Description = "Smoothed Heikin-Ashi candles over the price bars, with the previous candle's high and low, CCZ zones, optional inside-candle graying and reversal triangles.";
                 Name = "Flow HA";
                 Calculate = Calculate.OnPriceChange;
                 IsOverlay = true;
@@ -58,11 +61,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 HidePriceBars = true;
-                SmoothingPeriod = 0;
-                ShowTrafficArea = true;
-                MarkInsideCandles = true;
+                SmoothingPeriod = 2;
+                FinalSmoothingPeriod = 2;
+                ShowTrafficArea = false;
+                MarkInsideCandles = false;
                 MinBarsForReversal = 2;
-                ShowReversalTriangles = true;
+                ShowReversalTriangles = false;
+                ShowLastLevels = true;
+                LevelPad = 0.15;
+                LevelWidth = 1;
                 ShowCczZones = true;
                 CczBodyPercent = 7;
                 CczOpacity = 10;
@@ -75,6 +82,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 FinishedCczColor = Rgb(0x5F, 0x67, 0x73);
                 WickColor = Rgb(0x1A, 0x1C, 0x26);
                 TrafficColor = Rgb(0x5F, 0x67, 0x73);
+                LastLevelColor = Brushes.Black;
+                BrokenLevelColor = Brushes.Red;
             }
             else if (State == State.DataLoaded)
             {
@@ -89,6 +98,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 haHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 haLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 haClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                rawOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
+                rawClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
         }
 
@@ -100,12 +111,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double barLow = smoothed ? smoothedLow[0] : Low[0];
             double barClose = smoothed ? smoothedClose[0] : Close[0];
 
-            double open = CurrentBar == 0 ? (barOpen + barClose) / 2 : (haOpen[1] + haClose[1]) / 2;
+            double open = CurrentBar == 0 ? (barOpen + barClose) / 2 : (rawOpen[1] + rawClose[1]) / 2;
             double close = (barOpen + barHigh + barLow + barClose) / 4;
-            haOpen[0] = open;
-            haClose[0] = close;
-            haHigh[0] = Math.Max(barHigh, Math.Max(open, close));
-            haLow[0] = Math.Min(barLow, Math.Min(open, close));
+            rawOpen[0] = open;
+            rawClose[0] = close;
+            // An EMA keeps high >= open/close >= low, so the smoothed candle stays well formed.
+            haOpen[0] = FinalSmooth(haOpen, open);
+            haClose[0] = FinalSmooth(haClose, close);
+            haHigh[0] = FinalSmooth(haHigh, Math.Max(barHigh, Math.Max(open, close)));
+            haLow[0] = FinalSmooth(haLow, Math.Min(barLow, Math.Min(open, close)));
 
             if (HidePriceBars)
             {
@@ -120,6 +134,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (CurrentBar >= closedBarsAgo && CurrentBar - closedBarsAgo > lastCczBar)
                     UpdateCczZones(closedBarsAgo);
             }
+        }
+
+        private double FinalSmooth(Series<double> smoothed, double value)
+        {
+            if (CurrentBar == 0 || FinalSmoothingPeriod <= 1)
+                return value;
+            double weight = 2.0 / (FinalSmoothingPeriod + 1);
+            return weight * value + (1 - weight) * smoothed[1];
         }
 
         private void UpdateCczZones(int closedBarsAgo)
@@ -235,6 +257,38 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
+        // The previous candle's high and low, turning to the broken color once the last candle trades through them.
+        private void DrawLastLevels(ChartControl chartControl, ChartScale chartScale)
+        {
+            int lastBar = Bars.Count - 1;
+            if (!haHigh.IsValidDataPointAt(lastBar))
+                lastBar--;
+            int previousBar = lastBar - 1;
+            if (previousBar < 0 || lastBar > ChartBars.ToIndex || !haHigh.IsValidDataPointAt(previousBar))
+                return;
+
+            float x1 = chartControl.GetXByBarIndex(ChartBars, previousBar);
+            float x2 = chartControl.GetXByBarIndex(ChartBars, lastBar) + (float)(LevelPad * chartControl.Properties.BarDistance);
+            double previousHigh = haHigh.GetValueAt(previousBar);
+            double previousLow = haLow.GetValueAt(previousBar);
+            SharpDX.Direct2D1.Brush levelBrush = LastLevelColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush brokenBrush = BrokenLevelColor.ToDxBrush(RenderTarget);
+            try
+            {
+                float highY = chartScale.GetYByValue(previousHigh);
+                float lowY = chartScale.GetYByValue(previousLow);
+                RenderTarget.DrawLine(new SharpDX.Vector2(x1, highY), new SharpDX.Vector2(x2, highY),
+                    haHigh.GetValueAt(lastBar) > previousHigh ? brokenBrush : levelBrush, LevelWidth);
+                RenderTarget.DrawLine(new SharpDX.Vector2(x1, lowY), new SharpDX.Vector2(x2, lowY),
+                    haLow.GetValueAt(lastBar) < previousLow ? brokenBrush : levelBrush, LevelWidth);
+            }
+            finally
+            {
+                levelBrush.Dispose();
+                brokenBrush.Dispose();
+            }
+        }
+
         protected override void OnRender(ChartControl chartControl, ChartScale chartScale)
         {
             base.OnRender(chartControl, chartScale);
@@ -259,6 +313,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                 if (ShowTrafficArea && Bars.Count >= 2)
                     DrawTrafficArea(chartControl, chartScale, Bars.Count - 2);
+
+                if (ShowLastLevels)
+                    DrawLastLevels(chartControl, chartScale);
 
                 if (ShowCczZones)
                 {
@@ -356,8 +413,45 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int SignalOffsetTicks { get; set; }
 
         [Range(0, 200), NinjaScriptProperty]
-        [Display(Name = "Smoothing period", Description = "0 = classic Heikin-Ashi. Above 0, the candles' open, high, low and close are smoothed with an EMA of this period first.", Order = 5, GroupName = "1. Heikin-Ashi")]
+        [Display(Name = "Smoothing period", Description = "0 = classic Heikin-Ashi. Above 0, the price open, high, low and close are smoothed with an EMA of this period before the Heikin-Ashi is built.", Order = 5, GroupName = "1. Heikin-Ashi")]
         public int SmoothingPeriod { get; set; }
+
+        [Range(0, 200), NinjaScriptProperty]
+        [Display(Name = "Final smoothing period", Description = "Above 1, the Heikin-Ashi open, high, low and close are smoothed again with an EMA of this period. 0 or 1 draws them unsmoothed.", Order = 8, GroupName = "1. Heikin-Ashi")]
+        public int FinalSmoothingPeriod { get; set; }
+
+        [Display(Name = "Show last levels", Description = "Lines at the previous candle's high and low, extended to the last candle.", Order = 1, GroupName = "4. Last levels")]
+        public bool ShowLastLevels { get; set; }
+
+        [Range(0, 5)]
+        [Display(Name = "Current pad (bar fraction)", Description = "How far past the last candle the lines reach, as a fraction of the bar spacing.", Order = 2, GroupName = "4. Last levels")]
+        public double LevelPad { get; set; }
+
+        [Range(1, 10)]
+        [Display(Name = "Line width", Order = 3, GroupName = "4. Last levels")]
+        public int LevelWidth { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Level color", Order = 4, GroupName = "4. Last levels")]
+        public System.Windows.Media.Brush LastLevelColor { get; set; }
+
+        [Browsable(false)]
+        public string LastLevelColorSerializable
+        {
+            get { return Serialize.BrushToString(LastLevelColor); }
+            set { LastLevelColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Broken level color", Order = 5, GroupName = "4. Last levels")]
+        public System.Windows.Media.Brush BrokenLevelColor { get; set; }
+
+        [Browsable(false)]
+        public string BrokenLevelColorSerializable
+        {
+            get { return Serialize.BrushToString(BrokenLevelColor); }
+            set { BrokenLevelColor = Serialize.StringToBrush(value); }
+        }
 
         [Display(Name = "Show traffic area", Description = "Dotted lines at the previous Heikin-Ashi candle's high, low and middle: the stop and the zone for adding lots.", Order = 6, GroupName = "1. Heikin-Ashi")]
         public bool ShowTrafficArea { get; set; }
