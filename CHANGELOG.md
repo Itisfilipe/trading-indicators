@@ -3,6 +3,17 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-13
+
+- ChartTrading and Breakeven Stops: pop-up windows only when a position may
+  be left without a stop or with stops of the wrong size. Refused clicks,
+  Stops to BE not possible, retries and cleanups go to the log only; an
+  error that repeats pops up at most once a minute.
+- ChartTrading: a stop or target hit is a normal close again; the other leg
+  is cancelled quietly instead of reported as a position closed elsewhere.
+  A leftover stop or target that comes back alive on a flat account is
+  cancelled again.
+
 ## 2026-11-12
 
 - New Candle Countdown Bubble: the time left in the chart's candle in a box

@@ -179,6 +179,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // for good); a pair unsettled this long is cancelled and placed again.
         private DateTime unsettledSince = DateTime.MinValue;
         private static readonly TimeSpan StuckChangeLimit = TimeSpan.FromSeconds(5);
+        private DateTime lastFailureAlert = DateTime.MinValue;
         private readonly Dictionary<Order, DateTime> abandonedExits = new Dictionary<Order, DateTime>();
         // The flat-coverage check acts only on two equal reads of the account's
         // position, which can lag its fills.
@@ -582,7 +583,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     commit.Account.Cancel(new[] { commit.Entry });
                     Log("ChartTrading: indicator removed or reloaded; cancelled unfilled entry " + commit.Entry.OrderId + " so it cannot fill without a stop.",
-                        NinjaTrader.Cbi.LogLevel.Alert);
+                        NinjaTrader.Cbi.LogLevel.Information);
                 }
 
                 if (subscribedAccount != null)
@@ -671,7 +672,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 else
                 {
                     Log("ChartTrading: show Chart Trader on this chart, then re-add the indicator, to get the ON/OFF button.",
-                        NinjaTrader.Cbi.LogLevel.Alert);
+                        NinjaTrader.Cbi.LogLevel.Information);
                 }
 
                 // Subscribe to the ChartTrader account up front, so auto-breakeven
@@ -896,7 +897,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (account == null)
             {
                 Log("ChartTrading: no ChartTrader account selected; order not placed.",
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
             if (subscribedAccount != null && !ReferenceEquals(account, subscribedAccount))
@@ -907,7 +908,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (oldAccountBusy)
                 {
                     Log("ChartTrading: " + subscribedAccount.Name + " still has a position or a pending entry; order on " + account.Name + " not placed.",
-                        NinjaTrader.Cbi.LogLevel.Alert);
+                        NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
             }
@@ -935,7 +936,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!ResolveBracketTicks(out stopTicks, out targetTicks))
             {
                 Log("ChartTrading: ATR distances are on but no ATR is available yet; order not placed.",
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
             int[] percents = { Percent1, Percent2, Percent3 };
@@ -969,7 +970,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (anyPairEnabled && stops.Count == 0)
             {
                 Log("ChartTrading: enabled pairs round to 0 lots each (percentages too low or all 0%); entry would be unprotected, order not placed.",
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
             int entryQuantity = quantity;
@@ -1004,7 +1005,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (blocked)
             {
                 Log("ChartTrading: close the " + (isBuy ? "short" : "long") + " position first (Close half / Close all); opposite orders are disabled.",
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 e.Handled = true;
                 return;
             }
@@ -1030,7 +1031,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     lock (orderLock)
                         activeCommits.Remove(commit);
-                    Log("ChartTrading: entry not placed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Alert);
+                    LogFailure("ChartTrading: entry not placed - " + ex.Message);
                 }
             }, null);
 
@@ -1151,8 +1152,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                Log("ChartTrading: position update handling failed - " + ex,
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                LogFailure("ChartTrading: position update handling failed - " + ex);
             }
         }
 
@@ -1174,6 +1174,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private void ApplyPositionUpdate(Account account, bool nowFlat, MarketPosition marketPosition, int quantity, double averagePrice)
         {
             List<Order> orphanedExits = new List<Order>();
+            bool ownExitFilled = false;
             List<BracketCommit> slotsToClear = new List<BracketCommit>();
             List<BracketCommit> toGrow = new List<BracketCommit>();
             List<Order> keptExits = new List<Order>();
@@ -1205,7 +1206,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 // Any side change, from flat too: a fill counted against a flat cache
                 // may have placed exits for a side the position never took.
                 if (nowFlat || marketPosition != currentMarketPosition || settleKept)
-                    CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits, slotsToClear);
+                    ownExitFilled = CollectOrphanedExits(nowFlat ? MarketPosition.Flat : marketPosition, orphanedExits, slotsToClear);
                 // Only a shrinking or reversed position trims exits: a scale-in fill can
                 // reach the exits before its own position update does.
                 trimNeeded = !nowFlat && (flipped || quantity < currentQuantity);
@@ -1246,8 +1247,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (orphanedExits.Count > 0)
             {
                 account.Cancel(orphanedExits);
-                Log("ChartTrading: position on " + Instrument.FullName + " closed or reversed outside its brackets; cancelled "
-                    + orphanedExits.Count + " leftover stop/target order(s).", NinjaTrader.Cbi.LogLevel.Alert);
+                if (!ownExitFilled)
+                    Log("ChartTrading: position on " + Instrument.FullName + " closed or reversed outside its brackets; cancelled "
+                        + orphanedExits.Count + " leftover stop/target order(s).", NinjaTrader.Cbi.LogLevel.Information);
             }
         }
 
@@ -1259,8 +1261,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// slots queued for clearing so later fills get fresh pairs. Caller holds
         /// orderLock and has not yet moved the position cache.
         /// </summary>
-        private void CollectOrphanedExits(MarketPosition newPosition, List<Order> orphanedExits, List<BracketCommit> slotsToClear)
+        private bool CollectOrphanedExits(MarketPosition newPosition, List<Order> orphanedExits, List<BracketCommit> slotsToClear)
         {
+            bool ownExitFilled = false;
             for (int i = activeCommits.Count - 1; i >= 0; i--)
             {
                 BracketCommit commit = activeCommits[i];
@@ -1297,11 +1300,37 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     foreach (Order exit in new[] { commit.StopOrders[p], commit.TargetOrders[p] })
                     {
-                        if (exit != null && !Order.IsTerminalState(exit.OrderState))
+                        if (exit == null)
+                            continue;
+                        if (exit.Filled > 0)
+                            ownExitFilled = true;
+                        if (!Order.IsTerminalState(exit.OrderState) && !IsBeingCancelled(exit))
                             orphanedExits.Add(exit);
                     }
                 }
             }
+            return ownExitFilled;
+        }
+
+        // Caller holds orderLock.
+        private bool IsOwnedExit(Order order)
+        {
+            foreach (BracketCommit commit in activeCommits)
+            {
+                if (commit.StopOrders == null)
+                    continue;
+                for (int p = 0; p < commit.StopOrders.Length; p++)
+                {
+                    if (ReferenceEquals(commit.StopOrders[p], order) || ReferenceEquals(commit.TargetOrders[p], order))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool IsBeingCancelled(Order order)
+        {
+            return order.OrderState == OrderState.CancelPending || order.OrderState == OrderState.CancelSubmitted;
         }
 
         /// <summary>
@@ -1351,7 +1380,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         continue;
                     if (order.Name != "CT Stop" && order.Name != "CT Target")
                         continue;
-                    if (!Order.IsTerminalState(order.OrderState) && !orphanedExits.Contains(order) && !keptExits.Contains(order))
+                    if (!Order.IsTerminalState(order.OrderState) && !IsBeingCancelled(order) && !orphanedExits.Contains(order) && !keptExits.Contains(order))
                         orphanedExits.Add(order);
                 }
             }
@@ -1379,6 +1408,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             int stopLots = OpenQuantity(stop);
             bool targetStands = target != null && target.OrderState != OrderState.Cancelled && target.OrderState != OrderState.Rejected;
             return targetStands ? Math.Min(stopLots, OpenQuantity(target)) : stopLots;
+        }
+
+        // A handler that throws on every event must not bury the trader in pop-ups.
+        private void LogFailure(string message)
+        {
+            DateTime now = DateTime.UtcNow;
+            bool popUp = now - lastFailureAlert >= TimeSpan.FromMinutes(1);
+            if (popUp)
+                lastFailureAlert = now;
+            Log(message, popUp ? NinjaTrader.Cbi.LogLevel.Alert : NinjaTrader.Cbi.LogLevel.Error);
         }
 
         private static bool IsSettled(Order order)
@@ -1655,7 +1694,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     EnsureExits(commit, account);
                 if (abandoned > 0)
                     Log("ChartTrading: " + abandoned + " stop/target pair(s) on " + Instrument.FullName + " stayed mid-change for "
-                        + StuckChangeLimit.TotalSeconds + " s; cancelled them to place them again.", NinjaTrader.Cbi.LogLevel.Alert);
+                        + StuckChangeLimit.TotalSeconds + " s; cancelled them to place them again.", NinjaTrader.Cbi.LogLevel.Information);
                 else if (changes.Count + cancels.Count > 0)
                     Log("ChartTrading: position on " + Instrument.FullName + " shrank outside its brackets; trimmed stops and targets to "
                         + currentQuantity + ".", NinjaTrader.Cbi.LogLevel.Information);
@@ -1690,7 +1729,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                Log("ChartTrading: deferred trim failed - " + ex, NinjaTrader.Cbi.LogLevel.Alert);
+                LogFailure("ChartTrading: deferred trim failed - " + ex);
             }
         }
 
@@ -1706,8 +1745,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                Log("ChartTrading: order update handling failed - " + ex,
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                LogFailure("ChartTrading: order update handling failed - " + ex);
             }
         }
 
@@ -1715,6 +1753,24 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (e.Order == null || Instrument == null)
                 return;
+
+            // A leftover whose cancel was refused comes back alive on a flat account, where a fill would open a trade.
+            bool isCtExit = e.Order.Name == "CT Stop" || e.Order.Name == "CT Target";
+            if (isCtExit && (e.OrderState == OrderState.Working || e.OrderState == OrderState.Accepted)
+                && e.Order.Instrument != null && e.Order.Instrument.FullName == Instrument.FullName)
+            {
+                bool unowned;
+                lock (orderLock)
+                    unowned = ReferenceEquals(sender, subscribedAccount) && currentMarketPosition == MarketPosition.Flat && !IsOwnedExit(e.Order);
+                Account account = sender as Account;
+                if (unowned && account != null && LivePosition(account) == null)
+                {
+                    account.Cancel(new[] { e.Order });
+                    Log("ChartTrading: a leftover " + e.Order.Name + " on " + Instrument.FullName + " came back alive while flat; cancelled it again.",
+                        NinjaTrader.Cbi.LogLevel.Information);
+                    return;
+                }
+            }
 
             // An auto-breakeven that fired before the exits were live re-arms as soon
             // as a protective stop is accepted, instead of polling every tick. Any
@@ -1979,7 +2035,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 target.StopPriceChanged = target.StopPrice;
                 account.Change(new[] { target });
                 Log("ChartTrading: a target on " + Instrument.FullName + " did not match its stop; resizing it.",
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
 
@@ -1992,7 +2048,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 if (refusedCutKeeps > 0 && retry)
                 {
                     Log("ChartTrading: a stop cut on " + Instrument.FullName + " was refused; cutting it again.",
-                        NinjaTrader.Cbi.LogLevel.Alert);
+                        NinjaTrader.Cbi.LogLevel.Information);
                     ReconcileExits(account);
                     return;
                 }
@@ -2012,7 +2068,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             else if (retry)
             {
                 Log("ChartTrading: a stop for " + unprotected + " lot(s) on " + Instrument.FullName + " was refused; placing it again.",
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 EnsureExits(owner, account);
                 return;
             }
@@ -2023,8 +2079,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (closable > 0)
                 account.Submit(new[] { account.CreateOrder(Instrument, owner.ExitAction, OrderType.Market, OrderEntry.Manual, TimeInForce.Day,
                     closable, 0, 0, string.Empty, "CT Exit", Core.Globals.MaxDate, null) });
-            Log("ChartTrading: a stop or target on " + Instrument.FullName + " was refused twice; closed " + closable + " lot(s) at market.",
-                NinjaTrader.Cbi.LogLevel.Alert);
+            Log("ChartTrading: a stop or target on " + Instrument.FullName + " was refused twice; closed " + closable + " of " + unprotected + " lot(s) at market.",
+                closable < unprotected ? NinjaTrader.Cbi.LogLevel.Alert : NinjaTrader.Cbi.LogLevel.Information);
         }
 
         /// <summary>
@@ -2084,7 +2140,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             // click-relative estimate but say so, because it silently
                             // reproduces the bug this resolution fixes.
                             Log("ChartTrading: entry filled without an average fill price; exits placed at their click-relative estimate.",
-                                NinjaTrader.Cbi.LogLevel.Alert);
+                                NinjaTrader.Cbi.LogLevel.Information);
                             commit.PricesResolved = true;
                         }
                     }
@@ -2516,7 +2572,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 catch (Exception ex)
                 {
                     ReArmAutoBreakeven();
-                    Log("ChartTrading: auto breakeven failed - " + ex.Message, NinjaTrader.Cbi.LogLevel.Alert);
+                    LogFailure("ChartTrading: auto breakeven failed - " + ex.Message);
                 }
             }, null);
         }
@@ -3051,7 +3107,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
             catch (Exception ex)
             {
-                Log("ChartTrading: flat coverage check failed - " + ex, NinjaTrader.Cbi.LogLevel.Alert);
+                LogFailure("ChartTrading: flat coverage check failed - " + ex);
             }
         }
 

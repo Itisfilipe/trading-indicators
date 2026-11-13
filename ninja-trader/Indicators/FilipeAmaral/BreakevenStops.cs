@@ -88,7 +88,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 chartTraderGrid = chartTrader?.Content as System.Windows.Controls.Grid;
                 if (chartTraderGrid == null)
                 {
-                    Log("Breakeven Stops: show Chart Trader on this chart, then re-add the indicator.", NinjaTrader.Cbi.LogLevel.Alert);
+                    Log("Breakeven Stops: show Chart Trader on this chart, then re-add the indicator.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
@@ -339,7 +339,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             Position position = OpenPosition(account);
             if (position == null)
             {
-                Log("Breakeven Stops: no position on " + Instrument.FullName + " to halve.", NinjaTrader.Cbi.LogLevel.Alert);
+                Log("Breakeven Stops: no position on " + Instrument.FullName + " to halve.", NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
             if (CloseHalfInFlight())
@@ -364,7 +364,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Log("Breakeven Stops: a stop or target on " + Instrument.FullName + (stuck
                         ? " has been stuck mid-change for over 5 s; Close half not sent. Check the order in the Orders tab."
                         : " is still being changed; Close half not sent, click again."),
-                    NinjaTrader.Cbi.LogLevel.Alert);
+                    NinjaTrader.Cbi.LogLevel.Information);
                 return;
             }
             exitsUnsettledSince = DateTime.MinValue;
@@ -423,7 +423,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Dictionary<string, int> ocoQuantities = new Dictionary<string, int>();
                         TrimToQuantity(account, stops, targets, position.Quantity, ocoQuantities);
                         TrimToQuantity(account, targets, stops, position.Quantity, ocoQuantities);
-                        Log("Breakeven Stops: stops or targets on " + Instrument.FullName + " were still larger than the position; cut them to " + position.Quantity + ".", NinjaTrader.Cbi.LogLevel.Alert);
+                        Log("Breakeven Stops: stops or targets on " + Instrument.FullName + " were still larger than the position; cut them to " + position.Quantity + ".", NinjaTrader.Cbi.LogLevel.Information);
                     }
                     catch (Exception ex)
                     {
@@ -569,7 +569,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 Position position = OpenPosition(account);
                 if (position == null)
                 {
-                    Log("Breakeven Stops: no open position on " + Instrument.FullName + "; stops not moved.", NinjaTrader.Cbi.LogLevel.Alert);
+                    Log("Breakeven Stops: no open position on " + Instrument.FullName + "; stops not moved.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
@@ -577,7 +577,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 List<Order> stops = StopsToMove(account, position, out breakeven);
                 if (stops.Count == 0)
                 {
-                    Log("Breakeven Stops: no stop on " + Instrument.FullName + " is short of breakeven; nothing moved.", NinjaTrader.Cbi.LogLevel.Alert);
+                    Log("Breakeven Stops: no stop on " + Instrument.FullName + " is short of breakeven; nothing moved.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
@@ -589,7 +589,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     : breakeven >= exitQuote + master.TickSize);
                 if (!roomForStop)
                 {
-                    Log("Breakeven Stops: price has not passed breakeven " + master.FormatPrice(breakeven) + " by a tick yet; stops not moved.", NinjaTrader.Cbi.LogLevel.Alert);
+                    Log("Breakeven Stops: price has not passed breakeven " + master.FormatPrice(breakeven) + " by a tick yet; stops not moved.", NinjaTrader.Cbi.LogLevel.Information);
                     return;
                 }
 
