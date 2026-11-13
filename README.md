@@ -548,15 +548,16 @@ the two count toward volume only.
     in the last "Scale lookback" candles.
   - The panel scales to the CVD range of the last "Scale lookback" candles,
     so it does not jump as you scroll.
-- **Flow Absorption** (price panel): absorption zones, built from the
-  reference trader's own settings. Over the last "Window" of 1-minute bars
+- **Flow Absorption** (price panel): absorption zones. Over the last
+  "Window" of 1-minute bars
   (180, read from a 1-minute series whatever the chart's period), every
   bar's aggressor volume at each price is compared with the window's
   average: a bar whose volume at a price beats the average by
   "Sensitivity" standard deviations (2.5) is a touch there, and a price
-  with "Minimum touches" (2) becomes a zone. The band starts on the next
-  candle and runs right, with the zone's number in a colored box on the
-  right edge.
+  with "Minimum touches" (2) becomes a zone. The band starts after the
+  1-minute bar that confirms it and runs right, with the zone's number in
+  a colored box on the right edge. A zone whose touches leave the window
+  disappears.
   - Nothing changes during a 1-minute bar: zones appear, flip and end only
     when one closes.
   - Below price a zone is support (blue), above it resistance (red).
@@ -566,11 +567,6 @@ the two count toward volume only.
   - The number is the volume of the zone's touches; it only grows and
     stays with the price. At most "Maximum simultaneous zones" (8) show:
     the largest numbers stay.
-  - His settings map 1:1: Janela (barras de 1m) = Window, Sensibilidade =
-    Sensitivity, Toques minimos = Minimum touches, Barras p/ considerar
-    zona rompida = Bars to consider zone broken, Buffer de rompimento =
-    Break buffer, Max. de zonas simultaneas = Maximum simultaneous zones.
-    He keeps the defaults and only sets the text black on a white chart.
 - **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
   candles (hidden by default). A candle that breaks neither the previous
   high nor low, or breaks both, is gray (absorption); a triangle marks a

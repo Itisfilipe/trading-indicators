@@ -160,6 +160,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 for (int i = zones.Count - 1; i >= 0; i--)
                 {
                     AbsorptionZone zone = zones[i];
+                    int touchesLeft;
+                    if (!touches.TryGetValue(zone.Price, out touchesLeft) || touchesLeft < MinimumTouches)
+                    {
+                        zones.RemoveAt(i);
+                        continue;
+                    }
                     bool beyond = zone.IsSupport ? close < zone.Price - buffer : close > zone.Price + buffer;
                     zone.BarsBeyond = beyond ? zone.BarsBeyond + 1 : 0;
                     if (zone.BarsBeyond >= BrokenBars)

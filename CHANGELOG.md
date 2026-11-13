@@ -5,12 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
-- Flow Absorption rebuilt from the reference trader's own settings window:
-  zones are prices where 1-minute aggressor volume concentrated (2.5
-  standard deviations above the 180-bar average, in at least 2 bars), blue
-  below price and red above, broken after 3 closes more than 4 ticks
-  beyond and back on the other side if they still qualify, at most 8 at
-  once. The old grouping, minimum lots, multiplier, edge, consumed-level
+- Flow Absorption zones are now prices where 1-minute aggressor volume
+  concentrated (2.5 standard deviations above the 180-bar average, in at
+  least 2 bars), blue below price and red above, broken after 3 closes
+  more than 4 ticks beyond and back on the other side if they still
+  qualify, gone once their touches leave the window, at most 8 at once. The old grouping, minimum lots, multiplier, edge, consumed-level
   and opacity settings are gone.
 - Flow HA: "Show reversal triangles" turns the triangles off.
 - Flow CVD and Flow VD: new "Delta source" StructureVolume, which keeps
