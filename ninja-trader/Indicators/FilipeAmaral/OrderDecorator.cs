@@ -34,6 +34,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double Price;
             public int RemainingQuantity;
             public bool IsStopType;
+            public bool IsBuy;
         }
 
         private struct PendingLabel
@@ -286,6 +287,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         Price = price,
                         RemainingQuantity = Math.Max(0, order.Quantity - (int)order.Filled),
                         IsStopType = isStopType,
+                        IsBuy = order.OrderAction == OrderAction.Buy || order.OrderAction == OrderAction.BuyToCover,
                     });
                 }
             }
@@ -397,8 +399,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         nearestStopDistance = distance;
                 }
 
-            SimpleFont chartFont = chartControl.Properties.LabelFont;
-            SimpleFont boldFont = new SimpleFont(chartFont.Family.Source, (int)Math.Round(chartFont.Size)) { Bold = true };
+            Gui.Tools.SimpleFont boldFont = chartControl.Properties.LabelFont.Clone() as Gui.Tools.SimpleFont;
+            boldFont.Bold = true;
             SharpDX.DirectWrite.TextFormat textFormat = boldFont.ToDirectWriteTextFormat();
             List<PendingLabel> labels = new List<PendingLabel>();
             try
@@ -432,15 +434,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                         SharpDX.Direct2D1.Brush positionBrush = !pnlKnown || pnlMoney.ApproxCompare(0) == 0
                             ? neutralBrushDx : (inProfit ? profitBrushDx : lossBrushDx);
-                        // Below the line, where order labels never draw (they sit
-                        // above it): a stop moved to breakeven rests exactly on the
-                        // average price, and the two labels must stack, not overlap.
+                        // Below the half box an order centered on the same line would cover:
+                        // a stop moved to breakeven rests exactly on the average price.
+                        SharpDX.DirectWrite.TextLayout positionLayout = new SharpDX.DirectWrite.TextLayout(
+                            Core.Globals.DirectWriteFactory, positionLabel, textFormat, 600, textFormat.FontSize);
                         labels.Add(new PendingLabel
                         {
-                            Layout = new SharpDX.DirectWrite.TextLayout(
-                                Core.Globals.DirectWriteFactory, positionLabel, textFormat, 600, textFormat.FontSize),
+                            Layout = positionLayout,
                             Brush = positionBrush,
-                            Top = avgY + 3,
+                            Top = avgY + BoxHeight(positionLayout) / 2 + 3,
                         });
                     }
                 }
@@ -456,15 +458,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     bool isProfitSide = hasPosition && (positionIsLong ? signedPoints > 0 : signedPoints < 0);
 
                     // Colored by role, not by side: a stop trailed into profit stays red.
-                    // Flat there is no role yet, so working entries stay neutral.
+                    // Entries (flat, or adding to the position) have no exit role and stay neutral.
+                    bool isExit = hasPosition && (positionIsLong ? !order.IsBuy : order.IsBuy);
                     SharpDX.Direct2D1.Brush brush = neutralBrushDx;
-                    if (hasPosition)
+                    if (isExit)
                         brush = order.IsStopType ? lossBrushDx : profitBrushDx;
 
                     string label = OrderLabel(order.IsStopType, order.RemainingQuantity,
-                        Math.Abs(signedPoints) * order.RemainingQuantity, hasPosition && !isProfitSide, pointMoney);
+                        Math.Abs(signedPoints) * order.RemainingQuantity, isExit, isExit && !isProfitSide, pointMoney);
                     if (ShowTicks)
-                        label += FieldSeparator + string.Format("{0:F0}t", ticks);
+                        label += FieldSeparator + string.Format("{0:F0}t", ticks * order.RemainingQuantity);
                     if (ShowRMultiple && isProfitSide && nearestStopDistance > 0)
                         label += FieldSeparator + string.Format("{0:0.0}R", Math.Abs(signedPoints) / nearestStopDistance);
 
@@ -559,12 +562,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// profit side), targets do not; money shows only a minus. Numbers follow the
         /// reference trader's Brazilian format whatever the machine's culture.
         /// </summary>
-        private string OrderLabel(bool isStop, int quantity, double points, bool lossSide, double pointMoney)
+        private string OrderLabel(bool isStop, int quantity, double points, bool showSign, bool lossSide, double pointMoney)
         {
             string label = string.Format("{0} ({1})", isStop ? "STOP" : "ALVO", quantity);
             if (ShowPoints)
             {
-                string sign = !isStop || points == 0 ? "" : (lossSide ? "-" : "+");
+                string sign = !isStop || !showSign || points == 0 ? "" : (lossSide ? "-" : "+");
                 label += FieldSeparator + sign + points.ToString("#,0.##", LabelCulture) + " P";
             }
             if (ShowCurrency)

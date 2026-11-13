@@ -5,6 +5,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- OrderDecorator: orders that add to the position (or wait while flat) stay
+  neutral and unsigned instead of reading as a stop or target. Charts saved
+  earlier keep points off until "Show points" is turned on.
 - Flow POC and Flow HA start with the reference trader's settings: POC
   average over 30 candles, square markers of 20 px, dark green / red / gray
   with black 10-point labels, thinner borders and thicker dashes, outliers
