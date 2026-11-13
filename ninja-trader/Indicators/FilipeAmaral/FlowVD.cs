@@ -41,9 +41,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return brush;
         }
 
-        private System.Windows.Media.Brush WithOpacity(System.Windows.Media.Brush color)
+        private System.Windows.Media.Brush WithOpacity(System.Windows.Media.Brush source)
         {
-            System.Windows.Media.Brush brush = color.Clone();
+            System.Windows.Media.Brush brush = source.Clone();
             brush.Opacity = BarOpacity / 100.0;
             brush.Freeze();
             return brush;
