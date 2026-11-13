@@ -22,8 +22,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// Annotates every working order on the chart's instrument with its distance from
     /// the position's average price (or from the market when flat): ticks, points,
     /// money value for the order's remaining quantity, and for profit-side orders the
-    /// R multiple against the nearest stop. The platform draws the orders themselves;
-    /// this only adds the numbers their markers never show.
+    /// R multiple against the nearest stop, each in a rounded box colored by side.
+    /// The platform draws the orders themselves; this only adds the numbers their
+    /// markers never show.
     /// </summary>
     public class OrderDecorator : Indicator
     {
@@ -47,6 +48,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private SharpDX.Direct2D1.Brush profitBrushDx;
         private SharpDX.Direct2D1.Brush lossBrushDx;
         private SharpDX.Direct2D1.Brush neutralBrushDx;
+        private SharpDX.Direct2D1.Brush borderBrushDx;
+        private SharpDX.Direct2D1.Brush textBrushDx;
+        private SharpDX.Direct2D1.Brush shadowBrushDx;
+        private const float BoxPaddingX = 4f;
+        private const float BoxPaddingY = 2f;
 
         #region Properties
 
@@ -72,8 +78,49 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                  Description = "Distance kept between the labels and the right edge, clearing the platform's own order markers.")]
         public int RightMarginPixels { get; set; }
 
+        [Range(0, 20)]
+        [Display(Name = "Corner Radius", Order = 1, GroupName = "3. Box")]
+        public int CornerRadius { get; set; }
+
+        [Range(0.0, 1.0)]
+        [Display(Name = "Box Opacity", Order = 2, GroupName = "3. Box")]
+        public double BoxOpacity { get; set; }
+
+        [Display(Name = "Show Shadow", Order = 3, GroupName = "3. Box")]
+        public bool ShowShadow { get; set; }
+
+        [Range(0, 20)]
+        [Display(Name = "Shadow Offset", Order = 4, GroupName = "3. Box")]
+        public int ShadowOffset { get; set; }
+
+        [Range(0.0, 1.0)]
+        [Display(Name = "Shadow Opacity", Order = 5, GroupName = "3. Box")]
+        public double ShadowOpacity { get; set; }
+
         [XmlIgnore]
-        [Display(Name = "Profit Side Color", Order = 4, GroupName = "2. Colors")]
+        [Display(Name = "Border Color", Order = 7, GroupName = "2. Colors")]
+        public System.Windows.Media.Brush BorderColor { get; set; }
+
+        [Browsable(false)]
+        public string BorderColorSerializable
+        {
+            get { return Serialize.BrushToString(BorderColor); }
+            set { BorderColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Text Color", Order = 8, GroupName = "2. Colors")]
+        public System.Windows.Media.Brush TextColor { get; set; }
+
+        [Browsable(false)]
+        public string TextColorSerializable
+        {
+            get { return Serialize.BrushToString(TextColor); }
+            set { TextColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Target / Profit Side Background", Order = 4, GroupName = "2. Colors")]
         public System.Windows.Media.Brush ProfitColor { get; set; }
 
         [Browsable(false)]
@@ -84,7 +131,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Loss Side Color", Order = 5, GroupName = "2. Colors")]
+        [Display(Name = "Stop / Loss Side Background", Order = 5, GroupName = "2. Colors")]
         public System.Windows.Media.Brush LossColor { get; set; }
 
         [Browsable(false)]
@@ -95,7 +142,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         }
 
         [XmlIgnore]
-        [Display(Name = "Flat/Neutral Color", Order = 6, GroupName = "2. Colors")]
+        [Display(Name = "Flat/Neutral Background", Order = 6, GroupName = "2. Colors")]
         public System.Windows.Media.Brush NeutralColor { get; set; }
 
         [Browsable(false)]
@@ -126,14 +173,21 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 DisplayInDataBox = false;
                 PaintPriceMarkers = false;
 
-                ShowTicks = true;
+                ShowTicks = false;
                 ShowPoints = false;
                 ShowCurrency = true;
-                ShowRMultiple = true;
-                RightMarginPixels = 50;
-                ProfitColor = Brushes.SeaGreen;
-                LossColor = Brushes.Crimson;
+                ShowRMultiple = false;
+                RightMarginPixels = 105;
+                CornerRadius = 4;
+                BoxOpacity = 0.85;
+                ShowShadow = true;
+                ShadowOffset = 2;
+                ShadowOpacity = 0.35;
+                ProfitColor = Rgb(0x00, 0x64, 0x00);
+                LossColor = Rgb(0x80, 0x00, 0x00);
                 NeutralColor = Rgb(0x5F, 0x67, 0x73);
+                BorderColor = Rgb(0xF0, 0xF8, 0xFF);
+                TextColor = Brushes.White;
             }
             else if (State == State.Terminated)
             {
@@ -152,6 +206,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             profitBrushDx = ToDxBrush(ProfitColor);
             lossBrushDx = ToDxBrush(LossColor);
             neutralBrushDx = ToDxBrush(NeutralColor);
+            profitBrushDx.Opacity = (float)BoxOpacity;
+            lossBrushDx.Opacity = (float)BoxOpacity;
+            neutralBrushDx.Opacity = (float)BoxOpacity;
+            borderBrushDx = ToDxBrush(BorderColor);
+            textBrushDx = ToDxBrush(TextColor);
+            shadowBrushDx = ToDxBrush(Brushes.Black);
+            shadowBrushDx.Opacity = (float)ShadowOpacity;
         }
 
         private void DisposeDxBrushes()
@@ -159,6 +220,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (profitBrushDx != null) { profitBrushDx.Dispose(); profitBrushDx = null; }
             if (lossBrushDx != null) { lossBrushDx.Dispose(); lossBrushDx = null; }
             if (neutralBrushDx != null) { neutralBrushDx.Dispose(); neutralBrushDx = null; }
+            if (borderBrushDx != null) { borderBrushDx.Dispose(); borderBrushDx = null; }
+            if (textBrushDx != null) { textBrushDx.Dispose(); textBrushDx = null; }
+            if (shadowBrushDx != null) { shadowBrushDx.Dispose(); shadowBrushDx = null; }
         }
 
         private SharpDX.Direct2D1.Brush ToDxBrush(System.Windows.Media.Brush wpfBrush)
@@ -452,13 +516,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             for (int i = 0; i < labels.Count; i++)
             {
                 tops[i] = Math.Max(labels[i].Top, previousBottom + gap);
-                previousBottom = tops[i] + labels[i].Layout.Metrics.Height;
+                previousBottom = tops[i] + BoxHeight(labels[i]);
             }
 
             float nextTop = ChartPanel.Y + ChartPanel.H + gap;
             for (int i = labels.Count - 1; i >= 0; i--)
             {
-                tops[i] = Math.Min(tops[i], nextTop - gap - labels[i].Layout.Metrics.Height);
+                tops[i] = Math.Min(tops[i], nextTop - gap - BoxHeight(labels[i]));
                 nextTop = tops[i];
             }
 
@@ -466,15 +530,39 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             for (int i = 0; i < labels.Count; i++)
             {
                 tops[i] = Math.Max(tops[i], previousBottom + gap);
-                previousBottom = tops[i] + labels[i].Layout.Metrics.Height;
+                previousBottom = tops[i] + BoxHeight(labels[i]);
             }
 
             float panelRight = ChartPanel.X + ChartPanel.W;
             for (int i = 0; i < labels.Count; i++)
             {
-                float x = panelRight - RightMarginPixels - labels[i].Layout.Metrics.Width;
-                RenderTarget.DrawTextLayout(new SharpDX.Vector2(x, tops[i]), labels[i].Layout, labels[i].Brush);
+                float width = labels[i].Layout.Metrics.Width + 2 * BoxPaddingX;
+                float x = panelRight - RightMarginPixels - width;
+                SharpDX.Direct2D1.RoundedRectangle box = new SharpDX.Direct2D1.RoundedRectangle
+                {
+                    Rect = new SharpDX.RectangleF(x, tops[i], width, BoxHeight(labels[i])),
+                    RadiusX = CornerRadius,
+                    RadiusY = CornerRadius
+                };
+                if (ShowShadow)
+                {
+                    SharpDX.Direct2D1.RoundedRectangle shadow = new SharpDX.Direct2D1.RoundedRectangle
+                    {
+                        Rect = new SharpDX.RectangleF(x + ShadowOffset, tops[i] + ShadowOffset, width, BoxHeight(labels[i])),
+                        RadiusX = CornerRadius,
+                        RadiusY = CornerRadius
+                    };
+                    RenderTarget.FillRoundedRectangle(ref shadow, shadowBrushDx);
+                }
+                RenderTarget.FillRoundedRectangle(ref box, labels[i].Brush);
+                RenderTarget.DrawRoundedRectangle(ref box, borderBrushDx, 1f, null);
+                RenderTarget.DrawTextLayout(new SharpDX.Vector2(x + BoxPaddingX, tops[i] + BoxPaddingY), labels[i].Layout, textBrushDx);
             }
+        }
+
+        private static float BoxHeight(PendingLabel label)
+        {
+            return label.Layout.Metrics.Height + 2 * BoxPaddingY;
         }
     }
 }
