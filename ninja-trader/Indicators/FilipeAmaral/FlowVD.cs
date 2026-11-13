@@ -27,6 +27,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> rawDelta;
         private Series<double> priceHaOpen;
         private Series<double> priceHaClose;
+        private Series<int> structureSign;
         private Series<double> smoothedSize;
         private double previousSmoothedSize = double.NaN;
 
@@ -66,6 +67,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 rawDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 priceHaOpen = new Series<double>(this);
                 priceHaClose = new Series<double>(this);
+                structureSign = new Series<int>(this);
                 smoothedSize = new Series<double>(this, MaximumBarsLookBack.Infinite);
             }
             else if (State == State.Historical)
@@ -87,7 +89,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (!UsesTrades)
             {
                 StartBarIfNew();
-                delta = HeikinAshiVolumeDelta();
+                delta = DeltaSource == FlowDeltaSource.StructureVolume ? PriceStructureSign() * Volume[0] : HeikinAshiVolumeDelta();
                 ShowDelta();
             }
         }
@@ -123,6 +125,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             priceHaOpen[0] = haOpen;
             priceHaClose[0] = haClose;
             return haClose >= haOpen ? Volume[0] : -Volume[0];
+        }
+
+        // The sign holds until a price candle closes past the previous candle's high or low.
+        private int PriceStructureSign()
+        {
+            int sign;
+            if (CurrentBar == 0)
+                sign = Close[0] >= Open[0] ? 1 : -1;
+            else
+                sign = Close[0] > High[1] ? 1 : Close[0] < Low[1] ? -1 : structureSign[1];
+            structureSign[0] = sign;
+            return sign;
         }
 
         private void StartBarIfNew()
@@ -195,7 +209,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Smoothing period", Description = "Bar height is an EMA of this many candles' delta size; the color still follows each candle's own delta. 0 = raw delta.", Order = 4, GroupName = "1. Display")]
         public int SmoothingPeriod { get; set; }
 
-        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). HeikinAshiVolume: each candle's whole volume, positive while a Heikin-Ashi candle built from price is rising and negative while it falls; the reference trader's 1-minute VD and CVD are built this way. It follows price and needs no Tick Replay.", Order = 5, GroupName = "1. Display")]
+        [Display(Name = "Delta source", Description = "BidAsk: real aggression from each trade's bid and ask (needs Tick Replay). HeikinAshiVolume: each candle's whole volume, positive while a Heikin-Ashi candle built from price is rising and negative while it falls; the reference trader's 1-minute VD and CVD are built this way. StructureVolume: the whole volume signed by the last structure break of the price candles (+ after a close above the previous candle's high, - after a close below its low, unchanged otherwise). Both follow price and need no Tick Replay.", Order = 5, GroupName = "1. Display")]
         public FlowDeltaSource DeltaSource { get; set; }
 
         [XmlIgnore]

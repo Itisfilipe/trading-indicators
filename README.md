@@ -522,8 +522,13 @@ the two count toward volume only.
   Flow VD picks what delta means: HeikinAshiVolume (default) counts volume
   positive while a Heikin-Ashi candle built from price is rising and
   negative while it falls, which is how his 1-minute VD and CVD are built;
-  it follows price and needs no Tick Replay. BidAsk is real aggression from
-  each trade's bid and ask. On Flow CVD, "Sign each trade" gives each
+  it follows price and needs no Tick Replay. StructureVolume signs each
+  candle's volume by the last structure break of the price candles: up
+  after a close above the previous candle's high, down after a close below
+  its low, unchanged in between, so it keeps adding through pullbacks that
+  break nothing (a reading of the reference trader's "soma saldos enquanto
+  os topos/fundos não são rompidos"; compare it with HeikinAshiVolume on
+  replay). BidAsk is real aggression from each trade's bid and ask. On Flow CVD, "Sign each trade" gives each
   trade the price candle's color at that moment instead of signing the
   whole candle (needs Tick Replay). Signing the whole candle draws the same
   candles live and after a reload: a candle does not keep extremes from a

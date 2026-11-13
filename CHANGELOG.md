@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow CVD and Flow VD: new "Delta source" StructureVolume, which keeps
+  each candle's volume on the side of the last price candle that closed
+  past the previous candle's high or low, so the CVD keeps adding through
+  pullbacks that break nothing.
 - Flow CVD now draws like the reference trader's CVD: Heikin-Ashi-signed
   volume by default, breakout circles when the CVD breaks the previous
   candle the other way, pivot lines that stop where the CVD trades through

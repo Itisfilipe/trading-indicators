@@ -18,7 +18,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     public enum FlowDeltaSource
     {
         BidAsk,
-        HeikinAshiVolume
+        HeikinAshiVolume,
+        StructureVolume
     }
 
     /// <summary>
@@ -54,6 +55,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private Series<double> cvdClose;
         private Series<double> priceHaOpen;
         private Series<double> priceHaClose;
+        private Series<int> structureSign;
         private Series<double> shownOpen;
         private Series<double> shownHigh;
         private Series<double> shownLow;
@@ -139,6 +141,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 cvdClose = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 priceHaOpen = new Series<double>(this);
                 priceHaClose = new Series<double>(this);
+                structureSign = new Series<int>(this);
                 shownOpen = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 shownHigh = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 shownLow = new Series<double>(this, MaximumBarsLookBack.Infinite);
@@ -168,7 +171,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
 
             StartBarIfNew();
-            int side = DeltaSource == FlowDeltaSource.BidAsk ? TradeSide(e) : PriceHeikinAshiSign();
+            int side = DeltaSource == FlowDeltaSource.BidAsk ? TradeSide(e) : PriceSign();
             cumulativeDelta += side * e.Volume;
 
             cvdHigh[0] = Math.Max(cvdHigh[0], cumulativeDelta);
@@ -222,10 +225,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return haClose >= haOpen ? 1 : -1;
         }
 
+        private int PriceSign()
+        {
+            return DeltaSource == FlowDeltaSource.StructureVolume ? PriceStructureSign() : PriceHeikinAshiSign();
+        }
+
+        // The sign holds until a price candle closes past the previous candle's high or low.
+        private int PriceStructureSign()
+        {
+            int sign;
+            if (CurrentBar == 0)
+                sign = Close[0] >= Open[0] ? 1 : -1;
+            else
+                sign = Close[0] > High[1] ? 1 : Close[0] < Low[1] ? -1 : structureSign[1];
+            structureSign[0] = sign;
+            return sign;
+        }
+
         private void UpdateFromCandle()
         {
             StartBarIfNew();
-            double close = cvdOpen[0] + PriceHeikinAshiSign() * Volume[0];
+            double close = cvdOpen[0] + PriceSign() * Volume[0];
             // History sees only the final sign, so live must not keep extremes from earlier ones.
             cvdHigh[0] = Math.Max(cvdOpen[0], close);
             cvdLow[0] = Math.Min(cvdOpen[0], close);
@@ -288,10 +308,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MarkDivergence(CurrentBar - 1);
             }
 
-            if (DeltaSource == FlowDeltaSource.HeikinAshiVolume)
+            if (DeltaSource != FlowDeltaSource.BidAsk)
             {
                 if (SignEachTrade)
-                    PriceHeikinAshiSign();
+                    PriceSign();
                 else
                     UpdateFromCandle();
             }
@@ -567,10 +587,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Reset time", Description = "HH:MM, New York time. 09:30 is the cash open.", Order = 3, GroupName = "1. CVD")]
         public string ResetTime { get; set; }
 
-        [Display(Name = "Delta source", Description = "HeikinAshiVolume: volume signed by the Heikin-Ashi color of price, as the reference CVD appears to be built; needs no Tick Replay. BidAsk: real aggression from each trade's bid and ask (needs Tick Replay).", Order = 4, GroupName = "1. CVD")]
+        [Display(Name = "Delta source", Description = "HeikinAshiVolume: volume signed by the Heikin-Ashi color of price, as the reference CVD appears to be built; needs no Tick Replay. StructureVolume: volume signed by the last structure break of the price candles (+ after a close above the previous candle's high, - after a close below its low, unchanged otherwise). BidAsk: real aggression from each trade's bid and ask (needs Tick Replay).", Order = 4, GroupName = "1. CVD")]
         public FlowDeltaSource DeltaSource { get; set; }
 
-        [Display(Name = "Sign each trade", Description = "HeikinAshiVolume only. On: each trade's volume takes the price Heikin-Ashi color at that moment (needs Tick Replay). Off: the candle's whole volume takes its current color.", Order = 5, GroupName = "1. CVD")]
+        [Display(Name = "Sign each trade", Description = "HeikinAshiVolume and StructureVolume. On: each trade's volume takes the price sign at that moment (needs Tick Replay). Off: the candle's whole volume takes its current sign.", Order = 5, GroupName = "1. CVD")]
         public bool SignEachTrade { get; set; }
 
         [Display(Name = "Show breakout circles", Order = 1, GroupName = "2. Breakout Circles")]
