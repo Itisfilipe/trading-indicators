@@ -169,19 +169,18 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 - Labels every working order on the chart's instrument (any tool's orders,
   not just this repo's) with its distance from the position's average
-  price: ticks, optional points, and money value for the order's
-  remaining quantity.
-- Profit-side orders also show their R multiple against the nearest
-  working stop.
+  price, in a rounded box: dark red on the stop/loss side, dark green on
+  the target/profit side, white text. Money value for the order's
+  remaining quantity by default; ticks, points and the R multiple against
+  the nearest working stop can be turned on.
 - The execution (average price) line gets its own label: position side,
   quantity, and live unrealized P&L in ticks and money.
-- Colors by side: profit green, loss red; flat = neutral gray with
-  distance from the last price instead.
+- Flat: neutral gray with distance from the last price instead.
 - Orders at the same price merge into one label with the summed quantity,
   matching how the platform stacks their markers. Orders a few ticks apart
   get their labels stacked so they never overlap.
 - Each value (ticks, points, money, R) has its own on/off setting.
-- "Right margin" setting (default 50 px) keeps the labels clear of the
+- "Right margin" setting (default 105 px) keeps the labels clear of the
   platform's own order markers.
 - Reads the ChartTrader-selected account; labels update tick by tick.
 - Use: add to a chart with ChartTrader visible; working orders get their
@@ -567,15 +566,16 @@ the two count toward volume only.
   - The number is the volume of the zone's touches; it only grows and
     stays with the price. At most "Maximum simultaneous zones" (8) show:
     the largest numbers stay.
-- **Flow HA** (price panel): Heikin-Ashi candles over the chart's own
-  candles (hidden by default). A candle that breaks neither the previous
-  high nor low, or breaks both, is gray (absorption); a triangle marks a
-  color change after a run of "Candles before a reversal" candles, on
-  closed candles only ("Show reversal triangles" off hides them).
-  "Smoothing period" above 0 smooths the candles'
-  open, high, low and close with an EMA before the Heikin-Ashi math.
-  Dotted lines at the previous candle's high, middle and low show the
-  traffic area (stop on the far side, add zone in the near half). CCZ zones
+- **Flow HA** (price panel): smoothed Heikin-Ashi candles over the
+  chart's own candles (hidden by default): price is smoothed with an EMA
+  ("Smoothing period", 2), the Heikin-Ashi is built, then its values are
+  smoothed again ("Final smoothing period", 2). "Last levels" draws the
+  previous candle's high and low out past the last candle, red once that
+  candle trades through them. Off by default: gray candles that break
+  neither or both of the previous candle's extremes ("Mark inside
+  candles"), reversal triangles after a run of "Candles before a reversal"
+  candles ("Show reversal triangles"), and the traffic area, dotted lines
+  at the previous candle's high, middle and low ("Show traffic area"). CCZ zones
   box the range of each Heikin-Ashi candle whose body is at most "Body (%
   of range)" of its range (7% by default), colored while open and gray
   once a candle closes outside the box.

@@ -5,6 +5,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow HA: candles are smoothed twice (EMA 2 on price, then EMA 2 on the
+  Heikin-Ashi), the previous candle's high and low are drawn as levels, and
+  reversal triangles, gray inside candles and the traffic area start off.
+- OrderDecorator: labels are rounded boxes (dark red on the stop side, dark
+  green on the target side, white text) showing money only by default,
+  105 px from the right edge.
 - Flow Absorption zones are now prices where 1-minute aggressor volume
   concentrated (2.5 standard deviations above the 180-bar average, in at
   least 2 bars), blue below price and red above, broken after 3 closes
