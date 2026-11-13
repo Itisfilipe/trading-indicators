@@ -53,8 +53,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ZScoreLookback = 60;
                 SmoothingPeriod = 0;
                 DeltaSource = FlowDeltaSource.BidAsk;
-                BuyColor = Brushes.DodgerBlue;
-                SellColor = Brushes.Crimson;
+                BuyColor = Rgb(0x37, 0xF0, 0x9C);
+                SellColor = Rgb(0x1A, 0x1C, 0x26);
 
                 AddPlot(new Stroke(BuyColor, 2), PlotStyle.Bar, "Delta");
                 Plots[0].AutoWidth = true;
