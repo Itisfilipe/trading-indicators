@@ -28,7 +28,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             public double Price;
             public bool IsSupport;
-            public DateTime StartTime;
+            public int StartBar;
             public int BarsBeyond;
         }
 
@@ -41,6 +41,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private readonly List<AbsorptionZone> zones = new List<AbsorptionZone>();
         private readonly Dictionary<double, double> zoneVolume = new Dictionary<double, double>();
         private int formingBar = -1;
+        private SessionIterator minuteSession;
 
         protected override void OnStateChange()
         {
@@ -70,6 +71,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 AddDataSeries(BarsPeriodType.Minute, 1);
             }
+            else if (State == State.DataLoaded)
+            {
+                minuteSession = new SessionIterator(BarsArray[MinuteSeries]);
+            }
             else if (State == State.Historical)
             {
                 if (Calculate == Calculate.OnBarClose)
@@ -85,12 +90,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 return;
             // OnMarketData runs after OnBarUpdate, so the cells still hold the whole bar that just closed.
             if (formingBar == CurrentBars[MinuteSeries] - 1)
-                CloseMinute(Closes[MinuteSeries][1], Times[MinuteSeries][0]);
+                CloseMinute(Closes[MinuteSeries][1], CurrentBars[0]);
         }
 
         protected override void OnMarketData(MarketDataEventArgs e)
         {
             if (BarsInProgress != MinuteSeries || e.MarketDataType != MarketDataType.Last || CurrentBars[MinuteSeries] < 0)
+                return;
+            // Live trades keep arriving outside the trading-hours template while the minute series stands still.
+            if (State == State.Realtime && !minuteSession.IsInSession(e.Time, true, true))
                 return;
 
             if (CurrentBars[MinuteSeries] != formingBar)
@@ -108,7 +116,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             formingCells[price] = volume + e.Volume;
         }
 
-        private void CloseMinute(double close, DateTime nextBarTime)
+        private void CloseMinute(double close, int startBar)
         {
             window.Add(formingCells);
             if (window.Count > WindowBars)
@@ -178,7 +186,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     zoneVolume[price] = Math.Max(known, concentrated[price]);
                     if (brokenNow.Contains(price) || zones.Exists(z => z.Price == price) || price == close)
                         continue;
-                    zones.Add(new AbsorptionZone { Price = price, IsSupport = price < close, StartTime = nextBarTime });
+                    zones.Add(new AbsorptionZone { Price = price, IsSupport = price < close, StartBar = startBar });
                 }
 
                 if (zones.Count > MaximumZones)
@@ -211,10 +219,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 lock (zones)
                     foreach (AbsorptionZone zone in zones)
                     {
-                        int startBar = Bars.GetBar(zone.StartTime);
-                        if (startBar > ChartBars.ToIndex)
+                        if (zone.StartBar < 0 || zone.StartBar > ChartBars.ToIndex)
                             continue;
-                        float x1 = chartControl.GetXByBarIndex(ChartBars, startBar);
+                        float x1 = chartControl.GetXByBarIndex(ChartBars, zone.StartBar);
                         float y = chartScale.GetYByValue(zone.Price);
                         float top = y - BandHeight / 2;
                         if (x1 >= panelRight || top > ChartPanel.Y + ChartPanel.H || top + BandHeight < ChartPanel.Y)
