@@ -134,8 +134,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             int sign;
             if (CurrentBar == 0)
                 sign = Close[0] >= Open[0] ? 1 : -1;
+            else if (Close[0] > High[1])
+                sign = 1;
+            else if (Close[0] < Low[1])
+                sign = -1;
             else
-                sign = Close[0] > High[1] ? 1 : Close[0] < Low[1] ? -1 : structureSign[1];
+                sign = structureSign[1];
             structureSign[0] = sign;
             return sign;
         }
