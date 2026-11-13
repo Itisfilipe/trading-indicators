@@ -299,12 +299,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             List<long> mergeOrder = new List<long>();
             foreach (OrderInfo order in workingOrders)
             {
-                long priceKey = (long)Math.Round(order.Price / master.TickSize);
+                // Same price, side and type only, so an exit never takes another order's role.
+                long priceKey = (long)Math.Round(order.Price / master.TickSize) * 4
+                    + (order.IsBuy ? 2 : 0) + (order.IsStopType ? 1 : 0);
                 OrderInfo existing;
                 if (mergedByPrice.TryGetValue(priceKey, out existing))
                 {
                     existing.RemainingQuantity += order.RemainingQuantity;
-                    existing.IsStopType = existing.IsStopType || order.IsStopType;
                     mergedByPrice[priceKey] = existing;
                 }
                 else
@@ -562,7 +563,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         /// </summary>
         private string OrderLabel(bool isStop, int quantity, double points, bool isExit, bool lossSide, double pointMoney)
         {
-            string label = string.Format("{0} ({1})", isStop ? "STOP" : "ALVO", quantity);
+            string role = "ENTRADA";
+            if (isExit)
+                role = isStop ? "STOP" : "ALVO";
+            string label = string.Format("{0} ({1})", role, quantity);
             if (ShowPoints)
             {
                 string sign = "";
