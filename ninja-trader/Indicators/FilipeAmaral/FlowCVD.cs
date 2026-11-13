@@ -128,6 +128,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PivotDown = Rgb(0xFF, 0x00, 0x00);
                 PivotLineWidth = 2;
                 PivotLineOpacity = 0.8;
+                LastLevelsLength = 30;
 
                 AddPlot(new Stroke(Brushes.Transparent, 1), PlotStyle.Line, "CVD");
             }
@@ -487,7 +488,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     lock (pivots)
                         foreach (PivotLevel level in pivots)
                         {
-                            if (level.BarIndex > ChartBars.ToIndex || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
+                            if (level.BarIndex > ChartBars.ToIndex || level.BarIndex <= lastBar - LastLevelsLength
+                                || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
                                 continue;
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
                             float x2 = level.BrokenAt >= 0
@@ -836,6 +838,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 1)]
         [Display(Name = "Pivot line opacity", Order = 6, GroupName = "8. Pivot Levels")]
         public double PivotLineOpacity { get; set; }
+
+        [Range(1, 5000)]
+        [Display(Name = "Last levels length (bars)", Description = "Only pivots from the last this many candles get a line.", Order = 7, GroupName = "8. Pivot Levels")]
+        public int LastLevelsLength { get; set; }
 
         #endregion
     }

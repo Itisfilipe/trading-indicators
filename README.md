@@ -543,6 +543,7 @@ the two count toward volume only.
     pairs.
   - Pivot lines start at each CVD high (red) and low (dark green) and stop
     at the first candle that trades through them; the crossed part stays.
+    Only pivots from the last "Last levels length" candles (30) get a line.
   - Two short dashes mark the previous candle's high and low; each turns red
     once the forming candle crosses it.
   - A vertical stripe marks effort without result: orange when buying flow

@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow CVD draws pivot lines only for pivots of the last 30 candles
+  ("Last levels length"), so old levels no longer stack across the panel.
 - Flow CVD scales to the visible candles by default: scaled to the last 300
   candles, a drifting CVD left each candle one or two pixels tall and every
   old pivot line inside the panel. Charts already set up keep the old
