@@ -526,10 +526,9 @@ the two count toward volume only.
   candle's volume by the last structure break of the price candles: up
   after a close above the previous candle's high, down after a close below
   its low, unchanged in between, so it keeps adding through pullbacks that
-  break nothing (a reading of the reference trader's "soma saldos enquanto
-  os topos/fundos não são rompidos"; compare it with HeikinAshiVolume on
-  replay). BidAsk is real aggression from each trade's bid and ask. On Flow CVD, "Sign each trade" gives each
-  trade the price candle's color at that moment instead of signing the
+  break nothing. BidAsk is real aggression from each trade's bid and ask.
+  On Flow CVD, "Sign each trade" gives each trade the price sign at that
+  moment instead of signing the
   whole candle (needs Tick Replay). Signing the whole candle draws the same
   candles live and after a reload: a candle does not keep extremes from a
   color its price candle had earlier in the minute. The CVD keeps accumulating across
@@ -576,8 +575,8 @@ the two count toward volume only.
   candles (hidden by default). A candle that breaks neither the previous
   high nor low, or breaks both, is gray (absorption); a triangle marks a
   color change after a run of "Candles before a reversal" candles, on
-  closed candles only ("Show reversal triangles" off hides them, as the
-  reference trader runs his HA). "Smoothing period" above 0 smooths the candles'
+  closed candles only ("Show reversal triangles" off hides them).
+  "Smoothing period" above 0 smooths the candles'
   open, high, low and close with an EMA before the Heikin-Ashi math.
   Dotted lines at the previous candle's high, middle and low show the
   traffic area (stop on the far side, add zone in the near half). CCZ zones
