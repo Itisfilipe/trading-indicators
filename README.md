@@ -563,8 +563,9 @@ the two count toward volume only.
   least "Minimum touches" (2) bars of the window. The band starts after the
   1-minute bar that confirms it and runs right, with the zone's number in
   a colored box on the right edge: the contracts traded at that price
-  inside the window. A zone disappears once its heavy minute leaves the
-  window.
+  inside the window. A zone disappears once it stops qualifying: its
+  heavy minute leaves the window or no longer stands out, or it trades in
+  fewer than "Minimum touches" bars.
   - Nothing changes during a 1-minute bar: zones appear, flip and end only
     when one closes.
   - Below price a zone is support (blue), above it resistance (red).
