@@ -473,6 +473,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     ? Math.Max(1f, (float)(chartControl.GetBarPaintWidth(ChartBars) * WidthScale))
                     : FixedCandleWidth;
                 int lastBar = Bars.Count - 1;
+                // On bar close the forming candle has no CVD yet; recent marks count from the last one that does.
+                int lastCvdBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
                 float levelsEndX = chartControl.GetXByBarIndex(ChartBars, lastBar) + (float)(CurrentPad * barDistance);
 
                 if (ShowDivergence)
@@ -490,7 +492,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         foreach (PivotLevel level in pivots)
                         {
                             // INFERRED from his chart: a broken level disappears, and only recent pivots get a line.
-                            if (level.BrokenAt >= 0 || level.BarIndex > ChartBars.ToIndex || level.BarIndex < lastBar - LastLevelsLength + 1)
+                            if (level.BrokenAt >= 0 || level.BarIndex > ChartBars.ToIndex || level.BarIndex < lastCvdBar - LastLevelsLength + 1)
                                 continue;
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
                             float x2 = levelsEndX;
@@ -520,8 +522,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RenderTarget.DrawRectangle(body, wick, 1f);
                 }
 
-                // On bar close the forming candle has no CVD yet; the dashes follow the last one that does.
-                int dashBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
+                int dashBar = lastCvdBar;
                 if (dashBar <= ChartBars.ToIndex && HasCvd(dashBar) && HasCvd(dashBar - 1))
                 {
                     double previousHigh = shownHigh.GetValueAt(dashBar - 1);
@@ -537,7 +538,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 }
 
                 if (ShowBreakoutCircles)
-                    for (int barIndex = Math.Max(Math.Max(1, ChartBars.FromIndex), lastBar - ColorLookback + 1); barIndex <= ChartBars.ToIndex; barIndex++)
+                    for (int barIndex = Math.Max(Math.Max(1, ChartBars.FromIndex), lastCvdBar - ColorLookback + 1); barIndex <= ChartBars.ToIndex; barIndex++)
                     {
                         if (!HasCvd(barIndex) || !HasCvd(barIndex - 1) || resetBars.GetValueAt(barIndex))
                             continue;
