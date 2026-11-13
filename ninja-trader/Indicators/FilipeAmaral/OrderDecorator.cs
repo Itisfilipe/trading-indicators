@@ -239,7 +239,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             base.OnRender(chartControl, chartScale);
 
             if (Bars == null || ChartControl == null || ChartPanel == null
-                || RenderTarget == null || neutralBrushDx == null)
+                || RenderTarget == null || neutralBrushDx == null || IsInHitTest)
                 return;
 
             Account account = ChartControl.OwnerChart?.ChartTrader?.Account;
@@ -483,12 +483,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (ShowRMultiple && isProfitSide && nearestStopDistance > 0)
                         label += string.Format("  {0:0.0}R", Math.Abs(signedPoints) / nearestStopDistance);
 
+                    SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
+                        Core.Globals.DirectWriteFactory, label, textFormat, 600, textFormat.FontSize);
                     labels.Add(new PendingLabel
                     {
-                        Layout = new SharpDX.DirectWrite.TextLayout(
-                            Core.Globals.DirectWriteFactory, label, textFormat, 600, textFormat.FontSize),
+                        Layout = layout,
                         Brush = brush,
-                        Top = y - textFormat.FontSize - 3,
+                        Top = y - layout.Metrics.Height - 2 * BoxPaddingY - 3,
                     });
                 }
 
