@@ -5,6 +5,9 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-13
 
+- Flow Absorption: one heavy minute at a price is enough for a zone, as
+  long as the price traded in at least 2 minutes of the window, so the
+  single big prints the reference chart marks now show up as zones.
 - Flow Absorption: a zone's number is now the contracts traded at its
   price inside the window, as on the reference chart, instead of only the
   volume of its concentrated minutes; numbers run higher and can shrink as

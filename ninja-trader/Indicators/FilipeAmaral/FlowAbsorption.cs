@@ -141,17 +141,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             Dictionary<double, int> touches = new Dictionary<double, int>();
             Dictionary<double, double> traded = new Dictionary<double, double>();
+            HashSet<double> absorbed = new HashSet<double>();
             foreach (Dictionary<double, double> cells in window)
                 foreach (KeyValuePair<double, double> cell in cells)
                 {
                     double total;
                     traded.TryGetValue(cell.Key, out total);
                     traded[cell.Key] = total + cell.Value;
-                    if (cell.Value <= threshold)
-                        continue;
                     int touched;
                     touches.TryGetValue(cell.Key, out touched);
                     touches[cell.Key] = touched + 1;
+                    if (cell.Value > threshold)
+                        absorbed.Add(cell.Key);
                 }
 
             double buffer = BreakBufferTicks * TickSize;
@@ -163,7 +164,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     AbsorptionZone zone = zones[i];
                     int touchCount;
                     touches.TryGetValue(zone.Price, out touchCount);
-                    if (touchCount < MinimumTouches)
+                    if (touchCount < MinimumTouches || !absorbed.Contains(zone.Price))
                     {
                         zones.RemoveAt(i);
                         continue;
@@ -180,7 +181,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 foreach (KeyValuePair<double, int> entry in touches)
                 {
                     double price = entry.Key;
-                    if (entry.Value < MinimumTouches)
+                    if (entry.Value < MinimumTouches || !absorbed.Contains(price))
                         continue;
                     zoneVolume[price] = traded[price];
                     if (brokenNow.Contains(price) || zones.Exists(z => z.Price == price) || price == close)
@@ -263,11 +264,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         public int WindowBars { get; set; }
 
         [Range(0.5, 10), NinjaScriptProperty]
-        [Display(Name = "Sensitivity (std devs above mean)", Description = "How far above the window's average volume per price a bar's volume at a price must be to count as a touch.", Order = 2, GroupName = "1. Parameters")]
+        [Display(Name = "Sensitivity (std devs above mean)", Description = "How far above the window's average volume per price a bar's volume at a price must be to mark absorption there.", Order = 2, GroupName = "1. Parameters")]
         public double Sensitivity { get; set; }
 
         [Range(1, 50), NinjaScriptProperty]
-        [Display(Name = "Minimum touches to confirm zone", Description = "1-minute bars in the window that must concentrate volume at the price.", Order = 3, GroupName = "1. Parameters")]
+        [Display(Name = "Minimum touches to confirm zone", Description = "1-minute bars in the window that must trade at an absorption price.", Order = 3, GroupName = "1. Parameters")]
         public int MinimumTouches { get; set; }
 
         [Range(1, 50), NinjaScriptProperty]
