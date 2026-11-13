@@ -115,7 +115,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double close = (barOpen + barHigh + barLow + barClose) / 4;
             rawOpen[0] = open;
             rawClose[0] = close;
-            // An EMA keeps high >= open/close >= low, so the smoothed candle stays well formed.
             haOpen[0] = FinalSmooth(haOpen, open);
             haClose[0] = FinalSmooth(haClose, close);
             haHigh[0] = FinalSmooth(haHigh, Math.Max(barHigh, Math.Max(open, close)));
@@ -257,7 +256,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        // The previous candle's high and low, turning to the broken color once the last candle trades through them.
         private void DrawLastLevels(ChartControl chartControl, ChartScale chartScale)
         {
             int lastBar = Bars.Count - 1;

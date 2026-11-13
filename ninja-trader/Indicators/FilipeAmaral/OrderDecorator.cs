@@ -489,7 +489,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         Layout = layout,
                         Brush = brush,
-                        Top = y - layout.Metrics.Height - 2 * BoxPaddingY - 3,
+                        Top = y - BoxHeight(layout) - 3,
                     });
                 }
 
@@ -517,13 +517,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             for (int i = 0; i < labels.Count; i++)
             {
                 tops[i] = Math.Max(labels[i].Top, previousBottom + gap);
-                previousBottom = tops[i] + BoxHeight(labels[i]);
+                previousBottom = tops[i] + BoxHeight(labels[i].Layout);
             }
 
             float nextTop = ChartPanel.Y + ChartPanel.H + gap;
             for (int i = labels.Count - 1; i >= 0; i--)
             {
-                tops[i] = Math.Min(tops[i], nextTop - gap - BoxHeight(labels[i]));
+                tops[i] = Math.Min(tops[i], nextTop - gap - BoxHeight(labels[i].Layout));
                 nextTop = tops[i];
             }
 
@@ -531,17 +531,18 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             for (int i = 0; i < labels.Count; i++)
             {
                 tops[i] = Math.Max(tops[i], previousBottom + gap);
-                previousBottom = tops[i] + BoxHeight(labels[i]);
+                previousBottom = tops[i] + BoxHeight(labels[i].Layout);
             }
 
             float panelRight = ChartPanel.X + ChartPanel.W;
             for (int i = 0; i < labels.Count; i++)
             {
                 float width = labels[i].Layout.Metrics.Width + 2 * BoxPaddingX;
+                float height = BoxHeight(labels[i].Layout);
                 float x = panelRight - RightMarginPixels - width;
                 SharpDX.Direct2D1.RoundedRectangle box = new SharpDX.Direct2D1.RoundedRectangle
                 {
-                    Rect = new SharpDX.RectangleF(x, tops[i], width, BoxHeight(labels[i])),
+                    Rect = new SharpDX.RectangleF(x, tops[i], width, height),
                     RadiusX = CornerRadius,
                     RadiusY = CornerRadius
                 };
@@ -549,7 +550,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     SharpDX.Direct2D1.RoundedRectangle shadow = new SharpDX.Direct2D1.RoundedRectangle
                     {
-                        Rect = new SharpDX.RectangleF(x + ShadowOffset, tops[i] + ShadowOffset, width, BoxHeight(labels[i])),
+                        Rect = new SharpDX.RectangleF(x + ShadowOffset, tops[i] + ShadowOffset, width, height),
                         RadiusX = CornerRadius,
                         RadiusY = CornerRadius
                     };
@@ -561,9 +562,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        private static float BoxHeight(PendingLabel label)
+        private static float BoxHeight(SharpDX.DirectWrite.TextLayout layout)
         {
-            return label.Layout.Metrics.Height + 2 * BoxPaddingY;
+            return layout.Metrics.Height + 2 * BoxPaddingY;
         }
     }
 }
