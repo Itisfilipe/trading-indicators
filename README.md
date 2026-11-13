@@ -570,10 +570,10 @@ the two count toward volume only.
   - Below price a zone is support (blue), above it resistance (red).
   - A zone breaks after "Bars to consider zone broken" (3) closes in a row
     more than "Break buffer" (4 ticks) beyond it. If it still qualifies it
-    comes back at the next close on its new side, with the same number.
-  - The number is the volume of the zone's touches; it only grows and
-    stays with the price. At most "Maximum simultaneous zones" (8) show:
-    the largest numbers stay.
+    comes back at the next close on its new side.
+  - The number grows and shrinks as minutes enter and leave the window.
+    At most "Maximum simultaneous zones" (8) show: the largest numbers
+    stay.
 - **Flow HA** (price panel): smoothed Heikin-Ashi candles over the
   chart's own candles (hidden by default): price is smoothed with an EMA
   ("Smoothing period", 2), the Heikin-Ashi is built, then its values are
