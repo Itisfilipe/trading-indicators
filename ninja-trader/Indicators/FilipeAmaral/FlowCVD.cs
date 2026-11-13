@@ -491,13 +491,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     lock (pivots)
                         foreach (PivotLevel level in pivots)
                         {
-                            // INFERRED from his chart: a broken level disappears, and only recent pivots get a line.
                             if (level.BrokenAt >= 0 || level.BarIndex > ChartBars.ToIndex || level.BarIndex < lastCvdBar - LastLevelsLength + 1)
                                 continue;
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
-                            float x2 = levelsEndX;
                             float y = chartScale.GetYByValue(level.Value);
-                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(x2, y),
+                            RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(levelsEndX, y),
                                 level.IsHigh ? pivotDownBrush : pivotUpBrush, PivotLineWidth);
                         }
 
@@ -606,10 +604,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Circle radius (px)", Order = 2, GroupName = "2. Breakout Circles")]
         public int CircleRadius { get; set; }
 
-        [Range(1, 1000)]
-        [Display(Name = "Color lookback (bars)", Description = "Circles show only on the last this many candles.", Order = 9, GroupName = "2. Breakout Circles")]
-        public int ColorLookback { get; set; }
-
         [XmlIgnore]
         [Display(Name = "Bull fill", Order = 3, GroupName = "2. Breakout Circles")]
         public System.Windows.Media.Brush BullFill { get; set; }
@@ -661,6 +655,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             get { return Serialize.BrushToString(BearBorder); }
             set { BearBorder = Serialize.StringToBrush(value); }
         }
+
+        [Range(1, 1000)]
+        [Display(Name = "Color lookback (bars)", Description = "Circles show only on the last this many candles.", Order = 9, GroupName = "2. Breakout Circles")]
+        public int ColorLookback { get; set; }
 
         [Display(Name = "Match chart candle width", Order = 1, GroupName = "3. Candle Width")]
         public bool MatchChartCandleWidth { get; set; }
@@ -813,10 +811,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Pivot strength (bars each side)", Order = 2, GroupName = "8. Pivot Levels")]
         public int PivotStrength { get; set; }
 
-        [Range(1, 5000)]
-        [Display(Name = "Last levels length (bars)", Description = "Only pivots from the last this many candles get a line; a broken line disappears.", Order = 9, GroupName = "8. Pivot Levels")]
-        public int LastLevelsLength { get; set; }
-
         [XmlIgnore]
         [Display(Name = "Pivot up", Description = "Line from a CVD low.", Order = 3, GroupName = "8. Pivot Levels")]
         public System.Windows.Media.Brush PivotUp { get; set; }
@@ -846,6 +840,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Range(0, 1)]
         [Display(Name = "Pivot line opacity", Order = 6, GroupName = "8. Pivot Levels")]
         public double PivotLineOpacity { get; set; }
+
+        [Range(1, 5000)]
+        [Display(Name = "Last levels length (bars)", Description = "Only pivots from the last this many candles get a line; a broken line disappears.", Order = 9, GroupName = "8. Pivot Levels")]
+        public int LastLevelsLength { get; set; }
 
         #endregion
     }
