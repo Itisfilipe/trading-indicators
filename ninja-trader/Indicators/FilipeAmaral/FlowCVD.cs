@@ -38,6 +38,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private readonly List<PivotLevel> pivots = new List<PivotLevel>();
         private readonly List<PivotLevel> unbrokenPivots = new List<PivotLevel>();
+        private readonly List<PivotLevel> provisionalBreaks = new List<PivotLevel>();
         private SessionIterator sessionIterator;
         private int activeBar = -1;
         private double cumulativeDelta;
@@ -195,6 +196,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             activeBar = CurrentBar;
             activeBarIsReset = IsResetBar(CurrentBar);
             resetBars[0] = activeBarIsReset;
+            lock (pivots)
+                provisionalBreaks.Clear();
             if (activeBarIsReset)
             {
                 cumulativeDelta = 0;
@@ -250,6 +253,17 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
             // A pivot line stops at the first candle that trades through it, the forming one included.
             lock (pivots)
+            {
+                // A whole-candle CVD can retreat within the bar, and history sees only its final shape.
+                if (!UsesTrades)
+                {
+                    foreach (PivotLevel level in provisionalBreaks)
+                    {
+                        level.BrokenAt = -1;
+                        unbrokenPivots.Add(level);
+                    }
+                    provisionalBreaks.Clear();
+                }
                 for (int i = unbrokenPivots.Count - 1; i >= 0; i--)
                 {
                     PivotLevel level = unbrokenPivots[i];
@@ -257,8 +271,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         level.BrokenAt = CurrentBar;
                         unbrokenPivots.RemoveAt(i);
+                        if (!UsesTrades)
+                            provisionalBreaks.Add(level);
                     }
                 }
+            }
         }
 
         protected override void OnBarUpdate()
@@ -370,7 +387,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 maxEffort = Math.Max(maxEffort, Math.Abs(cvdClose.GetValueAt(barIndex) - cvdClose.GetValueAt(barIndex - lookback)));
                 maxResult = Math.Max(maxResult, Math.Abs(Bars.GetClose(barIndex) - Bars.GetClose(barIndex - lookback)));
             }
-            if (maxEffort <= 0 || maxResult <= 0)
+            if (maxEffort <= 0)
                 return;
 
             double effort = cvdClose.GetValueAt(closedBar) - cvdClose.GetValueAt(closedBar - lookback);
@@ -378,7 +395,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double effortScaled = Math.Abs(effort) / maxEffort;
             if (effortScaled < MinEffortThreshold)
                 return;
-            double progress = Math.Sign(effort) * result / maxResult;
+            double progress = maxResult > 0 ? Math.Sign(effort) * result / maxResult : 0;
             if (progress / effortScaled <= MaxResultRatio)
                 divergence[1] = effort > 0 ? 1 : -1;
         }
