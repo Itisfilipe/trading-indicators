@@ -19,12 +19,11 @@ using SharpDX.Direct2D1;
 namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 {
     /// <summary>
-    /// Annotates every working order on the chart's instrument with its distance from
-    /// the position's average price (or from the market when flat): ticks, points,
-    /// money value for the order's remaining quantity, and for profit-side orders the
-    /// R multiple against the nearest stop, each in a rounded box colored by side.
-    /// The platform draws the orders themselves; this only adds the numbers their
-    /// markers never show.
+    /// Annotates every working order on the chart's instrument with a box centered on
+    /// its line: STOP or ALVO with the quantity, points times quantity and the money
+    /// value against the position's average price (or the market when flat), red for
+    /// stops and green for targets. The platform draws the orders themselves; this
+    /// only adds the numbers their markers never show.
     /// </summary>
     public class OrderDecorator : Indicator
     {
@@ -35,7 +34,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double Price;
             public int RemainingQuantity;
             public bool IsStopType;
-            public string TypeLabel;
         }
 
         private struct PendingLabel
@@ -53,6 +51,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private SharpDX.Direct2D1.Brush shadowBrushDx;
         private const float BoxPaddingX = 4f;
         private const float BoxPaddingY = 2f;
+        private const string FieldSeparator = "  :  ";
+        private static readonly System.Globalization.CultureInfo LabelCulture = new System.Globalization.CultureInfo("pt-BR");
 
         #region Properties
 
@@ -77,6 +77,14 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Right Margin (pixels)", Order = 4, GroupName = "1. Content",
                  Description = "Distance kept between the labels and the right edge, clearing the platform's own order markers.")]
         public int RightMarginPixels { get; set; }
+
+        [Display(Name = "Label the Average Price", Order = 5, GroupName = "1. Content",
+                 Description = "Add a box on the position's average-price line with side, quantity and unrealized P&L.")]
+        public bool ShowPositionLabel { get; set; }
+
+        [Display(Name = "Keep Labels Apart", Order = 6, GroupName = "1. Content",
+                 Description = "Push labels of nearby orders apart instead of letting them overlap on their own lines.")]
+        public bool AvoidOverlap { get; set; }
 
         [Range(0, 20)]
         [Display(Name = "Corner Radius", Order = 1, GroupName = "3. Box")]
@@ -165,7 +173,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Labels every working order with its distance from the position average (ticks, points, money, R vs the nearest stop).";
+                Description = "Labels every working order with STOP or ALVO, its quantity, points times quantity and money value against the position average.";
                 Name = "Order Decorator";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
@@ -174,9 +182,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PaintPriceMarkers = false;
 
                 ShowTicks = false;
-                ShowPoints = false;
+                ShowPoints = true;
                 ShowCurrency = true;
                 ShowRMultiple = false;
+                ShowPositionLabel = false;
+                AvoidOverlap = false;
                 RightMarginPixels = 105;
                 CornerRadius = 4;
                 BoxOpacity = 0.85;
@@ -271,18 +281,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     if (price <= 0)
                         continue; // market orders and the like carry no resting price to label
 
-                    string typeLabel;
-                    if (order.OrderType == OrderType.StopMarket) typeLabel = "STP";
-                    else if (order.OrderType == OrderType.StopLimit) typeLabel = "STP LMT";
-                    else if (order.OrderType == OrderType.MIT) typeLabel = "MIT";
-                    else typeLabel = "LMT";
-
                     workingOrders.Add(new OrderInfo
                     {
                         Price = price,
                         RemainingQuantity = Math.Max(0, order.Quantity - (int)order.Filled),
                         IsStopType = isStopType,
-                        TypeLabel = typeLabel,
                     });
                 }
             }
@@ -300,17 +303,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 {
                     existing.RemainingQuantity += order.RemainingQuantity;
                     existing.IsStopType = existing.IsStopType || order.IsStopType;
-                    // Exact token comparison: substring matching would treat "STP" as
-                    // already present inside "STP LMT" and drop a distinct type.
-                    bool hasToken = false;
-                    foreach (string token in existing.TypeLabel.Split('+'))
-                        if (token == order.TypeLabel)
-                        {
-                            hasToken = true;
-                            break;
-                        }
-                    if (!hasToken)
-                        existing.TypeLabel += "+" + order.TypeLabel;
                     mergedByPrice[priceKey] = existing;
                 }
                 else
@@ -405,14 +397,16 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         nearestStopDistance = distance;
                 }
 
-            SharpDX.DirectWrite.TextFormat textFormat = chartControl.Properties.LabelFont.ToDirectWriteTextFormat();
+            SimpleFont chartFont = chartControl.Properties.LabelFont;
+            SimpleFont boldFont = new SimpleFont(chartFont.Family.Source, (int)Math.Round(chartFont.Size)) { Bold = true };
+            SharpDX.DirectWrite.TextFormat textFormat = boldFont.ToDirectWriteTextFormat();
             List<PendingLabel> labels = new List<PendingLabel>();
             try
             {
                 // The execution (average price) line: live unrealized P&L in ticks and
                 // money, so the entry line answers "where am I" without the trader
                 // toggling the platform's own P&L display.
-                if (hasPosition)
+                if (hasPosition && ShowPositionLabel)
                 {
                     bool inProfit = pnlMoney > 0;
 
@@ -459,29 +453,20 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                     double signedPoints = order.Price - referencePrice;
                     double ticks = Math.Abs(signedPoints) / master.TickSize;
-                    double money = Math.Abs(signedPoints) * pointMoney * order.RemainingQuantity;
+                    bool isProfitSide = hasPosition && (positionIsLong ? signedPoints > 0 : signedPoints < 0);
 
-                    // Which side of the reference an order rests on decides win/lose:
-                    // for a long, anything above average pays and anything below costs;
-                    // shorts mirror. Flat has no side, so it stays neutral.
-                    bool isProfitSide = false;
+                    // Colored by role, not by side: a stop trailed into profit stays red.
+                    // Flat there is no role yet, so working entries stay neutral.
                     SharpDX.Direct2D1.Brush brush = neutralBrushDx;
                     if (hasPosition)
-                    {
-                        isProfitSide = positionIsLong ? signedPoints > 0 : signedPoints < 0;
-                        brush = isProfitSide ? profitBrushDx : lossBrushDx;
-                    }
+                        brush = order.IsStopType ? lossBrushDx : profitBrushDx;
 
-                    string label = order.TypeLabel;
+                    string label = OrderLabel(order.IsStopType, order.RemainingQuantity,
+                        Math.Abs(signedPoints) * order.RemainingQuantity, hasPosition && !isProfitSide, pointMoney);
                     if (ShowTicks)
-                        label += string.Format(" {0:F0}t", ticks);
-                    if (ShowPoints)
-                        label += string.Format("  {0:0.00}pt", Math.Abs(signedPoints));
-                    if (ShowCurrency)
-                        label += string.Format("  {0}{1}", !hasPosition ? "" : (isProfitSide ? "+" : "-"),
-                            Core.Globals.FormatCurrency(money));
+                        label += FieldSeparator + string.Format("{0:F0}t", ticks);
                     if (ShowRMultiple && isProfitSide && nearestStopDistance > 0)
-                        label += string.Format("  {0:0.0}R", Math.Abs(signedPoints) / nearestStopDistance);
+                        label += FieldSeparator + string.Format("{0:0.0}R", Math.Abs(signedPoints) / nearestStopDistance);
 
                     SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
                         Core.Globals.DirectWriteFactory, label, textFormat, 600, textFormat.FontSize);
@@ -489,11 +474,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         Layout = layout,
                         Brush = brush,
-                        Top = y - BoxHeight(layout) - 3,
+                        Top = y - BoxHeight(layout) / 2,
                     });
                 }
 
-                DrawWithoutOverlap(labels);
+                DrawLabels(labels);
             }
             finally
             {
@@ -503,35 +488,41 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
-        // Orders a few ticks apart would print their labels on top of each other.
-        // Walking the labels top to bottom pushes each one just below the previous,
-        // a bottom-up pass pulls back any pushed off the panel's bottom, and a final
+        // With Keep Labels Apart, orders a few ticks apart get their boxes pushed
+        // off each other: top to bottom each box goes just below the previous, a
+        // bottom-up pass pulls back any pushed off the panel's bottom, and a final
         // top-down pass keeps them below its top; price order never changes.
-        private void DrawWithoutOverlap(List<PendingLabel> labels)
+        private void DrawLabels(List<PendingLabel> labels)
         {
             const float gap = 1f;
             labels.Sort((a, b) => a.Top.CompareTo(b.Top));
 
             float[] tops = new float[labels.Count];
-            float previousBottom = float.MinValue;
             for (int i = 0; i < labels.Count; i++)
-            {
-                tops[i] = Math.Max(labels[i].Top, previousBottom + gap);
-                previousBottom = tops[i] + BoxHeight(labels[i].Layout);
-            }
+                tops[i] = labels[i].Top;
 
-            float nextTop = ChartPanel.Y + ChartPanel.H + gap;
-            for (int i = labels.Count - 1; i >= 0; i--)
+            if (AvoidOverlap)
             {
-                tops[i] = Math.Min(tops[i], nextTop - gap - BoxHeight(labels[i].Layout));
-                nextTop = tops[i];
-            }
+                float previousBottom = float.MinValue;
+                for (int i = 0; i < labels.Count; i++)
+                {
+                    tops[i] = Math.Max(tops[i], previousBottom + gap);
+                    previousBottom = tops[i] + BoxHeight(labels[i].Layout);
+                }
 
-            previousBottom = ChartPanel.Y - gap;
-            for (int i = 0; i < labels.Count; i++)
-            {
-                tops[i] = Math.Max(tops[i], previousBottom + gap);
-                previousBottom = tops[i] + BoxHeight(labels[i].Layout);
+                float nextTop = ChartPanel.Y + ChartPanel.H + gap;
+                for (int i = labels.Count - 1; i >= 0; i--)
+                {
+                    tops[i] = Math.Min(tops[i], nextTop - gap - BoxHeight(labels[i].Layout));
+                    nextTop = tops[i];
+                }
+
+                previousBottom = ChartPanel.Y - gap;
+                for (int i = 0; i < labels.Count; i++)
+                {
+                    tops[i] = Math.Max(tops[i], previousBottom + gap);
+                    previousBottom = tops[i] + BoxHeight(labels[i].Layout);
+                }
             }
 
             float panelRight = ChartPanel.X + ChartPanel.W;
@@ -560,6 +551,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 RenderTarget.DrawRoundedRectangle(ref box, borderBrushDx, 1f, null);
                 RenderTarget.DrawTextLayout(new SharpDX.Vector2(x + BoxPaddingX, tops[i] + BoxPaddingY), labels[i].Layout, textBrushDx);
             }
+        }
+
+        /// <summary>
+        /// "STOP (4)  :  -230 P  :  $ -4.600,00" / "ALVO (2)  :  31 P  :  $ 620,00".
+        /// Points are the distance times the quantity; stops carry a sign (+ on the
+        /// profit side), targets do not; money shows only a minus. Numbers follow the
+        /// reference trader's Brazilian format whatever the machine's culture.
+        /// </summary>
+        private string OrderLabel(bool isStop, int quantity, double points, bool lossSide, double pointMoney)
+        {
+            string label = string.Format("{0} ({1})", isStop ? "STOP" : "ALVO", quantity);
+            if (ShowPoints)
+            {
+                string sign = !isStop || points == 0 ? "" : (lossSide ? "-" : "+");
+                label += FieldSeparator + sign + points.ToString("#,0.##", LabelCulture) + " P";
+            }
+            if (ShowCurrency)
+            {
+                double money = points * pointMoney;
+                label += FieldSeparator + "$ " + (lossSide && money != 0 ? "-" : "") + money.ToString("N2", LabelCulture);
+            }
+            return label;
         }
 
         private static float BoxHeight(SharpDX.DirectWrite.TextLayout layout)

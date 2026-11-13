@@ -17,9 +17,12 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   saved earlier pick up the second smoothing and the last levels too; set
   "Final smoothing period" to 0 and turn "Last levels" off to keep the old
   look.
-- OrderDecorator: labels are rounded boxes (dark red on the stop side, dark
-  green on the target side, white text) showing money only by default,
-  105 px from the right edge.
+- OrderDecorator: each order gets a rounded box centered on its line, like
+  `STOP (4)  :  -230 P  :  $ -4.600,00`: role and quantity, points times
+  quantity and money, comma decimals, bold white text, dark red for stops
+  and dark green for targets wherever they sit. The average-price label
+  and pushing nearby labels apart are now off by default (settings
+  "Label the average price" and "Keep labels apart").
 - Flow Absorption zones are now prices where 1-minute aggressor volume
   concentrated (2.5 standard deviations above the 180-bar average, in at
   least 2 bars), blue below price and red above, broken after 3 closes

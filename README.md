@@ -168,18 +168,22 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 ### OrderDecorator — distances on your working orders
 
 - Labels every working order on the chart's instrument (any tool's orders,
-  not just this repo's) with its distance from the position's average
-  price, in a rounded box: dark red on the stop/loss side, dark green on
-  the target/profit side, white text. Money value for the order's
-  remaining quantity by default; ticks, points and the R multiple against
-  the nearest working stop can be turned on.
-- The execution (average price) line gets its own label: position side,
-  quantity, and live unrealized P&L in ticks and money.
-- Flat: neutral gray with distance from the last price instead.
+  not just this repo's) with a rounded box centered on its line, e.g.
+  `STOP (4)  :  -230 P  :  $ -4.600,00` or `ALVO (2)  :  31 P  :  $ 620,00`:
+  the role and quantity, the distance from the position's average price in
+  points times the quantity, and its money value. Stops are dark red and
+  targets dark green whatever side they sit on, so a stop trailed into
+  profit stays red and shows `+`; numbers use comma decimals and dot
+  thousands, white bold text.
+- Flat: working orders show their distance from the last price in a
+  neutral gray box.
 - Orders at the same price merge into one label with the summed quantity,
   matching how the platform stacks their markers. Orders a few ticks apart
-  get their labels stacked so they never overlap.
-- Each value (ticks, points, money, R) has its own on/off setting.
+  overlap on their own lines; "Keep labels apart" pushes them off each
+  other instead.
+- Points and money are on by default; ticks and the R multiple against the
+  nearest working stop can be added. "Label the average price" adds a box
+  on the execution line with side, quantity and unrealized P&L.
 - "Right margin" setting (default 105 px) keeps the labels clear of the
   platform's own order markers.
 - Reads the ChartTrader-selected account; labels update tick by tick.
