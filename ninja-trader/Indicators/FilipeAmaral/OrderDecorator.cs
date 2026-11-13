@@ -42,6 +42,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public SharpDX.DirectWrite.TextLayout Layout;
             public SharpDX.Direct2D1.Brush Brush;
             public float Top;
+            public float ShiftLeft;
         }
 
         private SharpDX.Direct2D1.Brush profitBrushDx;
@@ -448,6 +449,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     }
                 }
 
+                // Different roles at one price get one label each, laid side by side.
+                Dictionary<float, float> usedWidthAtY = new Dictionary<float, float>();
                 foreach (OrderInfo order in workingOrders)
                 {
                     float y = chartScale.GetYByValue(order.Price);
@@ -473,11 +476,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
                     SharpDX.DirectWrite.TextLayout layout = new SharpDX.DirectWrite.TextLayout(
                         Core.Globals.DirectWriteFactory, label, textFormat, 600, textFormat.FontSize);
+                    float usedWidth;
+                    usedWidthAtY.TryGetValue(y, out usedWidth);
+                    usedWidthAtY[y] = usedWidth + layout.Metrics.Width + 2 * BoxPaddingX + 4;
                     labels.Add(new PendingLabel
                     {
                         Layout = layout,
                         Brush = brush,
                         Top = y - BoxHeight(layout) / 2,
+                        ShiftLeft = usedWidth,
                     });
                 }
 
@@ -533,7 +540,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 float width = labels[i].Layout.Metrics.Width + 2 * BoxPaddingX;
                 float height = BoxHeight(labels[i].Layout);
-                float x = panelRight - RightMarginPixels - width;
+                float x = panelRight - RightMarginPixels - width - labels[i].ShiftLeft;
                 SharpDX.Direct2D1.RoundedRectangle box = new SharpDX.Direct2D1.RoundedRectangle
                 {
                     Rect = new SharpDX.RectangleF(x, tops[i], width, height),
