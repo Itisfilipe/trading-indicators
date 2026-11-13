@@ -472,6 +472,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     ? Math.Max(1f, (float)(chartControl.GetBarPaintWidth(ChartBars) * WidthScale))
                     : FixedCandleWidth;
                 int lastBar = Bars.Count - 1;
+                // On bar close the forming candle has no CVD yet; recent lines and the dashes follow the last one that does.
+                int lastCvdBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
                 float levelsEndX = chartControl.GetXByBarIndex(ChartBars, lastBar) + (float)(CurrentPad * barDistance);
 
                 if (ShowDivergence)
@@ -488,7 +490,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     lock (pivots)
                         foreach (PivotLevel level in pivots)
                         {
-                            if (level.BarIndex > ChartBars.ToIndex || level.BarIndex <= lastBar - LastLevelsLength
+                            if (level.BarIndex > ChartBars.ToIndex || level.BarIndex <= lastCvdBar - LastLevelsLength
                                 || (level.BrokenAt >= 0 && level.BrokenAt < ChartBars.FromIndex))
                                 continue;
                             float x1 = chartControl.GetXByBarIndex(ChartBars, level.BarIndex);
@@ -521,8 +523,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     RenderTarget.DrawRectangle(body, wick, 1f);
                 }
 
-                // On bar close the forming candle has no CVD yet; the dashes follow the last one that does.
-                int dashBar = HasCvd(lastBar) ? lastBar : lastBar - 1;
+                int dashBar = lastCvdBar;
                 if (dashBar <= ChartBars.ToIndex && HasCvd(dashBar) && HasCvd(dashBar - 1))
                 {
                     double previousHigh = shownHigh.GetValueAt(dashBar - 1);
