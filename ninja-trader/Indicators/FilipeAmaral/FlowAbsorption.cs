@@ -24,12 +24,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// </summary>
     public class FlowAbsorption : Indicator
     {
-        private class WindowBar
-        {
-            public Dictionary<double, double> Cells;
-            public double Close;
-        }
-
         private class AbsorptionZone
         {
             public double Price;
@@ -43,9 +37,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private const float FillOpacity = 0.4f;
 
         private Dictionary<double, double> formingCells = new Dictionary<double, double>();
-        private readonly List<WindowBar> window = new List<WindowBar>();
+        private readonly List<Dictionary<double, double>> window = new List<Dictionary<double, double>>();
         private readonly List<AbsorptionZone> zones = new List<AbsorptionZone>();
-        // The number belongs to the price: it never decreases and survives a zone breaking and coming back.
         private readonly Dictionary<double, double> zoneVolume = new Dictionary<double, double>();
         private int formingBar = -1;
 
@@ -117,15 +110,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         private void CloseMinute(double close, DateTime nextBarTime)
         {
-            window.Add(new WindowBar { Cells = formingCells, Close = close });
+            window.Add(formingCells);
             if (window.Count > WindowBars)
                 window.RemoveAt(0);
 
             double sum = 0;
             double sumOfSquares = 0;
             int count = 0;
-            foreach (WindowBar bar in window)
-                foreach (double volume in bar.Cells.Values)
+            foreach (Dictionary<double, double> cells in window)
+                foreach (double volume in cells.Values)
                 {
                     sum += volume;
                     sumOfSquares += volume * volume;
@@ -137,11 +130,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             double deviation = Math.Sqrt(Math.Max(0, sumOfSquares / count - mean * mean));
             double threshold = mean + Sensitivity * deviation;
 
-            // INFERRED: a touch is a 1-minute bar whose volume at the price clears the threshold; the zone's number is the sum of its touches.
             Dictionary<double, int> touches = new Dictionary<double, int>();
             Dictionary<double, double> concentrated = new Dictionary<double, double>();
-            foreach (WindowBar bar in window)
-                foreach (KeyValuePair<double, double> cell in bar.Cells)
+            foreach (Dictionary<double, double> cells in window)
+                foreach (KeyValuePair<double, double> cell in cells)
                 {
                     if (cell.Value <= threshold)
                         continue;
@@ -160,8 +152,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 for (int i = zones.Count - 1; i >= 0; i--)
                 {
                     AbsorptionZone zone = zones[i];
-                    int touchesLeft;
-                    if (!touches.TryGetValue(zone.Price, out touchesLeft) || touchesLeft < MinimumTouches)
+                    int touchCount;
+                    touches.TryGetValue(zone.Price, out touchCount);
+                    if (touchCount < MinimumTouches)
                     {
                         zones.RemoveAt(i);
                         continue;
@@ -188,7 +181,6 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     zones.Add(new AbsorptionZone { Price = price, IsSupport = price < close, StartTime = nextBarTime });
                 }
 
-                // INFERRED: past the cap, the zones with the largest numbers stay.
                 if (zones.Count > MaximumZones)
                 {
                     zones.Sort((a, b) => zoneVolume[b.Price].CompareTo(zoneVolume[a.Price]));
