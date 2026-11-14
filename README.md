@@ -530,6 +530,17 @@ the two count toward volume only.
     orders. Rebuilding orders depends on fill timestamps: a feed whose
     history is stamped by the second merges separate orders, so history can
     show more and bigger circles than live.
+  - Levels (both off by default): "Show naked POCs" draws a thin line from
+    each strong POC to the right, in its side color, ending at the first
+    candle that trades back to its price. "Show POC zones" draws a band
+    where strong POCs cluster: once "Zone minimum POCs" (3) among the last
+    "Zone lookback" (30) POCs sit within "Zone width" (10 ticks) of the
+    newest one, the band spans them and runs right. It ends when price closes
+    through it to the other side, more than "Zone break buffer" (4 ticks)
+    beyond; a close inside the buffer does not count. A new cluster that
+    overlaps an open zone widens it. With big trades on, a zone with a
+    big-trade circle on screen inside it gets a thicker border. Both are
+    judged on closed candles.
 - It needs **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
   in the chart's Data Series). Without it the indicator starts counting

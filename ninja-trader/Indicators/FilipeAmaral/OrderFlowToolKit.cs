@@ -103,6 +103,38 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         private double orderLots;
         private double orderPrice;
 
+        private class StrongPoc
+        {
+            public int GroupNumber;
+            public int BarIndex;
+            public double Price;
+        }
+
+        private class NakedPoc
+        {
+            public int BarIndex;
+            public double Price;
+            public int AggressorSide;
+            public int TouchedAt = -1;
+        }
+
+        private class PocZone
+        {
+            public int StartBar;
+            public double Low;
+            public double High;
+            public int LastSide;
+            public int BrokenAt = -1;
+        }
+
+        private readonly List<StrongPoc> recentStrongPocs = new List<StrongPoc>();
+        private readonly List<NakedPoc> nakedPocs = new List<NakedPoc>();
+        private readonly List<PocZone> zones = new List<PocZone>();
+        private readonly List<NakedPoc> untouchedPocs = new List<NakedPoc>();
+        private readonly List<PocZone> openZones = new List<PocZone>();
+        private int closedGroups;
+        private int lastTrackedBar = -1;
+
         private readonly Dictionary<double, LevelVolume> levels = new Dictionary<double, LevelVolume>();
         private int levelsKey = -1;
         private int periodMinutes;
@@ -178,6 +210,15 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 BigBuyColor = Brushes.DodgerBlue;
                 BigSellColor = Brushes.Crimson;
 
+                ShowNakedPocs = false;
+                ShowPocZones = false;
+                ZoneLookback = 30;
+                ZoneMinimumPocs = 3;
+                ZoneTicks = 10;
+                ZoneBreakTicks = 4;
+                ZoneOpacity = 20;
+                ZoneColor = Rgb(0x64, 0x74, 0x8B);
+
                 BuyColor = Rgb(0x00, 0x4D, 0x00);
                 SellColor = Rgb(0xFF, 0x00, 0x00);
                 NeutralColor = Rgb(0x80, 0x80, 0x80);
@@ -237,6 +278,13 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 pocSells[0] = pocSells[1];
                 barVolume[0] = barVolume[1];
                 barDelta[0] = barDelta[1];
+            }
+
+            // Remove-last-bar charts reopen the same candle, so each closed candle is tracked once.
+            while (lastTrackedBar < CurrentBar - 1 && (ShowNakedPocs || ShowPocZones))
+            {
+                lastTrackedBar++;
+                TrackLevels(lastTrackedBar);
             }
 
             if (!useTimeOfDay)
@@ -483,6 +531,119 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             return low;
         }
 
+        private void TrackLevels(int closedBar)
+        {
+            double close = Bars.GetClose(closedBar);
+            double low = Bars.GetLow(closedBar);
+            double high = Bars.GetHigh(closedBar);
+            double groupTop = (PriceGrouping - 1) * TickSize;
+            double halfTick = TickSize / 2;
+
+            lock (zones)
+            {
+                foreach (NakedPoc naked in untouchedPocs)
+                {
+                    if (low <= naked.Price + groupTop + halfTick && high >= naked.Price - halfTick)
+                        naked.TouchedAt = closedBar;
+                }
+                untouchedPocs.RemoveAll(naked => naked.TouchedAt >= 0);
+
+                foreach (PocZone zone in openZones)
+                {
+                    int side = SideOfZone(zone, close);
+                    if (side == 0)
+                        continue;
+                    if (zone.LastSide != 0 && side != zone.LastSide)
+                    {
+                        zone.BrokenAt = closedBar;
+                        recentStrongPocs.RemoveAll(poc => poc.Price >= zone.Low && poc.Price <= zone.High);
+                    }
+                    zone.LastSide = side;
+                }
+                openZones.RemoveAll(zone => zone.BrokenAt >= 0);
+
+                if (!IsGroupEnd(closedBar))
+                    return;
+                closedGroups++;
+                if (!pocVolume.IsValidDataPointAt(closedBar) || !IsStrongPoc(closedBar))
+                    return;
+
+                double price = pocPrice.GetValueAt(closedBar);
+                int groupStart = GroupStart(closedBar);
+                int aggressorSide = AggressorSide(pocBuys.GetValueAt(closedBar), pocSells.GetValueAt(closedBar));
+                if (ShowNakedPocs)
+                {
+                    NakedPoc formed = new NakedPoc { BarIndex = groupStart, Price = price, AggressorSide = aggressorSide };
+                    nakedPocs.Add(formed);
+                    untouchedPocs.Add(formed);
+                }
+
+                recentStrongPocs.RemoveAll(poc => poc.GroupNumber <= closedGroups - ZoneLookback);
+                recentStrongPocs.Add(new StrongPoc { GroupNumber = closedGroups, BarIndex = groupStart, Price = price });
+                List<StrongPoc> cluster = recentStrongPocs.FindAll(poc => Math.Abs(poc.Price - price) <= ZoneTicks * TickSize + halfTick);
+                if (cluster.Count < ZoneMinimumPocs)
+                    return;
+
+                int startBar = closedBar;
+                double zoneLow = price;
+                double zoneHigh = price;
+                foreach (StrongPoc poc in cluster)
+                {
+                    startBar = Math.Min(startBar, poc.BarIndex);
+                    zoneLow = Math.Min(zoneLow, poc.Price);
+                    zoneHigh = Math.Max(zoneHigh, poc.Price);
+                }
+                zoneHigh += groupTop;
+
+                List<PocZone> overlapping = openZones.FindAll(zone => zone.Low <= zoneHigh && zone.High >= zoneLow);
+                if (overlapping.Count == 0)
+                {
+                    PocZone created = new PocZone { StartBar = startBar, Low = zoneLow, High = zoneHigh };
+                    created.LastSide = SideOfZone(created, close);
+                    zones.Add(created);
+                    openZones.Add(created);
+                    return;
+                }
+                PocZone merged = overlapping[0];
+                double previousLow = merged.Low;
+                double previousHigh = merged.High;
+                merged.StartBar = Math.Min(merged.StartBar, startBar);
+                merged.Low = Math.Min(merged.Low, zoneLow);
+                merged.High = Math.Max(merged.High, zoneHigh);
+                for (int i = 1; i < overlapping.Count; i++)
+                {
+                    PocZone absorbed = overlapping[i];
+                    merged.StartBar = Math.Min(merged.StartBar, absorbed.StartBar);
+                    merged.Low = Math.Min(merged.Low, absorbed.Low);
+                    merged.High = Math.Max(merged.High, absorbed.High);
+                    zones.Remove(absorbed);
+                    openZones.Remove(absorbed);
+                }
+                int closeSide = SideOfZone(merged, close);
+                bool grewTowardLastSide = (merged.LastSide == 1 && merged.High > previousHigh) || (merged.LastSide == -1 && merged.Low < previousLow);
+                if (closeSide != 0)
+                    merged.LastSide = closeSide;
+                else if (grewTowardLastSide)
+                    merged.LastSide = 0;
+            }
+        }
+
+        private int SideOfZone(PocZone zone, double close)
+        {
+            double margin = ZoneBreakTicks * TickSize + TickSize / 2;
+            if (close > zone.High + margin)
+                return 1;
+            if (close < zone.Low - margin)
+                return -1;
+            return 0;
+        }
+
+        private bool IsStrongPoc(int barIndex)
+        {
+            double baseline = StrengthBaseline(barIndex);
+            return baseline > 0 && PocStrength(barIndex) > baseline * AverageMultiplier;
+        }
+
         private double PocStrength(int barIndex)
         {
             if (StrengthMeasure == FlowPocMeasure.Volume)
@@ -620,6 +781,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 float rowHeight = (float)LabelFont.Size * 1.4f;
                 double groupOffset = (PriceGrouping - 1) * TickSize / 2;
 
+                if (ShowPocZones)
+                    DrawZones(chartControl, chartScale, barWidth);
+                if (ShowNakedPocs)
+                    DrawNakedPocs(chartControl, chartScale, lines);
+
                 int lastIndex = ChartBars.ToIndex;
                 while (!IsGroupEnd(lastIndex))
                     lastIndex++;
@@ -753,6 +919,81 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             }
         }
 
+        private float RightEdgeX(ChartControl chartControl, int endBar)
+        {
+            return endBar >= 0 ? chartControl.GetXByBarIndex(ChartBars, endBar) : ChartPanel.X + ChartPanel.W;
+        }
+
+        private void DrawNakedPocs(ChartControl chartControl, ChartScale chartScale, Dictionary<System.Windows.Media.Brush, SharpDX.Direct2D1.Brush> lines)
+        {
+            double groupOffset = (PriceGrouping - 1) * TickSize / 2;
+            lock (zones)
+            {
+                foreach (NakedPoc naked in nakedPocs)
+                {
+                    if (naked.BarIndex > ChartBars.ToIndex || (naked.TouchedAt >= 0 && naked.TouchedAt < ChartBars.FromIndex))
+                        continue;
+                    float y = chartScale.GetYByValue(naked.Price + groupOffset);
+                    float x1 = chartControl.GetXByBarIndex(ChartBars, naked.BarIndex);
+                    RenderTarget.DrawLine(new SharpDX.Vector2(x1, y), new SharpDX.Vector2(RightEdgeX(chartControl, naked.TouchedAt), y), lines[SideColor(naked.AggressorSide)], 1f);
+                }
+            }
+        }
+
+        private void DrawZones(ChartControl chartControl, ChartScale chartScale, float barWidth)
+        {
+            SharpDX.Direct2D1.Brush fill = ZoneColor.ToDxBrush(RenderTarget, ZoneOpacity / 100f);
+            SharpDX.Direct2D1.Brush border = ZoneColor.ToDxBrush(RenderTarget);
+            try
+            {
+                double threshold;
+                lock (trades)
+                    threshold = BigTradesFilter == FlowBigTradesFilter.Automatic ? AutomaticThreshold() : MinimumLots;
+                lock (zones)
+                {
+                    foreach (PocZone zone in zones)
+                    {
+                        if (zone.StartBar > ChartBars.ToIndex || (zone.BrokenAt >= 0 && zone.BrokenAt < ChartBars.FromIndex))
+                            continue;
+                        float left = chartControl.GetXByBarIndex(ChartBars, zone.StartBar) - barWidth / 2;
+                        float right = RightEdgeX(chartControl, zone.BrokenAt);
+                        float top = chartScale.GetYByValue(zone.High + TickSize / 2);
+                        float bottom = chartScale.GetYByValue(zone.Low - TickSize / 2);
+                        if (bottom < ChartPanel.Y || top > ChartPanel.Y + ChartPanel.H)
+                            continue;
+                        SharpDX.RectangleF band = new SharpDX.RectangleF(left, top, right - left, bottom - top);
+                        RenderTarget.FillRectangle(band, fill);
+                        RenderTarget.DrawRectangle(band, border, HadBigTrade(zone, threshold) ? 2.5f : 1f);
+                    }
+                }
+            }
+            finally
+            {
+                fill.Dispose();
+                border.Dispose();
+            }
+        }
+
+        private bool HadBigTrade(PocZone zone, double threshold)
+        {
+            if (!ShowBigTrades)
+                return false;
+            lock (trades)
+            {
+                int lastBar = zone.BrokenAt >= 0 ? Math.Min(zone.BrokenAt, ChartBars.ToIndex) : ChartBars.ToIndex;
+                for (int i = FirstTradeAtOrAfter(trades, Math.Max(zone.StartBar, ChartBars.FromIndex)); i < trades.Count; i++)
+                {
+                    BigTrade trade = trades[i];
+                    if (trade.BarIndex > lastBar)
+                        break;
+                    bool qualifies = trade.Lots >= threshold && (MaximumLots == 0 || trade.Lots <= MaximumLots);
+                    if (qualifies && trade.Price >= zone.Low && trade.Price <= zone.High)
+                        return true;
+                }
+            }
+            return false;
+        }
+
         #region Properties
 
         [Display(Name = "POC period", Description = "Chart: one POC per candle. A longer period: one POC per window of that length on the exchange clock, spanning its candles (a 5-minute POC on a 1-minute chart). Session: one POC per trading session. Minute periods need a minute chart whose candle divides the period; otherwise it behaves as Chart.", Order = 0, GroupName = "2. POC")]
@@ -867,6 +1108,43 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Hollow circles", Description = "Outline only, no fill.", Order = 10, GroupName = "6. Big trades")]
         public bool HollowBubbles { get; set; }
+
+        [Display(Name = "Show naked POCs", Description = "A thin line from each strong POC to the right, ending where price first trades back to it.", Order = 1, GroupName = "7. Levels")]
+        public bool ShowNakedPocs { get; set; }
+
+        [Display(Name = "Show POC zones", Description = "A band where strong POCs cluster, running right until price closes through it to the other side. The border thickens when a big trade printed inside it.", Order = 2, GroupName = "7. Levels")]
+        public bool ShowPocZones { get; set; }
+
+        [Range(2, 500)]
+        [Display(Name = "Zone lookback (POCs)", Description = "Strong POCs among this many recent POCs (one per candle, or per window with a POC period) can join a zone.", Order = 3, GroupName = "7. Levels")]
+        public int ZoneLookback { get; set; }
+
+        [Range(2, 20)]
+        [Display(Name = "Zone minimum POCs", Description = "Strong POCs needed within the zone width to start a zone.", Order = 4, GroupName = "7. Levels")]
+        public int ZoneMinimumPocs { get; set; }
+
+        [Range(1, 200)]
+        [Display(Name = "Zone width (ticks)", Description = "How far a strong POC may sit from the newest one and still join its zone.", Order = 5, GroupName = "7. Levels")]
+        public int ZoneTicks { get; set; }
+
+        [Range(0, 100)]
+        [Display(Name = "Zone break buffer (ticks)", Description = "A close must be this far beyond the zone to count as a break.", Order = 6, GroupName = "7. Levels")]
+        public int ZoneBreakTicks { get; set; }
+
+        [Range(0, 100)]
+        [Display(Name = "Zone opacity (%)", Order = 7, GroupName = "7. Levels")]
+        public int ZoneOpacity { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Zone color", Order = 7, GroupName = "5. Colors")]
+        public System.Windows.Media.Brush ZoneColor { get; set; }
+
+        [Browsable(false)]
+        public string ZoneColorSerializable
+        {
+            get { return Serialize.BrushToString(ZoneColor); }
+            set { ZoneColor = Serialize.StringToBrush(value); }
+        }
 
         [XmlIgnore]
         [Display(Name = "Big buy color", Description = "Orders lifting the ask.", Order = 5, GroupName = "5. Colors")]

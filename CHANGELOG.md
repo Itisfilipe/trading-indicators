@@ -5,6 +5,10 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-14
 
+- OrderFlowToolKit: optional naked POC lines, from each strong POC to the
+  first candle that trades back to it, and optional POC zones, bands where
+  strong POCs cluster that run until price closes through them. A zone
+  with a big-trade circle inside gets a thicker border. Both off by default.
 - Flow POC is renamed OrderFlowToolKit, since it also draws big trades;
   add it again on charts that used Flow POC. Delete FlowPOC.cs from the
   installed FilipeAmaral folder before compiling.
