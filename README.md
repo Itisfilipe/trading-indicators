@@ -477,7 +477,7 @@ buys at the ask or above and as sells at the bid or below; trades between
 the two count toward volume only.
 
 - **OrderFlowToolKit** (price panel): a marker at each candle's most traded price,
-  green when buyers dominated that price, red when sellers did, gray when
+  blue when buyers dominated that price, red when sellers did, gray when
   buys and sells tie. A POC whose volume beats the average of the previous 30
   candles' POCs (times "Square at") gets a square (or circle) that grows
   with volume and shows the contracts traded at that price ("Label" =

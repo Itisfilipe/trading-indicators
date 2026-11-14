@@ -5,6 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-14
 
+- OrderFlowToolKit: POC markers, naked POC lines and delta numbers now default to the
+  big-trade colors, blue for buyers and red for sellers, instead of dark
+  green and red, so buy and sell read the same everywhere and stand apart
+  from green/red candles. Charts that already carry the indicator keep
+  their saved colors until it is re-added or the colors are reset.
 - OrderFlowToolKit: optional naked POC lines, from each strong POC to the
   first candle that trades back to it, and optional POC zones, bands where
   strong POCs cluster that run until price closes through them. A zone

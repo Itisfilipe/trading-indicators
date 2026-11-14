@@ -219,8 +219,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 ZoneOpacity = 20;
                 ZoneColor = Rgb(0x64, 0x74, 0x8B);
 
-                BuyColor = Rgb(0x00, 0x4D, 0x00);
-                SellColor = Rgb(0xFF, 0x00, 0x00);
+                BuyColor = Brushes.DodgerBlue;
+                SellColor = Brushes.Crimson;
                 NeutralColor = Rgb(0x80, 0x80, 0x80);
                 AbsorptionColor = Rgb(0xB8, 0x86, 0x2B);
                 TextColor = Brushes.Black;
