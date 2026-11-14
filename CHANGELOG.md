@@ -5,6 +5,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-14
 
+- OrderFlowToolKit: big trades get a third filter mode, Recent, which
+  calls an order big when it is among the largest of the last 30 minutes
+  (adjustable) instead of the largest since the chart loaded, so the bar
+  for "big" can drop in quiet hours and rises at the open. Circles are sized
+  against the threshold of their own moment.
 - OrderFlowToolKit: POC markers, naked POC lines and delta numbers now default to the
   big-trade colors, blue for buyers and red for sellers, instead of dark
   green and red, so buy and sell read the same everywhere and stand apart

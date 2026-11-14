@@ -526,6 +526,12 @@ the two count toward volume only.
     circles, one per price. "Filter mode" Manual shows orders of at least
     "Minimum lots" (30); Automatic shows the largest orders this chart has
     seen — the top 1%, 0.5% or 0.1% by "Intensity" — once 500 orders are in.
+    Recent takes the same top share from only the last "Recent window"
+    minutes (30), so a size that is big in the quiet overnight session need
+    not be big at the New York open; each circle keeps the threshold of its
+    own moment and is sized against it, so equal lots can draw different
+    sizes at different hours, and below 500 orders in the window it falls
+    back to "Minimum lots".
     "Maximum lots" caps the band so two copies can split small and huge
     orders. Rebuilding orders depends on fill timestamps: a feed whose
     history is stamped by the second merges separate orders, so history can

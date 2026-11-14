@@ -55,7 +55,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Session
     }
 
-    public enum FlowBigTradesFilter { Manual, Automatic }
+    public enum FlowBigTradesFilter { Manual, Automatic, Recent }
 
     public enum FlowBigTradesIntensity { Low, Medium, Strong }
 
@@ -87,15 +87,25 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double Price;
             public double Lots;
             public bool IsBuy;
+            public double Threshold;
+        }
+
+        private class RecentOrder
+        {
+            public DateTime Time;
+            public int Lots;
         }
 
         private const int HistogramCap = 10000;
         private const int StoredFloor = 5;
         private const int MinimumOrdersForAutomatic = 500;
+        private const int RecentHistogramCap = 1000;
 
         private readonly List<BigTrade> trades = new List<BigTrade>();
         private readonly long[] sizeHistogram = new long[HistogramCap + 1];
         private long orderCount;
+        private readonly Queue<RecentOrder> recentOrders = new Queue<RecentOrder>();
+        private readonly long[] recentHistogram = new long[RecentHistogramCap + 1];
         private bool hasOrder;
         private bool orderIsBuy;
         private int orderBar;
@@ -202,6 +212,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MinimumLots = 30;
                 MaximumLots = 0;
                 BigTradesIntensity = FlowBigTradesIntensity.Medium;
+                RecentMinutes = 30;
                 AggregationMilliseconds = 5;
                 BubbleMinimumSize = 18;
                 BubbleMaximumSize = 70;
@@ -479,16 +490,26 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             {
                 sizeHistogram[(int)Math.Min(HistogramCap, orderLots)]++;
                 orderCount++;
-                // Manual never draws below Minimum lots; Automatic may lower its threshold to the floor.
+                if (BigTradesFilter == FlowBigTradesFilter.Recent)
+                    TrackRecentOrder();
+                // Manual never draws below Minimum lots; Automatic and Recent may lower their threshold to the floor.
                 int storedFloor = BigTradesFilter == FlowBigTradesFilter.Manual ? MinimumLots : Math.Min(StoredFloor, MinimumLots);
                 if (orderLots < storedFloor)
                     return;
+                double recentThreshold = 0;
+                if (BigTradesFilter == FlowBigTradesFilter.Recent)
+                {
+                    recentThreshold = TopShareThreshold(recentHistogram, recentOrders.Count);
+                    if (orderLots < recentThreshold)
+                        return;
+                }
                 trades.Add(new BigTrade
                 {
                     BarIndex = orderBar,
                     Price = orderPrice,
                     Lots = orderLots,
                     IsBuy = orderIsBuy,
+                    Threshold = recentThreshold,
                 });
             }
         }
@@ -496,7 +517,27 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         // Smallest order size in the top share of all orders seen, by intensity.
         private double AutomaticThreshold()
         {
-            if (orderCount < MinimumOrdersForAutomatic)
+            return TopShareThreshold(sizeHistogram, orderCount);
+        }
+
+        private void TrackRecentOrder()
+        {
+            int lots = (int)Math.Min(RecentHistogramCap, orderLots);
+            recentOrders.Enqueue(new RecentOrder { Time = orderStartTime, Lots = lots });
+            recentHistogram[lots]++;
+            DateTime cutoff = orderStartTime.AddMinutes(-RecentMinutes);
+            while (recentOrders.Peek().Time < cutoff)
+                recentHistogram[recentOrders.Dequeue().Lots]--;
+        }
+
+        private double ThresholdOf(BigTrade trade, double sharedThreshold)
+        {
+            return BigTradesFilter == FlowBigTradesFilter.Recent ? trade.Threshold : sharedThreshold;
+        }
+
+        private double TopShareThreshold(long[] histogram, long count)
+        {
+            if (count < MinimumOrdersForAutomatic)
                 return MinimumLots;
             double topShare;
             if (BigTradesIntensity == FlowBigTradesIntensity.Low)
@@ -505,11 +546,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 topShare = 0.005;
             else
                 topShare = 0.001;
-            long wanted = (long)Math.Ceiling(orderCount * topShare);
+            long wanted = (long)Math.Ceiling(count * topShare);
             long counted = 0;
-            for (int size = HistogramCap; size >= 1; size--)
+            for (int size = histogram.Length - 1; size >= 1; size--)
             {
-                counted += sizeHistogram[size];
+                counted += histogram[size];
                 if (counted >= wanted)
                     return Math.Max(StoredFloor, size);
             }
@@ -894,10 +935,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         BigTrade trade = trades[i];
                         if (trade.BarIndex > ChartBars.ToIndex)
                             break;
-                        if (trade.Lots < threshold || (MaximumLots > 0 && trade.Lots > MaximumLots))
+                        double tradeThreshold = ThresholdOf(trade, threshold);
+                        if (trade.Lots < tradeThreshold || (MaximumLots > 0 && trade.Lots > MaximumLots))
                             continue;
 
-                        float radius = (float)Math.Min(BubbleMaximumSize, BubbleMinimumSize * trade.Lots / threshold) / 2f;
+                        float radius = (float)Math.Min(BubbleMaximumSize, BubbleMinimumSize * trade.Lots / tradeThreshold) / 2f;
                         float x = chartControl.GetXByBarIndex(ChartBars, trade.BarIndex);
                         float y = chartScale.GetYByValue(trade.Price);
                         SharpDX.Direct2D1.Ellipse bubble = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
@@ -986,7 +1028,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     BigTrade trade = trades[i];
                     if (trade.BarIndex > lastBar)
                         break;
-                    bool qualifies = trade.Lots >= threshold && (MaximumLots == 0 || trade.Lots <= MaximumLots);
+                    bool qualifies = trade.Lots >= ThresholdOf(trade, threshold) && (MaximumLots == 0 || trade.Lots <= MaximumLots);
                     if (qualifies && trade.Price >= zone.Low && trade.Price <= zone.High)
                         return true;
                 }
@@ -1076,37 +1118,41 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Show big trades", Description = "Circles at the prices where large aggressive market orders traded.", Order = 1, GroupName = "6. Big trades")]
         public bool ShowBigTrades { get; set; }
 
-        [Display(Name = "Filter mode", Description = "Manual: show orders of at least Minimum lots. Automatic: show the largest orders seen on this chart, by Intensity.", Order = 2, GroupName = "6. Big trades")]
+        [Display(Name = "Filter mode", Description = "Manual: show orders of at least Minimum lots. Automatic: show the largest orders seen on this chart, by Intensity. Recent: show the largest orders of the last Recent window minutes, by Intensity, so the size that counts as big follows the session.", Order = 2, GroupName = "6. Big trades")]
         public FlowBigTradesFilter BigTradesFilter { get; set; }
 
         [Range(1, 10000), NinjaScriptProperty]
-        [Display(Name = "Minimum lots", Description = "Manual filter: smallest order shown. Also used by Automatic until enough orders have been seen.", Order = 3, GroupName = "6. Big trades")]
+        [Display(Name = "Minimum lots", Description = "Manual filter: smallest order shown. Also used by Automatic and Recent until enough orders have been seen.", Order = 3, GroupName = "6. Big trades")]
         public int MinimumLots { get; set; }
 
-        [Display(Name = "Intensity", Description = "Automatic filter: Low shows the top 1% of orders by size, Medium the top 0.5%, Strong the top 0.1%.", Order = 4, GroupName = "6. Big trades")]
+        [Display(Name = "Intensity", Description = "Automatic and Recent filters: Low shows the top 1% of orders by size, Medium the top 0.5%, Strong the top 0.1%.", Order = 4, GroupName = "6. Big trades")]
         public FlowBigTradesIntensity BigTradesIntensity { get; set; }
 
+        [Range(1, 600)]
+        [Display(Name = "Recent window (minutes)", Description = "Recent filter: how many minutes of orders the top share is taken from.", Order = 5, GroupName = "6. Big trades")]
+        public int RecentMinutes { get; set; }
+
         [Range(0, 100000), NinjaScriptProperty]
-        [Display(Name = "Maximum lots", Description = "Largest order shown, to split size bands across two copies. 0 turns it off.", Order = 5, GroupName = "6. Big trades")]
+        [Display(Name = "Maximum lots", Description = "Largest order shown, to split size bands across two copies. 0 turns it off.", Order = 6, GroupName = "6. Big trades")]
         public int MaximumLots { get; set; }
 
         [Range(0, 1000), NinjaScriptProperty]
-        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side at the same price arriving within this many milliseconds of the first one count as one order. 0 joins only fills with the same timestamp.", Order = 6, GroupName = "6. Big trades")]
+        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side at the same price arriving within this many milliseconds of the first one count as one order. 0 joins only fills with the same timestamp.", Order = 7, GroupName = "6. Big trades")]
         public int AggregationMilliseconds { get; set; }
 
         [Range(2, 200)]
-        [Display(Name = "Circle minimum size", Description = "Circle diameter, in pixels, of an order at the threshold.", Order = 7, GroupName = "6. Big trades")]
+        [Display(Name = "Circle minimum size", Description = "Circle diameter, in pixels, of an order at the threshold.", Order = 8, GroupName = "6. Big trades")]
         public int BubbleMinimumSize { get; set; }
 
         [Range(2, 400)]
-        [Display(Name = "Circle maximum size", Description = "Largest circle diameter, in pixels; circles grow in proportion to lots.", Order = 8, GroupName = "6. Big trades")]
+        [Display(Name = "Circle maximum size", Description = "Largest circle diameter, in pixels; circles grow in proportion to lots.", Order = 9, GroupName = "6. Big trades")]
         public int BubbleMaximumSize { get; set; }
 
         [Range(0, 100)]
-        [Display(Name = "Circle fill opacity (%)", Order = 9, GroupName = "6. Big trades")]
+        [Display(Name = "Circle fill opacity (%)", Order = 10, GroupName = "6. Big trades")]
         public int BubbleFillOpacity { get; set; }
 
-        [Display(Name = "Hollow circles", Description = "Outline only, no fill.", Order = 10, GroupName = "6. Big trades")]
+        [Display(Name = "Hollow circles", Description = "Outline only, no fill.", Order = 11, GroupName = "6. Big trades")]
         public bool HollowBubbles { get; set; }
 
         [Display(Name = "Show naked POCs", Description = "A thin line from each strong POC to the right, ending where price first trades back to it.", Order = 1, GroupName = "7. Levels")]
