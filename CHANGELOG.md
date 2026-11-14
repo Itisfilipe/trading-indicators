@@ -3,6 +3,20 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-14
+
+- Flow POC draws big trades: large aggressive orders as circles on the
+  candles, with the same filter, aggregation and defaults Flow Big Trades
+  had (30 lots). Flow Big Trades is removed; use Flow POC instead.
+  Delete FlowBigTrades.cs, FlowVD.cs, FlowCVD.cs and FlowHA.cs from the
+  installed FilipeAmaral folder, or the NinjaScript build fails.
+- Flow POC: "Show numbers" off hides the counts in POC markers and
+  big-trade circles, leaving only the shapes.
+- Flow POC: "Marker matches candle width" sizes the markers to the candle
+  body, and "Marker size" now goes down to 2 pixels.
+- Flow VD, Flow CVD and Flow HA are removed. Over 19 sessions their
+  signals did no better than random entries.
+
 ## 2026-11-13
 
 - Flow Absorption: one heavy minute at a price is enough for a zone, as

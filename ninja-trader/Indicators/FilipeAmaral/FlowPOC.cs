@@ -55,6 +55,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         Session
     }
 
+    public enum FlowBigTradesFilter { Manual, Automatic }
+
+    public enum FlowBigTradesIntensity { Low, Medium, Strong }
+
     /// <summary>
     /// Marks each candle's point of control (the most traded price) colored by
     /// the aggressor that dominated it, labels the strong ones with their
@@ -62,6 +66,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// period set, the candles are grouped into clock-aligned windows of that
     /// many minutes and each window gets one POC spanning its candles, and one
     /// volume and delta.
+    /// Large aggressive market orders show as circles, one per price. The
+    /// exchange reports one big market order as many fills; consecutive fills
+    /// on the same side at the same price within the aggregation window are put
+    /// back together, so a sweep through several prices shows one circle per
+    /// price, sized by its lots.
     /// </summary>
     public class FlowPOC : Indicator
     {
@@ -71,6 +80,28 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             public double Sells;
             public double Total;
         }
+
+        private class BigTrade
+        {
+            public int BarIndex;
+            public double Price;
+            public double Lots;
+            public bool IsBuy;
+        }
+
+        private const int HistogramCap = 10000;
+        private const int StoredFloor = 5;
+        private const int MinimumOrdersForAutomatic = 500;
+
+        private readonly List<BigTrade> trades = new List<BigTrade>();
+        private readonly long[] sizeHistogram = new long[HistogramCap + 1];
+        private long orderCount;
+        private bool hasOrder;
+        private bool orderIsBuy;
+        private int orderBar;
+        private DateTime orderStartTime;
+        private double orderLots;
+        private double orderPrice;
 
         private readonly Dictionary<double, LevelVolume> levels = new Dictionary<double, LevelVolume>();
         private int levelsKey = -1;
@@ -104,7 +135,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         {
             if (State == State.SetDefaults)
             {
-                Description = "Each candle's point of control colored by aggressor, with contract counts on the strong ones. Needs Tick Replay for history.";
+                Description = "Each candle's point of control colored by aggressor, with contract counts on the strong ones, and large aggressive orders as circles. Needs Tick Replay for history.";
                 Name = "Flow POC";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
@@ -130,7 +161,22 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 MarkerSize = 20;
                 FillOpacity = 40;
                 ShowBarStats = false;
+                ShowNumbers = true;
+                MarkerMatchesCandle = false;
                 PocPeriod = FlowPocPeriod.Chart;
+
+                ShowBigTrades = true;
+                BigTradesFilter = FlowBigTradesFilter.Manual;
+                MinimumLots = 30;
+                MaximumLots = 0;
+                BigTradesIntensity = FlowBigTradesIntensity.Medium;
+                AggregationMilliseconds = 5;
+                BubbleMinimumSize = 18;
+                BubbleMaximumSize = 70;
+                BubbleFillOpacity = 50;
+                HollowBubbles = false;
+                BigBuyColor = Brushes.DodgerBlue;
+                BigSellColor = Brushes.Crimson;
 
                 BuyColor = Rgb(0x00, 0x4D, 0x00);
                 SellColor = Rgb(0xFF, 0x00, 0x00);
@@ -150,6 +196,10 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 barDelta = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 slotBaseline = new Series<double>(this, MaximumBarsLookBack.Infinite);
                 groupStarts = new Series<int>(this, MaximumBarsLookBack.Infinite);
+            }
+            else if (State == State.Realtime)
+            {
+                FlushOrder();
             }
             else if (State == State.Historical)
             {
@@ -286,7 +336,12 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         protected override void OnMarketData(MarketDataEventArgs e)
         {
-            if (e.MarketDataType != MarketDataType.Last || CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+            if (CurrentBar < 0 || Calculate == Calculate.OnBarClose)
+                return;
+            // Bid and ask updates arrive constantly, so a finished order shows without waiting for the next trade.
+            if (hasOrder && (e.Time - orderStartTime).TotalMilliseconds > AggregationMilliseconds)
+                FlushOrder();
+            if (e.MarketDataType != MarketDataType.Last)
                 return;
             if (State == State.Realtime && !sessionIterator.IsInSession(e.Time, true, true))
                 return;
@@ -337,6 +392,95 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             pocSells[0] = poc.Sells;
             barVolume[0] = runningVolume;
             barDelta[0] = runningDelta;
+
+            if (ShowBigTrades)
+                TrackOrder(e);
+        }
+
+        private void TrackOrder(MarketDataEventArgs e)
+        {
+            bool isBuy = e.Price >= e.Ask;
+            bool isSell = !isBuy && e.Price <= e.Bid;
+            if (!isBuy && !isSell)
+                return;
+
+            bool continuesOrder = hasOrder
+                && orderIsBuy == isBuy
+                && e.Price == orderPrice
+                && (e.Time - orderStartTime).TotalMilliseconds <= AggregationMilliseconds;
+            if (!continuesOrder)
+            {
+                FlushOrder();
+                hasOrder = true;
+                orderIsBuy = isBuy;
+                orderBar = CurrentBar;
+                orderStartTime = e.Time;
+                orderLots = 0;
+                orderPrice = e.Price;
+            }
+            orderLots += e.Volume;
+        }
+
+        private void FlushOrder()
+        {
+            if (!hasOrder)
+                return;
+            hasOrder = false;
+
+            lock (trades)
+            {
+                sizeHistogram[(int)Math.Min(HistogramCap, orderLots)]++;
+                orderCount++;
+                // Manual never draws below Minimum lots; Automatic may lower its threshold to the floor.
+                int storedFloor = BigTradesFilter == FlowBigTradesFilter.Manual ? MinimumLots : Math.Min(StoredFloor, MinimumLots);
+                if (orderLots < storedFloor)
+                    return;
+                trades.Add(new BigTrade
+                {
+                    BarIndex = orderBar,
+                    Price = orderPrice,
+                    Lots = orderLots,
+                    IsBuy = orderIsBuy,
+                });
+            }
+        }
+
+        // Smallest order size in the top share of all orders seen, by intensity.
+        private double AutomaticThreshold()
+        {
+            if (orderCount < MinimumOrdersForAutomatic)
+                return MinimumLots;
+            double topShare;
+            if (BigTradesIntensity == FlowBigTradesIntensity.Low)
+                topShare = 0.01;
+            else if (BigTradesIntensity == FlowBigTradesIntensity.Medium)
+                topShare = 0.005;
+            else
+                topShare = 0.001;
+            long wanted = (long)Math.Ceiling(orderCount * topShare);
+            long counted = 0;
+            for (int size = HistogramCap; size >= 1; size--)
+            {
+                counted += sizeHistogram[size];
+                if (counted >= wanted)
+                    return Math.Max(StoredFloor, size);
+            }
+            return MinimumLots;
+        }
+
+        private static int FirstTradeAtOrAfter(List<BigTrade> sorted, int barIndex)
+        {
+            int low = 0;
+            int high = sorted.Count;
+            while (low < high)
+            {
+                int middle = (low + high) / 2;
+                if (sorted[middle].BarIndex < barIndex)
+                    low = middle + 1;
+                else
+                    high = middle;
+            }
+            return low;
         }
 
         private double PocStrength(int barIndex)
@@ -500,7 +644,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     {
                         float growth = (float)Math.Min(1.1, Math.Max(1.0, Math.Sqrt(strength / baseline)));
                         bool isOutlier = OutlierMultiplier > 0 && strength >= baseline * OutlierMultiplier;
-                        float radius = MarkerSize / 2f * growth * (isOutlier ? OutlierSizePercent / 100f : 1f);
+                        float baseSize = MarkerMatchesCandle ? barWidth : MarkerSize;
+                        float radius = baseSize / 2f * growth * (isOutlier ? OutlierSizePercent / 100f : 1f);
                         float ringRadius = radius + 4;
                         bool isAbsorption = HighlightAbsorption && IsAbsorptionPoc(startIndex, barIndex, aggressorSide);
                         bool solid = isOutlier && OutlierSolidFill;
@@ -529,7 +674,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                         double labelValue = PocLabel == FlowPocLabel.Delta
                             ? Math.Abs(pocBuys.GetValueAt(barIndex) - pocSells.GetValueAt(barIndex))
                             : volume;
-                        DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, solid ? backgroundBrush : textBrush);
+                        if (ShowNumbers)
+                            DrawCenteredText(labelValue.ToString("0"), textFormat, x, y, solid ? backgroundBrush : textBrush);
                     }
                     else
                     {
@@ -549,6 +695,9 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                             lines[delta >= 0 ? BuyColor : SellColor]);
                     }
                 }
+
+                if (ShowBigTrades)
+                    DrawBigTrades(chartControl, chartScale, textFormat, textBrush);
             }
             finally
             {
@@ -560,6 +709,47 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     brush.Dispose();
                 foreach (SharpDX.Direct2D1.Brush brush in lines.Values)
                     brush.Dispose();
+            }
+        }
+
+        private void DrawBigTrades(ChartControl chartControl, ChartScale chartScale, SharpDX.DirectWrite.TextFormat textFormat, SharpDX.Direct2D1.Brush textBrush)
+        {
+            SharpDX.Direct2D1.Brush buyFill = BigBuyColor.ToDxBrush(RenderTarget, BubbleFillOpacity / 100f);
+            SharpDX.Direct2D1.Brush sellFill = BigSellColor.ToDxBrush(RenderTarget, BubbleFillOpacity / 100f);
+            SharpDX.Direct2D1.Brush buyLine = BigBuyColor.ToDxBrush(RenderTarget);
+            SharpDX.Direct2D1.Brush sellLine = BigSellColor.ToDxBrush(RenderTarget);
+            try
+            {
+                lock (trades)
+                {
+                    double threshold = BigTradesFilter == FlowBigTradesFilter.Automatic ? AutomaticThreshold() : MinimumLots;
+                    for (int i = FirstTradeAtOrAfter(trades, ChartBars.FromIndex); i < trades.Count; i++)
+                    {
+                        BigTrade trade = trades[i];
+                        if (trade.BarIndex > ChartBars.ToIndex)
+                            break;
+                        if (trade.Lots < threshold || (MaximumLots > 0 && trade.Lots > MaximumLots))
+                            continue;
+
+                        float radius = (float)Math.Min(BubbleMaximumSize, BubbleMinimumSize * trade.Lots / threshold) / 2f;
+                        float x = chartControl.GetXByBarIndex(ChartBars, trade.BarIndex);
+                        float y = chartScale.GetYByValue(trade.Price);
+                        SharpDX.Direct2D1.Ellipse bubble = new SharpDX.Direct2D1.Ellipse(new SharpDX.Vector2(x, y), radius, radius);
+                        if (!HollowBubbles)
+                            RenderTarget.FillEllipse(bubble, trade.IsBuy ? buyFill : sellFill);
+                        RenderTarget.DrawEllipse(bubble, trade.IsBuy ? buyLine : sellLine, 1.5f);
+
+                        if (ShowNumbers && radius * 2 >= LabelFont.Size * 1.6)
+                            DrawCenteredText(trade.Lots.ToString("0"), textFormat, x, y, textBrush);
+                    }
+                }
+            }
+            finally
+            {
+                buyFill.Dispose();
+                sellFill.Dispose();
+                buyLine.Dispose();
+                sellLine.Dispose();
             }
         }
 
@@ -611,8 +801,8 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
         [Display(Name = "Marker", Order = 1, GroupName = "3. Markers")]
         public FlowPocMarker Marker { get; set; }
 
-        [Range(6, 60)]
-        [Display(Name = "Marker size", Order = 2, GroupName = "3. Markers")]
+        [Range(2, 60)]
+        [Display(Name = "Marker size", Description = "Square or circle size, in pixels. Ignored when the marker matches the candle width.", Order = 2, GroupName = "3. Markers")]
         public int MarkerSize { get; set; }
 
         [Range(0, 100)]
@@ -635,6 +825,70 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
 
         [Display(Name = "Font", Order = 7, GroupName = "3. Markers")]
         public SimpleFont LabelFont { get; set; }
+
+        [Display(Name = "Show numbers", Description = "Print contract counts inside POC markers and big-trade circles. Off leaves only the shapes.", Order = 9, GroupName = "3. Markers")]
+        public bool ShowNumbers { get; set; }
+
+        [Display(Name = "Marker matches candle width", Description = "Size strong-POC markers to the candle body's width, so they follow the chart's zoom.", Order = 10, GroupName = "3. Markers")]
+        public bool MarkerMatchesCandle { get; set; }
+
+        [Display(Name = "Show big trades", Description = "Circles at the prices where large aggressive market orders traded.", Order = 1, GroupName = "6. Big trades")]
+        public bool ShowBigTrades { get; set; }
+
+        [Display(Name = "Filter mode", Description = "Manual: show orders of at least Minimum lots. Automatic: show the largest orders seen on this chart, by Intensity.", Order = 2, GroupName = "6. Big trades")]
+        public FlowBigTradesFilter BigTradesFilter { get; set; }
+
+        [Range(1, 10000), NinjaScriptProperty]
+        [Display(Name = "Minimum lots", Description = "Manual filter: smallest order shown. Also used by Automatic until enough orders have been seen.", Order = 3, GroupName = "6. Big trades")]
+        public int MinimumLots { get; set; }
+
+        [Display(Name = "Intensity", Description = "Automatic filter: Low shows the top 1% of orders by size, Medium the top 0.5%, Strong the top 0.1%.", Order = 4, GroupName = "6. Big trades")]
+        public FlowBigTradesIntensity BigTradesIntensity { get; set; }
+
+        [Range(0, 100000), NinjaScriptProperty]
+        [Display(Name = "Maximum lots", Description = "Largest order shown, to split size bands across two copies. 0 turns it off.", Order = 5, GroupName = "6. Big trades")]
+        public int MaximumLots { get; set; }
+
+        [Range(0, 1000), NinjaScriptProperty]
+        [Display(Name = "Aggregation (ms)", Description = "Fills on the same side at the same price arriving within this many milliseconds of the first one count as one order. 0 joins only fills with the same timestamp.", Order = 6, GroupName = "6. Big trades")]
+        public int AggregationMilliseconds { get; set; }
+
+        [Range(2, 200)]
+        [Display(Name = "Circle minimum size", Description = "Circle diameter, in pixels, of an order at the threshold.", Order = 7, GroupName = "6. Big trades")]
+        public int BubbleMinimumSize { get; set; }
+
+        [Range(2, 400)]
+        [Display(Name = "Circle maximum size", Description = "Largest circle diameter, in pixels; circles grow in proportion to lots.", Order = 8, GroupName = "6. Big trades")]
+        public int BubbleMaximumSize { get; set; }
+
+        [Range(0, 100)]
+        [Display(Name = "Circle fill opacity (%)", Order = 9, GroupName = "6. Big trades")]
+        public int BubbleFillOpacity { get; set; }
+
+        [Display(Name = "Hollow circles", Description = "Outline only, no fill.", Order = 10, GroupName = "6. Big trades")]
+        public bool HollowBubbles { get; set; }
+
+        [XmlIgnore]
+        [Display(Name = "Big buy color", Description = "Orders lifting the ask.", Order = 5, GroupName = "5. Colors")]
+        public System.Windows.Media.Brush BigBuyColor { get; set; }
+
+        [Browsable(false)]
+        public string BigBuyColorSerializable
+        {
+            get { return Serialize.BrushToString(BigBuyColor); }
+            set { BigBuyColor = Serialize.StringToBrush(value); }
+        }
+
+        [XmlIgnore]
+        [Display(Name = "Big sell color", Description = "Orders hitting the bid.", Order = 6, GroupName = "5. Colors")]
+        public System.Windows.Media.Brush BigSellColor { get; set; }
+
+        [Browsable(false)]
+        public string BigSellColorSerializable
+        {
+            get { return Serialize.BrushToString(BigSellColor); }
+            set { BigSellColor = Serialize.StringToBrush(value); }
+        }
 
         [XmlIgnore]
         [Display(Name = "Buyer color", Order = 1, GroupName = "5. Colors")]

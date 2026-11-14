@@ -470,9 +470,9 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart; set the step and the two tier intervals in price
   units for the instrument you trade.
 
-### OrderFlowKit — candle POC, volume delta, CVD, absorption, Heikin-Ashi
+### OrderFlowKit — candle POC, big trades, absorption
 
-Five indicators for reading aggression candle by candle. Trades count as
+Two indicators for reading aggression candle by candle. Trades count as
 buys at the ask or above and as sells at the bid or below; trades between
 the two count toward volume only.
 
@@ -512,48 +512,23 @@ the two count toward volume only.
   when the losing side's aggression sits at the candle's edge: sellers in
   the bottom "Absorption edge" share of a candle that closes above the
   POC, or buyers at the top of one that closes below it.
-- **Flow VD** (own panel): each candle's delta, updated while the candle
-  forms. Bars grow up from zero colored by side, or above and below zero
-  with "Bars from zero up" off. "Show as z-score" plots how many deviations
-  the delta sits from the average of the previous "Z-score lookback"
-  candles, so a 1-minute and a 5-minute panel read on the same scale.
-  "Smoothing period" above 0 makes each bar's height an EMA of the recent
-  candles' delta size while its color stays the candle's own side, so a
-  burst fades over a few bars instead of dropping to zero.
-- **Flow CVD** (own panel): cumulative delta drawn as Heikin-Ashi candles,
-  laid out like the reference trader's CVD. "Delta source" on Flow CVD and
-  Flow VD picks what delta means: HeikinAshiVolume (default) counts volume
-  positive while a Heikin-Ashi candle built from price is rising and
-  negative while it falls, which is how his 1-minute VD and CVD are built;
-  it follows price and needs no Tick Replay. StructureVolume signs each
-  candle's volume by the last structure break of the price candles: up
-  after a close above the previous candle's high, down after a close below
-  its low, unchanged in between, so it keeps adding through pullbacks that
-  break nothing. BidAsk is real aggression from each trade's bid and ask.
-  On Flow CVD, "Sign each trade" gives each trade the price sign at that
-  moment instead of signing the
-  whole candle (needs Tick Replay). Signing the whole candle draws the same
-  candles live and after a reload: a candle does not keep extremes from a
-  color its price candle had earlier in the minute. The CVD keeps accumulating across
-  sessions unless "Reset each session" or "Reset at time" is on.
-  - A circle marks the moment the CVD breaks the previous candle the other
-    way: green when it closes above a falling candle's high, red below a
-    rising candle's low. It is checked on the forming candle, so it can
-    appear and vanish before the close; in sideways flow they come in
-    pairs.
-  - Pivot lines start at each CVD high (red) and low (dark green) and stop
-    at the first candle that trades through them; the crossed part stays.
-    Only pivots from the last "Last levels length" candles (30) get a line.
-  - Two short dashes mark the previous candle's high and low; each turns red
-    once the forming candle crosses it.
-  - A vertical stripe marks effort without result: orange when buying flow
-    did not lift price, purple when selling flow did not drop it, over
-    "Divergence lookback" candles, scaled against the largest such moves
-    in the last "Scale lookback" candles.
-  - The panel scales to the visible candles. "Use lookback scaling" fits
-    the range of the last "Scale lookback" candles instead, which stops the
-    scale jumping as you scroll but flattens the candles when the CVD has
-    drifted far in that time.
+  "Show numbers" off leaves only the shapes, and "Marker matches candle
+  width" sizes the markers to the candle body so they follow the zoom and
+  stay out of the way of the candles.
+  - Big trades (on by default, "Show big trades"): large aggressive market
+    orders as circles on the candles, blue lifting the ask, red hitting the
+    bid, one circle per price, sized in proportion to lots (between "Circle
+    minimum size" and "Circle maximum size") with the lots printed inside.
+    The exchange reports one big order as many fills; fills on the same side
+    at the same price arriving within "Aggregation (ms)" of the first are put
+    back together, so a sweep through several prices shows a stack of
+    circles, one per price. "Filter mode" Manual shows orders of at least
+    "Minimum lots" (30); Automatic shows the largest orders this chart has
+    seen — the top 1%, 0.5% or 0.1% by "Intensity" — once 500 orders are in.
+    "Maximum lots" caps the band so two copies can split small and huge
+    orders. Rebuilding orders depends on fill timestamps: a feed whose
+    history is stamped by the second merges separate orders, so history can
+    show more and bigger circles than live.
 - **Flow Absorption** (price panel): absorption zones. Over the last
   "Window" of 1-minute bars
   (180, read from a 1-minute series whatever the chart's period), every
@@ -575,35 +550,7 @@ the two count toward volume only.
   - The number grows and shrinks as minutes enter and leave the window.
     At most "Maximum simultaneous zones" (8) show: the largest numbers
     stay.
-- **Flow HA** (price panel): smoothed Heikin-Ashi candles over the
-  chart's own candles (hidden by default): price is smoothed with an EMA
-  ("Smoothing period", 2), the Heikin-Ashi is built, then its values are
-  smoothed again ("Final smoothing period", 2). "Last levels" draws the
-  previous candle's high and low out past the last candle, red once that
-  candle trades through them. Off by default: gray candles that break
-  neither or both of the previous candle's extremes ("Mark inside
-  candles"), reversal triangles after a run of "Candles before a reversal"
-  candles ("Show reversal triangles"), the traffic area, dotted lines
-  at the previous candle's high, middle and low ("Show traffic area"),
-  and CCZ zones ("Show CCZ zones"). CCZ zones
-  box the range of each Heikin-Ashi candle whose body is at most "Body (%
-  of range)" of its range (7% by default), colored while open and gray
-  once a candle closes outside the box.
-- **Flow Big Trades** (price panel): large aggressive market orders as
-  bubbles on the candles, blue lifting the ask, red hitting the bid, one
-  bubble per price, sized in proportion to lots (between "Minimum size"
-  and "Maximum size") with the lots printed inside. The exchange reports
-  one big order as many fills; fills on the same side at the same price
-  arriving within "Aggregation (ms)" of the first are put back together,
-  so a sweep through several prices shows a stack of bubbles, one per
-  price. "Filter mode" Manual shows orders of at least "Minimum lots"
-  (30); Automatic shows the largest orders this chart has seen — the top
-  1%, 0.5% or 0.1% by "Intensity" — once 500 orders are in. "Maximum
-  lots" caps the band so two copies can split small and huge orders.
-  Rebuilding orders depends on fill timestamps: a feed whose history is
-  stamped by the second merges separate orders, so history can show more
-  and bigger bubbles than live.
-- Flow POC, VD, CVD, Absorption and Big Trades need **Tick Replay** on the data series to show past
+- Flow POC and Flow Absorption need **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
   in the chart's Data Series). Without it they start counting when the
   chart loads and say so in the corner. Tick Replay makes loading slow:
@@ -613,9 +560,7 @@ the two count toward volume only.
   and POC colors only mean something on feeds that carry it.
 - Calculate must be On each tick or On price change; On bar close is
   refused with a note in the corner.
-- Use: Flow POC and Flow Absorption on a 5-minute chart, Flow VD and Flow
-  CVD under a 1-minute chart, Flow HA on a
-  second 5-minute chart.
+- Use: Flow POC and Flow Absorption on a 5-minute chart.
 - Pre-open levels come from the repo's other indicators: ICT Killzones
   with a slot for the overnight session (18:00-09:30) boxes its range and
   draws its high and low until price takes them, a slot for 00:00-00:05
