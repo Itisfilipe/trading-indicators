@@ -72,7 +72,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
     /// back together, so a sweep through several prices shows one circle per
     /// price, sized by its lots.
     /// </summary>
-    public class FlowPOC : Indicator
+    public class OrderFlowToolKit : Indicator
     {
         private class LevelVolume
         {
@@ -136,7 +136,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
             if (State == State.SetDefaults)
             {
                 Description = "Each candle's point of control colored by aggressor, with contract counts on the strong ones, and large aggressive orders as circles. Needs Tick Replay for history.";
-                Name = "Flow POC";
+                Name = "OrderFlowToolKit";
                 Calculate = Calculate.OnEachTick;
                 IsOverlay = true;
                 DrawOnPricePanel = true;
@@ -151,7 +151,7 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                 PocLabel = FlowPocLabel.Volume;
                 StrengthMeasure = FlowPocMeasure.Volume;
                 SessionsBack = 4;
-                HighlightAbsorption = false;
+                HighlightAbsorption = true;
                 AbsorptionEdgePercent = 25;
                 OutlierMultiplier = 0;
                 OutlierSizePercent = 130;
@@ -212,11 +212,11 @@ namespace NinjaTrader.NinjaScript.Indicators.FilipeAmaral
                     periodMinutes = 0;
                 useTimeOfDay = StrengthMode == FlowPocStrength.SameTimeOfDay && Bars.BarsType.IsTimeBased;
                 if (StrengthMode == FlowPocStrength.SameTimeOfDay && !useTimeOfDay)
-                    Draw.TextFixed(this, "FlowPocStrength", "Flow POC: same time of day needs time-based bars; using recent candles", TextPosition.TopLeft);
+                    Draw.TextFixed(this, "FlowPocStrength", "OrderFlowToolKit: same time of day needs time-based bars; using recent candles", TextPosition.TopLeft);
                 if (Calculate == Calculate.OnBarClose)
-                    Draw.TextFixed(this, "FlowPocCalculate", "Flow POC: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
+                    Draw.TextFixed(this, "FlowPocCalculate", "OrderFlowToolKit: set Calculate to On each tick or On price change", TextPosition.BottomLeft);
                 if (!Bars.IsTickReplay)
-                    Draw.TextFixed(this, "FlowPocTickReplay", "Flow POC: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
+                    Draw.TextFixed(this, "FlowPocTickReplay", "OrderFlowToolKit: enable Tick Replay on the data series to see past candles", TextPosition.BottomRight);
             }
         }
 

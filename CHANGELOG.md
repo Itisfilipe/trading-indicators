@@ -5,9 +5,17 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-14
 
+- Flow POC is renamed OrderFlowToolKit, since it also draws big trades;
+  add it again on charts that used Flow POC. Delete FlowPOC.cs from the
+  installed FilipeAmaral folder before compiling.
+- OrderFlowToolKit rings absorption POCs by default ("Highlight absorption
+  POCs" on).
+- Flow Absorption is removed: it marked prices with heavy volume, not
+  absorption, which the strong POCs already show. Delete
+  FlowAbsorption.cs from the installed FilipeAmaral folder.
 - Flow POC draws big trades: large aggressive orders as circles on the
   candles, with the same filter, aggregation and defaults Flow Big Trades
-  had (30 lots). Flow Big Trades is removed; use Flow POC instead.
+  had (30 lots). Flow Big Trades is removed; use OrderFlowToolKit instead.
   Delete FlowBigTrades.cs, FlowVD.cs, FlowCVD.cs and FlowHA.cs from the
   installed FilipeAmaral folder, or the NinjaScript build fails.
 - Flow POC: "Show numbers" off hides the counts in POC markers and

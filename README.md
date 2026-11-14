@@ -470,13 +470,13 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 - Use: add to the chart; set the step and the two tier intervals in price
   units for the instrument you trade.
 
-### OrderFlowKit — candle POC, big trades, absorption
+### OrderFlowToolKit — candle POC, big trades, absorption
 
-Two indicators for reading aggression candle by candle. Trades count as
+One indicator for reading aggression candle by candle. Trades count as
 buys at the ask or above and as sells at the bid or below; trades between
 the two count toward volume only.
 
-- **Flow POC** (price panel): a marker at each candle's most traded price,
+- **OrderFlowToolKit** (price panel): a marker at each candle's most traded price,
   green when buyers dominated that price, red when sellers did, gray when
   buys and sells tie. A POC whose volume beats the average of the previous 30
   candles' POCs (times "Square at") gets a square (or circle) that grows
@@ -508,7 +508,8 @@ the two count toward volume only.
   against the overnight; it needs at least 3 past sessions loaded (and
   Tick Replay makes that slow). Times are read in the exchange's time
   zone, so daylight-saving changes do not shift the slots; on bars that
-  are not time-based it falls back to recent candles with a note. "Highlight absorption POCs" rings a strong POC on a closed candle
+  are not time-based it falls back to recent candles with a note.
+  "Highlight absorption POCs" (on by default) rings a strong POC on a closed candle
   when the losing side's aggression sits at the candle's edge: sellers in
   the bottom "Absorption edge" share of a candle that closes above the
   POC, or buyers at the top of one that closes below it.
@@ -529,38 +530,17 @@ the two count toward volume only.
     orders. Rebuilding orders depends on fill timestamps: a feed whose
     history is stamped by the second merges separate orders, so history can
     show more and bigger circles than live.
-- **Flow Absorption** (price panel): absorption zones. Over the last
-  "Window" of 1-minute bars
-  (180, read from a 1-minute series whatever the chart's period), every
-  bar's aggressor volume at each price is compared with the window's
-  average. A price becomes a zone when one bar's volume there beats the
-  average by "Sensitivity" standard deviations (2.5) and it traded in at
-  least "Minimum touches" (2) bars of the window. The band starts after the
-  1-minute bar that confirms it and runs right, with the zone's number in
-  a colored box on the right edge: the contracts traded at that price
-  inside the window. A zone disappears once it stops qualifying: its
-  heavy minute leaves the window or no longer stands out, or it trades in
-  fewer than "Minimum touches" bars.
-  - Nothing changes during a 1-minute bar: zones appear, flip and end only
-    when one closes.
-  - Below price a zone is support (blue), above it resistance (red).
-  - A zone breaks after "Bars to consider zone broken" (3) closes in a row
-    more than "Break buffer" (4 ticks) beyond it. If it still qualifies it
-    comes back at the next close on its new side.
-  - The number grows and shrinks as minutes enter and leave the window.
-    At most "Maximum simultaneous zones" (8) show: the largest numbers
-    stay.
-- Flow POC and Flow Absorption need **Tick Replay** on the data series to show past
+- It needs **Tick Replay** on the data series to show past
   candles (Tools > Options > Market Data > Show Tick Replay, then tick it
-  in the chart's Data Series). Without it they start counting when the
-  chart loads and say so in the corner. Tick Replay makes loading slow:
+  in the chart's Data Series). Without it the indicator starts counting
+  when the chart loads and says so in the corner. Tick Replay makes loading slow:
   load only a few days.
 - The side of each trade comes from the bid and ask stored with it. A data
   feed without historical bid/ask makes every past trade a sell, so delta
   and POC colors only mean something on feeds that carry it.
 - Calculate must be On each tick or On price change; On bar close is
   refused with a note in the corner.
-- Use: Flow POC and Flow Absorption on a 5-minute chart.
+- Use: on a 5-minute chart.
 - Pre-open levels come from the repo's other indicators: ICT Killzones
   with a slot for the overnight session (18:00-09:30) boxes its range and
   draws its high and low until price takes them, a slot for 00:00-00:05
