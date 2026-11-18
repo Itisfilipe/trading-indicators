@@ -19,71 +19,57 @@
 //   gap
 // - Opening block (off by default): a band between the highest and lowest of
 //   the first, third and fourth opens (00:00, 08:30, 09:30)
-// - One history setting for every drawing
+// - Opens at one price share a caption ("Midnight / London")
 //
 // Notes:
-// - Levels are computed on a 5-minute feed of the extended session (setting),
-//   not on the chart's candles, so a 1-minute chart still shows every level
-//   of the history even where its own candles do not reach. NWOGs are read
-//   from an hourly feed, which reaches months back.
-// - An open time must sit on the calculation timeframe's grid (a 5-minute
-//   feed reads any time ending in :00, :05, :10 ...).
+// - Opens come from a 5-minute feed and NWOGs from an hourly feed (the chart's
+//   own timeframe when larger), not the chart's candles, so a 1-minute chart
+//   shows the whole history even where its own candles do not reach.
+// - An open time must sit on the 5-minute grid, or on the chart's own grid
+//   above 5 minutes (a 1-hour chart reads 08:30 from the 09:00 candle).
 // -----------------------------------------------------------------------------
 
-indicator('ORMOpenings', 'ORM Opens', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+indicator('ORMOpenings', 'ORM Openings', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
 
 TZ = 'America/New_York'
 MS_PER_MINUTE = 60000
 MS_PER_DAY = 86400000
 HALF_DAY_MS = 43200000
 
-//==============================================================================
-// INPUTS
-//==============================================================================
-GRP_GENERAL = 'General'
-GRP_OPENS = 'Opens'
-GRP_NWOG = 'NWOG and block'
-
-history = input.int(1, 'Sessions of history', minval = 1, maxval = 30, tooltip = 'Trading days of open lines, and weeks of NWOGs, kept on the chart.', group = GRP_GENERAL)
-calcTf = input.timeframe('5', 'Calculation timeframe', options = ['1', '5', '15'], tooltip = 'Feed the opens are read from. 1 reaches only as far back as TradingView serves 1-minute data; 5 reaches weeks back.', group = GRP_GENERAL)
-lineWidth = input.int(1, 'Line width', minval = 1, maxval = 4, group = GRP_GENERAL)
-lineStyleInput = input.string('Dashed', 'Line style', options = ['Solid', 'Dashed', 'Dotted'], group = GRP_GENERAL)
-labelSizeInput = input.string('small', 'Label size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_GENERAL)
+history = input.int(1, 'Days of history', minval = 1, maxval = 30)
 
 OPEN_TOOLTIP = 'On/off, time as HH:MM New York, caption, color.'
-open1On = input.bool(true, '1', inline = 'o1', tooltip = OPEN_TOOLTIP, group = GRP_OPENS)
-open1Time = input.string('00:00', '', inline = 'o1', group = GRP_OPENS)
-open1Text = input.string('Midnight', '', inline = 'o1', group = GRP_OPENS)
-open1Color = input.color(#374151, '', inline = 'o1', group = GRP_OPENS)
-open2On = input.bool(true, '2', inline = 'o2', group = GRP_OPENS)
-open2Time = input.string('02:00', '', inline = 'o2', group = GRP_OPENS)
-open2Text = input.string('London', '', inline = 'o2', group = GRP_OPENS)
-open2Color = input.color(#9c27b0, '', inline = 'o2', group = GRP_OPENS)
-open3On = input.bool(true, '3', inline = 'o3', group = GRP_OPENS)
-open3Time = input.string('08:30', '', inline = 'o3', group = GRP_OPENS)
-open3Text = input.string('08:30', '', inline = 'o3', group = GRP_OPENS)
-open3Color = input.color(#374151, '', inline = 'o3', group = GRP_OPENS)
-open4On = input.bool(true, '4', inline = 'o4', group = GRP_OPENS)
-open4Time = input.string('09:30', '', inline = 'o4', group = GRP_OPENS)
-open4Text = input.string('NY Open', '', inline = 'o4', group = GRP_OPENS)
-open4Color = input.color(#2962ff, '', inline = 'o4', group = GRP_OPENS)
-open5On = input.bool(true, '5', inline = 'o5', group = GRP_OPENS)
-open5Time = input.string('13:30', '', inline = 'o5', group = GRP_OPENS)
-open5Text = input.string('PM Open', '', inline = 'o5', group = GRP_OPENS)
-open5Color = input.color(#f23645, '', inline = 'o5', group = GRP_OPENS)
-open6On = input.bool(true, '6', inline = 'o6', group = GRP_OPENS)
-open6Time = input.string('20:00', '', inline = 'o6', group = GRP_OPENS)
-open6Text = input.string('Asia Open', '', inline = 'o6', group = GRP_OPENS)
-open6Color = input.color(#089981, '', inline = 'o6', group = GRP_OPENS)
+open1On = input.bool(true, '1', inline = 'o1', tooltip = OPEN_TOOLTIP)
+open1Time = input.string('00:00', '', inline = 'o1')
+open1Text = input.string('Midnight', '', inline = 'o1')
+open1Color = input.color(#374151, '', inline = 'o1')
+open2On = input.bool(true, '2', inline = 'o2')
+open2Time = input.string('02:00', '', inline = 'o2')
+open2Text = input.string('London', '', inline = 'o2')
+open2Color = input.color(#9c27b0, '', inline = 'o2')
+open3On = input.bool(true, '3', inline = 'o3')
+open3Time = input.string('08:30', '', inline = 'o3')
+open3Text = input.string('08:30', '', inline = 'o3')
+open3Color = input.color(#374151, '', inline = 'o3')
+open4On = input.bool(true, '4', inline = 'o4')
+open4Time = input.string('09:30', '', inline = 'o4')
+open4Text = input.string('NY Open', '', inline = 'o4')
+open4Color = input.color(#2962ff, '', inline = 'o4')
+open5On = input.bool(true, '5', inline = 'o5')
+open5Time = input.string('13:30', '', inline = 'o5')
+open5Text = input.string('PM Open', '', inline = 'o5')
+open5Color = input.color(#f23645, '', inline = 'o5')
+open6On = input.bool(true, '6', inline = 'o6')
+open6Time = input.string('20:00', '', inline = 'o6')
+open6Text = input.string('Asia Open', '', inline = 'o6')
+open6Color = input.color(#089981, '', inline = 'o6')
 
-nwogOn = input.bool(true, 'NWOG', inline = 'nwog', group = GRP_NWOG)
-nwogColor = input.color(#7e57c2, '', inline = 'nwog', group = GRP_NWOG)
-blockOn = input.bool(false, 'Opening block', inline = 'blk', tooltip = 'Band between the highest and lowest of opens 1, 3 and 4 (00:00, 08:30 and 09:30 by default).', group = GRP_NWOG)
-blockColor = input.color(color.new(#787b86, 88), '', inline = 'blk', group = GRP_NWOG)
+nwogOn = input.bool(true, 'NWOG', inline = 'nwog')
+nwogColor = input.color(#7e57c2, '', inline = 'nwog')
+nwogWeeks = input.int(4, 'Weeks', minval = 1, maxval = 30, inline = 'nwog', tooltip = 'Past weeks whose gap stays on the chart until price trades through it.')
+blockOn = input.bool(false, 'Opening block', inline = 'blk', tooltip = 'Band between the highest and lowest of opens 1, 3 and 4 (00:00, 08:30 and 09:30 by default).')
+blockColor = input.color(color.new(#787b86, 88), '', inline = 'blk')
 
-//==============================================================================
-// TYPES AND HELPERS
-//==============================================================================
 type Mark
     float price
     int t
@@ -120,9 +106,6 @@ tradingDayClose(int t) =>
     nextDay = t + MS_PER_DAY
     sameDay > t ? sameDay : timestamp(TZ, year(nextDay, TZ), month(nextDay, TZ), dayofmonth(nextDay, TZ), 17, 0)
 
-//==============================================================================
-// TRACKERS (run on the calculation feed through request.security)
-//==============================================================================
 trackOpen(int openMinute, int barMs, int keep) =>
     var marks = array.new<Mark>()
     if not na(openMinute)
@@ -147,15 +130,12 @@ trackWeekGaps(int keep) =>
             gap.reachedBottom := true
     barstate.islast ? gaps : na
 
-//==============================================================================
-// DATA
-//==============================================================================
 // A feed below the chart's timeframe would only return its first sub-candle, so the chart's own timeframe takes over.
 feedTimeframe(string minimum) =>
     timeframe.in_seconds() > timeframe.in_seconds(minimum) ? timeframe.period : minimum
 
 feed = ticker.modify(syminfo.tickerid, session.extended)
-openFeedTf = feedTimeframe(calcTf)
+openFeedTf = feedTimeframe('5')
 calcMs = timeframe.in_seconds(openFeedTf) * 1000
 
 opens1 = request.security(feed, openFeedTf, trackOpen(parseClock(open1Time), calcMs, history), lookahead = barmerge.lookahead_on)
@@ -164,32 +144,34 @@ opens3 = request.security(feed, openFeedTf, trackOpen(parseClock(open3Time), cal
 opens4 = request.security(feed, openFeedTf, trackOpen(parseClock(open4Time), calcMs, history), lookahead = barmerge.lookahead_on)
 opens5 = request.security(feed, openFeedTf, trackOpen(parseClock(open5Time), calcMs, history), lookahead = barmerge.lookahead_on)
 opens6 = request.security(feed, openFeedTf, trackOpen(parseClock(open6Time), calcMs, history), lookahead = barmerge.lookahead_on)
-weekGaps = request.security(feed, feedTimeframe('60'), trackWeekGaps(history), lookahead = barmerge.lookahead_on)
+weekGaps = request.security(feed, feedTimeframe('60'), trackWeekGaps(nwogWeeks), lookahead = barmerge.lookahead_on)
 
-//==============================================================================
-// DRAWING
-//==============================================================================
 var int firstBarTime = time
-textSize = switch labelSizeInput
-    'tiny' => size.tiny
-    'normal' => size.normal
-    'large' => size.large
-    => size.small
-openStyle = switch lineStyleInput
-    'Solid' => line.style_solid
-    'Dotted' => line.style_dotted
-    => line.style_dashed
+var openCaptions = map.new<string, label>()
+var openCaptionTexts = map.new<string, string>()
 
 // The caption sits above the line, ending at x, clear of the candles to its right.
 levelLabel(int x, float price, string caption, color tint) =>
-    label.new(x, price, caption, xloc = xloc.bar_time, style = label.style_label_lower_right, color = color(na), textcolor = tint, size = textSize)
+    label.new(x, price, caption, xloc = xloc.bar_time, style = label.style_label_lower_right, color = color(na), textcolor = tint, size = size.small)
+
+// The caption sits past the line's end; opens at one price ending together share one caption.
+openCaption(int x, float price, string caption, color tint) =>
+    key = str.tostring(x) + '|' + str.tostring(price)
+    existing = openCaptions.get(key)
+    merged = na(existing) ? caption : openCaptionTexts.get(key) + ' / ' + caption
+    openCaptionTexts.put(key, merged)
+    if na(existing)
+        openCaptions.put(key, label.new(x, price, merged, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small))
+    else
+        existing.set_text(merged)
+    merged
 
 drawOpens(array<Mark> marks, string caption, color tint) =>
     for mark in marks
         x1 = math.max(mark.t, firstBarTime)
         if mark.endTime > x1
-            line.new(x1, mark.price, mark.endTime, mark.price, xloc = xloc.bar_time, color = tint, style = openStyle, width = lineWidth)
-            label.new(mark.endTime, mark.price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+            line.new(x1, mark.price, mark.endTime, mark.price, xloc = xloc.bar_time, color = tint, style = line.style_dashed)
+            openCaption(mark.endTime, mark.price, caption, tint)
 
 priceOnDay(array<Mark> marks, int dayClose) =>
     float result = na
@@ -212,7 +194,7 @@ drawWeekGaps() =>
             x1 = math.max(gap.t, firstBarTime)
             middle = (gap.top + gap.bottom) / 2
             box.new(x1, gap.top, x1 + MS_PER_MINUTE, gap.bottom, xloc = xloc.bar_time, extend = extend.right, border_color = color.new(nwogColor, 60), bgcolor = color.new(nwogColor, 85))
-            line.new(x1, middle, x1 + MS_PER_MINUTE, middle, xloc = xloc.bar_time, extend = extend.right, color = nwogColor, style = line.style_dotted, width = lineWidth)
+            line.new(x1, middle, x1 + MS_PER_MINUTE, middle, xloc = xloc.bar_time, extend = extend.right, color = nwogColor, style = line.style_dotted)
             levelLabel(time, middle, 'NWOG ' + str.format_time(gap.t, 'dd/MM', TZ), nwogColor)
 
 if barstate.islast and not na(opens1)
@@ -222,7 +204,8 @@ if barstate.islast and not na(opens1)
         drawn.delete()
     for drawn in box.all
         drawn.delete()
-
+    openCaptions.clear()
+    openCaptionTexts.clear()
     if blockOn
         drawBlock()
     if nwogOn
