@@ -47,7 +47,7 @@ if barstate.islast
     int column = 0
     if showCountdown and timeframe.isintraday
         secondsLeft = int(math.max(0, time_close - timenow) / 1000)
-        addCell(column, countdownText(secondsLeft), secondsLeft <= alertSeconds ? alertColor : panelColor)
+        addCell(column, countdownText(secondsLeft), barstate.isrealtime and secondsLeft <= alertSeconds ? alertColor : panelColor)
         column += 1
     if showLot
         addCell(column, na(lotSize) ? '-' : str.tostring(lotSize), panelColor)

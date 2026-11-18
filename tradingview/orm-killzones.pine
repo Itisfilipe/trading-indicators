@@ -154,7 +154,7 @@ var placedLabels = map.new<string, label>()
 // The caption sits above a high and below a low, ending at x, clear of the candles; levels at the same
 // price whose captions land on the same candle share one caption.
 placeLabel(int x, float price, string caption, color tint, bool isHigh) =>
-    key = str.tostring(x) + '|' + str.tostring(price)
+    key = str.tostring(x) + '|' + str.tostring(price) + '|' + str.tostring(isHigh)
     existing = placedLabels.get(key)
     if na(existing)
         placedLabels.put(key, label.new(x, price, caption, xloc = xloc.bar_time, style = isHigh ? label.style_label_lower_right : label.style_label_upper_right, color = color(na), textcolor = tint, size = size.small))
