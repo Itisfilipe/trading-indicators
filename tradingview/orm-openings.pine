@@ -8,7 +8,7 @@
 //
 // Description:
 // The opening prices the Open Reaction Model reads on NQ: a line at each
-// session open and the New Week Opening Gaps.
+// session open and the New Week (and optionally New Day) Opening Gaps.
 // Every time is New York local, so daylight saving needs no adjustment.
 //
 // Features:
@@ -17,12 +17,14 @@
 //   last one, caption just past its end), captioned with their time; times and colors
 //   editable
 // - NWOG: the gap between Friday's 17:00 close and Sunday's 18:00 open, as a
-//   box with its midpoint (CE), kept until price has traded through the whole
-//   gap
+//   box with its midpoint (CE), for the last few weeks whether or not price
+//   has traded through it
+// - NDOG (off by default): the same for each weekday's 17:00 close and 18:00
+//   reopen
 // - Opens at one price ending together share a caption ("00:00 / 02:00")
 //
 // Notes:
-// - Opens come from a 5-minute feed and NWOGs from an hourly feed (the chart's
+// - Opens come from a 5-minute feed and opening gaps from an hourly feed (the chart's
 //   own timeframe when larger), not the chart's candles, so a 1-minute chart
 //   shows the whole history even where its own candles do not reach.
 // - An open time must sit on the 5-minute grid, or on the chart's own grid
@@ -37,7 +39,7 @@ MS_PER_DAY = 86400000
 HALF_DAY_MS = 43200000
 
 GRP_OPENS = 'Opens'
-GRP_NWOG = 'NWOG'
+GRP_NWOG = 'Opening gaps'
 
 history = input.int(1, 'Days of history', minval = 1, maxval = 30, group = GRP_OPENS)
 open1On = input.bool(true, '', inline = 'o1', group = GRP_OPENS)
@@ -58,9 +60,12 @@ open5Color = input.color(#000000, '', inline = 'o5', group = GRP_OPENS)
 open6On = input.bool(true, '', inline = 'o6', group = GRP_OPENS)
 open6Time = input.string('20:00', '', inline = 'o6', group = GRP_OPENS)
 open6Color = input.color(#000000, '', inline = 'o6', group = GRP_OPENS)
-nwogOn = input.bool(true, 'Show', inline = 'nwog', group = GRP_NWOG)
+nwogOn = input.bool(true, 'NWOG', inline = 'nwog', group = GRP_NWOG)
 nwogColor = input.color(#000000, '', inline = 'nwog', group = GRP_NWOG)
-nwogWeeks = input.int(4, 'Weeks', minval = 1, maxval = 30, tooltip = 'Past weeks whose gap stays on the chart until price trades through it.', group = GRP_NWOG)
+nwogWeeks = input.int(4, 'Weeks', minval = 1, maxval = 30, group = GRP_NWOG)
+ndogOn = input.bool(false, 'NDOG', inline = 'ndog', group = GRP_NWOG)
+ndogColor = input.color(#787b86, '', inline = 'ndog', group = GRP_NWOG)
+ndogDays = input.int(5, 'Days', minval = 1, maxval = 30, group = GRP_NWOG)
 
 type Mark
     float price
@@ -71,8 +76,6 @@ type Gap
     float top
     float bottom
     int t
-    bool reachedTop
-    bool reachedBottom
 
 // "HH:MM" to minutes after midnight; na when the text is not a time.
 parseClock(string clockText) =>
@@ -108,18 +111,15 @@ trackOpen(int openMinute, int barMs, int keep) =>
                 marks.shift()
     barstate.islast ? marks : na
 
-trackWeekGaps(int keep) =>
+// The gap across the 17:00-18:00 break: the Sunday reopen makes the NWOG, the weekday reopens the NDOGs.
+trackGaps(bool weekly, int keep) =>
     var gaps = array.new<Gap>()
-    isWeekOpen = dayofweek(time, TZ) == dayofweek.sunday and dayofweek(time[1], TZ) != dayofweek.sunday
-    if isWeekOpen and open != close[1]
-        gaps.push(Gap.new(math.max(open, close[1]), math.min(open, close[1]), time, false, false))
+    isReopen = hour(time, TZ) == 18 and minute(time, TZ) == 0
+    isSunday = dayofweek(time, TZ) == dayofweek.sunday
+    if isReopen and isSunday == weekly and open != close[1]
+        gaps.push(Gap.new(math.max(open, close[1]), math.min(open, close[1]), time))
         if gaps.size() > keep
             gaps.shift()
-    for gap in gaps
-        if high >= gap.top
-            gap.reachedTop := true
-        if low <= gap.bottom
-            gap.reachedBottom := true
     barstate.islast ? gaps : na
 
 // A feed below the chart's timeframe would only return its first sub-candle, so the chart's own timeframe takes over.
@@ -136,15 +136,12 @@ opens3 = request.security(feed, openFeedTf, trackOpen(parseClock(open3Time), cal
 opens4 = request.security(feed, openFeedTf, trackOpen(parseClock(open4Time), calcMs, history), lookahead = barmerge.lookahead_on)
 opens5 = request.security(feed, openFeedTf, trackOpen(parseClock(open5Time), calcMs, history), lookahead = barmerge.lookahead_on)
 opens6 = request.security(feed, openFeedTf, trackOpen(parseClock(open6Time), calcMs, history), lookahead = barmerge.lookahead_on)
-weekGaps = request.security(feed, feedTimeframe('60'), trackWeekGaps(nwogWeeks), lookahead = barmerge.lookahead_on)
+weekGaps = request.security(feed, feedTimeframe('60'), trackGaps(true, nwogWeeks), lookahead = barmerge.lookahead_on)
+dayGaps = request.security(feed, feedTimeframe('60'), trackGaps(false, ndogDays), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
 var openCaptions = map.new<string, label>()
 var openCaptionTexts = map.new<string, string>()
-
-// The caption sits above the line, ending at x, clear of the candles to its right.
-levelLabel(int x, float price, string caption, color tint) =>
-    label.new(x, price, caption, xloc = xloc.bar_time, style = label.style_label_lower_right, color = color(na), textcolor = tint, size = size.small)
 
 // The caption sits past the line's end; opens at one price ending together share one caption.
 openCaption(int x, float price, string caption, color tint) =>
@@ -166,14 +163,14 @@ drawOpens(array<Mark> marks, string caption, color tint) =>
             line.new(x1, mark.price, x2, mark.price, xloc = xloc.bar_time, color = tint, style = line.style_dashed)
             openCaption(x2, mark.price, caption, tint)
 
-drawWeekGaps() =>
-    for gap in weekGaps
-        if not (gap.reachedTop and gap.reachedBottom)
-            x1 = math.max(gap.t, firstBarTime)
-            middle = (gap.top + gap.bottom) / 2
-            box.new(x1, gap.top, x1 + MS_PER_MINUTE, gap.bottom, xloc = xloc.bar_time, extend = extend.right, border_color = color.new(nwogColor, 60), bgcolor = color.new(nwogColor, 85))
-            line.new(x1, middle, x1 + MS_PER_MINUTE, middle, xloc = xloc.bar_time, extend = extend.right, color = nwogColor, style = line.style_dotted)
-            levelLabel(time, middle, 'NWOG ' + str.format_time(gap.t, 'dd/MM', TZ), nwogColor)
+drawGaps(array<Gap> gaps, string name, color tint) =>
+    x2 = time + 15 * timeframe.in_seconds() * 1000
+    for gap in gaps
+        x1 = math.max(gap.t, firstBarTime)
+        middle = (gap.top + gap.bottom) / 2
+        box.new(x1, gap.top, x2, gap.bottom, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, 85))
+        line.new(x1, middle, x2, middle, xloc = xloc.bar_time, color = tint, style = line.style_dotted)
+        label.new(x2, middle, name + ' ' + str.format_time(gap.t, 'dd/MM', TZ), xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all
@@ -185,7 +182,9 @@ if barstate.islast and not na(opens1)
     openCaptions.clear()
     openCaptionTexts.clear()
     if nwogOn
-        drawWeekGaps()
+        drawGaps(weekGaps, 'NWOG', nwogColor)
+    if ndogOn
+        drawGaps(dayGaps, 'NDOG', ndogColor)
     if open1On
         drawOpens(opens1, open1Time, open1Color)
     if open2On
