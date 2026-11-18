@@ -6,7 +6,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 ## 2026-11-18
 
 - New TradingView indicators for the Open Reaction Model on NQ: ORMOpenings
-  (session open lines, NWOG boxes, optional opening block), ORMLiquidity
+  (session open lines and NWOG boxes), ORMLiquidity
   (session and killzone highs and lows plus previous day, week, month and
   Monday highs and lows, each stopping at the first touch),
   ORMVerticalLines (session times with countdowns) and ORMCountdown (candle

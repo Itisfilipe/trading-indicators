@@ -688,11 +688,10 @@ candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
 - **ORMOpenings:** a line at the 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00
-  opens, running to the 17:00 close of the trading day; NWOG boxes with their
-  midpoint, kept until price trades through the whole gap (4 weeks back by
-  default); opens at one price share a caption; an optional band
-  between the highest and lowest of the 00:00, 08:30 and 09:30 opens (off by
-  default).
+  opens, captioned with its time, running to the 17:00 close of the trading
+  day (today's stop five candles past the last one, caption just past the
+  end); opens at one price ending together share a caption; NWOG boxes with their midpoint, kept until
+  price trades through the whole gap (4 weeks back by default).
 - **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
   London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:30, NY PM
   13:30-16:00, boxes optional) and previous day (the 1D candle without

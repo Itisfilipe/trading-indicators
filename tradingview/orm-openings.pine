@@ -8,18 +8,18 @@
 //
 // Description:
 // The opening prices the Open Reaction Model reads on NQ: a line at each
-// session open, the New Week Opening Gaps, and an optional opening block.
+// session open and the New Week Opening Gaps.
 // Every time is New York local, so daylight saving needs no adjustment.
 //
 // Features:
 // - Open lines at 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00, each running to
-//   the 17:00 close of its trading day; times, captions and colors editable
+//   the 17:00 close of its trading day (today's stop five candles past the
+//   last one, caption just past its end), captioned with their time; times and colors
+//   editable
 // - NWOG: the gap between Friday's 17:00 close and Sunday's 18:00 open, as a
 //   box with its midpoint (CE), kept until price has traded through the whole
 //   gap
-// - Opening block (off by default): a band between the highest and lowest of
-//   the first, third and fourth opens (00:00, 08:30, 09:30)
-// - Opens at one price share a caption ("Midnight / London")
+// - Opens at one price ending together share a caption ("00:00 / 02:00")
 //
 // Notes:
 // - Opens come from a 5-minute feed and NWOGs from an hourly feed (the chart's
@@ -36,39 +36,31 @@ MS_PER_MINUTE = 60000
 MS_PER_DAY = 86400000
 HALF_DAY_MS = 43200000
 
-history = input.int(1, 'Days of history', minval = 1, maxval = 30)
+GRP_OPENS = 'Opens'
+GRP_NWOG = 'NWOG'
 
-OPEN_TOOLTIP = 'On/off, time as HH:MM New York, caption, color.'
-open1On = input.bool(true, '1', inline = 'o1', tooltip = OPEN_TOOLTIP)
-open1Time = input.string('00:00', '', inline = 'o1')
-open1Text = input.string('Midnight', '', inline = 'o1')
-open1Color = input.color(#374151, '', inline = 'o1')
-open2On = input.bool(true, '2', inline = 'o2')
-open2Time = input.string('02:00', '', inline = 'o2')
-open2Text = input.string('London', '', inline = 'o2')
-open2Color = input.color(#9c27b0, '', inline = 'o2')
-open3On = input.bool(true, '3', inline = 'o3')
-open3Time = input.string('08:30', '', inline = 'o3')
-open3Text = input.string('08:30', '', inline = 'o3')
-open3Color = input.color(#374151, '', inline = 'o3')
-open4On = input.bool(true, '4', inline = 'o4')
-open4Time = input.string('09:30', '', inline = 'o4')
-open4Text = input.string('NY Open', '', inline = 'o4')
-open4Color = input.color(#2962ff, '', inline = 'o4')
-open5On = input.bool(true, '5', inline = 'o5')
-open5Time = input.string('13:30', '', inline = 'o5')
-open5Text = input.string('PM Open', '', inline = 'o5')
-open5Color = input.color(#f23645, '', inline = 'o5')
-open6On = input.bool(true, '6', inline = 'o6')
-open6Time = input.string('20:00', '', inline = 'o6')
-open6Text = input.string('Asia Open', '', inline = 'o6')
-open6Color = input.color(#089981, '', inline = 'o6')
-
-nwogOn = input.bool(true, 'NWOG', inline = 'nwog')
-nwogColor = input.color(#7e57c2, '', inline = 'nwog')
-nwogWeeks = input.int(4, 'Weeks', minval = 1, maxval = 30, inline = 'nwog', tooltip = 'Past weeks whose gap stays on the chart until price trades through it.')
-blockOn = input.bool(false, 'Opening block', inline = 'blk', tooltip = 'Band between the highest and lowest of opens 1, 3 and 4 (00:00, 08:30 and 09:30 by default).')
-blockColor = input.color(color.new(#787b86, 88), '', inline = 'blk')
+history = input.int(1, 'Days of history', minval = 1, maxval = 30, group = GRP_OPENS)
+open1On = input.bool(true, '', inline = 'o1', group = GRP_OPENS)
+open1Time = input.string('00:00', '', inline = 'o1', group = GRP_OPENS)
+open1Color = input.color(#374151, '', inline = 'o1', group = GRP_OPENS)
+open2On = input.bool(true, '', inline = 'o2', group = GRP_OPENS)
+open2Time = input.string('02:00', '', inline = 'o2', group = GRP_OPENS)
+open2Color = input.color(#9c27b0, '', inline = 'o2', group = GRP_OPENS)
+open3On = input.bool(true, '', inline = 'o3', group = GRP_OPENS)
+open3Time = input.string('08:30', '', inline = 'o3', group = GRP_OPENS)
+open3Color = input.color(#374151, '', inline = 'o3', group = GRP_OPENS)
+open4On = input.bool(true, '', inline = 'o4', group = GRP_OPENS)
+open4Time = input.string('09:30', '', inline = 'o4', group = GRP_OPENS)
+open4Color = input.color(#2962ff, '', inline = 'o4', group = GRP_OPENS)
+open5On = input.bool(true, '', inline = 'o5', group = GRP_OPENS)
+open5Time = input.string('13:30', '', inline = 'o5', group = GRP_OPENS)
+open5Color = input.color(#f23645, '', inline = 'o5', group = GRP_OPENS)
+open6On = input.bool(true, '', inline = 'o6', group = GRP_OPENS)
+open6Time = input.string('20:00', '', inline = 'o6', group = GRP_OPENS)
+open6Color = input.color(#089981, '', inline = 'o6', group = GRP_OPENS)
+nwogOn = input.bool(true, 'Show', inline = 'nwog', group = GRP_NWOG)
+nwogColor = input.color(#7e57c2, '', inline = 'nwog', group = GRP_NWOG)
+nwogWeeks = input.int(4, 'Weeks', minval = 1, maxval = 30, tooltip = 'Past weeks whose gap stays on the chart until price trades through it.', group = GRP_NWOG)
 
 type Mark
     float price
@@ -169,24 +161,10 @@ openCaption(int x, float price, string caption, color tint) =>
 drawOpens(array<Mark> marks, string caption, color tint) =>
     for mark in marks
         x1 = math.max(mark.t, firstBarTime)
-        if mark.endTime > x1
-            line.new(x1, mark.price, mark.endTime, mark.price, xloc = xloc.bar_time, color = tint, style = line.style_dashed)
-            openCaption(mark.endTime, mark.price, caption, tint)
-
-priceOnDay(array<Mark> marks, int dayClose) =>
-    float result = na
-    for mark in marks
-        if mark.endTime == dayClose
-            result := mark.price
-    result
-
-drawBlock() =>
-    for mark in opens1
-        x1 = math.max(mark.t, firstBarTime)
-        if mark.endTime > x1
-            prices = array.from(mark.price, priceOnDay(opens3, mark.endTime), priceOnDay(opens4, mark.endTime))
-            if prices.max() > prices.min()
-                box.new(x1, prices.max(), mark.endTime, prices.min(), xloc = xloc.bar_time, border_color = color(na), bgcolor = blockColor)
+        x2 = math.min(mark.endTime, time + 5 * timeframe.in_seconds() * 1000)
+        if x2 > x1
+            line.new(x1, mark.price, x2, mark.price, xloc = xloc.bar_time, color = tint, style = line.style_dashed)
+            openCaption(x2, mark.price, caption, tint)
 
 drawWeekGaps() =>
     for gap in weekGaps
@@ -206,19 +184,17 @@ if barstate.islast and not na(opens1)
         drawn.delete()
     openCaptions.clear()
     openCaptionTexts.clear()
-    if blockOn
-        drawBlock()
     if nwogOn
         drawWeekGaps()
     if open1On
-        drawOpens(opens1, open1Text, open1Color)
+        drawOpens(opens1, open1Time, open1Color)
     if open2On
-        drawOpens(opens2, open2Text, open2Color)
+        drawOpens(opens2, open2Time, open2Color)
     if open3On
-        drawOpens(opens3, open3Text, open3Color)
+        drawOpens(opens3, open3Time, open3Color)
     if open4On
-        drawOpens(opens4, open4Text, open4Color)
+        drawOpens(opens4, open4Time, open4Color)
     if open5On
-        drawOpens(opens5, open5Text, open5Color)
+        drawOpens(opens5, open5Time, open5Color)
     if open6On
-        drawOpens(opens6, open6Text, open6Color)
+        drawOpens(opens6, open6Time, open6Color)
