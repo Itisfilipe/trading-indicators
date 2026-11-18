@@ -17,7 +17,7 @@
 //   last one, caption just past its end), captioned with their time; times and colors
 //   editable
 // - NWOG: Friday's 17:00 close and Sunday's 18:00 open as solid lines
-//   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint (CE) between,
+//   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint ("NWOG CE") between,
 //   for the last few weeks whether or not price has traded through them
 // - NDOG (off by default): the same for each weekday's 17:00 close and 18:00
 //   reopen
@@ -174,6 +174,7 @@ drawGaps(array<Gap> gaps, string name, color tint) =>
         line.new(x1, middle, x2, middle, xloc = xloc.bar_time, color = tint, style = line.style_dotted)
         openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, 'dd/MM', TZ), tint)
         openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, 'dd/MM', TZ), tint)
+        openCaption(x2, middle, name + ' CE', tint)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all
