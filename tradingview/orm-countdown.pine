@@ -9,7 +9,8 @@
 // Description:
 // One row of large numbers in the chart's top-right corner, no captions:
 // the time left in the candle, the position size and the current ATR, in that
-// order. Each can be switched off, and the corner can be changed.
+// order. The countdown turns red in the candle's last seconds (default 5).
+// Each can be switched off, and the corner can be changed.
 //
 // Features:
 // - Countdown as m:ss, h:mm:ss past an hour (intraday charts only)
@@ -38,6 +39,8 @@ showAtr = input.bool(true, 'ATR', inline = 'parts', group = GRP_PANEL)
 panelColor = input.color(color.new(#374151, 10), 'Background', inline = 'colors', group = GRP_PANEL)
 textColor = input.color(color.white, 'Text', inline = 'colors', group = GRP_PANEL)
 labelSizeInput = input.string('large', 'Text size', options = ['small', 'normal', 'large', 'huge'], group = GRP_PANEL)
+alertSeconds = input.int(5, 'Red countdown in the last (s)', minval = 0, maxval = 60, inline = 'alert', group = GRP_PANEL)
+alertColor = input.color(#f23645, '', inline = 'alert', group = GRP_PANEL)
 cornerInput = input.string('Top right', 'Position', options = ['Top right', 'Top left', 'Bottom right', 'Bottom left'], group = GRP_PANEL)
 
 riskMode = input.string('Fixed $', 'Risk mode', options = ['Fixed $', '% of Account'], group = GRP_SIZING)
@@ -77,17 +80,18 @@ textSize = switch labelSizeInput
 
 var panel = table.new(corner, 3, 1, bgcolor = panelColor, border_width = 1, border_color = color.new(textColor, 70))
 
-addCell(int column, string value) =>
-    table.cell(panel, column, 0, value, text_color = textColor, text_size = textSize)
+addCell(int column, string value, color background) =>
+    table.cell(panel, column, 0, value, text_color = textColor, text_size = textSize, bgcolor = background)
 
 if barstate.islast
     panel.clear(0, 0, 2, 0)
     int column = 0
     if showCountdown and timeframe.isintraday
-        addCell(column, countdownText(int(math.max(0, time_close - timenow) / 1000)))
+        secondsLeft = int(math.max(0, time_close - timenow) / 1000)
+        addCell(column, countdownText(secondsLeft), secondsLeft <= alertSeconds ? alertColor : panelColor)
         column += 1
     if showLot
-        addCell(column, na(lotSize) ? '-' : str.tostring(lotSize))
+        addCell(column, na(lotSize) ? '-' : str.tostring(lotSize), panelColor)
         column += 1
     if showAtr
-        addCell(column, str.tostring(atrValue, format.mintick))
+        addCell(column, str.tostring(atrValue, format.mintick), panelColor)

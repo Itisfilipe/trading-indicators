@@ -704,7 +704,8 @@ on the feed candle that holds the event.
   after the 18:00 open the next day's lines are already up.
 - **ORMCountdown:** one row of large numbers in the top-right corner
   (movable), no captions: the time left in the candle, the position size for
-  a stop of N x ATR and the current ATR, in that order, each optional.
+  a stop of N x ATR and the current ATR, in that order, each optional. The
+  countdown turns red in the candle's last 5 seconds (adjustable).
 - One history setting per indicator, up to 30 sessions.
 - Each open or window time must sit on the feed's grid (any :00, :05, :10
   ... on the 5-minute feed).
