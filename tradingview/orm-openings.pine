@@ -165,7 +165,6 @@ weekGaps = request.security(feed, '60', trackWeekGaps(history), lookahead = barm
 // DRAWING
 //==============================================================================
 var int firstBarTime = time
-labelOffsetMs = 3 * timeframe.in_seconds() * 1000
 textSize = switch labelSizeInput
     'tiny' => size.tiny
     'normal' => size.normal
@@ -176,15 +175,16 @@ openStyle = switch lineStyleInput
     'Dotted' => line.style_dotted
     => line.style_dashed
 
+// The caption sits above the line, ending at x, clear of the candles to its right.
 levelLabel(int x, float price, string caption, color tint) =>
-    label.new(x, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+    label.new(x, price, caption, xloc = xloc.bar_time, style = label.style_label_lower_right, color = color(na), textcolor = tint, size = textSize)
 
 drawOpens(array<Mark> marks, string caption, color tint) =>
     for mark in marks
         x1 = math.max(mark.t, firstBarTime)
         if mark.endTime > x1
             line.new(x1, mark.price, mark.endTime, mark.price, xloc = xloc.bar_time, color = tint, style = openStyle, width = lineWidth)
-            levelLabel(math.min(mark.endTime, time + labelOffsetMs), mark.price, caption, tint)
+            levelLabel(math.min(mark.endTime, time), mark.price, caption, tint)
 
 priceOnDay(array<Mark> marks, int dayClose) =>
     float result = na
@@ -208,7 +208,7 @@ drawWeekGaps() =>
             middle = (gap.top + gap.bottom) / 2
             box.new(x1, gap.top, x1 + MS_PER_MINUTE, gap.bottom, xloc = xloc.bar_time, extend = extend.right, border_color = color.new(nwogColor, 60), bgcolor = color.new(nwogColor, 85))
             line.new(x1, middle, x1 + MS_PER_MINUTE, middle, xloc = xloc.bar_time, extend = extend.right, color = nwogColor, style = line.style_dotted, width = lineWidth)
-            levelLabel(time + labelOffsetMs, middle, 'NWOG ' + str.format_time(gap.t, 'dd/MM', TZ), nwogColor)
+            levelLabel(time, middle, 'NWOG ' + str.format_time(gap.t, 'dd/MM', TZ), nwogColor)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all
