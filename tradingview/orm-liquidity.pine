@@ -36,6 +36,7 @@ TZ = 'America/New_York'
 MS_PER_MINUTE = 60000
 HALF_DAY_MS = 43200000
 
+dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'])
 sessionHistory = input.int(3, 'Sessions of history', minval = 1, maxval = 20)
 showBoxes = input.bool(false, 'Session boxes', inline = 'box')
 boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box')
@@ -185,6 +186,7 @@ zones4 = request.security(feed, dayFeedTf, trackWindow(win4Start, win4Length, se
 zones5 = request.security(feed, dayFeedTf, trackWindow(win5Start, win5Length, sessionHistory), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
+dateFormat = dateFormatInput == 'MM/DD' ? 'MM/dd' : 'dd/MM'
 
 var barTimes = array.new<int>()
 var barHighs = array.new<float>()
@@ -266,11 +268,11 @@ if barstate.islast and not na(days)
     if monthOn
         drawRanges(months, hourFeedMs, 'PM', 'M', 'MMM', monthColor)
     if weekOn
-        drawRanges(weeks, hourFeedMs, 'PW', 'W', 'dd/MM', weekColor)
+        drawRanges(weeks, hourFeedMs, 'PW', 'W', dateFormat, weekColor)
     if mondayOn
-        drawRanges(mondays, hourFeedMs, 'Mon', 'Mon', 'dd/MM', mondayColor)
+        drawRanges(mondays, hourFeedMs, 'Mon', 'Mon', dateFormat, mondayColor)
     if dayOn
-        drawRanges(days, dayFeedMs, 'PD', 'D', 'dd/MM', dayColor)
+        drawRanges(days, dayFeedMs, 'PD', 'D', dateFormat, dayColor)
     if win1On
         drawZones(zones1, win1Name, win1Color)
     if win2On

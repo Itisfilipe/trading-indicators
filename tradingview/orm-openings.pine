@@ -41,6 +41,7 @@ HALF_DAY_MS = 43200000
 GRP_OPENS = 'Opens'
 GRP_NWOG = 'Opening gaps'
 
+dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'], group = GRP_OPENS)
 history = input.int(1, 'Days of history', minval = 1, maxval = 30, group = GRP_OPENS)
 open1On = input.bool(true, '', inline = 'o1', group = GRP_OPENS)
 open1Time = input.string('00:00', '', inline = 'o1', group = GRP_OPENS)
@@ -141,6 +142,7 @@ weekGaps = request.security(feed, feedTimeframe('60'), trackGaps(true, nwogWeeks
 dayGaps = request.security(feed, feedTimeframe('60'), trackGaps(false, ndogDays), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
+dateFormat = dateFormatInput == 'MM/DD' ? 'MM/dd' : 'dd/MM'
 var openCaptions = map.new<string, box>()
 var openCaptionTexts = map.new<string, string>()
 
@@ -172,9 +174,9 @@ drawGaps(array<Gap> gaps, string name, color tint) =>
         line.new(x1, gap.openPrice, x2, gap.openPrice, xloc = xloc.bar_time, color = tint)
         line.new(x1, gap.closePrice, x2, gap.closePrice, xloc = xloc.bar_time, color = tint)
         line.new(x1, middle, x2, middle, xloc = xloc.bar_time, color = tint, style = line.style_dotted)
-        openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, 'dd/MM', TZ), tint)
-        openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, 'dd/MM', TZ), tint)
-        openCaption(x2, middle, name + ' CE ' + str.format_time(gap.openTime, 'dd/MM', TZ), tint)
+        openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, dateFormat, TZ), tint)
+        openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, dateFormat, TZ), tint)
+        openCaption(x2, middle, name + ' CE ' + str.format_time(gap.openTime, dateFormat, TZ), tint)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all
