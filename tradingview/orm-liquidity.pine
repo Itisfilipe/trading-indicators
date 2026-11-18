@@ -12,7 +12,8 @@
 // (MonH/MonL), drawn as liquidity for the Open Reaction Model on NQ. Each line
 // runs from the candle that made the extreme to the first later candle that
 // touches it; a line nobody has touched yet runs to the last candle. Only
-// finished periods are drawn.
+// finished periods are drawn; only the latest carries the P name, older ones
+// carry their date (DH 13/11, WH 09/11, MH Oct).
 //
 // Notes:
 // - Days come from a 5-minute feed and weeks, months and Mondays from an
@@ -45,6 +46,7 @@ type Range
     int loTime
     int loTouched
     bool finished
+    int tradingDay
 
 // A period opens when the feed's period candle changes; with mondayOnly, only
 // Monday's trading day (Sunday 18:00 to Monday 17:00) is kept.
@@ -55,7 +57,7 @@ trackPeriod(string period, bool mondayOnly, int keep) =>
             previous = ranges.last()
             previous.finished := true
         if not mondayOnly or dayofweek(time_tradingday, 'UTC') == dayofweek.monday
-            ranges.push(Range.new(high, time, na, low, time, na, false))
+            ranges.push(Range.new(high, time, na, low, time, na, false, time_tradingday))
     else if ranges.size() > 0 and not ranges.last().finished
         current = ranges.last()
         if high > current.hi
@@ -130,11 +132,16 @@ drawLevel(float price, int feedFromTime, int feedTouchedTime, int feedMs, bool i
         line.new(x1, price, touchedTime, price, xloc = xloc.bar_time, color = tint)
         placeLabel(touchedTime, price, caption, tint)
 
-drawRanges(array<Range> ranges, int feedMs, string prefix, color tint) =>
+// The latest finished period is the previous one (PDH, PWH, PMH, MonH); older ones carry their date.
+drawRanges(array<Range> ranges, int feedMs, string latestPrefix, string olderPrefix, string dateFormat, color tint) =>
+    latest = ranges.size() > 0 and ranges.last().finished ? ranges.last() : ranges.size() > 1 ? ranges.get(ranges.size() - 2) : na
     for levelRange in ranges
         if levelRange.finished
-            drawLevel(levelRange.hi, levelRange.hiTime, levelRange.hiTouched, feedMs, true, prefix + 'H', tint)
-            drawLevel(levelRange.lo, levelRange.loTime, levelRange.loTouched, feedMs, false, prefix + 'L', tint)
+            isLatest = levelRange.tradingDay == latest.tradingDay
+            highCaption = isLatest ? latestPrefix + 'H' : olderPrefix + 'H ' + str.format_time(levelRange.tradingDay, dateFormat, 'UTC')
+            lowCaption = isLatest ? latestPrefix + 'L' : olderPrefix + 'L ' + str.format_time(levelRange.tradingDay, dateFormat, 'UTC')
+            drawLevel(levelRange.hi, levelRange.hiTime, levelRange.hiTouched, feedMs, true, highCaption, tint)
+            drawLevel(levelRange.lo, levelRange.loTime, levelRange.loTouched, feedMs, false, lowCaption, tint)
 
 if barstate.islast and not na(days)
     for drawn in line.all
@@ -143,10 +150,10 @@ if barstate.islast and not na(days)
         drawn.delete()
     placedLabels.clear()
     if monthOn
-        drawRanges(months, HOUR_FEED_MS, 'PM', monthColor)
+        drawRanges(months, HOUR_FEED_MS, 'PM', 'M', 'MMM', monthColor)
     if weekOn
-        drawRanges(weeks, HOUR_FEED_MS, 'PW', weekColor)
+        drawRanges(weeks, HOUR_FEED_MS, 'PW', 'W', 'dd/MM', weekColor)
     if mondayOn
-        drawRanges(mondays, HOUR_FEED_MS, 'Mon', mondayColor)
+        drawRanges(mondays, HOUR_FEED_MS, 'Mon', 'Mon', 'dd/MM', mondayColor)
     if dayOn
-        drawRanges(days, DAY_FEED_MS, 'PD', dayColor)
+        drawRanges(days, DAY_FEED_MS, 'PD', 'D', 'dd/MM', dayColor)

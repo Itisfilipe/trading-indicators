@@ -698,7 +698,8 @@ on the feed candle that holds the event.
   to the last candle while untouched. Boxes optional (off by default).
 - **ORMLiquidity:** previous day (the 1D candle without settlement, 18:00 to
   17:00), week, month and Monday highs and lows, with the same stop-on-touch
-  rule. Only finished periods are drawn.
+  rule. Only finished periods are drawn; the latest is named PDH, PWH, PMH
+  or MonH, older ones carry their date (DH 13/11, WH 09/11, MH Oct).
 - **ORMVerticalLines:** vertical lines at the same session times, drawn for
   the whole trading day ahead of time with a countdown under the caption;
   after the 18:00 open the next day's lines are already up.
