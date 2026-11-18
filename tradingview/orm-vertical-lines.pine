@@ -166,4 +166,4 @@ if barstate.islast
             line.new(eventTime, screenLow, eventTime, screenHigh, xloc = xloc.bar_time, extend = extend.both, color = marker.tint, style = line.style_dotted)
             if marker.caption != ''
                 caption = eventTime > timenow ? marker.caption + '\n' + countdownText(eventTime - timenow) : marker.caption
-                label.new(eventTime, labelY, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = marker.tint, size = size.tiny)
+                label.new(eventTime, labelY, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = marker.tint, size = size.small)
