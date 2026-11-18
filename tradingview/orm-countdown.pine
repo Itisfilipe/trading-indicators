@@ -7,9 +7,9 @@
 // Version: 1.0
 //
 // Description:
-// A compact panel in the chart's top-right corner with the time left in the
-// candle, the position size and the current ATR. Each row can be switched
-// off, and the corner can be changed.
+// One row of large numbers in the chart's top-right corner, no captions:
+// the time left in the candle, the position size and the current ATR, in that
+// order. Each can be switched off, and the corner can be changed.
 //
 // Features:
 // - Countdown as m:ss, h:mm:ss past an hour (intraday charts only)
@@ -37,7 +37,7 @@ showLot = input.bool(true, 'Lot', inline = 'parts', group = GRP_PANEL)
 showAtr = input.bool(true, 'ATR', inline = 'parts', group = GRP_PANEL)
 panelColor = input.color(color.new(#374151, 10), 'Background', inline = 'colors', group = GRP_PANEL)
 textColor = input.color(color.white, 'Text', inline = 'colors', group = GRP_PANEL)
-labelSizeInput = input.string('small', 'Text size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_PANEL)
+labelSizeInput = input.string('large', 'Text size', options = ['small', 'normal', 'large', 'huge'], group = GRP_PANEL)
 cornerInput = input.string('Top right', 'Position', options = ['Top right', 'Top left', 'Bottom right', 'Bottom left'], group = GRP_PANEL)
 
 riskMode = input.string('Fixed $', 'Risk mode', options = ['Fixed $', '% of Account'], group = GRP_SIZING)
@@ -70,25 +70,24 @@ corner = switch cornerInput
     'Bottom left' => position.bottom_left
     => position.top_right
 textSize = switch labelSizeInput
-    'tiny' => size.tiny
+    'small' => size.small
     'normal' => size.normal
-    'large' => size.large
-    => size.small
+    'huge' => size.huge
+    => size.large
 
-var panel = table.new(corner, 2, 3, bgcolor = panelColor)
+var panel = table.new(corner, 3, 1, bgcolor = panelColor, border_width = 1, border_color = color.new(textColor, 70))
 
-addRow(int row, string name, string value) =>
-    table.cell(panel, 0, row, name, text_color = textColor, text_size = textSize, text_halign = text.align_left)
-    table.cell(panel, 1, row, value, text_color = textColor, text_size = textSize, text_halign = text.align_right)
+addCell(int column, string value) =>
+    table.cell(panel, column, 0, value, text_color = textColor, text_size = textSize)
 
 if barstate.islast
-    panel.clear(0, 0, 1, 2)
-    int row = 0
+    panel.clear(0, 0, 2, 0)
+    int column = 0
     if showCountdown and timeframe.isintraday
-        addRow(row, 'Candle', countdownText(int(math.max(0, time_close - timenow) / 1000)))
-        row += 1
+        addCell(column, countdownText(int(math.max(0, time_close - timenow) / 1000)))
+        column += 1
     if showLot
-        addRow(row, 'Lot', na(lotSize) ? '-' : str.tostring(lotSize))
-        row += 1
+        addCell(column, na(lotSize) ? '-' : str.tostring(lotSize))
+        column += 1
     if showAtr
-        addRow(row, 'ATR', str.tostring(atrValue, format.mintick))
+        addCell(column, str.tostring(atrValue, format.mintick))
