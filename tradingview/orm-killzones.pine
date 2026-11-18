@@ -7,76 +7,51 @@
 // Version: 1.0
 //
 // Description:
-// The sessions and killzones of the Open Reaction Model on NQ, each boxed
-// around its candles, with its high and low drawn as liquidity: a line from
-// the candle that made it that stops at the first later candle to touch or
-// trade through it. A line nobody has touched yet runs to the right edge.
-// Every time is New York local, so daylight saving needs no adjustment.
-//
-// Features:
-// - Five slots (on/off, caption, session, color): Asia 20:00-00:00,
-//   London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:30,
-//   NY PM 13:30-16:00
-// - A window may run past midnight (Asia does); it stays keyed to the day it
-//   starts on
-// - The window in progress grows with its running high and low; only candles
-//   after the window closes can touch its levels
-// - Boxes optional (off by default), fill transparency adjustable
-// - One history setting for every drawing
+// The sessions and killzones of the Open Reaction Model on NQ, in New York
+// time: Asia 20:00-00:00, London 02:00-05:00, Pre-market 08:00-09:30,
+// NY AM 09:30-11:30 and NY PM 13:30-16:00. Each high and low is a line from
+// the candle that made it to the first later candle that touches it; a line
+// nobody has touched yet runs to the right edge. Boxes are optional.
 //
 // Notes:
-// - Levels are computed on a 5-minute feed of the extended session (setting),
-//   not on the chart's candles, so a 1-minute chart still shows every session
-//   of the history even where its own candles do not reach. Prices are exact;
-//   where a line starts and stops is placed at the feed candle that holds the
-//   event, so on a 1-minute chart it can sit up to 4 minutes early.
-// - Window edges must sit on the calculation timeframe's grid.
+// - Levels come from a 5-minute feed, not the chart's candles, so a 1-minute
+//   chart shows every session of the history even where its own candles do
+//   not reach. Prices are exact; line ends can sit up to 4 minutes early.
+// - Window edges must sit on the 5-minute grid.
 // -----------------------------------------------------------------------------
 
-indicator('ORMKillZones', 'ORM KZ', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+indicator('ORMKillZones', 'ORM KillZones', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
 
 TZ = 'America/New_York'
+FEED_TF = '5'
+FEED_MS = 300000
 MS_PER_MINUTE = 60000
 HALF_DAY_MS = 43200000
 
-//==============================================================================
-// INPUTS
-//==============================================================================
-GRP_GENERAL = 'General'
-GRP_WINDOWS = 'Sessions and killzones'
+history = input.int(3, 'Sessions of history', minval = 1, maxval = 30)
+showBoxes = input.bool(false, 'Boxes')
 
-history = input.int(3, 'Sessions of history', minval = 1, maxval = 30, tooltip = 'Past sessions of each window kept on the chart.', group = GRP_GENERAL)
-calcTf = input.timeframe('5', 'Calculation timeframe', options = ['1', '5', '15'], tooltip = 'Feed the levels are computed on. 1 places line ends to the minute but reaches only as far back as TradingView serves 1-minute data; 5 reaches weeks back.', group = GRP_GENERAL)
-lineWidth = input.int(1, 'Line width', minval = 1, maxval = 4, group = GRP_GENERAL)
-labelSizeInput = input.string('small', 'Label size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_GENERAL)
-showBoxes = input.bool(false, 'Boxes', inline = 'box', group = GRP_GENERAL)
-boxTransparency = input.int(90, 'Fill transparency', minval = 0, maxval = 100, inline = 'box', group = GRP_GENERAL)
+win1On = input.bool(true, '', inline = 'w1')
+win1Name = input.string('Asia', '', inline = 'w1')
+win1Session = input.session('2000-0000', '', inline = 'w1')
+win1Color = input.color(#2962ff, '', inline = 'w1')
+win2On = input.bool(true, '', inline = 'w2')
+win2Name = input.string('London', '', inline = 'w2')
+win2Session = input.session('0200-0500', '', inline = 'w2')
+win2Color = input.color(#9c27b0, '', inline = 'w2')
+win3On = input.bool(true, '', inline = 'w3')
+win3Name = input.string('Pre', '', inline = 'w3')
+win3Session = input.session('0800-0930', '', inline = 'w3')
+win3Color = input.color(#ff9800, '', inline = 'w3')
+win4On = input.bool(true, '', inline = 'w4')
+win4Name = input.string('NY AM', '', inline = 'w4')
+win4Session = input.session('0930-1130', '', inline = 'w4')
+win4Color = input.color(#089981, '', inline = 'w4')
+win5On = input.bool(true, '', inline = 'w5')
+win5Name = input.string('NY PM', '', inline = 'w5')
+win5Session = input.session('1330-1600', '', inline = 'w5')
+win5Color = input.color(#f23645, '', inline = 'w5')
 
-WINDOW_TOOLTIP = 'On/off, caption, session in New York time, color.'
-win1On = input.bool(true, '1', inline = 'w1', tooltip = WINDOW_TOOLTIP, group = GRP_WINDOWS)
-win1Name = input.string('Asia', '', inline = 'w1', group = GRP_WINDOWS)
-win1Session = input.session('2000-0000', '', inline = 'w1', group = GRP_WINDOWS)
-win1Color = input.color(#2962ff, '', inline = 'w1', group = GRP_WINDOWS)
-win2On = input.bool(true, '2', inline = 'w2', group = GRP_WINDOWS)
-win2Name = input.string('London', '', inline = 'w2', group = GRP_WINDOWS)
-win2Session = input.session('0200-0500', '', inline = 'w2', group = GRP_WINDOWS)
-win2Color = input.color(#9c27b0, '', inline = 'w2', group = GRP_WINDOWS)
-win3On = input.bool(true, '3', inline = 'w3', group = GRP_WINDOWS)
-win3Name = input.string('Pre', '', inline = 'w3', group = GRP_WINDOWS)
-win3Session = input.session('0800-0930', '', inline = 'w3', group = GRP_WINDOWS)
-win3Color = input.color(#ff9800, '', inline = 'w3', group = GRP_WINDOWS)
-win4On = input.bool(true, '4', inline = 'w4', group = GRP_WINDOWS)
-win4Name = input.string('NY AM', '', inline = 'w4', group = GRP_WINDOWS)
-win4Session = input.session('0930-1130', '', inline = 'w4', group = GRP_WINDOWS)
-win4Color = input.color(#089981, '', inline = 'w4', group = GRP_WINDOWS)
-win5On = input.bool(true, '5', inline = 'w5', group = GRP_WINDOWS)
-win5Name = input.string('NY PM', '', inline = 'w5', group = GRP_WINDOWS)
-win5Session = input.session('1330-1600', '', inline = 'w5', group = GRP_WINDOWS)
-win5Color = input.color(#f23645, '', inline = 'w5', group = GRP_WINDOWS)
-
-//==============================================================================
-// TYPES AND HELPERS
-//==============================================================================
 type Zone
     int startTime
     int endTime
@@ -102,7 +77,6 @@ latestClock(int t, int clockMinute) =>
     base = barMinute >= clockMinute ? t : dayStart - HALF_DAY_MS
     timestamp(TZ, year(base, TZ), month(base, TZ), dayofmonth(base, TZ), int(clockMinute / 60), clockMinute % 60)
 
-// Runs on the calculation feed through request.security.
 trackWindow(int startMinute, int lengthMs, int keep) =>
     var zones = array.new<Zone>()
     windowOpen = latestClock(time, startMinute)
@@ -128,50 +102,36 @@ trackWindow(int startMinute, int lengthMs, int keep) =>
                 zone.loTouched := time
     barstate.islast ? zones : na
 
-//==============================================================================
-// DATA
-//==============================================================================
 feed = ticker.modify(syminfo.tickerid, session.extended)
-calcMs = timeframe.in_seconds(calcTf) * 1000
-
 [win1Start, win1Length] = parseSession(win1Session)
 [win2Start, win2Length] = parseSession(win2Session)
 [win3Start, win3Length] = parseSession(win3Session)
 [win4Start, win4Length] = parseSession(win4Session)
 [win5Start, win5Length] = parseSession(win5Session)
+zones1 = request.security(feed, FEED_TF, trackWindow(win1Start, win1Length, history), lookahead = barmerge.lookahead_on)
+zones2 = request.security(feed, FEED_TF, trackWindow(win2Start, win2Length, history), lookahead = barmerge.lookahead_on)
+zones3 = request.security(feed, FEED_TF, trackWindow(win3Start, win3Length, history), lookahead = barmerge.lookahead_on)
+zones4 = request.security(feed, FEED_TF, trackWindow(win4Start, win4Length, history), lookahead = barmerge.lookahead_on)
+zones5 = request.security(feed, FEED_TF, trackWindow(win5Start, win5Length, history), lookahead = barmerge.lookahead_on)
 
-zones1 = request.security(feed, calcTf, trackWindow(win1Start, win1Length, history), lookahead = barmerge.lookahead_on)
-zones2 = request.security(feed, calcTf, trackWindow(win2Start, win2Length, history), lookahead = barmerge.lookahead_on)
-zones3 = request.security(feed, calcTf, trackWindow(win3Start, win3Length, history), lookahead = barmerge.lookahead_on)
-zones4 = request.security(feed, calcTf, trackWindow(win4Start, win4Length, history), lookahead = barmerge.lookahead_on)
-zones5 = request.security(feed, calcTf, trackWindow(win5Start, win5Length, history), lookahead = barmerge.lookahead_on)
-
-//==============================================================================
-// DRAWING
-//==============================================================================
 var int firstBarTime = time
 labelOffsetMs = 3 * timeframe.in_seconds() * 1000
-textSize = switch labelSizeInput
-    'tiny' => size.tiny
-    'normal' => size.normal
-    'large' => size.large
-    => size.small
 
 // A level from fromTime; it stops at touchedTime, or runs to the right edge while untouched.
 drawLevel(float price, int fromTime, int touchedTime, string caption, color tint) =>
     x1 = math.max(fromTime, firstBarTime)
     if na(touchedTime)
-        line.new(x1, price, x1 + MS_PER_MINUTE, price, xloc = xloc.bar_time, extend = extend.right, color = tint, width = lineWidth)
-        label.new(time + labelOffsetMs, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+        line.new(x1, price, x1 + MS_PER_MINUTE, price, xloc = xloc.bar_time, extend = extend.right, color = tint)
+        label.new(time + labelOffsetMs, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
     else if touchedTime > x1
-        line.new(x1, price, touchedTime, price, xloc = xloc.bar_time, color = tint, width = lineWidth)
-        label.new(touchedTime, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+        line.new(x1, price, touchedTime, price, xloc = xloc.bar_time, color = tint)
+        label.new(touchedTime, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
 
 drawZones(array<Zone> zones, string name, color tint) =>
     for zone in zones
-        boxEnd = zone.lastTime + calcMs
+        boxEnd = zone.lastTime + FEED_MS
         if showBoxes and boxEnd > firstBarTime
-            box.new(math.max(zone.startTime, firstBarTime), zone.hi, boxEnd, zone.lo, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, boxTransparency))
+            box.new(math.max(zone.startTime, firstBarTime), zone.hi, boxEnd, zone.lo, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, 90))
         drawLevel(zone.hi, zone.hiTime, zone.hiTouched, name + ' High', tint)
         drawLevel(zone.lo, zone.loTime, zone.loTouched, name + ' Low', tint)
 
@@ -182,7 +142,6 @@ if barstate.islast and not na(zones1)
         drawn.delete()
     for drawn in box.all
         drawn.delete()
-
     if win1On
         drawZones(zones1, win1Name, win1Color)
     if win2On
