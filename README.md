@@ -695,7 +695,7 @@ on the feed candle that holds the event.
 - **ORMKillZones:** Asia 20:00-00:00, London 02:00-05:00, Pre-market
   08:00-09:30, NY AM 09:30-11:30 and NY PM 13:30-16:00, each with its high
   and low as a line that stops at the first later candle to touch it and runs
-  to the right edge while untouched. Boxes optional (off by default).
+  to the last candle while untouched. Boxes optional (off by default).
 - **ORMLiquidity:** previous day (the 1D candle without settlement, 18:00 to
   17:00), week, month and Monday highs and lows, with the same stop-on-touch
   rule. Only finished periods are drawn.

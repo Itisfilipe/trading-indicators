@@ -11,7 +11,7 @@
 // time: Asia 20:00-00:00, London 02:00-05:00, Pre-market 08:00-09:30,
 // NY AM 09:30-11:30 and NY PM 13:30-16:00. Each high and low is a line from
 // the candle that made it to the first later candle that touches it; a line
-// nobody has touched yet runs to the right edge. Boxes are optional.
+// nobody has touched yet runs to the last candle. Boxes are optional.
 //
 // Notes:
 // - Levels come from a 5-minute feed, not the chart's candles, so a 1-minute
@@ -143,13 +143,13 @@ exactTime(int feedTime, float price, bool isHigh) =>
             index += 1
     result
 
-// A level from fromTime; it stops at touchedTime, or runs to the right edge while untouched.
+// A level from fromTime; it stops at touchedTime, or runs to the last candle while untouched.
 drawLevel(float price, int feedFromTime, int feedTouchedTime, bool isHigh, string caption, color tint) =>
     fromTime = exactTime(feedFromTime, price, isHigh)
     touchedTime = exactTime(feedTouchedTime, price, isHigh)
     x1 = math.max(fromTime, firstBarTime)
     if na(touchedTime)
-        line.new(x1, price, x1 + MS_PER_MINUTE, price, xloc = xloc.bar_time, extend = extend.right, color = tint)
+        line.new(x1, price, math.max(time, x1 + MS_PER_MINUTE), price, xloc = xloc.bar_time, color = tint)
         label.new(time + labelOffsetMs, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
     else if touchedTime > x1
         line.new(x1, price, touchedTime, price, xloc = xloc.bar_time, color = tint)
