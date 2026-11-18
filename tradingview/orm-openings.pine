@@ -17,7 +17,7 @@
 //   last one, caption just past its end), captioned with their time; times and colors
 //   editable
 // - NWOG: Friday's 17:00 close and Sunday's 18:00 open as solid lines
-//   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint ("NWOG CE") between,
+//   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint ("NWOG CE 15/11") between,
 //   for the last few weeks whether or not price has traded through them
 // - NDOG (off by default): the same for each weekday's 17:00 close and 18:00
 //   reopen
@@ -31,7 +31,7 @@
 //   above 5 minutes (a 1-hour chart reads 08:30 from the 09:00 candle).
 // -----------------------------------------------------------------------------
 
-indicator('ORMOpenings', 'ORM Openings', overlay = true, max_lines_count = 500, max_labels_count = 500)
+indicator('ORMOpenings', 'ORM Openings', overlay = true, max_lines_count = 500, max_boxes_count = 500)
 
 TZ = 'America/New_York'
 MS_PER_MINUTE = 60000
@@ -141,17 +141,17 @@ weekGaps = request.security(feed, feedTimeframe('60'), trackGaps(true, nwogWeeks
 dayGaps = request.security(feed, feedTimeframe('60'), trackGaps(false, ndogDays), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
-var openCaptions = map.new<string, label>()
+var openCaptions = map.new<string, box>()
 var openCaptionTexts = map.new<string, string>()
 
-// The caption sits past the line's end; opens at one price ending together share one caption.
+// The caption starts right at the line's end (a borderless zero-height box, which has no label pointer gap); opens at one price ending together share one caption.
 openCaption(int x, float price, string caption, color tint) =>
     key = str.tostring(x) + '|' + str.tostring(price)
     existing = openCaptions.get(key)
     merged = na(existing) ? caption : openCaptionTexts.get(key) + ' / ' + caption
     openCaptionTexts.put(key, merged)
     if na(existing)
-        openCaptions.put(key, label.new(x, price, merged, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small))
+        openCaptions.put(key, box.new(x, price, x + 30 * timeframe.in_seconds() * 1000, price, xloc = xloc.bar_time, border_color = color(na), bgcolor = color(na), text = merged, text_color = tint, text_size = size.small, text_halign = text.align_left, text_valign = text.align_center))
     else
         existing.set_text(merged)
     merged
@@ -174,12 +174,12 @@ drawGaps(array<Gap> gaps, string name, color tint) =>
         line.new(x1, middle, x2, middle, xloc = xloc.bar_time, color = tint, style = line.style_dotted)
         openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, 'dd/MM', TZ), tint)
         openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, 'dd/MM', TZ), tint)
-        openCaption(x2, middle, name + ' CE', tint)
+        openCaption(x2, middle, name + ' CE ' + str.format_time(gap.openTime, 'dd/MM', TZ), tint)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all
         drawn.delete()
-    for drawn in label.all
+    for drawn in box.all
         drawn.delete()
     openCaptions.clear()
     openCaptionTexts.clear()

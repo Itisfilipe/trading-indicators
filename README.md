@@ -692,7 +692,7 @@ on the feed candle that holds the event.
   day (today's stop 15 candles past the last one, caption just past the
   end); opens at one price ending together share a caption; NWOG lines
   at Friday's close and Sunday's open ("NWOG C 13/11", "NWOG O 15/11") with
-  the midpoint dotted ("NWOG CE"), for the last 4 weeks (adjustable), and the same for
+  the midpoint dotted ("NWOG CE 15/11"), for the last 4 weeks (adjustable), and the same for
   each weekday's 17:00-18:00 gap as optional NDOG lines.
 - **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
   London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:30, NY PM
