@@ -16,7 +16,8 @@
 // Notes:
 // - Levels come from a 5-minute feed, not the chart's candles, so a 1-minute
 //   chart shows every session of the history even where its own candles do
-//   not reach. Prices are exact; line ends can sit up to 4 minutes early.
+//   not reach. Where the chart's own candles cover a level, its line starts
+//   and stops on the exact candle; beyond them, on the 5-minute candle.
 // - Window edges must sit on the 5-minute grid.
 // -----------------------------------------------------------------------------
 
@@ -29,7 +30,8 @@ MS_PER_MINUTE = 60000
 HALF_DAY_MS = 43200000
 
 history = input.int(3, 'Sessions of history', minval = 1, maxval = 30)
-showBoxes = input.bool(false, 'Boxes')
+showBoxes = input.bool(false, 'Boxes', inline = 'box')
+boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box')
 
 win1On = input.bool(true, '', inline = 'w1')
 win1Name = input.string('Asia', '', inline = 'w1')
@@ -117,8 +119,34 @@ zones5 = request.security(feed, FEED_TF, trackWindow(win5Start, win5Length, hist
 var int firstBarTime = time
 labelOffsetMs = 3 * timeframe.in_seconds() * 1000
 
+var barTimes = array.new<int>()
+var barHighs = array.new<float>()
+var barLows = array.new<float>()
+if barTimes.size() >= 99999
+    barTimes.shift()
+    barHighs.shift()
+    barLows.shift()
+barTimes.push(time)
+barHighs.push(high)
+barLows.push(low)
+
+// The first chart candle inside the feed candle at feedTime that reaches price; feedTime when none does.
+exactTime(int feedTime, float price, bool isHigh) =>
+    int result = feedTime
+    if not na(feedTime)
+        index = math.max(0, barTimes.binary_search_leftmost(feedTime))
+        while index < barTimes.size() and barTimes.get(index) < feedTime + FEED_MS
+            reached = isHigh ? barHighs.get(index) >= price : barLows.get(index) <= price
+            if barTimes.get(index) >= feedTime and reached
+                result := barTimes.get(index)
+                break
+            index += 1
+    result
+
 // A level from fromTime; it stops at touchedTime, or runs to the right edge while untouched.
-drawLevel(float price, int fromTime, int touchedTime, string caption, color tint) =>
+drawLevel(float price, int feedFromTime, int feedTouchedTime, bool isHigh, string caption, color tint) =>
+    fromTime = exactTime(feedFromTime, price, isHigh)
+    touchedTime = exactTime(feedTouchedTime, price, isHigh)
     x1 = math.max(fromTime, firstBarTime)
     if na(touchedTime)
         line.new(x1, price, x1 + MS_PER_MINUTE, price, xloc = xloc.bar_time, extend = extend.right, color = tint)
@@ -131,9 +159,9 @@ drawZones(array<Zone> zones, string name, color tint) =>
     for zone in zones
         boxEnd = zone.lastTime + FEED_MS
         if showBoxes and boxEnd > firstBarTime
-            box.new(math.max(zone.startTime, firstBarTime), zone.hi, boxEnd, zone.lo, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, 90))
-        drawLevel(zone.hi, zone.hiTime, zone.hiTouched, name + ' High', tint)
-        drawLevel(zone.lo, zone.loTime, zone.loTouched, name + ' Low', tint)
+            box.new(math.max(zone.startTime, firstBarTime), zone.hi, boxEnd, zone.lo, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, boxTransparency))
+        drawLevel(zone.hi, zone.hiTime, zone.hiTouched, true, name + ' High', tint)
+        drawLevel(zone.lo, zone.loTime, zone.loTouched, false, name + ' Low', tint)
 
 if barstate.islast and not na(zones1)
     for drawn in line.all
