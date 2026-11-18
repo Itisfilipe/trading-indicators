@@ -13,7 +13,7 @@
 //
 // Features:
 // - Open lines at 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00, each running to
-//   the 17:00 close of its trading day (today's stop five candles past the
+//   the 17:00 close of its trading day (today's stop 15 candles past the
 //   last one, caption just past its end), captioned with their time; times and colors
 //   editable
 // - NWOG: the gap between Friday's 17:00 close and Sunday's 18:00 open, as a
@@ -161,7 +161,7 @@ openCaption(int x, float price, string caption, color tint) =>
 drawOpens(array<Mark> marks, string caption, color tint) =>
     for mark in marks
         x1 = math.max(mark.t, firstBarTime)
-        x2 = math.min(mark.endTime, time + 5 * timeframe.in_seconds() * 1000)
+        x2 = math.min(mark.endTime, time + 15 * timeframe.in_seconds() * 1000)
         if x2 > x1
             line.new(x1, mark.price, x2, mark.price, xloc = xloc.bar_time, color = tint, style = line.style_dashed)
             openCaption(x2, mark.price, caption, tint)

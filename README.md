@@ -689,7 +689,7 @@ on the feed candle that holds the event.
 
 - **ORMOpenings:** a line at the 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00
   opens, captioned with its time, running to the 17:00 close of the trading
-  day (today's stop five candles past the last one, caption just past the
+  day (today's stop 15 candles past the last one, caption just past the
   end); opens at one price ending together share a caption; NWOG boxes with their midpoint, kept until
   price trades through the whole gap (4 weeks back by default).
 - **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
