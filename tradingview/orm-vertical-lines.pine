@@ -15,8 +15,8 @@
 // Features:
 // - Six slots (on/off, HH:MM, caption, color): 00:00 Midnight, 02:00 London,
 //   08:30 News, 09:30 NY AM, 13:30 NY PM, 20:00 Asia
-// - Countdown under the caption of a line still ahead, captions in the middle
-//   of the visible range
+// - Countdown under the caption of a line still ahead, captions on a strip
+//   just above (or below) the visible bars
 // - Colors match the other ORM indicators: each session's killzone color,
 //   black for midnight, orange for the 08:30 news
 // - Lines follow the futures trading day (18:00 to 17:00), so after the 18:00
@@ -39,6 +39,7 @@ SIX_HOURS_MS = 21600000
 FALLBACK_LOOKBACK = 100
 MAX_TRACKED_DAYS = 31
 
+captionPosition = input.string('Top', 'Caption position', options = ['Top', 'Bottom'], tooltip = 'Captions ride a strip just above (or below) the visible bars; the chart gives up a little scale to make the room.')
 history = input.int(1, 'Days of history', minval = 0, maxval = 30, tooltip = 'Past trading days that keep their lines, besides the current one.')
 
 line1On = input.bool(true, '', inline = 'l1')
@@ -145,7 +146,8 @@ if barstate.islast
 
     screenHigh = na(visibleHigh) ? fallbackHigh : visibleHigh
     screenLow = na(visibleLow) ? fallbackLow : visibleLow
-    labelY = math.avg(screenHigh, screenLow)
+    edgeGap = (screenHigh - screenLow) * 0.015
+    labelY = captionPosition == 'Top' ? screenHigh + edgeGap : screenLow - edgeGap
 
     currentDate = tradingDateOf(timenow)
     daysToDraw = array.new<int>()
