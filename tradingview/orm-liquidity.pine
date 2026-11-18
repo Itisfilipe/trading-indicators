@@ -7,55 +7,36 @@
 // Version: 1.0
 //
 // Description:
-// The highs and lows of past days, weeks and months, and of Monday, drawn as
-// liquidity for the Open Reaction Model on NQ: each line starts at the candle
-// that made the extreme and stops at the first later candle to touch or trade
-// through it. A line nobody has touched yet runs to the right edge.
-//
-// Features:
-// - Previous days (PDH/PDL): the 1D candle of the futures session, 18:00 to
-//   17:00 New York, which is the daily chart without settlement
-// - Previous weeks (PWH/PWL) and months (PMH/PML), as the weekly and monthly
-//   candles cut them
-// - Monday (MonH/MonL), the week's reference range
-// - Only finished periods are drawn; the one in progress is not liquidity yet
-// - One history setting: how many past periods of each kind stay on the chart
+// The highs and lows of past days (PDH/PDL, the 1D candle without settlement,
+// 18:00 to 17:00 New York), weeks (PWH/PWL), months (PMH/PML) and Mondays
+// (MonH/MonL), drawn as liquidity for the Open Reaction Model on NQ. Each line
+// runs from the candle that made the extreme to the first later candle that
+// touches it; a line nobody has touched yet runs to the right edge. Only
+// finished periods are drawn.
 //
 // Notes:
-// - Days are computed on a 5-minute feed (setting) and weeks, months and
-//   Mondays on an hourly feed, not on the chart's candles, so a 1-minute chart
-//   still shows every level of the history even where its own candles do not
-//   reach. Prices are exact; where a line starts and stops is placed at the
-//   feed candle that holds the event.
+// - Days come from a 5-minute feed and weeks, months and Mondays from an
+//   hourly feed, not the chart's candles, so a 1-minute chart shows the whole
+//   history even where its own candles do not reach. Where the chart's own
+//   candles cover a level, its line starts and stops on the exact candle.
 // -----------------------------------------------------------------------------
 
-indicator('ORMLiquidity', 'ORM Liq', overlay = true, max_lines_count = 500, max_labels_count = 500)
+indicator('ORMLiquidity', 'ORM Liquidity', overlay = true, max_lines_count = 500, max_labels_count = 500)
 
 MS_PER_MINUTE = 60000
+DAY_FEED_MS = 300000
+HOUR_FEED_MS = 3600000
 
-//==============================================================================
-// INPUTS
-//==============================================================================
-GRP_GENERAL = 'General'
-GRP_LEVELS = 'Levels'
+history = input.int(5, 'Periods of history', minval = 1, maxval = 30, tooltip = 'Past periods of each kind kept on the chart.')
+dayOn = input.bool(true, 'Day', inline = 'd')
+dayColor = input.color(#455a64, '', inline = 'd')
+weekOn = input.bool(true, 'Week', inline = 'w')
+weekColor = input.color(#089981, '', inline = 'w')
+monthOn = input.bool(true, 'Month', inline = 'm')
+monthColor = input.color(#f23645, '', inline = 'm')
+mondayOn = input.bool(true, 'Monday', inline = 'mon')
+mondayColor = input.color(#795548, '', inline = 'mon')
 
-history = input.int(5, 'Periods of history', minval = 1, maxval = 30, tooltip = 'Past periods of each kind (days, weeks, months, Mondays) kept on the chart.', group = GRP_GENERAL)
-calcTf = input.timeframe('5', 'Daily calculation timeframe', options = ['1', '5', '15'], tooltip = 'Feed the daily levels are computed on. Weeks, months and Mondays always use an hourly feed.', group = GRP_GENERAL)
-lineWidth = input.int(1, 'Line width', minval = 1, maxval = 4, group = GRP_GENERAL)
-labelSizeInput = input.string('small', 'Label size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_GENERAL)
-
-dayOn = input.bool(true, 'Day', inline = 'd', group = GRP_LEVELS)
-dayColor = input.color(#455a64, '', inline = 'd', group = GRP_LEVELS)
-weekOn = input.bool(true, 'Week', inline = 'w', group = GRP_LEVELS)
-weekColor = input.color(#089981, '', inline = 'w', group = GRP_LEVELS)
-monthOn = input.bool(true, 'Month', inline = 'm', group = GRP_LEVELS)
-monthColor = input.color(#f23645, '', inline = 'm', group = GRP_LEVELS)
-mondayOn = input.bool(true, 'Monday', inline = 'mon', group = GRP_LEVELS)
-mondayColor = input.color(#795548, '', inline = 'mon', group = GRP_LEVELS)
-
-//==============================================================================
-// TYPES AND TRACKER
-//==============================================================================
 type Range
     float hi
     int hiTime
@@ -65,9 +46,8 @@ type Range
     int loTouched
     bool finished
 
-// Runs on a feed through request.security. A period opens when the feed's
-// period candle changes; with mondayOnly, only the trading day of Monday
-// (Sunday 18:00 to Monday 17:00) is kept.
+// A period opens when the feed's period candle changes; with mondayOnly, only
+// Monday's trading day (Sunday 18:00 to Monday 17:00) is kept.
 trackPeriod(string period, bool mondayOnly, int keep) =>
     var ranges = array.new<Range>()
     if timeframe.change(period) and not barstate.isfirst
@@ -95,54 +75,66 @@ trackPeriod(string period, bool mondayOnly, int keep) =>
                 levelRange.loTouched := time
     barstate.islast ? ranges : na
 
-//==============================================================================
-// DATA
-//==============================================================================
 feed = ticker.modify(syminfo.tickerid, session.extended)
-
-days = request.security(feed, calcTf, trackPeriod('D', false, history), lookahead = barmerge.lookahead_on)
+days = request.security(feed, '5', trackPeriod('D', false, history), lookahead = barmerge.lookahead_on)
 weeks = request.security(feed, '60', trackPeriod('W', false, history), lookahead = barmerge.lookahead_on)
 months = request.security(feed, '60', trackPeriod('M', false, history), lookahead = barmerge.lookahead_on)
 mondays = request.security(feed, '60', trackPeriod('D', true, history), lookahead = barmerge.lookahead_on)
 
-//==============================================================================
-// DRAWING
-//==============================================================================
 var int firstBarTime = time
 labelOffsetMs = 3 * timeframe.in_seconds() * 1000
-textSize = switch labelSizeInput
-    'tiny' => size.tiny
-    'normal' => size.normal
-    'large' => size.large
-    => size.small
 
-// A level from fromTime; it stops at touchedTime, or runs to the right edge while untouched.
-drawLevel(float price, int fromTime, int touchedTime, string caption, color tint) =>
-    x1 = math.max(fromTime, firstBarTime)
+var barTimes = array.new<int>()
+var barHighs = array.new<float>()
+var barLows = array.new<float>()
+if barTimes.size() >= 99999
+    barTimes.shift()
+    barHighs.shift()
+    barLows.shift()
+barTimes.push(time)
+barHighs.push(high)
+barLows.push(low)
+
+// The first chart candle inside the feed candle at feedTime that reaches price; feedTime when none does.
+exactTime(int feedTime, int feedMs, float price, bool isHigh) =>
+    int result = feedTime
+    if not na(feedTime)
+        index = math.max(0, barTimes.binary_search_leftmost(feedTime))
+        while index < barTimes.size() and barTimes.get(index) < feedTime + feedMs
+            reached = isHigh ? barHighs.get(index) >= price : barLows.get(index) <= price
+            if barTimes.get(index) >= feedTime and reached
+                result := barTimes.get(index)
+                break
+            index += 1
+    result
+
+// A level from the candle that made it; it stops at the touch, or runs to the right edge while untouched.
+drawLevel(float price, int feedFromTime, int feedTouchedTime, int feedMs, bool isHigh, string caption, color tint) =>
+    x1 = math.max(exactTime(feedFromTime, feedMs, price, isHigh), firstBarTime)
+    touchedTime = exactTime(feedTouchedTime, feedMs, price, isHigh)
     if na(touchedTime)
-        line.new(x1, price, x1 + MS_PER_MINUTE, price, xloc = xloc.bar_time, extend = extend.right, color = tint, width = lineWidth)
-        label.new(time + labelOffsetMs, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+        line.new(x1, price, x1 + MS_PER_MINUTE, price, xloc = xloc.bar_time, extend = extend.right, color = tint)
+        label.new(time + labelOffsetMs, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
     else if touchedTime > x1
-        line.new(x1, price, touchedTime, price, xloc = xloc.bar_time, color = tint, width = lineWidth)
-        label.new(touchedTime, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+        line.new(x1, price, touchedTime, price, xloc = xloc.bar_time, color = tint)
+        label.new(touchedTime, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
 
-drawRanges(array<Range> ranges, string prefix, color tint) =>
+drawRanges(array<Range> ranges, int feedMs, string prefix, color tint) =>
     for levelRange in ranges
         if levelRange.finished
-            drawLevel(levelRange.hi, levelRange.hiTime, levelRange.hiTouched, prefix + 'H', tint)
-            drawLevel(levelRange.lo, levelRange.loTime, levelRange.loTouched, prefix + 'L', tint)
+            drawLevel(levelRange.hi, levelRange.hiTime, levelRange.hiTouched, feedMs, true, prefix + 'H', tint)
+            drawLevel(levelRange.lo, levelRange.loTime, levelRange.loTouched, feedMs, false, prefix + 'L', tint)
 
 if barstate.islast and not na(days)
     for drawn in line.all
         drawn.delete()
     for drawn in label.all
         drawn.delete()
-
     if monthOn
-        drawRanges(months, 'PM', monthColor)
+        drawRanges(months, HOUR_FEED_MS, 'PM', monthColor)
     if weekOn
-        drawRanges(weeks, 'PW', weekColor)
+        drawRanges(weeks, HOUR_FEED_MS, 'PW', weekColor)
     if mondayOn
-        drawRanges(mondays, 'Mon', mondayColor)
+        drawRanges(mondays, HOUR_FEED_MS, 'Mon', mondayColor)
     if dayOn
-        drawRanges(days, 'PD', dayColor)
+        drawRanges(days, DAY_FEED_MS, 'PD', dayColor)
