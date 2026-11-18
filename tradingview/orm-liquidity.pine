@@ -25,18 +25,16 @@
 indicator('ORMLiquidity', 'ORM Liquidity', overlay = true, max_lines_count = 500, max_labels_count = 500)
 
 MS_PER_MINUTE = 60000
-DAY_FEED_MS = 300000
-HOUR_FEED_MS = 3600000
 
 history = input.int(5, 'Periods of history', minval = 1, maxval = 30, tooltip = 'Past periods of each kind kept on the chart.')
 dayOn = input.bool(true, 'Day', inline = 'd')
 dayColor = input.color(#455a64, '', inline = 'd')
 weekOn = input.bool(true, 'Week', inline = 'w')
-weekColor = input.color(#089981, '', inline = 'w')
+weekColor = input.color(#455a64, '', inline = 'w')
 monthOn = input.bool(true, 'Month', inline = 'm')
-monthColor = input.color(#f23645, '', inline = 'm')
+monthColor = input.color(#455a64, '', inline = 'm')
 mondayOn = input.bool(true, 'Monday', inline = 'mon')
-mondayColor = input.color(#795548, '', inline = 'mon')
+mondayColor = input.color(#455a64, '', inline = 'mon')
 
 type Range
     float hi
@@ -77,11 +75,19 @@ trackPeriod(string period, bool mondayOnly, int keep) =>
                 levelRange.loTouched := time
     barstate.islast ? ranges : na
 
+// A feed below the chart's timeframe would only return its first sub-candle, so the chart's own timeframe takes over.
+feedTimeframe(string minimum) =>
+    timeframe.in_seconds() > timeframe.in_seconds(minimum) ? timeframe.period : minimum
+
 feed = ticker.modify(syminfo.tickerid, session.extended)
-days = request.security(feed, '5', trackPeriod('D', false, history), lookahead = barmerge.lookahead_on)
-weeks = request.security(feed, '60', trackPeriod('W', false, history), lookahead = barmerge.lookahead_on)
-months = request.security(feed, '60', trackPeriod('M', false, history), lookahead = barmerge.lookahead_on)
-mondays = request.security(feed, '60', trackPeriod('D', true, history), lookahead = barmerge.lookahead_on)
+dayFeedTf = feedTimeframe('5')
+hourFeedTf = feedTimeframe('60')
+dayFeedMs = timeframe.in_seconds(dayFeedTf) * 1000
+hourFeedMs = timeframe.in_seconds(hourFeedTf) * 1000
+days = request.security(feed, dayFeedTf, trackPeriod('D', false, history), lookahead = barmerge.lookahead_on)
+weeks = request.security(feed, hourFeedTf, trackPeriod('W', false, history), lookahead = barmerge.lookahead_on)
+months = request.security(feed, hourFeedTf, trackPeriod('M', false, history), lookahead = barmerge.lookahead_on)
+mondays = request.security(feed, hourFeedTf, trackPeriod('D', true, history), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
 
@@ -96,10 +102,13 @@ barTimes.push(time)
 barHighs.push(high)
 barLows.push(low)
 
-// The first chart candle inside the feed candle at feedTime that reaches price; feedTime when none does.
+// The first chart candle inside the feed candle at feedTime that reaches price; feedTime when none does,
+// or when the chart's candles do not tile the feed's.
 exactTime(int feedTime, int feedMs, float price, bool isHigh) =>
     int result = feedTime
-    if not na(feedTime)
+    chartSeconds = timeframe.in_seconds()
+    feedSeconds = int(feedMs / 1000)
+    if not na(feedTime) and chartSeconds < feedSeconds and feedSeconds % chartSeconds == 0
         index = math.max(0, barTimes.binary_search_leftmost(feedTime))
         while index < barTimes.size() and barTimes.get(index) < feedTime + feedMs
             reached = isHigh ? barHighs.get(index) >= price : barLows.get(index) <= price
@@ -151,10 +160,10 @@ if barstate.islast and not na(days)
         drawn.delete()
     placedLabels.clear()
     if monthOn
-        drawRanges(months, HOUR_FEED_MS, 'PM', 'M', 'MMM', monthColor)
+        drawRanges(months, hourFeedMs, 'PM', 'M', 'MMM', monthColor)
     if weekOn
-        drawRanges(weeks, HOUR_FEED_MS, 'PW', 'W', 'dd/MM', weekColor)
+        drawRanges(weeks, hourFeedMs, 'PW', 'W', 'dd/MM', weekColor)
     if mondayOn
-        drawRanges(mondays, HOUR_FEED_MS, 'Mon', 'Mon', 'dd/MM', mondayColor)
+        drawRanges(mondays, hourFeedMs, 'Mon', 'Mon', 'dd/MM', mondayColor)
     if dayOn
-        drawRanges(days, DAY_FEED_MS, 'PD', 'D', 'dd/MM', dayColor)
+        drawRanges(days, dayFeedMs, 'PD', 'D', 'dd/MM', dayColor)

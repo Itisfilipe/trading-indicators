@@ -150,16 +150,21 @@ trackWeekGaps(int keep) =>
 //==============================================================================
 // DATA
 //==============================================================================
-feed = ticker.modify(syminfo.tickerid, session.extended)
-calcMs = timeframe.in_seconds(calcTf) * 1000
+// A feed below the chart's timeframe would only return its first sub-candle, so the chart's own timeframe takes over.
+feedTimeframe(string minimum) =>
+    timeframe.in_seconds() > timeframe.in_seconds(minimum) ? timeframe.period : minimum
 
-opens1 = request.security(feed, calcTf, trackOpen(parseClock(open1Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens2 = request.security(feed, calcTf, trackOpen(parseClock(open2Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens3 = request.security(feed, calcTf, trackOpen(parseClock(open3Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens4 = request.security(feed, calcTf, trackOpen(parseClock(open4Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens5 = request.security(feed, calcTf, trackOpen(parseClock(open5Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens6 = request.security(feed, calcTf, trackOpen(parseClock(open6Time), calcMs, history), lookahead = barmerge.lookahead_on)
-weekGaps = request.security(feed, '60', trackWeekGaps(history), lookahead = barmerge.lookahead_on)
+feed = ticker.modify(syminfo.tickerid, session.extended)
+openFeedTf = feedTimeframe(calcTf)
+calcMs = timeframe.in_seconds(openFeedTf) * 1000
+
+opens1 = request.security(feed, openFeedTf, trackOpen(parseClock(open1Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens2 = request.security(feed, openFeedTf, trackOpen(parseClock(open2Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens3 = request.security(feed, openFeedTf, trackOpen(parseClock(open3Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens4 = request.security(feed, openFeedTf, trackOpen(parseClock(open4Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens5 = request.security(feed, openFeedTf, trackOpen(parseClock(open5Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens6 = request.security(feed, openFeedTf, trackOpen(parseClock(open6Time), calcMs, history), lookahead = barmerge.lookahead_on)
+weekGaps = request.security(feed, feedTimeframe('60'), trackWeekGaps(history), lookahead = barmerge.lookahead_on)
 
 //==============================================================================
 // DRAWING

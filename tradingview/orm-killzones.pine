@@ -24,8 +24,6 @@
 indicator('ORMKillZones', 'ORM KillZones', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
 
 TZ = 'America/New_York'
-FEED_TF = '5'
-FEED_MS = 300000
 MS_PER_MINUTE = 60000
 HALF_DAY_MS = 43200000
 
@@ -104,17 +102,23 @@ trackWindow(int startMinute, int lengthMs, int keep) =>
                 zone.loTouched := time
     barstate.islast ? zones : na
 
+// A feed below the chart's timeframe would only return its first sub-candle, so the chart's own timeframe takes over.
+feedTimeframe(string minimum) =>
+    timeframe.in_seconds() > timeframe.in_seconds(minimum) ? timeframe.period : minimum
+
 feed = ticker.modify(syminfo.tickerid, session.extended)
+feedTf = feedTimeframe('5')
+feedMs = timeframe.in_seconds(feedTf) * 1000
 [win1Start, win1Length] = parseSession(win1Session)
 [win2Start, win2Length] = parseSession(win2Session)
 [win3Start, win3Length] = parseSession(win3Session)
 [win4Start, win4Length] = parseSession(win4Session)
 [win5Start, win5Length] = parseSession(win5Session)
-zones1 = request.security(feed, FEED_TF, trackWindow(win1Start, win1Length, history), lookahead = barmerge.lookahead_on)
-zones2 = request.security(feed, FEED_TF, trackWindow(win2Start, win2Length, history), lookahead = barmerge.lookahead_on)
-zones3 = request.security(feed, FEED_TF, trackWindow(win3Start, win3Length, history), lookahead = barmerge.lookahead_on)
-zones4 = request.security(feed, FEED_TF, trackWindow(win4Start, win4Length, history), lookahead = barmerge.lookahead_on)
-zones5 = request.security(feed, FEED_TF, trackWindow(win5Start, win5Length, history), lookahead = barmerge.lookahead_on)
+zones1 = request.security(feed, feedTf, trackWindow(win1Start, win1Length, history), lookahead = barmerge.lookahead_on)
+zones2 = request.security(feed, feedTf, trackWindow(win2Start, win2Length, history), lookahead = barmerge.lookahead_on)
+zones3 = request.security(feed, feedTf, trackWindow(win3Start, win3Length, history), lookahead = barmerge.lookahead_on)
+zones4 = request.security(feed, feedTf, trackWindow(win4Start, win4Length, history), lookahead = barmerge.lookahead_on)
+zones5 = request.security(feed, feedTf, trackWindow(win5Start, win5Length, history), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
 
@@ -129,12 +133,15 @@ barTimes.push(time)
 barHighs.push(high)
 barLows.push(low)
 
-// The first chart candle inside the feed candle at feedTime that reaches price; feedTime when none does.
+// The first chart candle inside the feed candle at feedTime that reaches price; feedTime when none does,
+// or when the chart's candles do not tile the feed's.
 exactTime(int feedTime, float price, bool isHigh) =>
     int result = feedTime
-    if not na(feedTime)
+    chartSeconds = timeframe.in_seconds()
+    feedSeconds = int(feedMs / 1000)
+    if not na(feedTime) and chartSeconds < feedSeconds and feedSeconds % chartSeconds == 0
         index = math.max(0, barTimes.binary_search_leftmost(feedTime))
-        while index < barTimes.size() and barTimes.get(index) < feedTime + FEED_MS
+        while index < barTimes.size() and barTimes.get(index) < feedTime + feedMs
             reached = isHigh ? barHighs.get(index) >= price : barLows.get(index) <= price
             if barTimes.get(index) >= feedTime and reached
                 result := barTimes.get(index)
@@ -169,7 +176,7 @@ drawLevel(float price, int feedFromTime, int feedTouchedTime, bool isHigh, strin
 
 drawZones(array<Zone> zones, string name, color tint) =>
     for zone in zones
-        boxEnd = zone.lastTime + FEED_MS
+        boxEnd = zone.lastTime + feedMs
         if showBoxes and boxEnd > firstBarTime
             box.new(math.max(zone.startTime, firstBarTime), zone.hi, boxEnd, zone.lo, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, boxTransparency))
         drawLevel(zone.hi, zone.hiTime, zone.hiTouched, true, name + ' High', tint)
