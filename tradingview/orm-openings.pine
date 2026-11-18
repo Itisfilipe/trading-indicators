@@ -16,9 +16,9 @@
 //   the 17:00 close of its trading day (today's stop 15 candles past the
 //   last one, caption just past its end), captioned with their time; times and colors
 //   editable
-// - NWOG: the gap between Friday's 17:00 close and Sunday's 18:00 open, as a
-//   box with its midpoint (CE), for the last few weeks whether or not price
-//   has traded through it
+// - NWOG: Friday's 17:00 close and Sunday's 18:00 open as solid lines
+//   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint (CE) between,
+//   for the last few weeks whether or not price has traded through them
 // - NDOG (off by default): the same for each weekday's 17:00 close and 18:00
 //   reopen
 // - Opens at one price ending together share a caption ("00:00 / 02:00")
@@ -31,7 +31,7 @@
 //   above 5 minutes (a 1-hour chart reads 08:30 from the 09:00 candle).
 // -----------------------------------------------------------------------------
 
-indicator('ORMOpenings', 'ORM Openings', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+indicator('ORMOpenings', 'ORM Openings', overlay = true, max_lines_count = 500, max_labels_count = 500)
 
 TZ = 'America/New_York'
 MS_PER_MINUTE = 60000
@@ -73,9 +73,10 @@ type Mark
     int endTime
 
 type Gap
-    float top
-    float bottom
-    int t
+    float openPrice
+    int openTime
+    float closePrice
+    int closeTime
 
 // "HH:MM" to minutes after midnight; na when the text is not a time.
 parseClock(string clockText) =>
@@ -117,7 +118,7 @@ trackGaps(bool weekly, int keep) =>
     isReopen = hour(time, TZ) == 18 and minute(time, TZ) == 0
     isSunday = dayofweek(time, TZ) == dayofweek.sunday
     if isReopen and isSunday == weekly and open != close[1]
-        gaps.push(Gap.new(math.max(open, close[1]), math.min(open, close[1]), time))
+        gaps.push(Gap.new(open, time, close[1], time[1]))
         if gaps.size() > keep
             gaps.shift()
     barstate.islast ? gaps : na
@@ -166,18 +167,18 @@ drawOpens(array<Mark> marks, string caption, color tint) =>
 drawGaps(array<Gap> gaps, string name, color tint) =>
     x2 = time + 15 * timeframe.in_seconds() * 1000
     for gap in gaps
-        x1 = math.max(gap.t, firstBarTime)
-        middle = (gap.top + gap.bottom) / 2
-        box.new(x1, gap.top, x2, gap.bottom, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, 85))
+        x1 = math.max(gap.openTime, firstBarTime)
+        middle = (gap.openPrice + gap.closePrice) / 2
+        line.new(x1, gap.openPrice, x2, gap.openPrice, xloc = xloc.bar_time, color = tint)
+        line.new(x1, gap.closePrice, x2, gap.closePrice, xloc = xloc.bar_time, color = tint)
         line.new(x1, middle, x2, middle, xloc = xloc.bar_time, color = tint, style = line.style_dotted)
-        label.new(x2, middle, name + ' ' + str.format_time(gap.t, 'dd/MM', TZ), xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = size.small)
+        openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, 'dd/MM', TZ), tint)
+        openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, 'dd/MM', TZ), tint)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all
         drawn.delete()
     for drawn in label.all
-        drawn.delete()
-    for drawn in box.all
         drawn.delete()
     openCaptions.clear()
     openCaptionTexts.clear()

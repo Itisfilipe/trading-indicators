@@ -690,9 +690,10 @@ on the feed candle that holds the event.
 - **ORMOpenings:** a line at the 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00
   opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the
-  end); opens at one price ending together share a caption; NWOG boxes
-  with their midpoint for the last 4 weeks (adjustable), and optional NDOG
-  boxes for each weekday's 17:00-18:00 gap.
+  end); opens at one price ending together share a caption; NWOG lines
+  at Friday's close and Sunday's open ("NWOG C 13/11", "NWOG O 15/11") with
+  the midpoint dotted, for the last 4 weeks (adjustable), and the same for
+  each weekday's 17:00-18:00 gap as optional NDOG lines.
 - **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
   London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:30, NY PM
   13:30-16:00, boxes optional) and previous day (the 1D candle without
