@@ -10,7 +10,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   (session and killzone highs and lows that stop at the first touch),
   ORMLiquidity (previous day, week, month and Monday highs and lows),
   ORMVerticalLines (session times with countdowns) and ORMCountdown (candle
-  countdown, position size and ATR in a bubble beside price). The level
+  countdown, position size and ATR in a top-right panel). The level
   indicators keep their full history on a 1-minute chart.
 
 ## 2026-11-14

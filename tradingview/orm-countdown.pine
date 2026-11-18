@@ -7,10 +7,9 @@
 // Version: 1.0
 //
 // Description:
-// A bubble just right of the last candle, at its price, with the time left in
-// the candle, the position size and the current ATR -- the NinjaTrader
-// Candle Countdown Bubble with the Position Sizer's lot and ATR folded in.
-// Each part can be switched off.
+// A compact panel in the chart's top-right corner with the time left in the
+// candle, the position size and the current ATR. Each row can be switched
+// off, and the corner can be changed.
 //
 // Features:
 // - Countdown as m:ss, h:mm:ss past an hour (intraday charts only)
@@ -20,26 +19,26 @@
 // - ATR with EMA or Wilder (RMA) smoothing
 //
 // Notes:
-// - The bubble refreshes on each tick, so a quiet market can skip seconds.
+// - The panel refreshes on each tick, so a quiet market can skip seconds.
 // - Lot size uses syminfo.pointvalue; confirm it against your broker's
 //   contract specs before trading.
 // -----------------------------------------------------------------------------
 
-indicator('ORMCountdown', 'ORM Clock', overlay = true, max_labels_count = 1)
+indicator('ORMCountdown', 'ORM Countdown', overlay = true)
 
 //==============================================================================
 // INPUTS
 //==============================================================================
-GRP_BUBBLE = 'Bubble'
+GRP_PANEL = 'Panel'
 GRP_SIZING = 'Position sizing'
 
-showCountdown = input.bool(true, 'Countdown', inline = 'parts', group = GRP_BUBBLE)
-showLot = input.bool(true, 'Lot', inline = 'parts', group = GRP_BUBBLE)
-showAtr = input.bool(true, 'ATR', inline = 'parts', group = GRP_BUBBLE)
-bubbleColor = input.color(color.new(#374151, 10), 'Box', inline = 'colors', group = GRP_BUBBLE)
-textColor = input.color(color.white, 'Text', inline = 'colors', group = GRP_BUBBLE)
-labelSizeInput = input.string('small', 'Text size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_BUBBLE)
-gapBars = input.int(3, 'Gap from the candle (bars)', minval = 0, maxval = 50, group = GRP_BUBBLE)
+showCountdown = input.bool(true, 'Countdown', inline = 'parts', group = GRP_PANEL)
+showLot = input.bool(true, 'Lot', inline = 'parts', group = GRP_PANEL)
+showAtr = input.bool(true, 'ATR', inline = 'parts', group = GRP_PANEL)
+panelColor = input.color(color.new(#374151, 10), 'Background', inline = 'colors', group = GRP_PANEL)
+textColor = input.color(color.white, 'Text', inline = 'colors', group = GRP_PANEL)
+labelSizeInput = input.string('small', 'Text size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_PANEL)
+cornerInput = input.string('Top right', 'Position', options = ['Top right', 'Top left', 'Bottom right', 'Bottom left'], group = GRP_PANEL)
 
 riskMode = input.string('Fixed $', 'Risk mode', options = ['Fixed $', '% of Account'], group = GRP_SIZING)
 riskDollars = input.float(100.0, 'Risk per trade ($)', minval = 0.0, step = 10.0, tooltip = 'Used when Risk mode is Fixed $.', group = GRP_SIZING)
@@ -65,21 +64,31 @@ countdownText(int seconds) =>
 //==============================================================================
 // DRAWING
 //==============================================================================
-var label bubble = na
+corner = switch cornerInput
+    'Top left' => position.top_left
+    'Bottom right' => position.bottom_right
+    'Bottom left' => position.bottom_left
+    => position.top_right
+textSize = switch labelSizeInput
+    'tiny' => size.tiny
+    'normal' => size.normal
+    'large' => size.large
+    => size.small
+
+var panel = table.new(corner, 2, 3, bgcolor = panelColor)
+
+addRow(int row, string name, string value) =>
+    table.cell(panel, 0, row, name, text_color = textColor, text_size = textSize, text_halign = text.align_left)
+    table.cell(panel, 1, row, value, text_color = textColor, text_size = textSize, text_halign = text.align_right)
 
 if barstate.islast
-    parts = array.new<string>()
+    panel.clear(0, 0, 1, 2)
+    int row = 0
     if showCountdown and timeframe.isintraday
-        parts.push(countdownText(int(math.max(0, time_close - timenow) / 1000)))
+        addRow(row, 'Candle', countdownText(int(math.max(0, time_close - timenow) / 1000)))
+        row += 1
     if showLot
-        parts.push('Lot ' + (na(lotSize) ? '-' : str.tostring(lotSize)))
+        addRow(row, 'Lot', na(lotSize) ? '-' : str.tostring(lotSize))
+        row += 1
     if showAtr
-        parts.push('ATR ' + str.tostring(atrValue, format.mintick))
-    bubble.delete()
-    if parts.size() > 0
-        textSize = switch labelSizeInput
-            'tiny' => size.tiny
-            'normal' => size.normal
-            'large' => size.large
-            => size.small
-        bubble := label.new(bar_index + gapBars, close, parts.join('\n'), style = label.style_label_left, color = bubbleColor, textcolor = textColor, size = textSize)
+        addRow(row, 'ATR', str.tostring(atrValue, format.mintick))
