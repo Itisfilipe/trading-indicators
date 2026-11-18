@@ -3,6 +3,16 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-18
+
+- New TradingView indicators for the Open Reaction Model on NQ: ORMOpenings
+  (session open lines, NWOG boxes, optional opening block), ORMKillZones
+  (session and killzone highs and lows that stop at the first touch),
+  ORMLiquidity (previous day, week, month and Monday highs and lows),
+  ORMVerticalLines (session times with countdowns) and ORMCountdown (candle
+  countdown, position size and ATR in a bubble beside price). The level
+  indicators keep their full history on a 1-minute chart.
+
 ## 2026-11-14
 
 - OrderFlowToolKit: big trades get a third filter mode, Recent, which

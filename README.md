@@ -676,6 +676,39 @@ chart.
   style, width and color.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
+
+### ORM indicators — the Open Reaction Model map for NQ
+
+Five indicators that together draw the map the Open Reaction Model reads on
+NQ/MNQ. Every time is New York local, so daylight saving needs no
+adjustment. ORMOpenings, ORMKillZones and ORMLiquidity read their levels from
+a 5-minute (or hourly) feed of the extended session instead of the chart's
+own candles, so a 1-minute chart shows the whole history even where its
+candles do not reach; prices are exact, while the start and end of a line sit
+on the feed candle that holds the event.
+
+- **ORMOpenings:** a line at the 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00
+  opens, running to the 17:00 close of the trading day; NWOG boxes with their
+  midpoint, kept until price trades through the whole gap; an optional band
+  between the highest and lowest of the 00:00, 08:30 and 09:30 opens (off by
+  default).
+- **ORMKillZones:** Asia 20:00-00:00, London 02:00-05:00, Pre-market
+  08:00-09:30, NY AM 09:30-11:30 and NY PM 13:30-16:00, each with its high
+  and low as a line that stops at the first later candle to touch it and runs
+  to the right edge while untouched. Boxes optional (off by default).
+- **ORMLiquidity:** previous day (the 1D candle without settlement, 18:00 to
+  17:00), week, month and Monday highs and lows, with the same stop-on-touch
+  rule. Only finished periods are drawn.
+- **ORMVerticalLines:** vertical lines at the same session times, drawn for
+  the whole trading day ahead of time with a countdown under the caption;
+  after the 18:00 open the next day's lines are already up.
+- **ORMCountdown:** a bubble beside the last candle with the time left in
+  the candle, the position size for a stop of N x ATR and the current ATR,
+  each optional.
+- One history setting per indicator, up to 30 sessions.
+- Each open or window time must sit on the feed's grid (any :00, :05, :10
+  ... on the 5-minute feed).
+
 ## Chart palette
 
 The default colors of the NinjaTrader tools follow one palette, "Modern

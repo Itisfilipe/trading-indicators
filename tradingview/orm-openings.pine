@@ -1,0 +1,236 @@
+//@version=6
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Filipe Teixeira Amaral
+// -----------------------------------------------------------------------------
+// ORM Openings
+// Author: Filipe Teixeira Amaral
+// Version: 1.0
+//
+// Description:
+// The opening prices the Open Reaction Model reads on NQ: a line at each
+// session open, the New Week Opening Gaps, and an optional opening block.
+// Every time is New York local, so daylight saving needs no adjustment.
+//
+// Features:
+// - Open lines at 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00, each running to
+//   the 17:00 close of its trading day; times, captions and colors editable
+// - NWOG: the gap between Friday's 17:00 close and Sunday's 18:00 open, as a
+//   box with its midpoint (CE), kept until price has traded through the whole
+//   gap
+// - Opening block (off by default): a band between the highest and lowest of
+//   the first, third and fourth opens (00:00, 08:30, 09:30)
+// - One history setting for every drawing
+//
+// Notes:
+// - Levels are computed on a 5-minute feed of the extended session (setting),
+//   not on the chart's candles, so a 1-minute chart still shows every level
+//   of the history even where its own candles do not reach. NWOGs are read
+//   from an hourly feed, which reaches months back.
+// - An open time must sit on the calculation timeframe's grid (a 5-minute
+//   feed reads any time ending in :00, :05, :10 ...).
+// -----------------------------------------------------------------------------
+
+indicator('ORMOpenings', 'ORM Opens', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+
+TZ = 'America/New_York'
+MS_PER_MINUTE = 60000
+MS_PER_DAY = 86400000
+HALF_DAY_MS = 43200000
+
+//==============================================================================
+// INPUTS
+//==============================================================================
+GRP_GENERAL = 'General'
+GRP_OPENS = 'Opens'
+GRP_NWOG = 'NWOG and block'
+
+history = input.int(1, 'Sessions of history', minval = 1, maxval = 30, tooltip = 'Trading days of open lines, and weeks of NWOGs, kept on the chart.', group = GRP_GENERAL)
+calcTf = input.timeframe('5', 'Calculation timeframe', options = ['1', '5', '15'], tooltip = 'Feed the opens are read from. 1 reaches only as far back as TradingView serves 1-minute data; 5 reaches weeks back.', group = GRP_GENERAL)
+lineWidth = input.int(1, 'Line width', minval = 1, maxval = 4, group = GRP_GENERAL)
+lineStyleInput = input.string('Dashed', 'Line style', options = ['Solid', 'Dashed', 'Dotted'], group = GRP_GENERAL)
+labelSizeInput = input.string('small', 'Label size', options = ['tiny', 'small', 'normal', 'large'], group = GRP_GENERAL)
+
+OPEN_TOOLTIP = 'On/off, time as HH:MM New York, caption, color.'
+open1On = input.bool(true, '1', inline = 'o1', tooltip = OPEN_TOOLTIP, group = GRP_OPENS)
+open1Time = input.string('00:00', '', inline = 'o1', group = GRP_OPENS)
+open1Text = input.string('Midnight', '', inline = 'o1', group = GRP_OPENS)
+open1Color = input.color(#374151, '', inline = 'o1', group = GRP_OPENS)
+open2On = input.bool(true, '2', inline = 'o2', group = GRP_OPENS)
+open2Time = input.string('02:00', '', inline = 'o2', group = GRP_OPENS)
+open2Text = input.string('London', '', inline = 'o2', group = GRP_OPENS)
+open2Color = input.color(#9c27b0, '', inline = 'o2', group = GRP_OPENS)
+open3On = input.bool(true, '3', inline = 'o3', group = GRP_OPENS)
+open3Time = input.string('08:30', '', inline = 'o3', group = GRP_OPENS)
+open3Text = input.string('08:30', '', inline = 'o3', group = GRP_OPENS)
+open3Color = input.color(#374151, '', inline = 'o3', group = GRP_OPENS)
+open4On = input.bool(true, '4', inline = 'o4', group = GRP_OPENS)
+open4Time = input.string('09:30', '', inline = 'o4', group = GRP_OPENS)
+open4Text = input.string('NY Open', '', inline = 'o4', group = GRP_OPENS)
+open4Color = input.color(#2962ff, '', inline = 'o4', group = GRP_OPENS)
+open5On = input.bool(true, '5', inline = 'o5', group = GRP_OPENS)
+open5Time = input.string('13:30', '', inline = 'o5', group = GRP_OPENS)
+open5Text = input.string('PM Open', '', inline = 'o5', group = GRP_OPENS)
+open5Color = input.color(#f23645, '', inline = 'o5', group = GRP_OPENS)
+open6On = input.bool(true, '6', inline = 'o6', group = GRP_OPENS)
+open6Time = input.string('20:00', '', inline = 'o6', group = GRP_OPENS)
+open6Text = input.string('Asia Open', '', inline = 'o6', group = GRP_OPENS)
+open6Color = input.color(#089981, '', inline = 'o6', group = GRP_OPENS)
+
+nwogOn = input.bool(true, 'NWOG', inline = 'nwog', group = GRP_NWOG)
+nwogColor = input.color(#7e57c2, '', inline = 'nwog', group = GRP_NWOG)
+blockOn = input.bool(false, 'Opening block', inline = 'blk', tooltip = 'Band between the highest and lowest of opens 1, 3 and 4 (00:00, 08:30 and 09:30 by default).', group = GRP_NWOG)
+blockColor = input.color(color.new(#787b86, 88), '', inline = 'blk', group = GRP_NWOG)
+
+//==============================================================================
+// TYPES AND HELPERS
+//==============================================================================
+type Mark
+    float price
+    int t
+    int endTime
+
+type Gap
+    float top
+    float bottom
+    int t
+    bool reachedTop
+    bool reachedBottom
+
+// "HH:MM" to minutes after midnight; na when the text is not a time.
+parseClock(string clockText) =>
+    parts = str.split(str.trim(clockText), ':')
+    int result = na
+    if parts.size() == 2
+        hours = str.tonumber(parts.get(0))
+        minutes = str.tonumber(parts.get(1))
+        if not na(hours) and not na(minutes) and hours >= 0 and hours < 24 and minutes >= 0 and minutes < 60
+            result := int(hours) * 60 + int(minutes)
+    result
+
+// The latest moment at or before t whose New York clock reads clockMinute.
+latestClock(int t, int clockMinute) =>
+    barMinute = hour(t, TZ) * 60 + minute(t, TZ)
+    dayStart = timestamp(TZ, year(t, TZ), month(t, TZ), dayofmonth(t, TZ), 0, 0)
+    base = barMinute >= clockMinute ? t : dayStart - HALF_DAY_MS
+    timestamp(TZ, year(base, TZ), month(base, TZ), dayofmonth(base, TZ), int(clockMinute / 60), clockMinute % 60)
+
+// The 17:00 close of the trading day that holds t.
+tradingDayClose(int t) =>
+    sameDay = timestamp(TZ, year(t, TZ), month(t, TZ), dayofmonth(t, TZ), 17, 0)
+    nextDay = t + MS_PER_DAY
+    sameDay > t ? sameDay : timestamp(TZ, year(nextDay, TZ), month(nextDay, TZ), dayofmonth(nextDay, TZ), 17, 0)
+
+//==============================================================================
+// TRACKERS (run on the calculation feed through request.security)
+//==============================================================================
+trackOpen(int openMinute, int barMs, int keep) =>
+    var marks = array.new<Mark>()
+    if not na(openMinute)
+        openTime = latestClock(time, openMinute)
+        if time < openTime + barMs and (marks.size() == 0 or marks.last().t != openTime)
+            marks.push(Mark.new(open, openTime, tradingDayClose(openTime)))
+            if marks.size() > keep
+                marks.shift()
+    barstate.islast ? marks : na
+
+trackWeekGaps(int keep) =>
+    var gaps = array.new<Gap>()
+    isWeekOpen = dayofweek(time, TZ) == dayofweek.sunday and dayofweek(time[1], TZ) != dayofweek.sunday
+    if isWeekOpen and open != close[1]
+        gaps.push(Gap.new(math.max(open, close[1]), math.min(open, close[1]), time, false, false))
+        if gaps.size() > keep
+            gaps.shift()
+    for gap in gaps
+        if high >= gap.top
+            gap.reachedTop := true
+        if low <= gap.bottom
+            gap.reachedBottom := true
+    barstate.islast ? gaps : na
+
+//==============================================================================
+// DATA
+//==============================================================================
+feed = ticker.modify(syminfo.tickerid, session.extended)
+calcMs = timeframe.in_seconds(calcTf) * 1000
+
+opens1 = request.security(feed, calcTf, trackOpen(parseClock(open1Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens2 = request.security(feed, calcTf, trackOpen(parseClock(open2Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens3 = request.security(feed, calcTf, trackOpen(parseClock(open3Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens4 = request.security(feed, calcTf, trackOpen(parseClock(open4Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens5 = request.security(feed, calcTf, trackOpen(parseClock(open5Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens6 = request.security(feed, calcTf, trackOpen(parseClock(open6Time), calcMs, history), lookahead = barmerge.lookahead_on)
+weekGaps = request.security(feed, '60', trackWeekGaps(history), lookahead = barmerge.lookahead_on)
+
+//==============================================================================
+// DRAWING
+//==============================================================================
+var int firstBarTime = time
+labelOffsetMs = 3 * timeframe.in_seconds() * 1000
+textSize = switch labelSizeInput
+    'tiny' => size.tiny
+    'normal' => size.normal
+    'large' => size.large
+    => size.small
+openStyle = switch lineStyleInput
+    'Solid' => line.style_solid
+    'Dotted' => line.style_dotted
+    => line.style_dashed
+
+levelLabel(int x, float price, string caption, color tint) =>
+    label.new(x, price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
+
+drawOpens(array<Mark> marks, string caption, color tint) =>
+    for mark in marks
+        x1 = math.max(mark.t, firstBarTime)
+        if mark.endTime > x1
+            line.new(x1, mark.price, mark.endTime, mark.price, xloc = xloc.bar_time, color = tint, style = openStyle, width = lineWidth)
+            levelLabel(math.min(mark.endTime, time + labelOffsetMs), mark.price, caption, tint)
+
+priceOnDay(array<Mark> marks, int dayClose) =>
+    float result = na
+    for mark in marks
+        if mark.endTime == dayClose
+            result := mark.price
+    result
+
+drawBlock() =>
+    for mark in opens1
+        x1 = math.max(mark.t, firstBarTime)
+        if mark.endTime > x1
+            prices = array.from(mark.price, priceOnDay(opens3, mark.endTime), priceOnDay(opens4, mark.endTime))
+            if prices.max() > prices.min()
+                box.new(x1, prices.max(), mark.endTime, prices.min(), xloc = xloc.bar_time, border_color = color(na), bgcolor = blockColor)
+
+drawWeekGaps() =>
+    for gap in weekGaps
+        if not (gap.reachedTop and gap.reachedBottom)
+            x1 = math.max(gap.t, firstBarTime)
+            middle = (gap.top + gap.bottom) / 2
+            box.new(x1, gap.top, x1 + MS_PER_MINUTE, gap.bottom, xloc = xloc.bar_time, extend = extend.right, border_color = color.new(nwogColor, 60), bgcolor = color.new(nwogColor, 85))
+            line.new(x1, middle, x1 + MS_PER_MINUTE, middle, xloc = xloc.bar_time, extend = extend.right, color = nwogColor, style = line.style_dotted, width = lineWidth)
+            levelLabel(time + labelOffsetMs, middle, 'NWOG ' + str.format_time(gap.t, 'dd/MM', TZ), nwogColor)
+
+if barstate.islast and not na(opens1)
+    for drawn in line.all
+        drawn.delete()
+    for drawn in label.all
+        drawn.delete()
+    for drawn in box.all
+        drawn.delete()
+
+    if blockOn
+        drawBlock()
+    if nwogOn
+        drawWeekGaps()
+    if open1On
+        drawOpens(opens1, open1Text, open1Color)
+    if open2On
+        drawOpens(opens2, open2Text, open2Color)
+    if open3On
+        drawOpens(opens3, open3Text, open3Color)
+    if open4On
+        drawOpens(opens4, open4Text, open4Color)
+    if open5On
+        drawOpens(opens5, open5Text, open5Color)
+    if open6On
+        drawOpens(opens6, open6Text, open6Color)
