@@ -14,11 +14,11 @@
 //
 // Features:
 // - Six slots (on/off, HH:MM, caption, color): 00:00 Midnight, 02:00 London,
-//   08:30 News, 09:30 NY AM, 13:30 NY PM, 20:00 Asia
+//   08:30 Open, 09:30 NY AM, 13:30 NY PM, 20:00 Asia
 // - Countdown under the caption of a line still ahead, captions on a strip
 //   just below (or above) the visible bars
 // - Colors match the other ORM indicators: each session's killzone color,
-//   black for midnight, orange for the 08:30 news
+//   black for midnight, orange for the 8:30 Open
 // - Lines follow the futures trading day (18:00 to 17:00), so after the 18:00
 //   open the next day's Midnight and London lines are already up
 // - One history setting: past trading days that keep their lines
@@ -52,7 +52,7 @@ line2Text = input.string('London', '', inline = 'l2')
 line2Color = input.color(#9c27b0, '', inline = 'l2')
 line3On = input.bool(true, '', inline = 'l3')
 line3Time = input.string('08:30', '', inline = 'l3')
-line3Text = input.string('8:30 News', '', inline = 'l3')
+line3Text = input.string('8:30 Open', '', inline = 'l3')
 line3Color = input.color(#ff9800, '', inline = 'l3')
 line4On = input.bool(true, '', inline = 'l4')
 line4Time = input.string('09:30', '', inline = 'l4')
