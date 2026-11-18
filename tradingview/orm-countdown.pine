@@ -7,16 +7,9 @@
 // Version: 1.0
 //
 // Description:
-// One row of large numbers in the chart's top-right corner, no captions:
-// the time left in the candle, the position size and the current ATR, in that
-// order. The countdown turns red in the candle's last seconds (default 5).
-// Each can be switched off, and the corner can be changed.
-//
-// Features:
-// - Countdown as m:ss, h:mm:ss past an hour (intraday charts only)
-// - Lot: the largest whole contract count that keeps the loss within the
-//   risk budget if a stop of N x ATR is hit, from the symbol's point value
-// - ATR with EMA or Wilder (RMA) smoothing
+// One row of large numbers in the chart's top-right corner: the time left in
+// the candle (red in its last seconds), the lot size for a fixed dollar risk
+// with a stop of N x ATR, and the current ATR (EMA). Each can be switched off.
 //
 // Notes:
 // - The panel refreshes on each tick, so a quiet market can skip seconds.
@@ -26,57 +19,28 @@
 
 indicator('ORMCountdown', 'ORM Countdown', overlay = true)
 
-//==============================================================================
-// INPUTS
-//==============================================================================
-GRP_PANEL = 'Panel'
-GRP_SIZING = 'Position sizing'
+showCountdown = input.bool(true, 'Countdown', inline = 'parts')
+showLot = input.bool(true, 'Lot', inline = 'parts')
+showAtr = input.bool(true, 'ATR', inline = 'parts')
+panelColor = input.color(color.new(#374151, 10), 'Background', inline = 'colors')
+textColor = input.color(color.white, 'Text', inline = 'colors')
+alertSeconds = input.int(5, 'Red in the last (s)', minval = 0, maxval = 60, inline = 'alert')
+alertColor = input.color(#f23645, '', inline = 'alert')
+riskDollars = input.float(100.0, 'Risk per trade ($)', minval = 0.0, step = 10.0)
+stopAtrMult = input.float(1.5, 'Stop size (x ATR)', minval = 0.1, step = 0.1)
+atrLength = input.int(5, 'ATR length', minval = 1)
 
-showCountdown = input.bool(true, 'Countdown', inline = 'parts', group = GRP_PANEL)
-showLot = input.bool(true, 'Lot', inline = 'parts', group = GRP_PANEL)
-showAtr = input.bool(true, 'ATR', inline = 'parts', group = GRP_PANEL)
-panelColor = input.color(color.new(#374151, 10), 'Background', inline = 'colors', group = GRP_PANEL)
-textColor = input.color(color.white, 'Text', inline = 'colors', group = GRP_PANEL)
-labelSizeInput = input.string('large', 'Text size', options = ['small', 'normal', 'large', 'huge'], group = GRP_PANEL)
-alertSeconds = input.int(5, 'Red countdown in the last (s)', minval = 0, maxval = 60, inline = 'alert', group = GRP_PANEL)
-alertColor = input.color(#f23645, '', inline = 'alert', group = GRP_PANEL)
-cornerInput = input.string('Top right', 'Position', options = ['Top right', 'Top left', 'Bottom right', 'Bottom left'], group = GRP_PANEL)
-
-riskDollars = input.float(100.0, 'Risk per trade ($)', minval = 0.0, step = 10.0, group = GRP_SIZING)
-stopAtrMult = input.float(1.5, 'Stop size (x ATR)', minval = 0.1, step = 0.1, group = GRP_SIZING)
-atrLength = input.int(5, 'ATR length', minval = 1, group = GRP_SIZING)
-atrType = input.string('EMA (Exponential)', 'ATR smoothing', options = ['RMA (Wilder)', 'EMA (Exponential)'], group = GRP_SIZING)
-
-//==============================================================================
-// CALCULATION
-//==============================================================================
-trueRange = ta.tr(true)
-atrValue = atrType == 'EMA (Exponential)' ? ta.ema(trueRange, atrLength) : ta.rma(trueRange, atrLength)
-stopDistance = atrValue > 0 ? math.max(1, math.round(stopAtrMult * atrValue / syminfo.mintick)) * syminfo.mintick : 0
-riskPerLot = stopDistance * syminfo.pointvalue
-lotSize = riskPerLot > 0 ? math.floor(riskDollars / riskPerLot) : na
+atrValue = ta.ema(ta.tr(true), atrLength)
+stopDistance = math.max(1, math.round(stopAtrMult * atrValue / syminfo.mintick)) * syminfo.mintick
+lotSize = math.floor(riskDollars / (stopDistance * syminfo.pointvalue))
 
 countdownText(int seconds) =>
     seconds >= 3600 ? str.format('{0}:{1,number,00}:{2,number,00}', int(seconds / 3600), int(seconds % 3600 / 60), seconds % 60) : str.format('{0}:{1,number,00}', int(seconds / 60), seconds % 60)
 
-//==============================================================================
-// DRAWING
-//==============================================================================
-corner = switch cornerInput
-    'Top left' => position.top_left
-    'Bottom right' => position.bottom_right
-    'Bottom left' => position.bottom_left
-    => position.top_right
-textSize = switch labelSizeInput
-    'small' => size.small
-    'normal' => size.normal
-    'huge' => size.huge
-    => size.large
-
-var panel = table.new(corner, 3, 1, bgcolor = panelColor, border_width = 1, border_color = color.new(textColor, 70))
+var panel = table.new(position.top_right, 3, 1, bgcolor = panelColor, border_width = 1, border_color = color.new(textColor, 70))
 
 addCell(int column, string value, color background) =>
-    table.cell(panel, column, 0, value, text_color = textColor, text_size = textSize, bgcolor = background)
+    table.cell(panel, column, 0, value, text_color = textColor, text_size = size.large, bgcolor = background)
 
 if barstate.islast
     panel.clear(0, 0, 2, 0)
