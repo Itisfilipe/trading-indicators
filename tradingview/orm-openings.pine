@@ -189,7 +189,7 @@ drawOpens(array<Mark> marks, string caption, color tint) =>
         x1 = math.max(mark.t, firstBarTime)
         if mark.endTime > x1
             line.new(x1, mark.price, mark.endTime, mark.price, xloc = xloc.bar_time, color = tint, style = openStyle, width = lineWidth)
-            levelLabel(math.min(mark.endTime, time), mark.price, caption, tint)
+            label.new(mark.endTime, mark.price, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = tint, size = textSize)
 
 priceOnDay(array<Mark> marks, int dayClose) =>
     float result = na
