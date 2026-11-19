@@ -15,7 +15,7 @@
 // - Open lines at 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00, each running to
 //   the 17:00 close of its trading day (today's stop 15 candles past the
 //   last one, caption just past its end), captioned with their time; times and colors
-//   editable
+//   editable; 02:00 off by default, since London is context only
 // - NWOG: Friday's 17:00 close and Sunday's 18:00 open as solid lines
 //   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint ("NWOG CE 15/11") between,
 //   for the last few weeks whether or not price has traded through them
@@ -46,7 +46,7 @@ history = input.int(1, 'Days of history', minval = 1, maxval = 30, group = GRP_O
 open1On = input.bool(true, '', inline = 'o1', group = GRP_OPENS)
 open1Time = input.string('00:00', '', inline = 'o1', group = GRP_OPENS)
 open1Color = input.color(#000000, '', inline = 'o1', group = GRP_OPENS)
-open2On = input.bool(true, '', inline = 'o2', group = GRP_OPENS)
+open2On = input.bool(false, '', inline = 'o2', group = GRP_OPENS)
 open2Time = input.string('02:00', '', inline = 'o2', group = GRP_OPENS)
 open2Color = input.color(#000000, '', inline = 'o2', group = GRP_OPENS)
 open3On = input.bool(true, '', inline = 'o3', group = GRP_OPENS)

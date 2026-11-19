@@ -40,13 +40,13 @@ FALLBACK_LOOKBACK = 100
 MAX_TRACKED_DAYS = 31
 
 captionPosition = input.string('Bottom', 'Caption position', options = ['Top', 'Bottom'], tooltip = 'Captions ride a strip just above (or below) the visible bars; the chart gives up a little scale to make the room.')
-history = input.int(1, 'Days of history', minval = 0, maxval = 30, tooltip = 'Past trading days that keep their lines, besides the current one.')
+history = input.int(3, 'Days of history', minval = 0, maxval = 30, tooltip = 'Past trading days that keep their lines, besides the current one.')
 
 line1On = input.bool(true, '', inline = 'l1')
 line1Time = input.string('00:00', '', inline = 'l1')
 line1Text = input.string('Midnight', '', inline = 'l1')
 line1Color = input.color(#000000, '', inline = 'l1')
-line2On = input.bool(true, '', inline = 'l2')
+line2On = input.bool(false, '', inline = 'l2')
 line2Time = input.string('02:00', '', inline = 'l2')
 line2Text = input.string('London', '', inline = 'l2')
 line2Color = input.color(#9c27b0, '', inline = 'l2')

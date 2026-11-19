@@ -687,17 +687,19 @@ own candles, so a 1-minute chart shows the whole history even where its
 candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
-- **ORMOpenings:** a line at the 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00
-  opens, captioned with its time, running to the 17:00 close of the trading
+- **ORMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
+  13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the
   end); opens at one price ending together share a caption; NWOG lines
   at Friday's close and Sunday's open ("NWOG C 13/11", "NWOG O 15/11") with
   the midpoint dotted ("NWOG CE 15/11"), for the last 4 weeks (adjustable), and the same for
   each weekday's 17:00-18:00 gap as optional NDOG lines.
 - **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
-  London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:30, NY PM
-  13:30-16:00, boxes optional) and previous day (the 1D candle without
-  settlement, 18:00 to 17:00), week, month and Monday highs and lows. Each
+  London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM
+  13:30-16:00, boxes optional), the latest of each plus 3 earlier ones,
+  and previous day (the 1D candle without settlement, 18:00 to 17:00), week,
+  month and Monday highs and lows: by default the last 3 days and the last
+  week, month and Monday, each count adjustable. Each
   level stops at the first later candle to touch it and runs to the last
   candle while untouched, its caption glued above a high or below a low;
   levels at one price share a caption ("NY AM Low / PDL"). The latest finished
@@ -705,13 +707,14 @@ on the feed candle that holds the event.
   13/11, WH 09/11, MH Oct).
 - **ORMVerticalLines:** vertical lines at the same session times, drawn for
   the whole trading day ahead of time with a countdown under the caption;
-  after the 18:00 open the next day's lines are already up.
+  after the 18:00 open the next day's lines are already up; 3 past days by
+  default, the 02:00 line off.
 - **ORMCountdown:** one row of large numbers in the top-right corner, no
   captions: the time left in the candle, the position size for
   a stop of N x ATR and the current ATR, in that order, each optional. The
   countdown turns red in the candle's last 5 seconds (adjustable).
-- History up to 30 sessions (20 in ORMLiquidity, which has one setting for
-  sessions and one for days, weeks, months and Mondays).
+- History up to 30 days (20 in ORMLiquidity, which has one setting for
+  sessions and one each for days, weeks, months and Mondays).
 - Each open or window time must sit on the feed's grid (any :00, :05, :10
   ... on the 5-minute feed).
 

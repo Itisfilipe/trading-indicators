@@ -3,6 +3,19 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-19
+
+- ORMLiquidity: each session window keeps its latest session plus 3 earlier
+  ones by default. The shared "Periods of history" setting is replaced by one
+  count each for days, weeks, months and Mondays: 3 days and the last week,
+  month and Monday by default. Charts that already carry the indicator get
+  these new counts, so check them; their other saved settings stay until
+  reset to defaults. The Pre-market 08:00-09:30 range is on by default, and NY
+  AM ends at 11:00, the end of the killzone.
+- ORMOpenings: the 02:00 open is off by default.
+- ORMVerticalLines: 3 past days by default, and the 02:00 London line is off
+  by default.
+
 ## 2026-11-18
 
 - New TradingView indicators for the Open Reaction Model on NQ: ORMOpenings

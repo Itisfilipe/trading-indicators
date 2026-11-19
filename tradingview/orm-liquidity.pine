@@ -9,11 +9,12 @@
 // Description:
 // The liquidity the Open Reaction Model reads on NQ, in New York time:
 // - session and killzone highs and lows: Asia 20:00-00:00, London 02:00-05:00,
-//   Pre-market 08:00-09:30, NY AM 09:30-11:30, NY PM 13:30-16:00, with
-//   optional boxes;
+//   Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM 13:30-16:00, with
+//   optional boxes; the latest of each plus 3 earlier ones by default;
 // - past days (PDH/PDL, the 1D candle without settlement, 18:00 to 17:00),
 //   weeks (PWH/PWL), months (PMH/PML) and Mondays (MonH/MonL); only the latest
-//   finished period carries the P name, older ones carry their date.
+//   finished period carries the P name, older ones carry their date; by
+//   default the last 3 days and the last week, month and Monday.
 // Each level runs from the candle that made it to the first later candle that
 // touches it, or to the last candle while untouched, with its caption glued
 // above a high or below a low. Levels at one price ending on one candle share
@@ -26,7 +27,7 @@
 //   Where the chart's candles cover a level, its line starts and stops on the
 //   exact candle.
 // - Session edges must sit on the 5-minute grid.
-// - Both history settings stop at 20 so every drawing fits TradingView's
+// - Every history setting stops at 20 so every drawing fits TradingView's
 //   500-box limit, session boxes included.
 // -----------------------------------------------------------------------------
 
@@ -37,18 +38,21 @@ MS_PER_MINUTE = 60000
 HALF_DAY_MS = 43200000
 
 dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'])
-sessionHistory = input.int(3, 'Sessions of history', minval = 1, maxval = 20)
+sessionHistory = input.int(3, 'Sessions of history', minval = 0, maxval = 20, tooltip = 'Earlier sessions of each window kept besides the latest one.')
 showBoxes = input.bool(false, 'Session boxes', inline = 'box')
 boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box')
 
-periodHistory = input.int(5, 'Periods of history', minval = 1, maxval = 20, tooltip = 'Past days, weeks, months and Mondays kept on the chart.')
 dayOn = input.bool(true, 'Day', inline = 'd')
+dayHistory = input.int(3, '', minval = 1, maxval = 20, inline = 'd', tooltip = 'How many finished periods of each kind stay on the chart.')
 dayColor = input.color(#455a64, '', inline = 'd')
 weekOn = input.bool(true, 'Week', inline = 'w')
+weekHistory = input.int(1, '', minval = 1, maxval = 20, inline = 'w')
 weekColor = input.color(#455a64, '', inline = 'w')
 monthOn = input.bool(true, 'Month', inline = 'm')
+monthHistory = input.int(1, '', minval = 1, maxval = 20, inline = 'm')
 monthColor = input.color(#455a64, '', inline = 'm')
 mondayOn = input.bool(true, 'Monday', inline = 'mon')
+mondayHistory = input.int(1, '', minval = 1, maxval = 20, inline = 'mon')
 mondayColor = input.color(#455a64, '', inline = 'mon')
 
 win1On = input.bool(true, '', inline = 'w1')
@@ -59,13 +63,13 @@ win2On = input.bool(true, '', inline = 'w2')
 win2Name = input.string('London', '', inline = 'w2')
 win2Session = input.session('0200-0500', '', inline = 'w2')
 win2Color = input.color(#9c27b0, '', inline = 'w2')
-win3On = input.bool(false, '', inline = 'w3')
+win3On = input.bool(true, '', inline = 'w3')
 win3Name = input.string('Pre', '', inline = 'w3')
 win3Session = input.session('0800-0930', '', inline = 'w3')
 win3Color = input.color(#ff9800, '', inline = 'w3')
 win4On = input.bool(true, '', inline = 'w4')
 win4Name = input.string('NY AM', '', inline = 'w4')
-win4Session = input.session('0930-1130', '', inline = 'w4')
+win4Session = input.session('0930-1100', '', inline = 'w4')
 win4Color = input.color(#089981, '', inline = 'w4')
 win5On = input.bool(true, '', inline = 'w5')
 win5Name = input.string('NY PM', '', inline = 'w5')
@@ -170,20 +174,20 @@ dayFeedTf = feedTimeframe('5')
 hourFeedTf = feedTimeframe('60')
 dayFeedMs = timeframe.in_seconds(dayFeedTf) * 1000
 hourFeedMs = timeframe.in_seconds(hourFeedTf) * 1000
-days = request.security(feed, dayFeedTf, trackPeriod('D', false, periodHistory), lookahead = barmerge.lookahead_on)
-weeks = request.security(feed, hourFeedTf, trackPeriod('W', false, periodHistory), lookahead = barmerge.lookahead_on)
-months = request.security(feed, hourFeedTf, trackPeriod('M', false, periodHistory), lookahead = barmerge.lookahead_on)
-mondays = request.security(feed, hourFeedTf, trackPeriod('D', true, periodHistory), lookahead = barmerge.lookahead_on)
+days = request.security(feed, dayFeedTf, trackPeriod('D', false, dayHistory), lookahead = barmerge.lookahead_on)
+weeks = request.security(feed, hourFeedTf, trackPeriod('W', false, weekHistory), lookahead = barmerge.lookahead_on)
+months = request.security(feed, hourFeedTf, trackPeriod('M', false, monthHistory), lookahead = barmerge.lookahead_on)
+mondays = request.security(feed, hourFeedTf, trackPeriod('D', true, mondayHistory), lookahead = barmerge.lookahead_on)
 [win1Start, win1Length] = parseSession(win1Session)
 [win2Start, win2Length] = parseSession(win2Session)
 [win3Start, win3Length] = parseSession(win3Session)
 [win4Start, win4Length] = parseSession(win4Session)
 [win5Start, win5Length] = parseSession(win5Session)
-zones1 = request.security(feed, dayFeedTf, trackWindow(win1Start, win1Length, sessionHistory), lookahead = barmerge.lookahead_on)
-zones2 = request.security(feed, dayFeedTf, trackWindow(win2Start, win2Length, sessionHistory), lookahead = barmerge.lookahead_on)
-zones3 = request.security(feed, dayFeedTf, trackWindow(win3Start, win3Length, sessionHistory), lookahead = barmerge.lookahead_on)
-zones4 = request.security(feed, dayFeedTf, trackWindow(win4Start, win4Length, sessionHistory), lookahead = barmerge.lookahead_on)
-zones5 = request.security(feed, dayFeedTf, trackWindow(win5Start, win5Length, sessionHistory), lookahead = barmerge.lookahead_on)
+zones1 = request.security(feed, dayFeedTf, trackWindow(win1Start, win1Length, sessionHistory + 1), lookahead = barmerge.lookahead_on)
+zones2 = request.security(feed, dayFeedTf, trackWindow(win2Start, win2Length, sessionHistory + 1), lookahead = barmerge.lookahead_on)
+zones3 = request.security(feed, dayFeedTf, trackWindow(win3Start, win3Length, sessionHistory + 1), lookahead = barmerge.lookahead_on)
+zones4 = request.security(feed, dayFeedTf, trackWindow(win4Start, win4Length, sessionHistory + 1), lookahead = barmerge.lookahead_on)
+zones5 = request.security(feed, dayFeedTf, trackWindow(win5Start, win5Length, sessionHistory + 1), lookahead = barmerge.lookahead_on)
 
 var int firstBarTime = time
 dateFormat = dateFormatInput == 'MM/DD' ? 'MM/dd' : 'dd/MM'
