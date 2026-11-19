@@ -614,14 +614,14 @@ the two count toward volume only.
 - Vertical lines at the clock times that matter during a session — New York
   midnight, the 09:30 open, a news release. The companion to Time-Based
   Price Levels: that one answers "at what price", this one "at what time".
-  The macro windows live in the ICT Macros indicator instead.
+  The macro windows live in the LRM Macros indicator.
 - 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
   Three start on — NY midnight, the 08:30 news, the 09:30 open; the rest
   are carried but off.
 - Every line is drawn for the whole day, **including the ones still ahead**,
   each carrying a countdown to it.
 - Captions ride one strip below or above the bars (top by default, clear of
-  ICT Macros' bottom strip), set off them by an adjustable gap, welded
+  LRM Macros with its band set to Bottom), set off them by an adjustable gap, welded
   there through any scroll or zoom. Nothing is drawn over the candles.
   Captions read across rather than down the line: a script cannot use the
   chart's own vertical-line drawing, and a Pine label has no rotation, so
@@ -636,34 +636,11 @@ the two count toward volume only.
   line an hour out sits an hour's worth of bars past the last one, and
   TradingView will not scroll there on its own.
 
-### ICT Macros
+### LRM Macros
 
-- The ICT macro windows as first-class chart objects: each window bracketed
-  by a vertical line at its start and end, joined by a captioned rectangle
-  riding a strip at the chart's edge — bottom by default, so it shares a
-  chart with Time-Based Vertical Lines' top captions without collision. The
-  bracket lines can be switched off to leave only the rectangles.
-- 24 slots — the full standard macro map, one row per window, grouped by
-  session in the settings: Asia (18:50 through 00:50), London (01:50
-  through 04:50), NY pre-market (05:50 through 08:50), then the NY AM,
-  lunch and PM windows and the final-hour specials. Each row: on/off,
-  start and end as HH:MM, label. The caption carries the label — or the
-  window's times when the label is empty: `Macro 09:50-10:10` — and
-  changes tense with the window, counting down to the open while it is
-  ahead and counting out what is left once inside, on its own line under
-  the name.
-- The rule behind the map is `:50→:10` around every top of the hour,
-  except the final trading hour, which gets the Final Hour (15:15–15:45)
-  and Market On Close (15:45–16:00) specials plus the settlement portion
-  (15:50–16:00) as its own optional slot. The New York set the playbook
-  trades — the six regular-hours windows plus Final Hour and MOC — starts
-  enabled; every other window is there to switch on. A window may cross
-  midnight (23:50–00:10 does) and stays keyed to the day it starts on.
-- Windows still ahead today are already on the chart; same history-days,
-  include-tomorrow and right-margin behavior as Time-Based Vertical Lines.
-- The strip hangs off the visible bars, not the panel edge — Pine cannot
-  read the viewport's own bounds, so the chart gives up a little scale to
-  make room instead; the Edge Gap setting is that padding.
+- Shows Asia (19:50–20:10) and Market On Close (15:45–16:00) by default. A dotted line marks 15:50 inside MOC. All times are New York local.
+- London, pre-market, NY AM and Final Hour are optional. Each row has a time range and color.
+- Bands sit above the visible candles by default. Window edges and live countdowns are optional. The chart shows the latest futures trading day and one previous trading day by default.
 
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.
@@ -679,7 +656,7 @@ chart.
 
 ### LRM indicators — the Liquidity Reaction Model map for NQ
 
-Four indicators that together draw the map the Liquidity Reaction Model reads on
+Five indicators that together draw the map the Liquidity Reaction Model reads on
 NQ/MNQ. Every time is New York local, so daylight saving needs no
 adjustment. LRMOpenings and LRMLiquidity read their levels from
 a 5-minute (or hourly) feed of the extended session instead of the chart's
@@ -687,6 +664,7 @@ own candles, so a 1-minute chart shows the whole history even where its
 candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
+- **LRMMacros:** Asia and MOC time bands, with a marker at 15:50.
 - **LRMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
   13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the

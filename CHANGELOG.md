@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-19
 
+- TradingView ICT Macros is now LRM Macros. Asia and MOC bands are visible by default, with one 15:50 marker and four optional windows.
+
 - The four TradingView indicators now use the Liquidity Reaction Model (LRM) name: LRM Liquidity, Openings, Countdown and Vertical Lines.
 
 - LRMLiquidity: each session window keeps its latest session plus 3 earlier
