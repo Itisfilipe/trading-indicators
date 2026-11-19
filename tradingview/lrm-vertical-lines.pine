@@ -14,7 +14,7 @@
 //
 // Features:
 // - Six slots (on/off, HH:MM, caption, color): 00:00 Midnight, 02:00 London,
-//   08:30 Open, 09:30 NY AM, 13:30 NY PM, 20:00 Asia
+//   08:30 Open, 09:30 Equity Open, 13:30 NY PM, 20:00 Asia
 // - Optional MOC markers at 15:50 and 16:00 New York time
 // - Countdown under the caption of a line still ahead, captions on a strip
 //   just below (or above) the visible bars
@@ -57,7 +57,7 @@ line3Text = input.string('8:30 Open', '', inline = 'l3')
 line3Color = input.color(#ff9800, '', inline = 'l3')
 line4On = input.bool(true, '', inline = 'l4')
 line4Time = input.string('09:30', '', inline = 'l4')
-line4Text = input.string('NY AM', '', inline = 'l4')
+line4Text = input.string('Equity Open', '', inline = 'l4')
 line4Color = input.color(#089981, '', inline = 'l4')
 line5On = input.bool(true, '', inline = 'l5')
 line5Time = input.string('13:30', '', inline = 'l5')
@@ -125,7 +125,7 @@ if barstate.isfirst
     addLine(line6On, line6Time, line6Text, line6Color)
 
     addLine(showMoc, '15:50', 'MOC', mocColor)
-    addLine(showMoc, '16:00', 'NY Close', mocColor)
+    addLine(showMoc, '16:00', 'Equity Close', mocColor)
 
 var tradingDays = array.new<int>()
 barTradingDate = tradingDateOf(time)
