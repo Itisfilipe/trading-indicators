@@ -9,7 +9,7 @@
 // Description:
 // The liquidity the Open Reaction Model reads on NQ, in New York time:
 // - session and killzone highs and lows: Asia 20:00-00:00, London 02:00-05:00,
-//   Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM 13:30-16:00, with
+//   optional Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM 13:30-16:00, with
 //   optional boxes; the latest of each plus 3 earlier ones by default;
 // - past days (PDH/PDL, the 1D candle without settlement, 18:00 to 17:00),
 //   weeks (PWH/PWL), months (PMH/PML) and Mondays (MonH/MonL); only the latest
@@ -39,6 +39,7 @@ HALF_DAY_MS = 43200000
 
 dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'])
 sessionHistory = input.int(3, 'Sessions of history', minval = 0, maxval = 20, tooltip = 'Earlier sessions of each window kept besides the latest one.')
+showCurrentSession = input.bool(true, 'Show current session', tooltip = 'Show the high, low and optional box while a session is in progress. Completed sessions are always eligible for display.')
 showBoxes = input.bool(false, 'Session boxes', inline = 'box')
 boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box')
 
@@ -63,7 +64,7 @@ win2On = input.bool(true, '', inline = 'w2')
 win2Name = input.string('London', '', inline = 'w2')
 win2Session = input.session('0200-0500', '', inline = 'w2')
 win2Color = input.color(#9c27b0, '', inline = 'w2')
-win3On = input.bool(true, '', inline = 'w3')
+win3On = input.bool(false, '', inline = 'w3')
 win3Name = input.string('Pre', '', inline = 'w3')
 win3Session = input.session('0800-0930', '', inline = 'w3')
 win3Color = input.color(#ff9800, '', inline = 'w3')
@@ -258,6 +259,8 @@ drawRanges(array<Range> ranges, int feedMs, string latestPrefix, string olderPre
 
 drawZones(array<Zone> zones, string name, color tint) =>
     for zone in zones
+        if not showCurrentSession and time < zone.endTime
+            continue
         boxEnd = zone.lastTime + dayFeedMs
         if showBoxes and boxEnd > firstBarTime
             box.new(math.max(zone.startTime, firstBarTime), zone.hi, boxEnd, zone.lo, xloc = xloc.bar_time, border_color = color.new(tint, 60), bgcolor = color.new(tint, boxTransparency))

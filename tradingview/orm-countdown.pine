@@ -22,6 +22,7 @@ indicator('ORMCountdown', 'ORM Countdown', overlay = true)
 showCountdown = input.bool(true, 'Countdown', inline = 'parts')
 showLot = input.bool(true, 'Lot', inline = 'parts')
 showAtr = input.bool(true, 'ATR', inline = 'parts')
+panelTextSize = input.string(size.large, 'Text size', options = [size.tiny, size.small, size.normal, size.large, size.huge])
 panelColor = input.color(color.new(#374151, 10), 'Background', inline = 'colors')
 textColor = input.color(color.white, 'Text', inline = 'colors')
 alertSeconds = input.int(5, 'Red in the last (s)', minval = 0, maxval = 60, inline = 'alert')
@@ -40,7 +41,7 @@ countdownText(int seconds) =>
 var panel = table.new(position.top_right, 3, 1, bgcolor = panelColor, border_width = 1, border_color = color.new(textColor, 70))
 
 addCell(int column, string value, color background) =>
-    table.cell(panel, column, 0, value, text_color = textColor, text_size = size.large, bgcolor = background)
+    table.cell(panel, column, 0, value, text_color = textColor, text_size = panelTextSize, bgcolor = background)
 
 if barstate.islast
     panel.clear(0, 0, 2, 0)

@@ -695,9 +695,11 @@ on the feed candle that holds the event.
   the midpoint dotted ("NWOG CE 15/11"), for the last 4 weeks (adjustable), and the same for
   each weekday's 17:00-18:00 gap as optional NDOG lines.
 - **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
-  London 02:00-05:00, Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM
-  13:30-16:00, boxes optional), the latest of each plus 3 earlier ones,
-  and previous day (the 1D candle without settlement, 18:00 to 17:00), week,
+  London 02:00-05:00, optional Pre-market 08:00-09:30 (off by default), NY AM 09:30-11:00, NY PM
+  13:30-16:00, boxes optional), the latest of each plus 3 earlier ones.
+  Turn off **Show current session** to display its levels and box only after the window ends.
+  The indicator also shows
+  previous day (the 1D candle without settlement, 18:00 to 17:00), week,
   month and Monday highs and lows: by default the last 3 days and the last
   week, month and Monday, each count adjustable. Each
   level stops at the first later candle to touch it and runs to the last
@@ -712,7 +714,8 @@ on the feed candle that holds the event.
 - **ORMCountdown:** one row of large numbers in the top-right corner, no
   captions: the time left in the candle, the position size for
   a stop of N x ATR and the current ATR, in that order, each optional. The
-  countdown turns red in the candle's last 5 seconds (adjustable).
+  countdown turns red in the candle's last 5 seconds (adjustable). **Text size**
+  sets the whole row from tiny to huge (large by default).
 - History up to 30 days (20 in ORMLiquidity, which has one setting for
   sessions and one each for days, weeks, months and Mondays).
 - Each open or window time must sit on the feed's grid (any :00, :05, :10

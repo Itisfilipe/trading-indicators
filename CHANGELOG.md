@@ -10,8 +10,11 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
   count each for days, weeks, months and Mondays: 3 days and the last week,
   month and Monday by default. Charts that already carry the indicator get
   these new counts, so check them; their other saved settings stay until
-  reset to defaults. The Pre-market 08:00-09:30 range is on by default, and NY
+  reset to defaults. The Pre-market 08:00-09:30 range is off by default, and NY
   AM ends at 11:00, the end of the killzone.
+- ORMLiquidity: turn off **Show current session** to hide the developing high, low
+  and session box until that window ends. The default is on.
+- ORMCountdown: choose the text size for the whole panel, from tiny to huge.
 - ORMOpenings: the 02:00 open is off by default.
 - ORMVerticalLines: 3 past days by default, and the 02:00 London line is off
   by default.
