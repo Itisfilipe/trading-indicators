@@ -614,14 +614,12 @@ the two count toward volume only.
 - Vertical lines at the clock times that matter during a session — New York
   midnight, the 09:30 open, a news release. The companion to Time-Based
   Price Levels: that one answers "at what price", this one "at what time".
-  The macro windows live in the LRM Macros indicator.
 - 10 line slots, one compact row each: on/off, HH:MM, label, color, style.
   Three start on — NY midnight, the 08:30 news, the 09:30 open; the rest
   are carried but off.
 - Every line is drawn for the whole day, **including the ones still ahead**,
   each carrying a countdown to it.
-- Captions ride one strip below or above the bars (top by default, clear of
-  LRM Macros with its band set to Bottom), set off them by an adjustable gap, welded
+- Captions ride one strip below or above the bars (top by default), set off them by an adjustable gap, welded
   there through any scroll or zoom. Nothing is drawn over the candles.
   Captions read across rather than down the line: a script cannot use the
   chart's own vertical-line drawing, and a Pine label has no rotation, so
@@ -635,12 +633,6 @@ the two count toward volume only.
   (Chart settings → Appearance → Right margin, or drag the chart left) — a
   line an hour out sits an hour's worth of bars past the last one, and
   TradingView will not scroll there on its own.
-
-### LRM Macros
-
-- Shows only Market On Close (15:45–16:00) by default. A dotted line marks 15:50 inside MOC. All times are New York local.
-- Asia, London, pre-market, NY AM and Final Hour are optional. Each row has a time range and color.
-- Bands sit above the visible candles by default. Window edges and live countdowns are optional. The chart shows the latest futures trading day and one previous trading day by default.
 
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
 chart.
@@ -656,7 +648,7 @@ chart.
 
 ### LRM indicators — the Liquidity Reaction Model map for NQ
 
-Five indicators that together draw the map the Liquidity Reaction Model reads on
+Four indicators that together draw the map the Liquidity Reaction Model reads on
 NQ/MNQ. Every time is New York local, so daylight saving needs no
 adjustment. LRMOpenings and LRMLiquidity read their levels from
 a 5-minute (or hourly) feed of the extended session instead of the chart's
@@ -664,7 +656,6 @@ own candles, so a 1-minute chart shows the whole history even where its
 candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
-- **LRMMacros:** MOC time band with a marker at 15:50 and five optional windows.
 - **LRMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
   13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the
@@ -688,7 +679,8 @@ on the feed candle that holds the event.
 - **LRMVerticalLines:** vertical lines at the same session times, drawn for
   the whole trading day ahead of time with a countdown under the caption;
   after the 18:00 open the next day's lines are already up; 3 past days by
-  default, the 02:00 line off.
+  default, the 02:00 line off. The Market on Close option shows the 15:45 start,
+  15:50 imbalance and 16:00 close in New York time. It is enabled by default.
 - **LRMCountdown:** one row of large numbers in the top-right corner, no
   captions: the time left in the candle, the position size for
   a stop of N x ATR and the current ATR, in that order, each optional. The
