@@ -2,7 +2,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © Filipe Teixeira Amaral
 // -----------------------------------------------------------------------------
-// ORM Countdown
+// LRM Countdown
 // Author: Filipe Teixeira Amaral
 // Version: 1.0
 //
@@ -17,7 +17,7 @@
 //   contract specs before trading.
 // -----------------------------------------------------------------------------
 
-indicator('ORMCountdown', 'ORM Countdown', overlay = true)
+indicator('LRMCountdown', 'LRM Countdown', overlay = true)
 
 showCountdown = input.bool(true, 'Countdown', inline = 'parts')
 showLot = input.bool(true, 'Lot', inline = 'parts')

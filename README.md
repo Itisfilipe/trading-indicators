@@ -677,24 +677,24 @@ chart.
 - Lines cover the visible bars' price range plus an offset of extra levels
   above and below, recomputed when you scroll or zoom.
 
-### ORM indicators — the Open Reaction Model map for NQ
+### LRM indicators — the Liquidity Reaction Model map for NQ
 
-Four indicators that together draw the map the Open Reaction Model reads on
+Four indicators that together draw the map the Liquidity Reaction Model reads on
 NQ/MNQ. Every time is New York local, so daylight saving needs no
-adjustment. ORMOpenings and ORMLiquidity read their levels from
+adjustment. LRMOpenings and LRMLiquidity read their levels from
 a 5-minute (or hourly) feed of the extended session instead of the chart's
 own candles, so a 1-minute chart shows the whole history even where its
 candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
-- **ORMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
+- **LRMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
   13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the
   end); opens at one price ending together share a caption; NWOG lines
   at Friday's close and Sunday's open ("NWOG C 13/11", "NWOG O 15/11") with
   the midpoint dotted ("NWOG CE 15/11"), for the last 4 weeks (adjustable), and the same for
   each weekday's 17:00-18:00 gap as optional NDOG lines.
-- **ORMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
+- **LRMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
   London 02:00-05:00, optional Pre-market 08:00-09:30 (off by default), NY AM 09:30-11:00, NY PM
   13:30-16:00, boxes optional), the latest of each plus 3 earlier ones.
   Turn off **Show current session** to display its levels and box only after the window ends.
@@ -707,16 +707,16 @@ on the feed candle that holds the event.
   levels at one price share a caption ("NY AM Low / PDL"). The latest finished
   period is named PDH, PWH, PMH or MonH, older ones carry their date (DH
   13/11, WH 09/11, MH Oct).
-- **ORMVerticalLines:** vertical lines at the same session times, drawn for
+- **LRMVerticalLines:** vertical lines at the same session times, drawn for
   the whole trading day ahead of time with a countdown under the caption;
   after the 18:00 open the next day's lines are already up; 3 past days by
   default, the 02:00 line off.
-- **ORMCountdown:** one row of large numbers in the top-right corner, no
+- **LRMCountdown:** one row of large numbers in the top-right corner, no
   captions: the time left in the candle, the position size for
   a stop of N x ATR and the current ATR, in that order, each optional. The
   countdown turns red in the candle's last 5 seconds (adjustable). **Text size**
   sets the whole row from tiny to huge (large by default).
-- History up to 30 days (20 in ORMLiquidity, which has one setting for
+- History up to 30 days (20 in LRMLiquidity, which has one setting for
   sessions and one each for days, weeks, months and Mondays).
 - Each open or window time must sit on the feed's grid (any :00, :05, :10
   ... on the 5-minute feed).

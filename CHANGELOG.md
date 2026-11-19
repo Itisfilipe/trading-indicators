@@ -5,27 +5,29 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-19
 
-- ORMLiquidity: each session window keeps its latest session plus 3 earlier
+- The four TradingView indicators now use the Liquidity Reaction Model (LRM) name: LRM Liquidity, Openings, Countdown and Vertical Lines.
+
+- LRMLiquidity: each session window keeps its latest session plus 3 earlier
   ones by default. The shared "Periods of history" setting is replaced by one
   count each for days, weeks, months and Mondays: 3 days and the last week,
   month and Monday by default. Charts that already carry the indicator get
   these new counts, so check them; their other saved settings stay until
   reset to defaults. The Pre-market 08:00-09:30 range is off by default, and NY
   AM ends at 11:00, the end of the killzone.
-- ORMLiquidity: turn off **Show current session** to hide the developing high, low
+- LRMLiquidity: turn off **Show current session** to hide the developing high, low
   and session box until that window ends. The default is on.
-- ORMCountdown: choose the text size for the whole panel, from tiny to huge.
-- ORMOpenings: the 02:00 open is off by default.
-- ORMVerticalLines: 3 past days by default, and the 02:00 London line is off
+- LRMCountdown: choose the text size for the whole panel, from tiny to huge.
+- LRMOpenings: the 02:00 open is off by default.
+- LRMVerticalLines: 3 past days by default, and the 02:00 London line is off
   by default.
 
 ## 2026-11-18
 
-- New TradingView indicators for the Open Reaction Model on NQ: ORMOpenings
-  (session open lines, NWOG and optional NDOG lines), ORMLiquidity
+- New TradingView indicators for the Liquidity Reaction Model on NQ: LRMOpenings
+  (session open lines, NWOG and optional NDOG lines), LRMLiquidity
   (session and killzone highs and lows plus previous day, week, month and
   Monday highs and lows, each stopping at the first touch),
-  ORMVerticalLines (session times with countdowns) and ORMCountdown (candle
+  LRMVerticalLines (session times with countdowns) and LRMCountdown (candle
   countdown, position size and ATR in a top-right panel). The level
   indicators keep their full history on a 1-minute chart.
 

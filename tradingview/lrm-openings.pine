@@ -2,12 +2,12 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © Filipe Teixeira Amaral
 // -----------------------------------------------------------------------------
-// ORM Openings
+// LRM Openings
 // Author: Filipe Teixeira Amaral
 // Version: 1.0
 //
 // Description:
-// The opening prices the Open Reaction Model reads on NQ: a line at each
+// The opening prices the Liquidity Reaction Model reads on NQ: a line at each
 // session open and the New Week (and optionally New Day) Opening Gaps.
 // Every time is New York local, so daylight saving needs no adjustment.
 //
@@ -31,7 +31,7 @@
 //   above 5 minutes (a 1-hour chart reads 08:30 from the 09:00 candle).
 // -----------------------------------------------------------------------------
 
-indicator('ORMOpenings', 'ORM Openings', overlay = true, max_lines_count = 500, max_boxes_count = 500)
+indicator('LRMOpenings', 'LRM Openings', overlay = true, max_lines_count = 500, max_boxes_count = 500)
 
 TZ = 'America/New_York'
 MS_PER_MINUTE = 60000

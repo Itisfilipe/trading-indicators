@@ -2,12 +2,12 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © Filipe Teixeira Amaral
 // -----------------------------------------------------------------------------
-// ORM Liquidity
+// LRM Liquidity
 // Author: Filipe Teixeira Amaral
 // Version: 1.0
 //
 // Description:
-// The liquidity the Open Reaction Model reads on NQ, in New York time:
+// The liquidity the Liquidity Reaction Model reads on NQ, in New York time:
 // - session and killzone highs and lows: Asia 20:00-00:00, London 02:00-05:00,
 //   optional Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM 13:30-16:00, with
 //   optional boxes; the latest of each plus 3 earlier ones by default;
@@ -31,7 +31,7 @@
 //   500-box limit, session boxes included.
 // -----------------------------------------------------------------------------
 
-indicator('ORMLiquidity', 'ORM Liquidity', overlay = true, max_boxes_count = 500)
+indicator('LRMLiquidity', 'LRM Liquidity', overlay = true, max_boxes_count = 500)
 
 TZ = 'America/New_York'
 MS_PER_MINUTE = 60000
