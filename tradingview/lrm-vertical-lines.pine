@@ -125,7 +125,7 @@ if barstate.isfirst
     addLine(line6On, line6Time, line6Text, line6Color)
 
     addLine(showMoc, '15:50', 'MOC', mocColor)
-    addLine(showMoc, '16:00', 'Close', mocColor)
+    addLine(showMoc, '16:00', 'NY Close', mocColor)
 
 var tradingDays = array.new<int>()
 barTradingDate = tradingDateOf(time)
