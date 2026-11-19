@@ -638,8 +638,8 @@ the two count toward volume only.
 
 ### LRM Macros
 
-- Shows Asia (19:50–20:10) and Market On Close (15:45–16:00) by default. A dotted line marks 15:50 inside MOC. All times are New York local.
-- London, pre-market, NY AM and Final Hour are optional. Each row has a time range and color.
+- Shows only Market On Close (15:45–16:00) by default. A dotted line marks 15:50 inside MOC. All times are New York local.
+- Asia, London, pre-market, NY AM and Final Hour are optional. Each row has a time range and color.
 - Bands sit above the visible candles by default. Window edges and live countdowns are optional. The chart shows the latest futures trading day and one previous trading day by default.
 
 Use: paste a `.pine` file into TradingView's Pine editor, save, add to the
@@ -664,7 +664,7 @@ own candles, so a 1-minute chart shows the whole history even where its
 candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
-- **LRMMacros:** Asia and MOC time bands, with a marker at 15:50.
+- **LRMMacros:** MOC time band with a marker at 15:50 and five optional windows.
 - **LRMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
   13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the

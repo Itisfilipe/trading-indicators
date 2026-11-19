@@ -14,7 +14,7 @@ showLines = input.bool(false, 'Show window edge lines')
 showCountdown = input.bool(false, 'Show countdown')
 bandPosition = input.string('Top', 'Band position', options = ['Top', 'Bottom'])
 
-asiaOn = input.bool(true, 'Asia', inline = 'asia')
+asiaOn = input.bool(false, 'Asia', inline = 'asia')
 asiaTime = input.session('1950-2010', '', inline = 'asia')
 asiaColor = input.color(#2962ff, '', inline = 'asia')
 londonOn = input.bool(false, 'London', inline = 'london')
