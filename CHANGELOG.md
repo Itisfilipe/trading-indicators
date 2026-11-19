@@ -5,7 +5,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-19
 
-- TradingView LRM Vertical Lines now includes the Market on Close markers (15:45, 15:50 and 16:00 ET) under one option, enabled by default. The standalone TradingView macros indicator was removed.
+- TradingView LRM Vertical Lines now includes the Market on Close markers (15:50 and 16:00 ET) under one option, enabled by default. The standalone TradingView macros indicator was removed.
 
 - The four TradingView indicators now use the Liquidity Reaction Model (LRM) name: LRM Liquidity, Openings, Countdown and Vertical Lines.
 

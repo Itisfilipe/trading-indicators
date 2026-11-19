@@ -15,7 +15,7 @@
 // Features:
 // - Six slots (on/off, HH:MM, caption, color): 00:00 Midnight, 02:00 London,
 //   08:30 Open, 09:30 NY AM, 13:30 NY PM, 20:00 Asia
-// - Optional MOC markers at 15:45, 15:50 and 16:00 New York time
+// - Optional MOC markers at 15:50 and 16:00 New York time
 // - Countdown under the caption of a line still ahead, captions on a strip
 //   just below (or above) the visible bars
 // - Colors match the other LRM indicators: each session's killzone color,
@@ -68,7 +68,7 @@ line6Time = input.string('20:00', '', inline = 'l6')
 line6Text = input.string('Asia', '', inline = 'l6')
 line6Color = input.color(#2962ff, '', inline = 'l6')
 
-showMoc = input.bool(true, 'Market on Close (MOC)', inline = 'moc', tooltip = 'Mark the 15:45 start, 15:50 imbalance and 16:00 close in New York time.')
+showMoc = input.bool(true, 'Market on Close (MOC)', inline = 'moc', tooltip = 'Mark the 15:50 imbalance and 16:00 close in New York time.')
 mocColor = input.color(#f23645, '', inline = 'moc')
 
 type TimeLine
@@ -124,8 +124,7 @@ if barstate.isfirst
     addLine(line5On, line5Time, line5Text, line5Color)
     addLine(line6On, line6Time, line6Text, line6Color)
 
-    addLine(showMoc, '15:45', 'MOC', mocColor)
-    addLine(showMoc, '15:50', 'Imbalance', mocColor)
+    addLine(showMoc, '15:50', 'MOC', mocColor)
     addLine(showMoc, '16:00', 'Close', mocColor)
 
 var tradingDays = array.new<int>()

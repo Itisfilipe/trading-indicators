@@ -679,8 +679,8 @@ on the feed candle that holds the event.
 - **LRMVerticalLines:** vertical lines at the same session times, drawn for
   the whole trading day ahead of time with a countdown under the caption;
   after the 18:00 open the next day's lines are already up; 3 past days by
-  default, the 02:00 line off. The Market on Close option shows the 15:45 start,
-  15:50 imbalance and 16:00 close in New York time. It is enabled by default.
+  default, the 02:00 line off. The Market on Close option shows the 15:50 imbalance
+  and 16:00 close in New York time. It is enabled by default.
 - **LRMCountdown:** one row of large numbers in the top-right corner, no
   captions: the time left in the candle, the position size for
   a stop of N x ATR and the current ATR, in that order, each optional. The
