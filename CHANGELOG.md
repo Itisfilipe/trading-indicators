@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-25
 
+- Classic liquidity captions sit to the left of the line endpoint with space before the touch candle. Opening captions sit four pixels past the endpoint, centered on the price.
+
 - Desktop Risk Reward Targets now keeps 1R/2R/3R linked when dragging any price line. Classic adds a two-handle risk ladder, manual exit labels and a refreshable weekly economic calendar.
 
 - Classic LRM rectangles now pass fill and line opacity as percentages so the five zone fills and their subdivisions stay visible.
