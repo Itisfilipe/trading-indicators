@@ -38,7 +38,7 @@ const rectangle = {
         const items = [
             {
                 tag: "Shapes", key: "fill", primitives: [shape],
-                fillStyle: { color: zone ? zone.fill : color, opacity: (zone ? props.chartZoneOpacityPercent : props.fillOpacityPercent) / 100 }
+                fillStyle: { color: zone ? zone.fill : color, opacity: zone ? (props.chartZoneOpacityPercent ?? 10) : (props.fillOpacityPercent ?? 15) }
             },
             {
                 tag: "ContourShapes", key: "border", primitives: [shape],
@@ -55,7 +55,7 @@ const rectangle = {
                 tag: "LineSegments", key: middle ? "midline" : "level" + fraction,
                 lines: [{ tag: "Line", a: { x: a.x, y }, b: { x: b.x, y } }],
                 lineStyle: { color: zone ? zone.middle : color, lineWidth: 1,
-                    lineStyle: middle && zone ? 1 : 3, opacity: middle ? 1 : 0.65 }
+                    lineStyle: middle && zone ? 1 : 3, opacity: middle ? 100 : 65 }
             });
         }
         return { items };

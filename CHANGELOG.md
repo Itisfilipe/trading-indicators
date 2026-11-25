@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-25
 
+- Classic LRM rectangles now pass fill and line opacity as percentages so the five zone fills and their subdivisions stay visible.
+
 - Five separately named Classic rectangles match the orange, cyan, red, purple and gray zones and can divide their height into quarters or eighths. TradingView and Classic LRM defaults now follow the saved MNQ layout.
 
 - Classic Web Trader adds the LRM map, countdown and three-point Fibonacci projection. Rectangle now includes the red, orange and gray zones from the light TradingView layout.

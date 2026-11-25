@@ -150,9 +150,12 @@ test("five named rectangles retain every fractional line when dragged in either 
             for (const divisions of [1,2,4,8]) {
                 const props = { ...tool.params, colorPreset, showMidline: divisions >= 2,
                     divideIntoQuarters: divisions >= 4, divideIntoEighths: divisions === 8 };
-                const lines = tool.drawing.render({anchors, props}).items.slice(2);
+                const items = tool.drawing.render({anchors, props}).items;
+                assert.equal(items[0].fillStyle.opacity, 10);
+                const lines = items.slice(2);
                 assert.equal(lines.length, divisions - 1);
                 lines.forEach((item, index) => {
+                    assert.equal(item.lineStyle.opacity, item.key === "midline" ? 100 : 65);
                     const line = item.lines[0];
                     assert.equal(line.a.y.value, a + (b-a) * (index+1) / divisions);
                     assert.equal(line.b.y.value, line.a.y.value);
