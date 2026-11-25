@@ -33,12 +33,14 @@ const rectangle = {
             ? props.customColor
             : colors[props.colorPreset] || colors.blue;
         const zone = chartZones[props.colorPreset];
+        const fillOpacity = zone ? props.chartZoneOpacityPercent : props.fillOpacityPercent;
+        const defaultOpacity = zone ? 10 : 15;
         const corners = [a, { x: b.x, y: a.y }, b, { x: a.x, y: b.y }];
         const shape = { tag: "Polygon", points: corners };
         const items = [
             {
                 tag: "Shapes", key: "fill", primitives: [shape],
-                fillStyle: { color: zone ? zone.fill : color, opacity: zone ? (props.chartZoneOpacityPercent ?? 10) : (props.fillOpacityPercent ?? 15) }
+                fillStyle: { color: zone ? zone.fill : color, opacity: Number.isFinite(fillOpacity) ? fillOpacity : defaultOpacity }
             },
             {
                 tag: "ContourShapes", key: "border", primitives: [shape],
