@@ -42,7 +42,7 @@ Use fundo branco. A tabela seguinte registra a aparência **amostrada na captura
 | Purple | `#BFB1DE` | `#613CB0` | `#EFECF7` |
 | Gray | `#CCCCCC` | `#000000` | `#E6E6E6` |
 
-A configuração inicial desenha a linha de **50%**. **Divide Into Quarters** acrescenta os níveis de 25% e 75%. **Divide Into Eighths** mostra sete linhas internas em intervalos de 12,5% e inclui os quartos e o meio. Se ambas as opções estiverem ligadas, prevalecem os oitavos. Para uma zona vazia, desligue as duas opções e **Show Midline**.
+O retângulo genérico começa na cor cinza. Cada ferramenta nomeada começa na sua própria cor, com preenchimento a 10%. A configuração inicial desenha a linha de **50%**. **Divide Into Quarters** acrescenta os níveis de 25% e 75%. **Divide Into Eighths** mostra sete linhas internas em intervalos de 12,5% e inclui os quartos e o meio. Se ambas as opções estiverem ligadas, prevalecem os oitavos. Para uma zona vazia, desligue as duas opções e **Show Midline**.
 
 ## Configurações verificadas nos dois painéis
 

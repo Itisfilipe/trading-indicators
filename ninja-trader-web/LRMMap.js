@@ -204,7 +204,7 @@ class LRMMap {
                 if (p.drawSessionBoxes) {
                     const points = [point(r.first, r.h), point(r.last + 1, r.h), point(r.last + 1, r.l), point(r.first, r.l)];
                     items.push({ tag: "Shapes", key: "box" + name + r.first, primitives: [{tag:"Polygon", points}],
-                        fillStyle: { color, opacity: p.sessionBoxOpacityPercent / 100 } });
+                        fillStyle: { color, opacity: p.sessionBoxOpacityPercent } });
                 }
                 range(name, r, label, "", color, true);
             }

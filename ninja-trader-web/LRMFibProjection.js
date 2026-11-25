@@ -17,7 +17,7 @@ const projection = {
         const near = price(props.firstTargetPercent), far = price(props.secondTargetPercent);
         const corner = (x, y) => ({ x: du(x), y });
         const color = props.targetColor;
-        items.push({ tag: "Shapes", key: "targetZone", fillStyle: { color, opacity: props.fillOpacityPercent / 100 },
+        items.push({ tag: "Shapes", key: "targetZone", fillStyle: { color, opacity: props.fillOpacityPercent },
             primitives: [{ tag: "Polygon", points: [corner(start, near), corner(end, near), corner(end, far), corner(start, far)] }] });
         for (const [index, percent] of [props.firstTargetPercent, props.secondTargetPercent].entries()) {
             const y = price(percent);

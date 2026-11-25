@@ -72,7 +72,7 @@ module.exports = {
     minN: 2,
     maxN: 2,
     params: {
-        colorPreset: predef.paramSpecs.enum(presetNames, "blue"),
+        colorPreset: predef.paramSpecs.enum(presetNames, "grayZone"),
         customColor: predef.paramSpecs.color(colors.blue),
         showMidline: predef.paramSpecs.bool(true),
         divideIntoQuarters: predef.paramSpecs.bool(false),

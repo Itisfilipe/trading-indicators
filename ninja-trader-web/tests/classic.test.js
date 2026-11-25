@@ -96,6 +96,8 @@ test("three-point projection follows the signed impulse; rectangles follow both 
     for (const sign of [1, -1]) {
         const anchors = [0, 100, 40].map((v, i) => ({ x: du(i), y: du(200 + sign * v) }));
         const result = fib.drawing.render({ anchors, props: fib.params }).items;
+        assert.equal(result.find(i => i.key === "targetZone").fillStyle.opacity, 10);
+        assert.equal(rect.params.colorPreset, "grayZone");
         assert.equal(result.find(i => i.key === "target0").lines[0].a.y.value, 200 + sign * 116.4);
         assert.equal(result.find(i => i.key === "target1").lines[0].a.y.value, 200 + sign * 140);
         const box = rect.drawing.render({ anchors, props: { ...rect.params, colorPreset: "orangeZone" } }).items;
