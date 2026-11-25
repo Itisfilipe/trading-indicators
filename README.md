@@ -1,10 +1,11 @@
 # Trading Indicators
 
-Personal collection of trading indicators and chart tools for three platforms:
+Personal collection of trading indicators and chart tools for the following platforms:
 
 | Folder | Platform | Language |
 |--------|----------|----------|
 | [`ninja-trader/`](ninja-trader/) | NinjaTrader 8 | C# (NinjaScript) |
+| [`ninja-trader-web/`](ninja-trader-web/) | NinjaTrader Web | JavaScript |
 | [`profit-chart/`](profit-chart/) | Profit Chart (Nelogica) | NTSL |
 | [`tradingview/`](tradingview/) | TradingView | Pine Script |
 
@@ -12,6 +13,17 @@ Personal collection of trading indicators and chart tools for three platforms:
 > read the [Disclaimer](#disclaimer) before using anything here.
 
 Default colors for light charts follow one [chart palette](#chart-palette).
+
+## NinjaTrader Web
+
+[LRM Rectangle](ninja-trader-web/LRMRectangle.js) draws a zone from two opposite
+corners. Its dashed horizontal line follows the 50% price as you move either
+corner. Each rectangle has a Blue, Gray or Amber preset, a midline switch and
+adjustable fill opacity.
+
+In the Web workspace, open **Code editor → File → New**, create
+`LRMRectangle.js`, paste the file contents and save. In **Chart (NinjaTrader)**,
+look for **LRM Rectangle** in the drawing tools selector (pencil).
 
 ## NinjaTrader 8 (`ninja-trader/`)
 
