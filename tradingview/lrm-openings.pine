@@ -15,7 +15,7 @@
 // - Open lines at 00:00, 02:00, 08:30, 09:30, 13:30 and 20:00, each running to
 //   the 17:00 close of its trading day (today's stop 15 candles past the
 //   last one, caption just past its end), captioned with their time; times and colors
-//   editable; 02:00 off by default, since London is context only
+//   editable; 02:00 and 20:00 off by default
 // - NWOG: Friday's 17:00 close and Sunday's 18:00 open as solid lines
 //   ("NWOG C 13/11", "NWOG O 15/11") with the dotted midpoint ("NWOG CE 15/11") between,
 //   for the last few weeks whether or not price has traded through them
@@ -59,10 +59,10 @@ open4Color = input.color(#000000, '', inline = 'o4', group = GRP_OPENS)
 open5On = input.bool(true, '', inline = 'o5', group = GRP_OPENS)
 open5Time = input.string('13:30', '', inline = 'o5', group = GRP_OPENS)
 open5Color = input.color(#000000, '', inline = 'o5', group = GRP_OPENS)
-open6On = input.bool(true, '', inline = 'o6', group = GRP_OPENS)
+open6On = input.bool(false, '', inline = 'o6', group = GRP_OPENS)
 open6Time = input.string('20:00', '', inline = 'o6', group = GRP_OPENS)
 open6Color = input.color(#000000, '', inline = 'o6', group = GRP_OPENS)
-nwogOn = input.bool(true, 'NWOG', inline = 'nwog', group = GRP_NWOG)
+nwogOn = input.bool(false, 'NWOG', inline = 'nwog', group = GRP_NWOG)
 nwogColor = input.color(#000000, '', inline = 'nwog', group = GRP_NWOG)
 nwogWeeks = input.int(4, 'Weekly gaps to show', minval = 1, maxval = 30, group = GRP_NWOG)
 ndogOn = input.bool(false, 'NDOG', inline = 'ndog', group = GRP_NWOG)

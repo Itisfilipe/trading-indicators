@@ -16,6 +16,8 @@ Default colors for light charts follow one [chart palette](#chart-palette).
 
 ## NinjaTrader Web
 
+[Guia de migração do layout MNQ](ninja-trader-web/GUIA_DE_MIGRACAO.md).
+
 The [Classic Web Trader setup guide](ninja-trader-web/README.md) includes the
 1m/15m layout, candle colors and installation steps.
 
@@ -23,7 +25,7 @@ The [Classic Web Trader setup guide](ninja-trader-web/README.md) includes the
   and vertical time markers. Separate controls set labels, history and developing ranges.
 - **LRM Countdown** shows the candle timer, risk-based contract count and ATR.
 - **LRM Rectangle** draws a two-corner zone with an optional 50% line. Choose
-  session colors, a custom color, or the light chart's red, orange and gray zones.
+  session colors, a custom color, or one of five named zone drawings with optional quarter and eighth levels.
 - **LRM Fib Projection** projects the signed A–B move from C. The adjustable
   target band defaults to 76.4%–100%.
 
@@ -671,7 +673,7 @@ candles do not reach; prices are exact, while the start and end of a line sit
 on the feed candle that holds the event.
 
 - **LRMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
-  13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
+  13:30 and 20:00 (off by default) opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the
   end). **Past trading days to show opens** adds earlier trading days to today (0 by default).
   Opens at one price ending together share a caption; NWOG lines
@@ -680,8 +682,8 @@ on the feed candle that holds the event.
   each weekday's 17:00-18:00 gap as optional NDOG lines.
 - **LRMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
   London 02:00-05:00, optional Pre-market 08:00-09:30 (off by default), NY AM 09:30-11:00, NY PM
-  13:30-16:00, boxes optional), the latest of each plus 3 earlier ones.
-  Turn off **Show session levels while the session is open** to display its levels and box only after the window ends.
+  13:30-16:00, boxes optional), the latest of each plus 5 earlier ones.
+  Session levels appear after the window ends by default. Enable **Show session levels while the session is open** for developing levels.
   The indicator also shows
   previous day (the 1D candle without settlement, 18:00 to 17:00), week,
   month and Monday highs and lows: by default the last 3 days and the last
@@ -700,7 +702,7 @@ on the feed candle that holds the event.
   the whole trading day ahead of time with a countdown under the caption;
   after the 18:00 open the next day's lines are already up; 3 past days by
   default, the 02:00 line off. The Market on Close option shows the 15:50 imbalance
-  and 16:00 close in New York time. It is enabled by default.
+  and 16:00 close in New York time. MOC is off by default.
 - **LRMCountdown:** one row of large numbers in the top-right corner, no
   captions: the time left in the candle, the position size for
   a stop of N x ATR and the current ATR, in that order, each optional. The

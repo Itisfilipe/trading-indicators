@@ -10,7 +10,7 @@
 // The liquidity the Liquidity Reaction Model reads on NQ, in New York time:
 // - session and killzone highs and lows: Asia 20:00-00:00, London 02:00-05:00,
 //   optional Pre-market 08:00-09:30, NY AM 09:30-11:00, NY PM 13:30-16:00, with
-//   optional boxes; the latest of each plus 3 earlier ones by default;
+//   optional boxes; the latest of each plus 5 earlier ones by default;
 // - past days (PDH/PDL, the 1D candle without settlement, 18:00 to 17:00),
 //   weeks (PWH/PWL), months (PMH/PML) and Mondays (MonH/MonL); only the latest
 //   finished period carries the P name, older ones carry their date; by
@@ -41,8 +41,8 @@ showLabels = input.bool(true, 'Show labels')
 limitDays = input.bool(false, 'Limit history by trading day')
 pastDays = input.int(3, 'Past trading days to include', minval = 0, maxval = 500, active = limitDays, tooltip = '0 keeps only the current trading day. Finished ranges qualify by their last trading day. Current ranges are controlled separately.')
 dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'])
-sessionHistory = input.int(3, 'Previous sessions to show per window', minval = 0, maxval = 20, tooltip = 'Earlier sessions of each window kept besides the latest one.', group = 'Session liquidity')
-showCurrentSession = input.bool(true, 'Show session levels while the session is open', tooltip = 'Show the high, low and optional box while a session is in progress. The history filters also apply.', group = 'Session liquidity')
+sessionHistory = input.int(5, 'Previous sessions to show per window', minval = 0, maxval = 20, tooltip = 'Earlier sessions of each window kept besides the latest one.', group = 'Session liquidity')
+showCurrentSession = input.bool(false, 'Show session levels while the session is open', tooltip = 'Show the high, low and optional box while a session is in progress. The history filters also apply.', group = 'Session liquidity')
 showBoxes = input.bool(false, 'Draw session boxes', inline = 'box', group = 'Session liquidity')
 boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box', group = 'Session liquidity')
 

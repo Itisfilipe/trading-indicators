@@ -64,12 +64,12 @@ line5On = input.bool(true, '', inline = 'l5')
 line5Time = input.string('13:30', '', inline = 'l5')
 line5Text = input.string('NY PM', '', inline = 'l5')
 line5Color = input.color(#f23645, '', inline = 'l5')
-line6On = input.bool(true, '', inline = 'l6')
+line6On = input.bool(false, '', inline = 'l6')
 line6Time = input.string('20:00', '', inline = 'l6')
 line6Text = input.string('Asia', '', inline = 'l6')
 line6Color = input.color(#2962ff, '', inline = 'l6')
 
-showMoc = input.bool(true, 'Market on Close (MOC)', inline = 'moc', tooltip = 'Mark the 15:50 imbalance and 16:00 close in New York time.')
+showMoc = input.bool(false, 'Market on Close (MOC)', inline = 'moc', tooltip = 'Mark the 15:50 imbalance and 16:00 close in New York time.')
 mocColor = input.color(#f23645, '', inline = 'moc')
 
 type TimeLine

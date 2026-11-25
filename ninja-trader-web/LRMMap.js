@@ -209,13 +209,14 @@ class LRMMap {
                 range(name, r, label, "", color, true);
             }
         }
-        for (const day of this.days.slice(-(p.pastTradingDaysForOpens + 1))) {
+        const liquidityOnly = p.useLiquidityOnlyOn15MinuteChart && minuteChart && step === 15;
+        for (const day of liquidityOnly ? [] : this.days.slice(-(p.pastTradingDaysForOpens + 1))) {
             const remaining = (1020 - this.now.minute + 1440) % 1440;
             const end = day.day === bar.day && minuteChart ? bar.x + Math.min(15, remaining / step) : day.last;
             day.opens.forEach((o, i) => level("open" + day.day + "-" + i, o.x, end, o.price,
                 o.label, p.openLineColor, true, p.showOpeningLabels, 3));
         }
-        for (const g of this.gaps) {
+        for (const g of liquidityOnly ? [] : this.gaps) {
             if (g.kind === "NWOG" ? !p.showWeeklyOpeningGaps : !p.showDailyOpeningGaps) continue;
             const color = g.kind === "NWOG" ? p.weeklyGapColor : p.dailyGapColor;
             const end = bar.x + 15;
@@ -232,9 +233,9 @@ class LRMMap {
                 items.push(item);
             }
         };
-        for (const day of this.days.slice(-(p.pastTradingDaysForMarkers + 1)))
+        for (const day of liquidityOnly ? [] : this.days.slice(-(p.pastTradingDaysForMarkers + 1)))
             day.markers.forEach(m => drawMarker(m, ""));
-        if (minuteChart && p.showUpcomingMarkers) {
+        if (!liquidityOnly && minuteChart && p.showUpcomingMarkers) {
             const now = (this.now.minute + 360) % 1440;
             const upcoming = (m, label, color) => {
                 const delta = (m + 360) % 1440 - now;
@@ -251,16 +252,17 @@ class LRMMap {
 }
 
 const params = {
+    useLiquidityOnlyOn15MinuteChart: spec.bool(true),
     showLiquidityLabels: spec.bool(true), showOpeningLabels: spec.bool(true), showMarkerLabels: spec.bool(true),
     monthFirstDates: spec.bool(false), limitLiquidityHistory: spec.bool(false),
-    pastTradingDaysForLiquidity: spec.number(3, 1, 0), previousSessionsPerWindow: spec.number(3, 1, 0),
-    showCurrentSessionHighLow: spec.bool(true), drawSessionBoxes: spec.bool(false),
+    pastTradingDaysForLiquidity: spec.number(3, 1, 0), previousSessionsPerWindow: spec.number(5, 1, 0),
+    showCurrentSessionHighLow: spec.bool(false), drawSessionBoxes: spec.bool(false),
     sessionBoxOpacityPercent: spec.percent(10, 1, 0, 100),
     pastTradingDaysForOpens: spec.number(0, 1, 0), openLineColor: spec.color("#000000"),
-    showWeeklyOpeningGaps: spec.bool(true), weeklyGapsToShow: spec.number(4, 1, 0), weeklyGapColor: spec.color("#000000"),
+    showWeeklyOpeningGaps: spec.bool(false), weeklyGapsToShow: spec.number(4, 1, 0), weeklyGapColor: spec.color("#000000"),
     showDailyOpeningGaps: spec.bool(false), dailyGapsToShow: spec.number(5, 1, 0), dailyGapColor: spec.color("#787b86"),
     pastTradingDaysForMarkers: spec.number(3, 1, 0), showUpcomingMarkers: spec.bool(true),
-    showMocMarkers: spec.bool(true), mocColor: spec.color("#f23645")
+    showMocMarkers: spec.bool(false), mocColor: spec.color("#f23645")
 };
 for (const [name, , count] of periods) {
     params["show" + name + "Liquidity"] = spec.bool(true);
@@ -275,8 +277,8 @@ for (const [name, start, end, color] of windows) {
     params[name + "SessionColor"] = spec.color(color);
 }
 for (const [name, time, , color] of events) {
-    params["show" + name + "Open"] = spec.bool(name !== "London");
-    params["show" + name + "Marker"] = spec.bool(name !== "London");
+    params["show" + name + "Open"] = spec.bool(name !== "London" && name !== "Asia");
+    params["show" + name + "Marker"] = spec.bool(name !== "London" && name !== "Asia");
     params[name + "TimeNY"] = spec.number(time, 1, 0);
     params[name + "MarkerColor"] = spec.color(color);
 }

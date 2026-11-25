@@ -16,6 +16,7 @@ function load(name) {
     vm.runInNewContext(source, { module: mod, require: id => {
         if (id === "./tools/predef") return { paramSpecs: spec };
         if (id === "./tools/graphics") return { du, px };
+        if (id === "./LRMRectangle") return load("LRMRectangle");
         throw Error(id);
     } });
     return mod.exports;
@@ -38,7 +39,7 @@ const labels = list => list.filter(item => item.tag === "Text").map(item => item
 test("DST, overnight liquidity, live update and first post-session touch", () => {
     for (const [evening, morning] of [["2026-11-22T", "2026-11-23T"], ["2026-06-07T", "2026-06-08T"]]) {
         const winter = evening.includes("11-22");
-        const calc = instance("LRMMap", { showCurrentDayHighLow: true });
+        const calc = instance("LRMMap", { showCurrentDayHighLow: true, showAsiaOpen: true, showWeeklyOpeningGaps: true });
         items(calc, bar(0, evening + (winter ? "23:00Z" : "22:00Z"), 95, 96, 94, 95));
         const asia = bar(1, morning + (winter ? "01:00Z" : "00:00Z"), 100, 102, 98, 101);
         items(calc, asia);
@@ -57,7 +58,7 @@ test("DST, overnight liquidity, live update and first post-session touch", () =>
 });
 
 test("first partial period is omitted, Sunday gap uses Friday close, zero history drops Friday", () => {
-    const calc = instance("LRMMap", { showCurrentDayHighLow: true });
+    const calc = instance("LRMMap", { showCurrentDayHighLow: true, showAsiaOpen: true, showWeeklyOpeningGaps: true });
     const friday = items(calc, bar(0, "2026-11-20T21:59Z", 99, 101, 98, 100));
     assert.doesNotMatch(labels(friday), /Current DH/);
     const sunday = items(calc, bar(1, "2026-11-22T23:00Z", 105, 110, 102, 108));
@@ -68,7 +69,7 @@ test("first partial period is omitted, Sunday gap uses Friday close, zero histor
 });
 
 test("15m fractional MOC marker and independent label controls", () => {
-    const calc = instance("LRMMap", { showMarkerLabels: false, showOpeningLabels: false, showLiquidityLabels: false }, 15);
+    const calc = instance("LRMMap", { useLiquidityOnlyOn15MinuteChart: false, showMocMarkers: true, showMarkerLabels: false, showOpeningLabels: false, showLiquidityLabels: false }, 15);
     const result = items(calc, bar(10, "2026-11-23T20:45Z", 100, 101, 99, 100));
     assert.equal(labels(result), "");
     const marker = result.find(i => i.key.startsWith("markerMOC"));
@@ -136,4 +137,29 @@ test("1m and 15m overnight, daily, weekly and monthly extremes match in the same
     assert.ok(levels(a).includes("MonthH"));
     assert.equal(levels(a), levels(b));
     assert.equal(labels(a).includes("PDH"), true);
+});
+
+test("five named rectangles retain every fractional line when dragged in either direction", () => {
+    for (const name of ["Orange", "Cyan", "Red", "Purple", "Gray"]) {
+        const tool = load("LRMRectangle" + name);
+        assert.equal(tool.name, "LRMRectangle" + name);
+        const colorPreset = tool.params.colorPreset.def;
+        assert.equal(colorPreset, name.toLowerCase() + "Zone");
+        for (const [a,b] of [[100,180],[180,100]]) {
+            const anchors = [{ x: du(1), y: du(a) }, { x: du(5), y: du(b) }];
+            for (const divisions of [1,2,4,8]) {
+                const props = { ...tool.params, colorPreset, showMidline: divisions >= 2,
+                    divideIntoQuarters: divisions >= 4, divideIntoEighths: divisions === 8 };
+                const lines = tool.drawing.render({anchors, props}).items.slice(2);
+                assert.equal(lines.length, divisions - 1);
+                lines.forEach((item, index) => {
+                    const line = item.lines[0];
+                    assert.equal(line.a.y.value, a + (b-a) * (index+1) / divisions);
+                    assert.equal(line.b.y.value, line.a.y.value);
+                    assert.equal(line.a.x.value, 1);
+                    assert.equal(line.b.x.value, 5);
+                });
+            }
+        }
+    }
 });
