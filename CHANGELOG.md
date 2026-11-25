@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-25
 
+- Desktop Risk Reward Targets now keeps 1R/2R/3R linked when dragging any price line. Classic adds a two-handle risk ladder, manual exit labels and a refreshable weekly economic calendar.
+
 - Classic LRM rectangles now pass fill and line opacity as percentages so the five zone fills and their subdivisions stay visible.
 
 - Five separately named Classic rectangles match the orange, cyan, red, purple and gray zones and can divide their height into quarters or eighths. TradingView and Classic LRM defaults now follow the saved MNQ layout.

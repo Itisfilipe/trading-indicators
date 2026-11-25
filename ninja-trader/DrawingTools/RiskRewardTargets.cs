@@ -18,11 +18,7 @@ using NinjaTrader.Gui.Tools;
 namespace NinjaTrader.NinjaScript.DrawingTools
 {
     /// <summary>
-    /// Risk/reward drawing tool with up to three independently draggable targets.
-    /// Two clicks place entry and stop; targets seed at 1R/2R/3R and then every
-    /// anchor moves freely, with each target's R multiple recomputed live from
-    /// the current entry/stop distance (the built-in RiskReward tool instead
-    /// derives one side from the other through a fixed ratio).
+    /// Two-click risk ladder. Each price line resizes all targets to exact multiples of one risk unit.
     /// </summary>
     public class RiskRewardTargets : DrawingTool
     {
@@ -112,7 +108,7 @@ namespace NinjaTrader.NinjaScript.DrawingTools
         {
             if (State == State.SetDefaults)
             {
-                Description = "Risk/reward with up to three freely draggable targets; each target shows its own R.";
+                Description = "Risk/reward with linked levels: dragging a stop or target resizes the 1R/2R/3R ladder.";
                 Name = "Risk Reward Targets";
                 Targets = 3;
                 AnchorLineStroke = new Stroke(Brushes.DarkGray, DashStyleHelper.Solid, 1f, 50);
@@ -134,31 +130,65 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 Dispose();
         }
 
-        /// <summary>
-        /// Seeds the targets at 1R/2R/3R on the profit side of the entry, aligned to
-        /// the entry's bar. Only used while building; afterwards targets move freely.
-        /// Never fails: tick rounding is the only thing the instrument was needed
-        /// for, and rounding is cosmetic. A seed that could bail would strand the
-        /// tool in its build state, and a half-built drawing left active grinds the
-        /// platform's snap logic through nulls on every subsequent mouse event.
-        /// </summary>
-        private void SeedTargetsFromStop()
+        private double Snap(double price)
         {
             MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
-            double entryPrice = master != null ? master.RoundToTickSize(EntryAnchor.Price) : EntryAnchor.Price;
-            double stopPrice = master != null ? master.RoundToTickSize(StopAnchor.Price) : StopAnchor.Price;
-            double signedRisk = entryPrice - stopPrice;
+            return master == null ? price : master.RoundToTickSize(price);
+        }
 
-            ChartAnchor[] targets = { Target1Anchor, Target2Anchor, Target3Anchor };
-            for (int i = 0; i < targets.Length; i++)
+        private void LinkLevels(ChartAnchor changed)
+        {
+            double entry = Snap(EntryAnchor.Price);
+            double risk = entry - Snap(StopAnchor.Price);
+            int multiple = changed == Target1Anchor ? 1 : changed == Target2Anchor ? 2 : changed == Target3Anchor ? 3 : 0;
+            if (multiple > 0)
+                risk = (Snap(changed.Price) - entry) / multiple;
+            MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
+            if (master != null && master.TickSize > 0)
             {
-                double price = entryPrice + (i + 1) * signedRisk;
-                targets[i].Price = master != null ? master.RoundToTickSize(price) : price;
-                targets[i].Time = EntryAnchor.Time;
-                targets[i].SlotIndex = EntryAnchor.SlotIndex;
-                targets[i].IsEditing = false;
+                double rawDistance = multiple > 0 ? changed.Price - EntryAnchor.Price : EntryAnchor.Price - StopAnchor.Price;
+                double sign = rawDistance < 0 || (rawDistance == 0 && StopAnchor.Price > entry) ? -1 : 1;
+                risk = sign * master.TickSize * Math.Max(1.0, Math.Round(Math.Abs(risk) / master.TickSize, MidpointRounding.AwayFromZero));
+            }
+            EntryAnchor.Price = entry;
+            StopAnchor.Price = Snap(entry - risk);
+            Target1Anchor.Price = Snap(entry + risk);
+            Target2Anchor.Price = Snap(entry + 2 * risk);
+            Target3Anchor.Price = Snap(entry + 3 * risk);
+        }
+
+        private void SeedTargetsFromStop()
+        {
+            LinkLevels(StopAnchor);
+            foreach (ChartAnchor target in new[] { Target1Anchor, Target2Anchor, Target3Anchor })
+            {
+                target.Time = EntryAnchor.Time;
+                target.SlotIndex = EntryAnchor.SlotIndex;
+                target.IsEditing = false;
             }
         }
+
+        private ChartAnchor PriceLineAt(ChartControl control, ChartPanel panel, ChartScale scale, Point point)
+        {
+            double left, right;
+            GetLineBounds(control, panel, scale, out left, out right);
+            if (point.X < left - CursorSensitivity || point.X > right + CursorSensitivity)
+                return null;
+            ChartAnchor closest = null;
+            double best = double.MaxValue;
+            foreach (ChartAnchor anchor in EnabledAnchors())
+            {
+                double distance = Math.Abs(point.Y - anchor.GetPoint(control, panel, scale).Y);
+                if (distance <= CursorSensitivity && distance < best)
+                {
+                    closest = anchor;
+                    best = distance;
+                }
+            }
+            return closest;
+        }
+
+        private bool editingLine;
 
         public override void OnMouseDown(ChartControl chartControl, ChartPanel chartPanel, ChartScale chartScale, ChartAnchor dataPoint)
         {
@@ -186,6 +216,9 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 case DrawingState.Normal:
                     Point point = dataPoint.GetPoint(chartControl, chartPanel, chartScale);
                     editingAnchor = GetClosestEnabledAnchor(chartControl, chartPanel, chartScale, point);
+                    editingLine = editingAnchor == null;
+                    if (editingLine)
+                        editingAnchor = PriceLineAt(chartControl, chartPanel, chartScale, point);
                     if (editingAnchor != null)
                     {
                         editingAnchor.IsEditing = true;
@@ -217,7 +250,13 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                 }
             }
             else if (DrawingState == DrawingState.Editing && editingAnchor != null)
-                dataPoint.CopyDataValues(editingAnchor);
+            {
+                if (editingLine)
+                    editingAnchor.Price = dataPoint.Price;
+                else
+                    dataPoint.CopyDataValues(editingAnchor);
+                LinkLevels(editingAnchor);
+            }
             else if (DrawingState == DrawingState.Moving)
                 foreach (ChartAnchor anchor in Anchors)
                     anchor.MoveAnchor(InitialMouseDownAnchor, dataPoint, chartControl, chartPanel, chartScale, this);
@@ -284,17 +323,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
                     if (closest != null)
                         return IsLocked ? Cursors.Arrow : Cursors.SizeNS;
 
-                    // Near any of the horizontal price lines counts as "on the tool"
-                    // and drags the whole thing.
-                    double lineStartX, lineEndX;
-                    GetLineBounds(chartControl, chartPanel, chartScale, out lineStartX, out lineEndX);
-                    if (point.X >= lineStartX - CursorSensitivity && point.X <= lineEndX + CursorSensitivity)
-                        foreach (ChartAnchor anchor in EnabledAnchors())
-                        {
-                            double lineY = anchor.GetPoint(chartControl, chartPanel, chartScale).Y;
-                            if (Math.Abs(point.Y - lineY) <= CursorSensitivity)
-                                return IsLocked ? Cursors.Arrow : Cursors.SizeAll;
-                        }
+                    if (PriceLineAt(chartControl, chartPanel, chartScale, point) != null)
+                        return IsLocked ? Cursors.Arrow : Cursors.SizeNS;
 
                     // The diagonal connectors are part of the hit-test rendering, so
                     // they must also answer here -- otherwise clicking one deselects
@@ -381,6 +411,8 @@ namespace NinjaTrader.NinjaScript.DrawingTools
             MasterInstrument master = AttachedTo?.Instrument?.MasterInstrument;
             if (master == null)
                 return;
+            if (DrawingState == DrawingState.Normal && StopAnchor.Time != default(DateTime))
+                LinkLevels(StopAnchor);
             ChartPanel chartPanel = chartControl.ChartPanels[PanelIndex];
             double entryPrice = master.RoundToTickSize(EntryAnchor.Price);
             double stopPrice = master.RoundToTickSize(StopAnchor.Price);

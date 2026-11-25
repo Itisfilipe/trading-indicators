@@ -168,3 +168,101 @@ test("five named rectangles retain every fractional line when dragged in either 
         }
     }
 });
+
+test("each controlling level gives a linked whole-tick ladder for longs and shorts", () => {
+  const tool = load("RiskRewardTargets");
+  for (const risk of [-1.25, 1.25]) {
+    for (const [mode, factor] of Object.entries({
+      stop: -1,
+      t1: 1,
+      t2: 2,
+      t3: 3
+    })) {
+      const anchors = [
+        { x: du(3), y: du(100) },
+        { x: du(1), y: du(100 + factor * risk) }
+      ];
+      const props = { ...tool.params, secondAnchorControls: mode };
+      const lines = tool.drawing
+        .render({ anchors, props })
+        .items.filter((item) => item.lines);
+      assert.deepEqual(
+        Array.from(lines, (item) => item.lines[0].a.y.value),
+        [100, 100 - risk, 100 + risk, 100 + 2 * risk, 100 + 3 * risk]
+      );
+    }
+  }
+});
+
+test("manual short exit uses remaining contracts for signed gross dollars", () => {
+  const tool = load("OrderDecoratorManual");
+  const anchors = [
+    { x: du(1), y: du(100) },
+    { x: du(3), y: du(96) }
+  ];
+  const props = {
+    ...tool.params,
+    remainingContracts: 3,
+    positionSide: "short",
+    exitType: "target"
+  };
+  assert.match(
+    tool.drawing.render({ anchors, props }).items[1].text,
+    /ALVO.*12 pt·ct.*US\$ 24\.00/
+  );
+});
+
+test("calendar marks only the minute containing a release and reports expired coverage", () => {
+  const calc = instance("EconomicCalendar");
+  const release = calc.events.find((e) => e.currency === "USD");
+  assert.ok(release);
+  const r = calc.map(bar(0, release.time, 1, 2, 1, 2, true)).graphics.items;
+  assert.ok(r.some((item) => item.key === "release"));
+  assert.ok(
+    r
+      .find((item) => item.key === "today")
+      .children.some((row) => row.text && row.text.includes(release.title))
+  );
+  const expired = calc.map(
+    bar(1, release.time + 15 * 86400000, 1, 2, 1, 2, true)
+  ).graphics.items;
+  assert.match(
+    expired[0].children.find((item) => item.key === "row1").text,
+    /Atualize/
+  );
+});
+
+test("T3 drags snap to a minimum whole risk tick in either direction", () => {
+  const tool = load("RiskRewardTargets");
+  for (const offset of [-8, -5, -1, 0, 1, 5, 8]) {
+    const anchors = [
+      { x: du(1), y: du(100) },
+      { x: du(4), y: du(100 + offset * 0.25) }
+    ];
+    const props = { ...tool.params, secondAnchorControls: "t3" };
+    const lines = tool.drawing
+      .render({ anchors, props })
+      .items.filter((item) => item.lines);
+    const prices = Array.from(lines, (item) => item.lines[0].a.y.value);
+    const risk = 100 - prices[1];
+    assert.ok(Math.abs(risk) >= 0.25);
+    assert.equal(risk * 4, Math.trunc(risk * 4));
+    assert.deepEqual(prices.slice(2), [
+      100 + risk,
+      100 + 2 * risk,
+      100 + 3 * risk
+    ]);
+  }
+});
+
+test("a sub-tick short stop stays on the short side", () => {
+  const tool = load("RiskRewardTargets");
+  const anchors = [
+    { x: du(0), y: du(100) },
+    { x: du(5), y: du(100.01) }
+  ];
+  const stop = tool.drawing
+    .render({ anchors, props: tool.params })
+    .items.find((item) => item.key === "Stop");
+  assert.equal(stop.lines[0].a.y.value, 100.25);
+});

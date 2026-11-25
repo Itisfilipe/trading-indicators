@@ -61,3 +61,19 @@ O retângulo genérico começa na cor cinza. Cada ferramenta nomeada começa na 
 ## Conferir a migração
 
 Compare primeiro um pregão com a mesma cobertura nas duas plataformas. No 1m, confira o preço da abertura de 09:30, um extremo conhecido de sessão e a barra do primeiro toque. No 15m, o mesmo nível de preço pode começar ou terminar em outra posição horizontal devido à agregação das barras. Carregue a sessão eletrônica inteira e um período anterior completo para conferir níveis de semana ou mês. O relógio e o ATR do painel dependem das atualizações do feed. Para conferir a geometria, desenhe uma zona de 80 pontos: os quartos ficam a cada 20 pontos e os oitavos a cada 10.
+
+## Agenda e ferramentas de planejamento
+
+No Code Editor do Classic, use **File → Import** para carregar [EconomicCalendar.js](EconomicCalendar.js), [RiskRewardTargets.js](RiskRewardTargets.js) e [OrderDecoratorManual.js](OrderDecoratorManual.js). A agenda aparece em **Indicators**. As duas ferramentas de planejamento aparecem em **Drawing Tools**.
+
+### Economic Calendar
+
+A tabela usa a data da última barra e mostra a agenda do dia em horário de Nova York. Em gráficos de minutos, o marcador aparece sobre a barra que contém a divulgação. Para renovar os dados, rode `python3 ninja-trader-web/tools/update_calendar.py` na raiz do repositório e substitua EconomicCalendar.js no editor do Classic. A atualização usa Python 3.9+ e curl. O snapshot cobre de domingo a sábado; em outra semana o painel avisa que é preciso atualizar. Revisões intrassemanais entram ao repetir o comando.
+
+### Risk Reward Targets
+
+Marque a entrada e o stop. Para controlar a distância pelo alvo, selecione **Second Anchor Controls** e coloque a segunda alça no alvo escolhido. A troca dessa opção reinterpreta o preço da segunda alça. O risco mínimo é um tick. O tamanho de tick padrão é 0,25. T2 e T3 são arredondados ao preço compatível com um risco em ticks inteiros. Por exemplo, com entrada em 25.000 e stop em 24.990, os alvos ficam em 25.010, 25.020 e 25.030. Se a segunda alça controlar T2 e você a levar a 25.024, o stop passa a 24.988 e os alvos a 25.012, 25.024 e 25.036.
+
+### Order Decorator Manual
+
+Marque o preço médio e o preço da saída. Preencha a direção e os contratos restantes. Para MNQ, o valor padrão é US$ 2 por ponto por contrato; para NQ, selecione US$ 20. O cálculo é bruto e exige ajuste manual após execução parcial ou mudança do preço médio. Uma compra de dois MNQ com saída cinco pontos abaixo da entrada mostra −10 pontos × contratos e −US$ 20 antes de custos.

@@ -29,6 +29,16 @@ The [Classic Web Trader setup guide](ninja-trader-web/README.md) includes the
 - **LRM Fib Projection** projects the signed A–B move from C. The adjustable
   target band defaults to 76.4%–100%.
 
+- **Risk Reward Targets** draws a linked tick-rounded ladder. Place entry first.
+  The second handle controls stop, T1, T2 or T3 according to its setting.
+  On Web the other levels are calculated lines. Tick size defaults to 0.25 for MNQ/NQ.
+- **Order Decorator (manual plan)** measures a planned exit from a reference
+  entry. Set side, order label, remaining quantity and dollars per point
+  (MNQ 2, NQ 20). A second drawing can represent a partial exit at another price.
+- **Economic Calendar (weekly snapshot)** shows daily scheduled releases in
+  New York time, initially USD, and marks release bars on minute charts. The
+  panel follows the last loaded bar. Refresh the weekly snapshot for the current week.
+
 ## NinjaTrader 8 (`ninja-trader/`)
 
 Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/README.md).
@@ -210,10 +220,10 @@ Install steps and platform quirks: [`ninja-trader/README.md`](ninja-trader/READM
 
 - Drawing tool (chart's Draw menu), not an indicator: two clicks place entry
   and stop, targets appear at 1R/2R/3R.
-- Every anchor — entry, stop, and each target — drags independently; each
-  target's label shows its price, distance in ticks, and its R multiple,
-  recomputed live from the current entry/stop distance. The built-in
-  RiskReward tool instead locks target and stop to a fixed ratio.
+- Drag entry with stop fixed, or drag stop with entry fixed. Dragging any target
+  changes the risk distance around the entry. Risk rounds to a whole tick
+  (minimum one tick), keeping every target exactly at 1R, 2R or 3R.
+  Drag a diagonal connector to move the whole drawing.
 - 1 to 3 targets ("Targets" setting); works for long and short (stop side
   decides direction).
 - Lines extendable left/right; entry/stop/target line colors configurable.
