@@ -5,6 +5,8 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-25
 
+- Classic Web Trader adds the LRM map, countdown and three-point Fibonacci projection. Rectangle now includes the red, orange and gray zones from the light TradingView layout.
+
 - NinjaTrader Web gains LRM Rectangle with a movable 50% midline and per-drawing colors for the TradingView LRM sessions, liquidity levels, openings and gaps, plus Amber and a custom color.
 
 - TradingView LRM Liquidity, Openings and Vertical Lines can hide their labels.

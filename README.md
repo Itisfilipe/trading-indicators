@@ -16,16 +16,16 @@ Default colors for light charts follow one [chart palette](#chart-palette).
 
 ## NinjaTrader Web
 
-[LRM Rectangle](ninja-trader-web/LRMRectangle.js) draws a zone from two opposite
-corners. Its dashed horizontal line follows the 50% price as you move either
-corner. Each rectangle has its own color preset matching the TradingView LRM defaults
-for sessions, period liquidity, openings and gaps. Choose **Custom color**
-for a personal TradingView color, or **Amber** for the desktop preset. The
-fill opacity and midline switch apply to each rectangle.
+The [Classic Web Trader setup guide](ninja-trader-web/README.md) includes the
+1m/15m layout, candle colors and installation steps.
 
-In the Web workspace, open **Code editor → File → New**, create
-`LRMRectangle.js`, paste the file contents and save. In **Chart (NinjaTrader)**,
-look for **LRM Rectangle** in the drawing tools selector (pencil).
+- **LRM Map** combines session and period liquidity, opening prices, NWOG/NDOG
+  and vertical time markers. Separate controls set labels, history and developing ranges.
+- **LRM Countdown** shows the candle timer, risk-based contract count and ATR.
+- **LRM Rectangle** draws a two-corner zone with an optional 50% line. Choose
+  session colors, a custom color, or the light chart's red, orange and gray zones.
+- **LRM Fib Projection** projects the signed A–B move from C. The adjustable
+  target band defaults to 76.4%–100%.
 
 ## NinjaTrader 8 (`ninja-trader/`)
 
