@@ -5,7 +5,7 @@ Notable changes to the indicators in this repository. Dates follow ISO 8601
 
 ## 2026-11-25
 
-- NinjaTrader Web gains LRM Rectangle with a movable 50% midline and Blue, Gray and Amber color presets.
+- NinjaTrader Web gains LRM Rectangle with a movable 50% midline and per-drawing colors for the TradingView LRM sessions, liquidity levels, openings and gaps, plus Amber and a custom color.
 
 - TradingView LRM Liquidity, Openings and Vertical Lines can hide their labels.
   Liquidity can show developing day, week, month and Monday highs and lows

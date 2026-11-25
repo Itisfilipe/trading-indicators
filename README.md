@@ -18,8 +18,10 @@ Default colors for light charts follow one [chart palette](#chart-palette).
 
 [LRM Rectangle](ninja-trader-web/LRMRectangle.js) draws a zone from two opposite
 corners. Its dashed horizontal line follows the 50% price as you move either
-corner. Each rectangle has a Blue, Gray or Amber preset, a midline switch and
-adjustable fill opacity.
+corner. Each rectangle has its own color preset matching the TradingView LRM defaults
+for sessions, period liquidity, openings and gaps. Choose **Custom color**
+for a personal TradingView color, or **Amber** for the desktop preset. The
+fill opacity and midline switch apply to each rectangle.
 
 In the Web workspace, open **Code editor → File → New**, create
 `LRMRectangle.js`, paste the file contents and save. In **Chart (NinjaTrader)**,
