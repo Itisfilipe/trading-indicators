@@ -659,18 +659,24 @@ on the feed candle that holds the event.
 - **LRMOpenings:** a line at the 00:00, 02:00 (off by default), 08:30, 09:30,
   13:30 and 20:00 opens, captioned with its time, running to the 17:00 close of the trading
   day (today's stop 15 candles past the last one, caption just past the
-  end); opens at one price ending together share a caption; NWOG lines
+  end). **Past trading days to show opens** adds earlier trading days to today (0 by default).
+  Opens at one price ending together share a caption; NWOG lines
   at Friday's close and Sunday's open ("NWOG C 13/11", "NWOG O 15/11") with
   the midpoint dotted ("NWOG CE 15/11"), for the last 4 weeks (adjustable), and the same for
   each weekday's 17:00-18:00 gap as optional NDOG lines.
 - **LRMLiquidity:** session and killzone highs and lows (Asia 20:00-00:00,
   London 02:00-05:00, optional Pre-market 08:00-09:30 (off by default), NY AM 09:30-11:00, NY PM
   13:30-16:00, boxes optional), the latest of each plus 3 earlier ones.
-  Turn off **Show current session** to display its levels and box only after the window ends.
+  Turn off **Show session levels while the session is open** to display its levels and box only after the window ends.
   The indicator also shows
   previous day (the 1D candle without settlement, 18:00 to 17:00), week,
   month and Monday highs and lows: by default the last 3 days and the last
-  week, month and Monday, each count adjustable. Each
+  week, month and Monday. Each period has its own settings. For example, **Show current week high and low**
+  enables the developing weekly levels (off by default), and **Previous weeks to show**
+  selects 0–20 completed weeks.
+  **Limit history by trading day** also filters sessions and finished ranges
+  by their last trading day. A value of 0 keeps today, and 1 includes the previous
+  trading day as well. Each
   level stops at the first later candle to touch it and runs to the last
   candle while untouched, its caption glued above a high or below a low;
   levels at one price share a caption ("NY AM Low / PDL"). The latest finished
@@ -686,8 +692,8 @@ on the feed candle that holds the event.
   a stop of N x ATR and the current ATR, in that order, each optional. The
   countdown turns red in the candle's last 5 seconds (adjustable). **Text size**
   sets the whole row from tiny to huge (large by default).
-- History up to 30 days (20 in LRMLiquidity, which has one setting for
-  sessions and one each for days, weeks, months and Mondays).
+- Turn off **Show labels** in Liquidity, Openings or Vertical Lines to keep just the drawings.
+  In Vertical Lines this also hides the countdown attached to each marker.
 - Each open or window time must sit on the feed's grid (any :00, :05, :10
   ... on the 5-minute feed).
 

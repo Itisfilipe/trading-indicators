@@ -3,6 +3,14 @@
 Notable changes to the indicators in this repository. Dates follow ISO 8601
 (YYYY-MM-DD); entries describe what changed on the chart, not internals.
 
+## 2026-11-25
+
+- TradingView LRM Liquidity, Openings and Vertical Lines can hide their labels.
+  Liquidity can show developing day, week, month and Monday highs and lows
+  independently of the finished-period counts. An optional trading-day filter
+  limits older sessions and finished periods. Openings now counts prior trading
+  days from the current trading day, even before a configured open occurs.
+
 ## 2026-11-19
 
 - TradingView LRM Vertical Lines now includes the Market on Close markers (15:50 MOC and 16:00 Equity Close, ET) under one option, enabled by default. The 09:30 line is labeled Equity Open. The standalone TradingView macros indicator was removed.

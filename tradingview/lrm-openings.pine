@@ -41,8 +41,9 @@ HALF_DAY_MS = 43200000
 GRP_OPENS = 'Opens'
 GRP_NWOG = 'Opening gaps'
 
+showLabels = input.bool(true, 'Show labels')
 dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'], group = GRP_OPENS)
-history = input.int(1, 'Days of history', minval = 1, maxval = 30, group = GRP_OPENS)
+history = input.int(0, 'Past trading days to show opens', minval = 0, maxval = 30, group = GRP_OPENS, tooltip = '0 shows only opens from the current trading day. Opening gaps have separate history settings.')
 open1On = input.bool(true, '', inline = 'o1', group = GRP_OPENS)
 open1Time = input.string('00:00', '', inline = 'o1', group = GRP_OPENS)
 open1Color = input.color(#000000, '', inline = 'o1', group = GRP_OPENS)
@@ -63,12 +64,13 @@ open6Time = input.string('20:00', '', inline = 'o6', group = GRP_OPENS)
 open6Color = input.color(#000000, '', inline = 'o6', group = GRP_OPENS)
 nwogOn = input.bool(true, 'NWOG', inline = 'nwog', group = GRP_NWOG)
 nwogColor = input.color(#000000, '', inline = 'nwog', group = GRP_NWOG)
-nwogWeeks = input.int(4, 'Weeks', minval = 1, maxval = 30, group = GRP_NWOG)
+nwogWeeks = input.int(4, 'Weekly gaps to show', minval = 1, maxval = 30, group = GRP_NWOG)
 ndogOn = input.bool(false, 'NDOG', inline = 'ndog', group = GRP_NWOG)
 ndogColor = input.color(#787b86, '', inline = 'ndog', group = GRP_NWOG)
-ndogDays = input.int(5, 'Days', minval = 1, maxval = 30, group = GRP_NWOG)
+ndogDays = input.int(5, 'Daily gaps to show', minval = 1, maxval = 30, group = GRP_NWOG)
 
 type Mark
+    int tradingDay
     float price
     int t
     int endTime
@@ -108,7 +110,7 @@ trackOpen(int openMinute, int barMs, int keep) =>
     if not na(openMinute)
         openTime = latestClock(time, openMinute)
         if time < openTime + barMs and (marks.size() == 0 or marks.last().t != openTime)
-            marks.push(Mark.new(open, openTime, tradingDayClose(openTime)))
+            marks.push(Mark.new(time_tradingday, open, openTime, tradingDayClose(openTime)))
             if marks.size() > keep
                 marks.shift()
     barstate.islast ? marks : na
@@ -129,15 +131,17 @@ feedTimeframe(string minimum) =>
     timeframe.in_seconds() > timeframe.in_seconds(minimum) ? timeframe.period : minimum
 
 feed = ticker.modify(syminfo.tickerid, session.extended)
+// A daily timestamp is known at the open. On a larger chart bar use its last daily candle.
+cutoff = request.security(feed, '1D', time_tradingday[history], lookahead = timeframe.in_seconds() > timeframe.in_seconds('1D') ? barmerge.lookahead_off : barmerge.lookahead_on)
 openFeedTf = feedTimeframe('5')
 calcMs = timeframe.in_seconds(openFeedTf) * 1000
 
-opens1 = request.security(feed, openFeedTf, trackOpen(parseClock(open1Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens2 = request.security(feed, openFeedTf, trackOpen(parseClock(open2Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens3 = request.security(feed, openFeedTf, trackOpen(parseClock(open3Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens4 = request.security(feed, openFeedTf, trackOpen(parseClock(open4Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens5 = request.security(feed, openFeedTf, trackOpen(parseClock(open5Time), calcMs, history), lookahead = barmerge.lookahead_on)
-opens6 = request.security(feed, openFeedTf, trackOpen(parseClock(open6Time), calcMs, history), lookahead = barmerge.lookahead_on)
+opens1 = request.security(feed, openFeedTf, trackOpen(parseClock(open1Time), calcMs, history + 1), lookahead = barmerge.lookahead_on)
+opens2 = request.security(feed, openFeedTf, trackOpen(parseClock(open2Time), calcMs, history + 1), lookahead = barmerge.lookahead_on)
+opens3 = request.security(feed, openFeedTf, trackOpen(parseClock(open3Time), calcMs, history + 1), lookahead = barmerge.lookahead_on)
+opens4 = request.security(feed, openFeedTf, trackOpen(parseClock(open4Time), calcMs, history + 1), lookahead = barmerge.lookahead_on)
+opens5 = request.security(feed, openFeedTf, trackOpen(parseClock(open5Time), calcMs, history + 1), lookahead = barmerge.lookahead_on)
+opens6 = request.security(feed, openFeedTf, trackOpen(parseClock(open6Time), calcMs, history + 1), lookahead = barmerge.lookahead_on)
 weekGaps = request.security(feed, feedTimeframe('60'), trackGaps(true, nwogWeeks), lookahead = barmerge.lookahead_on)
 dayGaps = request.security(feed, feedTimeframe('60'), trackGaps(false, ndogDays), lookahead = barmerge.lookahead_on)
 
@@ -162,9 +166,10 @@ drawOpens(array<Mark> marks, string caption, color tint) =>
     for mark in marks
         x1 = math.max(mark.t, firstBarTime)
         x2 = math.min(mark.endTime, time + 15 * timeframe.in_seconds() * 1000)
-        if x2 > x1
+        if x2 > x1 and (na(cutoff) or mark.tradingDay >= cutoff)
             line.new(x1, mark.price, x2, mark.price, xloc = xloc.bar_time, color = tint, style = line.style_dashed)
-            openCaption(x2, mark.price, caption, tint)
+            if showLabels
+                openCaption(x2, mark.price, caption, tint)
 
 drawGaps(array<Gap> gaps, string name, color tint) =>
     x2 = time + 15 * timeframe.in_seconds() * 1000
@@ -174,9 +179,10 @@ drawGaps(array<Gap> gaps, string name, color tint) =>
         line.new(x1, gap.openPrice, x2, gap.openPrice, xloc = xloc.bar_time, color = tint)
         line.new(x1, gap.closePrice, x2, gap.closePrice, xloc = xloc.bar_time, color = tint)
         line.new(x1, middle, x2, middle, xloc = xloc.bar_time, color = tint, style = line.style_dotted)
-        openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, dateFormat, TZ), tint)
-        openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, dateFormat, TZ), tint)
-        openCaption(x2, middle, name + ' CE ' + str.format_time(gap.openTime, dateFormat, TZ), tint)
+        if showLabels
+            openCaption(x2, gap.openPrice, name + ' O ' + str.format_time(gap.openTime, dateFormat, TZ), tint)
+            openCaption(x2, gap.closePrice, name + ' C ' + str.format_time(gap.closeTime, dateFormat, TZ), tint)
+            openCaption(x2, middle, name + ' CE ' + str.format_time(gap.openTime, dateFormat, TZ), tint)
 
 if barstate.islast and not na(opens1)
     for drawn in line.all

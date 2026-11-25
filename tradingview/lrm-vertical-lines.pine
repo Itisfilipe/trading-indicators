@@ -40,8 +40,9 @@ SIX_HOURS_MS = 21600000
 FALLBACK_LOOKBACK = 100
 MAX_TRACKED_DAYS = 31
 
+showLabels = input.bool(true, 'Show labels')
 captionPosition = input.string('Bottom', 'Caption position', options = ['Top', 'Bottom'], tooltip = 'Captions ride a strip just above (or below) the visible bars; the chart gives up a little scale to make the room.')
-history = input.int(3, 'Days of history', minval = 0, maxval = 30, tooltip = 'Past trading days that keep their lines, besides the current one.')
+history = input.int(3, 'Past trading days to show markers', minval = 0, maxval = 30, tooltip = 'Past trading days that keep their lines, besides the current one.')
 
 line1On = input.bool(true, '', inline = 'l1')
 line1Time = input.string('00:00', '', inline = 'l1')
@@ -171,6 +172,6 @@ if barstate.islast
         for marker in markers
             eventTime = eventTimeOf(drawDay, marker.clockMinute)
             line.new(eventTime, screenLow, eventTime, screenHigh, xloc = xloc.bar_time, extend = extend.both, color = marker.tint, style = line.style_dotted)
-            if marker.caption != ''
+            if showLabels and marker.caption != ''
                 caption = eventTime > timenow ? marker.caption + '\n' + countdownText(eventTime - timenow) : marker.caption
                 label.new(eventTime, labelY, caption, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = marker.tint, size = size.small)

@@ -37,45 +37,55 @@ TZ = 'America/New_York'
 MS_PER_MINUTE = 60000
 HALF_DAY_MS = 43200000
 
+showLabels = input.bool(true, 'Show labels')
+limitDays = input.bool(false, 'Limit history by trading day')
+pastDays = input.int(3, 'Past trading days to include', minval = 0, maxval = 500, active = limitDays, tooltip = '0 keeps only the current trading day. Finished ranges qualify by their last trading day. Current ranges are controlled separately.')
 dateFormatInput = input.string('DD/MM', 'Date format', options = ['DD/MM', 'MM/DD'])
-sessionHistory = input.int(3, 'Sessions of history', minval = 0, maxval = 20, tooltip = 'Earlier sessions of each window kept besides the latest one.')
-showCurrentSession = input.bool(true, 'Show current session', tooltip = 'Show the high, low and optional box while a session is in progress. Completed sessions are always eligible for display.')
-showBoxes = input.bool(false, 'Session boxes', inline = 'box')
-boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box')
+sessionHistory = input.int(3, 'Previous sessions to show per window', minval = 0, maxval = 20, tooltip = 'Earlier sessions of each window kept besides the latest one.', group = 'Session liquidity')
+showCurrentSession = input.bool(true, 'Show session levels while the session is open', tooltip = 'Show the high, low and optional box while a session is in progress. The history filters also apply.', group = 'Session liquidity')
+showBoxes = input.bool(false, 'Draw session boxes', inline = 'box', group = 'Session liquidity')
+boxTransparency = input.int(90, 'Transparency', minval = 0, maxval = 100, inline = 'box', group = 'Session liquidity')
 
-dayOn = input.bool(true, 'Day', inline = 'd')
-dayHistory = input.int(3, '', minval = 1, maxval = 20, inline = 'd', tooltip = 'How many finished periods of each kind stay on the chart.')
-dayColor = input.color(#455a64, '', inline = 'd')
-weekOn = input.bool(true, 'Week', inline = 'w')
-weekHistory = input.int(1, '', minval = 1, maxval = 20, inline = 'w')
-weekColor = input.color(#455a64, '', inline = 'w')
-monthOn = input.bool(true, 'Month', inline = 'm')
-monthHistory = input.int(1, '', minval = 1, maxval = 20, inline = 'm')
-monthColor = input.color(#455a64, '', inline = 'm')
-mondayOn = input.bool(true, 'Monday', inline = 'mon')
-mondayHistory = input.int(1, '', minval = 1, maxval = 20, inline = 'mon')
-mondayColor = input.color(#455a64, '', inline = 'mon')
+dayOn = input.bool(true, 'Show day liquidity', group = 'Day liquidity')
+dayCurrent = input.bool(false, 'Show current trading day high and low', group = 'Day liquidity', active = dayOn)
+dayHistory = input.int(3, 'Previous days to show', minval = 0, maxval = 20, group = 'Day liquidity', active = dayOn, tooltip = '0 hides completed periods.')
+dayColor = input.color(#455a64, 'Level color', group = 'Day liquidity', active = dayOn)
 
-win1On = input.bool(true, '', inline = 'w1')
-win1Name = input.string('Asia', '', inline = 'w1')
-win1Session = input.session('2000-0000', '', inline = 'w1')
-win1Color = input.color(#2962ff, '', inline = 'w1')
-win2On = input.bool(true, '', inline = 'w2')
-win2Name = input.string('London', '', inline = 'w2')
-win2Session = input.session('0200-0500', '', inline = 'w2')
-win2Color = input.color(#9c27b0, '', inline = 'w2')
-win3On = input.bool(false, '', inline = 'w3')
-win3Name = input.string('Pre', '', inline = 'w3')
-win3Session = input.session('0800-0930', '', inline = 'w3')
-win3Color = input.color(#ff9800, '', inline = 'w3')
-win4On = input.bool(true, '', inline = 'w4')
-win4Name = input.string('NY AM', '', inline = 'w4')
-win4Session = input.session('0930-1100', '', inline = 'w4')
-win4Color = input.color(#089981, '', inline = 'w4')
-win5On = input.bool(true, '', inline = 'w5')
-win5Name = input.string('NY PM', '', inline = 'w5')
-win5Session = input.session('1330-1600', '', inline = 'w5')
-win5Color = input.color(#f23645, '', inline = 'w5')
+weekOn = input.bool(true, 'Show week liquidity', group = 'Week liquidity')
+weekCurrent = input.bool(false, 'Show current week high and low', group = 'Week liquidity', active = weekOn)
+weekHistory = input.int(1, 'Previous weeks to show', minval = 0, maxval = 20, group = 'Week liquidity', active = weekOn, tooltip = '0 hides completed periods.')
+weekColor = input.color(#455a64, 'Level color', group = 'Week liquidity', active = weekOn)
+
+monthOn = input.bool(true, 'Show month liquidity', group = 'Month liquidity')
+monthCurrent = input.bool(false, 'Show current month high and low', group = 'Month liquidity', active = monthOn)
+monthHistory = input.int(1, 'Previous months to show', minval = 0, maxval = 20, group = 'Month liquidity', active = monthOn, tooltip = '0 hides completed periods.')
+monthColor = input.color(#455a64, 'Level color', group = 'Month liquidity', active = monthOn)
+
+mondayOn = input.bool(true, 'Show Monday liquidity', group = 'Monday liquidity')
+mondayCurrent = input.bool(false, 'Show Monday high and low while Monday is open', group = 'Monday liquidity', active = mondayOn)
+mondayHistory = input.int(1, 'Previous Mondays to show', minval = 0, maxval = 20, group = 'Monday liquidity', active = mondayOn, tooltip = '0 hides completed periods.')
+mondayColor = input.color(#455a64, 'Level color', group = 'Monday liquidity', active = mondayOn)
+
+win1On = input.bool(true, '', inline = 'w1', group = 'Session liquidity')
+win1Name = input.string('Asia', '', inline = 'w1', group = 'Session liquidity')
+win1Session = input.session('2000-0000', '', inline = 'w1', group = 'Session liquidity')
+win1Color = input.color(#2962ff, '', inline = 'w1', group = 'Session liquidity')
+win2On = input.bool(true, '', inline = 'w2', group = 'Session liquidity')
+win2Name = input.string('London', '', inline = 'w2', group = 'Session liquidity')
+win2Session = input.session('0200-0500', '', inline = 'w2', group = 'Session liquidity')
+win2Color = input.color(#9c27b0, '', inline = 'w2', group = 'Session liquidity')
+win3On = input.bool(false, '', inline = 'w3', group = 'Session liquidity')
+win3Name = input.string('Pre', '', inline = 'w3', group = 'Session liquidity')
+win3Session = input.session('0800-0930', '', inline = 'w3', group = 'Session liquidity')
+win3Color = input.color(#ff9800, '', inline = 'w3', group = 'Session liquidity')
+win4On = input.bool(true, '', inline = 'w4', group = 'Session liquidity')
+win4Name = input.string('NY AM', '', inline = 'w4', group = 'Session liquidity')
+win4Session = input.session('0930-1100', '', inline = 'w4', group = 'Session liquidity')
+win4Color = input.color(#089981, '', inline = 'w4', group = 'Session liquidity')
+win5On = input.bool(true, '', inline = 'w5', group = 'Session liquidity')
+win5Name = input.string('NY PM', '', inline = 'w5', group = 'Session liquidity')
+win5Session = input.session('1330-1600', '', inline = 'w5', group = 'Session liquidity')
+win5Color = input.color(#f23645, '', inline = 'w5', group = 'Session liquidity')
 
 type Range
     float hi
@@ -86,6 +96,7 @@ type Range
     int loTouched
     bool finished
     int tradingDay
+    int lastTradingDay
 
 // A period opens when the feed's period candle changes; with mondayOnly, only
 // Monday's trading day (Sunday 18:00 to Monday 17:00) is kept.
@@ -96,9 +107,10 @@ trackPeriod(string period, bool mondayOnly, int keep) =>
             previous = ranges.last()
             previous.finished := true
         if not mondayOnly or dayofweek(time_tradingday, 'UTC') == dayofweek.monday
-            ranges.push(Range.new(high, time, na, low, time, na, false, time_tradingday))
+            ranges.push(Range.new(high, time, na, low, time, na, false, time_tradingday, time_tradingday))
     else if ranges.size() > 0 and not ranges.last().finished
         current = ranges.last()
+        current.lastTradingDay := time_tradingday
         if high > current.hi
             current.hi := high
             current.hiTime := time
@@ -117,6 +129,7 @@ trackPeriod(string period, bool mondayOnly, int keep) =>
     barstate.islast ? ranges : na
 
 type Zone
+    int tradingDay
     int startTime
     int endTime
     int lastTime
@@ -146,11 +159,12 @@ trackWindow(int startMinute, int lengthMs, int keep) =>
     windowOpen = latestClock(time, startMinute)
     if time < windowOpen + lengthMs
         if zones.size() == 0 or zones.last().startTime != windowOpen
-            zones.push(Zone.new(windowOpen, windowOpen + lengthMs, time, high, time, na, low, time, na))
+            zones.push(Zone.new(time_tradingday, windowOpen, windowOpen + lengthMs, time, high, time, na, low, time, na))
             if zones.size() > keep
                 zones.shift()
         else
             zone = zones.last()
+            zone.tradingDay := time_tradingday
             zone.lastTime := time
             if high > zone.hi
                 zone.hi := high
@@ -171,6 +185,11 @@ feedTimeframe(string minimum) =>
     timeframe.in_seconds() > timeframe.in_seconds(minimum) ? timeframe.period : minimum
 
 feed = ticker.modify(syminfo.tickerid, session.extended)
+// A daily timestamp is known at the open. On a larger chart bar use its last daily candle.
+cutoff = request.security(feed, '1D', time_tradingday[pastDays], lookahead = timeframe.in_seconds() > timeframe.in_seconds('1D') ? barmerge.lookahead_off : barmerge.lookahead_on)
+withinHistory(int tradingDay) =>
+    not limitDays or na(cutoff) or tradingDay >= cutoff
+
 dayFeedTf = feedTimeframe('5')
 hourFeedTf = feedTimeframe('60')
 dayFeedMs = timeframe.in_seconds(dayFeedTf) * 1000
@@ -231,8 +250,8 @@ levelBox(int x1, int x2, float price, string caption, color tint, bool isHigh) =
     merged = na(existing) ? caption : levelCaptions.get(key) + ' / ' + caption
     levelCaptions.put(key, merged)
     if not na(existing)
-        existing.set_text(merged)
-    drawn = box.new(x1, price, x2, price, xloc = xloc.bar_time, border_color = tint, bgcolor = color(na), text = na(existing) ? caption : '', text_color = tint, text_size = size.small, text_halign = text.align_right, text_valign = isHigh ? text.align_bottom : text.align_top)
+        existing.set_text(showLabels ? merged : '')
+    drawn = box.new(x1, price, x2, price, xloc = xloc.bar_time, border_color = tint, bgcolor = color(na), text = showLabels and na(existing) ? caption : '', text_color = tint, text_size = size.small, text_halign = text.align_right, text_valign = isHigh ? text.align_bottom : text.align_top)
     if na(existing)
         levelBoxes.put(key, drawn)
     drawn
@@ -247,10 +266,13 @@ drawLevel(float price, int feedFromTime, int feedTouchedTime, int feedMs, bool i
         levelBox(x1, touchedTime, price, caption, tint, isHigh)
 
 // The latest finished period is the previous one (PDH, PWH, PMH, MonH); older ones carry their date.
-drawRanges(array<Range> ranges, int feedMs, string latestPrefix, string olderPrefix, string dateFormat, color tint) =>
+drawRanges(array<Range> ranges, int feedMs, string latestPrefix, string olderPrefix, string dateFormat, color tint, bool showCurrent) =>
     latest = ranges.size() > 0 and ranges.last().finished ? ranges.last() : ranges.size() > 1 ? ranges.get(ranges.size() - 2) : na
     for levelRange in ranges
-        if levelRange.finished
+        if not levelRange.finished and showCurrent
+            drawLevel(levelRange.hi, levelRange.hiTime, na, feedMs, true, 'Current ' + olderPrefix + 'H', tint)
+            drawLevel(levelRange.lo, levelRange.loTime, na, feedMs, false, 'Current ' + olderPrefix + 'L', tint)
+        if levelRange.finished and withinHistory(levelRange.lastTradingDay)
             isLatest = levelRange.tradingDay == latest.tradingDay
             highCaption = isLatest ? latestPrefix + 'H' : olderPrefix + 'H ' + str.format_time(levelRange.tradingDay, dateFormat, 'UTC')
             lowCaption = isLatest ? latestPrefix + 'L' : olderPrefix + 'L ' + str.format_time(levelRange.tradingDay, dateFormat, 'UTC')
@@ -259,7 +281,7 @@ drawRanges(array<Range> ranges, int feedMs, string latestPrefix, string olderPre
 
 drawZones(array<Zone> zones, string name, color tint) =>
     for zone in zones
-        if not showCurrentSession and time < zone.endTime
+        if not withinHistory(zone.tradingDay) or (not showCurrentSession and time < zone.endTime)
             continue
         boxEnd = zone.lastTime + dayFeedMs
         if showBoxes and boxEnd > firstBarTime
@@ -273,13 +295,13 @@ if barstate.islast and not na(days)
     levelBoxes.clear()
     levelCaptions.clear()
     if monthOn
-        drawRanges(months, hourFeedMs, 'PM', 'M', 'MMM', monthColor)
+        drawRanges(months, hourFeedMs, 'PM', 'M', 'MMM', monthColor, monthCurrent)
     if weekOn
-        drawRanges(weeks, hourFeedMs, 'PW', 'W', dateFormat, weekColor)
+        drawRanges(weeks, hourFeedMs, 'PW', 'W', dateFormat, weekColor, weekCurrent)
     if mondayOn
-        drawRanges(mondays, hourFeedMs, 'Mon', 'Mon', dateFormat, mondayColor)
+        drawRanges(mondays, hourFeedMs, 'Mon', 'Mon', dateFormat, mondayColor, mondayCurrent)
     if dayOn
-        drawRanges(days, dayFeedMs, 'PD', 'D', dateFormat, dayColor)
+        drawRanges(days, dayFeedMs, 'PD', 'D', dateFormat, dayColor, dayCurrent)
     if win1On
         drawZones(zones1, win1Name, win1Color)
     if win2On
